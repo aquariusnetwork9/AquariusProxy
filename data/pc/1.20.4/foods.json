@@ -1,6 +1,6 @@
 [
   {
-    "id": 759,
+    "id": 796,
     "name": "apple",
     "stackSize": 64,
     "displayName": "Apple",
@@ -10,7 +10,7 @@
     "saturationRatio": 0.6
   },
   {
-    "id": 809,
+    "id": 846,
     "name": "mushroom_stew",
     "stackSize": 1,
     "displayName": "Mushroom Stew",
@@ -20,7 +20,7 @@
     "saturationRatio": 1.2
   },
   {
-    "id": 815,
+    "id": 852,
     "name": "bread",
     "stackSize": 64,
     "displayName": "Bread",
@@ -30,7 +30,7 @@
     "saturationRatio": 1.2
   },
   {
-    "id": 841,
+    "id": 878,
     "name": "porkchop",
     "stackSize": 64,
     "displayName": "Raw Porkchop",
@@ -40,7 +40,7 @@
     "saturationRatio": 0.6
   },
   {
-    "id": 842,
+    "id": 879,
     "name": "cooked_porkchop",
     "stackSize": 64,
     "displayName": "Cooked Porkchop",
@@ -50,7 +50,7 @@
     "saturationRatio": 1.6
   },
   {
-    "id": 844,
+    "id": 881,
     "name": "golden_apple",
     "stackSize": 64,
     "displayName": "Golden Apple",
@@ -60,7 +60,7 @@
     "saturationRatio": 2.4
   },
   {
-    "id": 845,
+    "id": 882,
     "name": "enchanted_golden_apple",
     "stackSize": 64,
     "displayName": "Enchanted Golden Apple",
@@ -70,7 +70,7 @@
     "saturationRatio": 2.4
   },
   {
-    "id": 895,
+    "id": 932,
     "name": "cod",
     "stackSize": 64,
     "displayName": "Raw Cod",
@@ -80,7 +80,7 @@
     "saturationRatio": 0.2
   },
   {
-    "id": 896,
+    "id": 933,
     "name": "salmon",
     "stackSize": 64,
     "displayName": "Raw Salmon",
@@ -90,7 +90,7 @@
     "saturationRatio": 0.2
   },
   {
-    "id": 897,
+    "id": 934,
     "name": "tropical_fish",
     "stackSize": 64,
     "displayName": "Tropical Fish",
@@ -100,7 +100,7 @@
     "saturationRatio": 0.2
   },
   {
-    "id": 898,
+    "id": 935,
     "name": "pufferfish",
     "stackSize": 64,
     "displayName": "Pufferfish",
@@ -110,7 +110,7 @@
     "saturationRatio": 0.2
   },
   {
-    "id": 899,
+    "id": 936,
     "name": "cooked_cod",
     "stackSize": 64,
     "displayName": "Cooked Cod",
@@ -120,7 +120,7 @@
     "saturationRatio": 1.2
   },
   {
-    "id": 900,
+    "id": 937,
     "name": "cooked_salmon",
     "stackSize": 64,
     "displayName": "Cooked Salmon",
@@ -130,7 +130,7 @@
     "saturationRatio": 1.6
   },
   {
-    "id": 940,
+    "id": 977,
     "name": "cookie",
     "stackSize": 64,
     "displayName": "Cookie",
@@ -140,7 +140,7 @@
     "saturationRatio": 0.2
   },
   {
-    "id": 943,
+    "id": 981,
     "name": "melon_slice",
     "stackSize": 64,
     "displayName": "Melon Slice",
@@ -150,7 +150,7 @@
     "saturationRatio": 0.6
   },
   {
-    "id": 944,
+    "id": 982,
     "name": "dried_kelp",
     "stackSize": 64,
     "displayName": "Dried Kelp",
@@ -160,7 +160,7 @@
     "saturationRatio": 0.6
   },
   {
-    "id": 947,
+    "id": 985,
     "name": "beef",
     "stackSize": 64,
     "displayName": "Raw Beef",
@@ -170,7 +170,7 @@
     "saturationRatio": 0.6
   },
   {
-    "id": 948,
+    "id": 986,
     "name": "cooked_beef",
     "stackSize": 64,
     "displayName": "Steak",
@@ -180,7 +180,7 @@
     "saturationRatio": 1.6
   },
   {
-    "id": 949,
+    "id": 987,
     "name": "chicken",
     "stackSize": 64,
     "displayName": "Raw Chicken",
@@ -190,7 +190,7 @@
     "saturationRatio": 0.6
   },
   {
-    "id": 950,
+    "id": 988,
     "name": "cooked_chicken",
     "stackSize": 64,
     "displayName": "Cooked Chicken",
@@ -200,7 +200,7 @@
     "saturationRatio": 1.2
   },
   {
-    "id": 951,
+    "id": 989,
     "name": "rotten_flesh",
     "stackSize": 64,
     "displayName": "Rotten Flesh",
@@ -210,7 +210,7 @@
     "saturationRatio": 0.2
   },
   {
-    "id": 959,
+    "id": 997,
     "name": "spider_eye",
     "stackSize": 64,
     "displayName": "Spider Eye",
@@ -220,7 +220,7 @@
     "saturationRatio": 1.6
   },
   {
-    "id": 1051,
+    "id": 1090,
     "name": "carrot",
     "stackSize": 64,
     "displayName": "Carrot",
@@ -230,7 +230,7 @@
     "saturationRatio": 1.2
   },
   {
-    "id": 1052,
+    "id": 1091,
     "name": "potato",
     "stackSize": 64,
     "displayName": "Potato",
@@ -240,7 +240,7 @@
     "saturationRatio": 0.6
   },
   {
-    "id": 1053,
+    "id": 1092,
     "name": "baked_potato",
     "stackSize": 64,
     "displayName": "Baked Potato",
@@ -250,7 +250,7 @@
     "saturationRatio": 1.2
   },
   {
-    "id": 1054,
+    "id": 1093,
     "name": "poisonous_potato",
     "stackSize": 64,
     "displayName": "Poisonous Potato",
@@ -260,7 +260,7 @@
     "saturationRatio": 0.6
   },
   {
-    "id": 1056,
+    "id": 1095,
     "name": "golden_carrot",
     "stackSize": 64,
     "displayName": "Golden Carrot",
@@ -270,7 +270,7 @@
     "saturationRatio": 2.4
   },
   {
-    "id": 1065,
+    "id": 1104,
     "name": "pumpkin_pie",
     "stackSize": 64,
     "displayName": "Pumpkin Pie",
@@ -280,7 +280,7 @@
     "saturationRatio": 0.6
   },
   {
-    "id": 1072,
+    "id": 1111,
     "name": "rabbit",
     "stackSize": 64,
     "displayName": "Raw Rabbit",
@@ -290,7 +290,7 @@
     "saturationRatio": 0.6
   },
   {
-    "id": 1073,
+    "id": 1112,
     "name": "cooked_rabbit",
     "stackSize": 64,
     "displayName": "Cooked Rabbit",
@@ -300,7 +300,7 @@
     "saturationRatio": 1.2
   },
   {
-    "id": 1074,
+    "id": 1113,
     "name": "rabbit_stew",
     "stackSize": 1,
     "displayName": "Rabbit Stew",
@@ -310,7 +310,7 @@
     "saturationRatio": 1.2
   },
   {
-    "id": 1085,
+    "id": 1124,
     "name": "mutton",
     "stackSize": 64,
     "displayName": "Raw Mutton",
@@ -320,7 +320,7 @@
     "saturationRatio": 0.6
   },
   {
-    "id": 1086,
+    "id": 1125,
     "name": "cooked_mutton",
     "stackSize": 64,
     "displayName": "Cooked Mutton",
@@ -330,7 +330,7 @@
     "saturationRatio": 1.6
   },
   {
-    "id": 1104,
+    "id": 1143,
     "name": "chorus_fruit",
     "stackSize": 64,
     "displayName": "Chorus Fruit",
@@ -340,7 +340,7 @@
     "saturationRatio": 0.6
   },
   {
-    "id": 1108,
+    "id": 1147,
     "name": "beetroot",
     "stackSize": 64,
     "displayName": "Beetroot",
@@ -350,7 +350,7 @@
     "saturationRatio": 1.2
   },
   {
-    "id": 1110,
+    "id": 1149,
     "name": "beetroot_soup",
     "stackSize": 1,
     "displayName": "Beetroot Soup",
@@ -360,7 +360,7 @@
     "saturationRatio": 1.2
   },
   {
-    "id": 1144,
+    "id": 1183,
     "name": "suspicious_stew",
     "stackSize": 1,
     "displayName": "Suspicious Stew",
@@ -370,7 +370,7 @@
     "saturationRatio": 1.2
   },
   {
-    "id": 1165,
+    "id": 1204,
     "name": "sweet_berries",
     "stackSize": 64,
     "displayName": "Sweet Berries",
@@ -380,7 +380,7 @@
     "saturationRatio": 0.2
   },
   {
-    "id": 1166,
+    "id": 1205,
     "name": "glow_berries",
     "stackSize": 64,
     "displayName": "Glow Berries",
@@ -390,7 +390,7 @@
     "saturationRatio": 0.2
   },
   {
-    "id": 1173,
+    "id": 1212,
     "name": "honey_bottle",
     "stackSize": 16,
     "displayName": "Honey Bottle",
