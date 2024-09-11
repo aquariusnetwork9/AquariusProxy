@@ -42,6 +42,7 @@ public class ActionLimiter extends Module {
             .setPriority(1000)
             .setActivePredicate(this::shouldLimit)
             .state(ProtocolState.GAME, PacketHandlerStateCodec.serverBuilder()
+                // todo: handle chunk and entity spawn packets to refuse sending if they are beyond home coords
                 .registerInbound(ServerboundChatCommandPacket.class, new ALChatCommandHandler())
                 .registerInbound(ServerboundChatCommandSignedPacket.class, new ALSignedChatCommandHandler())
                 .registerInbound(ServerboundChatPacket.class, new ALChatHandler())

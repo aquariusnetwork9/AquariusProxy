@@ -119,6 +119,7 @@ public final class Config {
             public boolean prioStatusChangeMention = true;
             public boolean killMessage = true;
             public boolean logChatMessages = true;
+            public final CoordObfuscation coordObfuscation = new CoordObfuscation();
             public final ActionLimiter actionLimiter = new ActionLimiter();
             public final VisualRange visualRange = new VisualRange();
             public final AutoArmor autoArmor = new AutoArmor();
@@ -457,6 +458,30 @@ public final class Config {
                 public int cooldownSeconds = 15;
                 public String message = "I am currently AFK, check back later or message me on discord.";
             }
+
+            public static final class CoordObfuscation {
+                // all offsets in chunk coords
+                public boolean enabled = true;
+                public ObfuscationMode mode = ObfuscationMode.RANDOM_OFFSET;
+                public boolean obfuscateBedrock = true;
+//                public boolean regenerateOnDistantTeleport = true;
+//                public int regenerateDistanceMin = 64; // minimum distance to regenerate coords at
+                public int randomBound = 10000000; // maximum bound to randomize coords by
+                public int randomMinOffset = 100000; // minimum bound to randomize coords by
+                public int randomMinSpawnDistance = 100000; // min distance to spawn the coords are
+                public int constantOffsetX = 0;
+                public int constantOffsetZ = 0;
+                public boolean constantOffsetNetherTranslate = true;
+                public int constantOffsetMinSpawnDistance = 100000; // min distance to spawn the actual coords are before player is disconnected
+                public int atLocationX = 0;
+                public int atLocationZ = 0;
+                public enum ObfuscationMode {
+                    RANDOM_OFFSET,
+                    CONSTANT_OFFSET,
+                    AT_LOCATION
+                }
+            }
+
             public static class ActionLimiter {
                 public boolean enabled = false;
                 // be careful with this, auto respawn will still respawn after they disconnect

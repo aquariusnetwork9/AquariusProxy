@@ -31,6 +31,7 @@ public class ModuleManager {
             new ChatControl(),
             new ChatHistory(),
             new Click(),
+            new CoordObfuscator(),
             new ESP(),
             new ExtraChat(),
             new KillAura(),

@@ -52,6 +52,7 @@ public class CommandManager {
         new CommandConfigCommand(),
         new ConnectCommand(),
         new ConnectionTestCommand(),
+        new CoordinateObfuscationCommand(),
         new DatabaseCommand(),
         new DebugCommand(),
         new DisconnectCommand(),
