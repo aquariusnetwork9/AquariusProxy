@@ -53,10 +53,10 @@ dependencies {
     implementation("com.github.rfresh2.discord4j:discord4j-core:3.4.4.11") {
         exclude(group = "io.netty")
     }
-    implementation("com.github.rfresh2:MCProtocolLib:1.21.4.4") {
+    implementation("com.github.rfresh2:MCProtocolLib:1.21.4.5") {
         exclude(group = "io.netty")
     }
-    val nettyVersion = "4.1.115.Final"
+    val nettyVersion = "4.1.116.Final"
     implementation("io.netty:netty-codec-haproxy:$nettyVersion")
     implementation("io.netty:netty-codec-dns:$nettyVersion")
     implementation("io.netty:netty-codec-http2:$nettyVersion")
@@ -71,7 +71,7 @@ dependencies {
     implementation("io.netty:netty-resolver-dns-native-macos:$nettyVersion:osx-aarch_64")
     implementation("org.cloudburstmc.math:api:2.0")
     implementation("org.cloudburstmc.math:immutable:2.0")
-    implementation("org.redisson:redisson:3.40.2") {
+    implementation("org.redisson:redisson:3.41.0") {
         exclude(group = "io.netty")
     }
     implementation("com.github.rfresh2:SimpleEventBus:1.2")
@@ -96,7 +96,7 @@ dependencies {
     //  which adds about 10mb to the binary size for zero benefit because we do not use jfr
     implementation("org.jdbi:jdbi3-postgres:3.45.4")
     implementation("com.google.guava:guava:33.4.0-jre")
-    implementation("ch.qos.logback:logback-classic:1.5.12")
+    implementation("ch.qos.logback:logback-classic:1.5.15")
     implementation("org.slf4j:slf4j-api:2.0.16")
     implementation("org.slf4j:jul-to-slf4j:2.0.16")
     implementation("com.mojang:brigadier:1.3.10")
