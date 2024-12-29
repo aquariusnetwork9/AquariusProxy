@@ -161,6 +161,7 @@ tasks {
         classpath = sourceSets.main.get().runtimeClasspath
         mainClass.set("com.zenith.Proxy")
         jvmArgs = listOf("-Xmx300m", "-XX:+UseG1GC")
+        standardInput = System.`in`
         outputs.upToDateWhen { false }
     }
     val javaPathTask = register("javaPath", Task::class.java) {
