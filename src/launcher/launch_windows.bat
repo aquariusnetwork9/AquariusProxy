@@ -1,8 +1,15 @@
 @echo off
 setlocal
 
+if "%1" == "--reinstall-python" (
+	echo Reinstalling Python...
+	del python /Q
+)
+
 if not exist python\python.exe (
-	del python.tar.gz
+	if exist python.tar.gz (
+		del python.tar.gz
+	)
 
     echo Downloading Python...
     REM --ssl-no-revoke necessary as some users have broken windows installs? https://discord.com/channels/1127460556710883391/1127461501960208465/1320859617487618078
