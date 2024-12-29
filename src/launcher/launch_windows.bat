@@ -1,28 +1,54 @@
 @echo off
 setlocal
 
-REM Check if Python is already installed
 if not exist python\python.exe (
-    REM Download python
-    echo Downloading Python...
-    curl -L -o python.tar.gz "https://github.com/indygreg/python-build-standalone/releases/download/20241206/cpython-3.13.1+20241206-x86_64-pc-windows-msvc-shared-install_only_stripped.tar.gz"
+	del python.tar.gz
 
-    REM Extract tarball
+    echo Downloading Python...
+    REM --ssl-no-revoke necessary as some users have broken windows installs? https://discord.com/channels/1127460556710883391/1127461501960208465/1320859617487618078
+    curl -L --ssl-no-revoke -o python.tar.gz "https://github.com/astral-sh/python-build-standalone/releases/download/20241219/cpython-3.13.1+20241219-x86_64-pc-windows-msvc-shared-install_only_stripped.tar.gz"
+
+  	if errorlevel 1 (
+		echo Error: Failed to download Python.
+		exit /b 1
+	)
+	if not exist python.tar.gz (
+		echo Error: Failed to download Python.
+		exit /b 1
+	)
+	REM sanity checking if python.tar.gz is less than 5MB
+	REM meaning we probably downloaded an error page
+	for %%A in (python.tar.gz) do if %%~zA LSS 5000000 (
+		echo Error: Failed to download Python.
+		exit /b 1
+	)
+
     echo Extracting Python...
     tar -xf python.tar.gz
 
-    REM Delete tarball
+	if errorlevel 1 (
+		echo Error: Failed to extract Python.
+		exit /b 1
+	)
+	if not exist python\python.exe (
+		echo Error: Failed to extract Python.
+		exit /b 1
+	)
+
     del python.tar.gz
 ) else (
     echo Found existing Python installation.
 )
 
-REM Install pip requirements.txt
 echo Verifying requirements...
 python\python.exe -m pip install -r requirements.txt -qq --disable-pip-version-check --no-input
 
-REM Run launcher-py.zip
+if errorlevel 1 (
+	echo Error: Failed installing Python requirements.
+	exit /b 1
+)
+
 echo Starting Launcher...
-python\python.exe launcher-py.zip
+python\python.exe launcher-py.zip %*
 
 endlocal
