@@ -401,7 +401,7 @@ public final class BlockRegistry {
 
     public static final Block OAK_DOOR = REGISTRY.register(new Block(195, "oak_door", true, 4590, 4653, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 3.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
-    public static final Block LADDER = REGISTRY.register(new Block(196, "ladder", true, 4654, 4661, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.4f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
+    public static final Block LADDER = REGISTRY.register(new Block(196, "ladder", true, 4654, 4661, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.4f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.CLIMBABLE)));
 
     public static final Block RAIL = REGISTRY.register(new Block(197, "rail", false, 4662, 4681, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.7f, false, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
@@ -643,7 +643,7 @@ public final class BlockRegistry {
 
     public static final Block MELON_STEM = REGISTRY.register(new Block(316, "melon_stem", false, 6829, 6836, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
 
-    public static final Block VINE = REGISTRY.register(new Block(317, "vine", false, 6837, 6868, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.2f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
+    public static final Block VINE = REGISTRY.register(new Block(317, "vine", false, 6837, 6868, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.2f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT, BlockTags.CLIMBABLE)));
 
     public static final Block GLOW_LICHEN = REGISTRY.register(new Block(318, "glow_lichen", false, 6869, 6996, 61, BlockOffsetType.NONE, 0.25f, 0.2f, 0.2f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
 
@@ -1553,7 +1553,7 @@ public final class BlockRegistry {
 
     public static final Block DIORITE_WALL = REGISTRY.register(new Block(771, "diorite_wall", true, 18048, 18371, 14, BlockOffsetType.NONE, 0.25f, 0.2f, 1.5f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block SCAFFOLDING = REGISTRY.register(new Block(772, "scaffolding", true, 18372, 18403, 2, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
+    public static final Block SCAFFOLDING = REGISTRY.register(new Block(772, "scaffolding", true, 18372, 18403, 2, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.CLIMBABLE)));
 
     public static final Block LOOM = REGISTRY.register(new Block(773, "loom", true, 18404, 18407, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 2.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
@@ -1619,13 +1619,13 @@ public final class BlockRegistry {
 
     public static final Block SHROOMLIGHT = REGISTRY.register(new Block(804, "shroomlight", true, 18610, 18610, 28, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_HOE)));
 
-    public static final Block WEEPING_VINES = REGISTRY.register(new Block(805, "weeping_vines", false, 18611, 18636, 35, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
+    public static final Block WEEPING_VINES = REGISTRY.register(new Block(805, "weeping_vines", false, 18611, 18636, 35, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT, BlockTags.CLIMBABLE)));
 
-    public static final Block WEEPING_VINES_PLANT = REGISTRY.register(new Block(806, "weeping_vines_plant", false, 18637, 18637, 35, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
+    public static final Block WEEPING_VINES_PLANT = REGISTRY.register(new Block(806, "weeping_vines_plant", false, 18637, 18637, 35, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT, BlockTags.CLIMBABLE)));
 
-    public static final Block TWISTING_VINES = REGISTRY.register(new Block(807, "twisting_vines", false, 18638, 18663, 23, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
+    public static final Block TWISTING_VINES = REGISTRY.register(new Block(807, "twisting_vines", false, 18638, 18663, 23, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT, BlockTags.CLIMBABLE)));
 
-    public static final Block TWISTING_VINES_PLANT = REGISTRY.register(new Block(808, "twisting_vines_plant", false, 18664, 18664, 23, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
+    public static final Block TWISTING_VINES_PLANT = REGISTRY.register(new Block(808, "twisting_vines_plant", false, 18664, 18664, 23, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT, BlockTags.CLIMBABLE)));
 
     public static final Block CRIMSON_ROOTS = REGISTRY.register(new Block(809, "crimson_roots", false, 18665, 18665, 35, BlockOffsetType.XZ, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.SWORD_EFFICIENT)));
 
@@ -2027,9 +2027,9 @@ public final class BlockRegistry {
 
     public static final Block DRIPSTONE_BLOCK = REGISTRY.register(new Block(1008, "dripstone_block", true, 24768, 24768, 48, BlockOffsetType.NONE, 0.25f, 0.2f, 1.5f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block CAVE_VINES = REGISTRY.register(new Block(1009, "cave_vines", false, 24769, 24820, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
+    public static final Block CAVE_VINES = REGISTRY.register(new Block(1009, "cave_vines", false, 24769, 24820, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT, BlockTags.CLIMBABLE)));
 
-    public static final Block CAVE_VINES_PLANT = REGISTRY.register(new Block(1010, "cave_vines_plant", false, 24821, 24822, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
+    public static final Block CAVE_VINES_PLANT = REGISTRY.register(new Block(1010, "cave_vines_plant", false, 24821, 24822, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT, BlockTags.CLIMBABLE)));
 
     public static final Block SPORE_BLOSSOM = REGISTRY.register(new Block(1011, "spore_blossom", false, 24823, 24823, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
 
