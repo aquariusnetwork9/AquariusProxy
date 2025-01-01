@@ -417,7 +417,9 @@ public class PlayerSimulation extends Module {
             }
             updateVelocity(waterSpeed, movementInputVec);
             move();
-            // todo: check if on climbable block here
+            if (horizontalCollision && onClimbable()) {
+                velocity.setY(0.2);
+            }
             velocity.multiply(waterSlowdown, 0.8f, waterSlowdown);
             double d;
             if (falling && Math.abs(velocity.getY() - 0.005) >= 0.003 && Math.abs(velocity.getY() - gravity / 16.0) < 0.003) {
@@ -740,9 +742,27 @@ public class PlayerSimulation extends Module {
 
     private void applyMovementInput(MutableVec3d movementInputVec, float slipperiness) {
         float movementSpeed = this.getMovementSpeed(slipperiness);
-        this.updateVelocity(movementSpeed, movementInputVec);
-        // todo: apply climbing speed
-        this.move();
+        updateVelocity(movementSpeed, movementInputVec);
+        if (onClimbable()) {
+            float maxV = 0.15F;
+            double velX = Math.clamp(velocity.getX(), -maxV, maxV);
+            double velZ = Math.clamp(velocity.getZ(), -maxV, maxV);
+            double velY = Math.max(velocity.getY(), -maxV);
+            if (velY < 0.0
+                && World.getBlockAtBlockPos(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z)) != BlockRegistry.SCAFFOLDING
+                && isSneaking
+            ) {
+                velY = 0.0;
+            }
+
+            velocity.set(velX, velY, velZ);
+        }
+        move();
+        if (horizontalCollision || movementInput.jumping) {
+            if (onClimbable()) { // todo: or inside powder snow
+                velocity.setY(0.2);
+            }
+        }
     }
 
     private void updateVelocity(float speed, MutableVec3d movementInput) {
@@ -897,6 +917,18 @@ public class PlayerSimulation extends Module {
             velocity.add(pushVec);
         }
         return touched;
+    }
+
+    private boolean onClimbable() {
+        var inBlock = World.getBlockAtBlockPos(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z));
+        if (inBlock.blockTags().contains(BlockTags.CLIMBABLE)) return true;
+//        // todo: check trapdoor is open
+//        if (inBlock.name().endsWith("trapdoor")) {
+//            Block belowTrapdoor = World.getBlockAtBlockPos(MathHelper.floorI(x), MathHelper.floorI(y) - 1, MathHelper.floorI(z));
+//            // todo: ladder and trapdoor facing checks
+//            if (belowTrapdoor == BlockRegistry.LADDER) return true;
+//        }
+        return false;
     }
 
     private boolean resyncTeleport() {

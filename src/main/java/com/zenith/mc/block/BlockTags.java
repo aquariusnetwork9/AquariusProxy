@@ -8,5 +8,6 @@ public enum BlockTags {
     SWORD_EFFICIENT,
     NEEDS_DIAMOND_TOOL,
     NEEDS_IRON_TOOL,
-    NEEDS_STONE_TOOL
+    NEEDS_STONE_TOOL,
+    CLIMBABLE
 }
