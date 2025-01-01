@@ -9,7 +9,6 @@
 *.ipr
 /out/
 .DS_Store
-gradle.properties
 # any json-like file in top directory, including configs, auth cache, etc.
 /*.json*
 *.tmp

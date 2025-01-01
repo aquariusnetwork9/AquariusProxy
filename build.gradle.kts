@@ -27,7 +27,7 @@ repositories {
     maven("https://repo.opencollab.dev/maven-releases/") {
         content { includeGroupByRegex("org.cloudburstmc.*") }
     }
-    maven("https://papermc.io/repo/repository/maven-public/") {
+    maven("https://repo.papermc.io/repository/maven-public/") {
         content { includeGroup("com.velocitypowered") }
     }
     maven("https://repo.viaversion.com") {
@@ -53,7 +53,7 @@ dependencies {
     implementation("com.github.rfresh2.discord4j:discord4j-core:3.4.4.11") {
         exclude(group = "io.netty")
     }
-    implementation("com.github.rfresh2:MCProtocolLib:1.21.4.5") {
+    implementation("com.github.rfresh2:MCProtocolLib:1.21.4.6") {
         exclude(group = "io.netty")
     }
     val nettyVersion = "4.1.116.Final"
@@ -161,6 +161,7 @@ tasks {
         classpath = sourceSets.main.get().runtimeClasspath
         mainClass.set("com.zenith.Proxy")
         jvmArgs = listOf("-Xmx300m", "-XX:+UseG1GC")
+        standardInput = System.`in`
         outputs.upToDateWhen { false }
     }
     val javaPathTask = register("javaPath", Task::class.java) {
