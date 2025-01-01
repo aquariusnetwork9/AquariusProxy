@@ -66,6 +66,7 @@ public class CommandManager {
         new JvmArgsCommand(),
         new KickCommand(),
         new KillAuraCommand(),
+        new LicenseCommand(),
         new MapCommand(),
         new PlaytimeCommand(),
         new PrioCommand(),
