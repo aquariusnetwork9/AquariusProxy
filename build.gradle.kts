@@ -27,7 +27,7 @@ repositories {
     maven("https://repo.opencollab.dev/maven-releases/") {
         content { includeGroupByRegex("org.cloudburstmc.*") }
     }
-    maven("https://papermc.io/repo/repository/maven-public/") {
+    maven("https://repo.papermc.io/repository/maven-public/") {
         content { includeGroup("com.velocitypowered") }
     }
     maven("https://repo.viaversion.com") {
@@ -53,7 +53,7 @@ dependencies {
     implementation("com.github.rfresh2.discord4j:discord4j-core:3.4.4.11") {
         exclude(group = "io.netty")
     }
-    implementation("com.github.rfresh2:MCProtocolLib:1.21.0.24") {
+    implementation("com.github.rfresh2:MCProtocolLib:1.21.0.25") {
         exclude(group = "io.netty")
     }
     val nettyVersion = "4.1.116.Final"
