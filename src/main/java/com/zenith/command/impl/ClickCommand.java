@@ -9,6 +9,8 @@ import com.zenith.command.brigadier.CommandContext;
 import com.zenith.feature.world.Input;
 import com.zenith.module.impl.PlayerSimulation;
 
+import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
+import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.Shared.PATHING;
 import static java.util.Arrays.asList;
@@ -28,6 +30,7 @@ public class ClickCommand extends Command {
                 "right",
                 "right hold",
                 "right hold <mainHand/offHand/alternate>",
+                "right hold interval <ticks>",
                 "stop"
             )
         );
@@ -154,6 +157,14 @@ public class ClickCommand extends Command {
                                         .title("Right Click Hold (Alternate)")
                                         .primaryColor();
                                     return OK;
-                                }))));
+                                }))
+                                .then(literal("interval").then(argument("ticks", integer(0, 100)).executes(c -> {
+                                    MODULE.get(PlayerSimulation.class).holdRightClickInterval = getInteger(c, "ticks");
+                                    c.getSource().getEmbed()
+                                        .title("Right Click Hold Interval Set")
+                                        .addField("Ticks", MODULE.get(PlayerSimulation.class).holdRightClickInterval, false)
+                                        .primaryColor();
+                                    return OK;
+                                })))));
     }
 }

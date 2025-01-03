@@ -83,6 +83,7 @@ public class PlayerSimulation extends Module {
     public HoldRightClickMode holdRightClickMode = HoldRightClickMode.MAIN_HAND;
     public boolean holdRightClickLastHand = false; // true if main hand, false if off hand
     private final Timer rightClickOverrideTimer = Timer.createTickTimer();
+    public int holdRightClickInterval = 5;
 
     public enum HoldRightClickMode {
         MAIN_HAND,
@@ -113,6 +114,7 @@ public class PlayerSimulation extends Module {
         this.holdLeftClickOverride = false;
         this.holdRightClickOverride = false;
         this.holdRightClickMode = HoldRightClickMode.MAIN_HAND;
+        this.holdRightClickInterval = 5;
     }
 
     public synchronized void handleClientTickStopped(final ClientBotTick.Stopped event) {
@@ -125,6 +127,7 @@ public class PlayerSimulation extends Module {
         this.holdLeftClickOverride = false;
         this.holdRightClickOverride = false;
         this.holdRightClickMode = HoldRightClickMode.MAIN_HAND;
+        this.holdRightClickInterval = 5;
     }
 
     public void doRotate(float yaw, float pitch) {
@@ -230,7 +233,7 @@ public class PlayerSimulation extends Module {
                         interactions.attackEntity(raycast.entity());
                     }
                 }
-            } else if (movementInput.isRightClick() || (holdRightClickOverride && rightClickOverrideTimer.tick(10))) {
+            } else if (movementInput.isRightClick() || (holdRightClickOverride && rightClickOverrideTimer.tick(holdRightClickInterval))) {
                 var raycast = RaycastHelper.playerBlockOrEntityRaycast(getBlockReachDistance());
                 Hand hand = Hand.MAIN_HAND;
                 if (holdRightClickOverride) {
