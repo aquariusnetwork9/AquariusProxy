@@ -4,10 +4,7 @@ import com.zenith.Proxy;
 import com.zenith.cache.data.inventory.Container;
 import com.zenith.feature.world.raycast.BlockRaycastResult;
 import com.zenith.feature.world.raycast.EntityRaycastResult;
-import com.zenith.mc.block.Block;
-import com.zenith.mc.block.BlockRegistry;
-import com.zenith.mc.block.BlockState;
-import com.zenith.mc.block.BlockTags;
+import com.zenith.mc.block.*;
 import com.zenith.mc.enchantment.EnchantmentData;
 import com.zenith.mc.item.ItemData;
 import com.zenith.mc.item.ItemRegistry;
@@ -18,7 +15,6 @@ import com.zenith.util.math.MathHelper;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.AttributeType;
-import org.geysermc.mcprotocollib.protocol.data.game.entity.object.Direction;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.InteractAction;
@@ -32,6 +28,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
+import static com.zenith.Shared.BLOCK_DATA;
 import static com.zenith.Shared.CACHE;
 
 public class PlayerInteractionManager {
@@ -68,7 +65,7 @@ public class PlayerInteractionManager {
                 new ServerboundPlayerActionPacket(
                     PlayerAction.START_DIGGING,
                     x, y, z,
-                    face,
+                    face.mcpl(),
                     CACHE.getPlayerCache().getSeqId().incrementAndGet()
                 )
             );
@@ -81,14 +78,14 @@ public class PlayerInteractionManager {
                     new ServerboundPlayerActionPacket(
                         PlayerAction.CANCEL_DIGGING,
                         this.destroyBlockPosX, this.destroyBlockPosY, this.destroyBlockPosZ,
-                        face,
+                        face.mcpl(),
                         CACHE.getPlayerCache().getSeqId().incrementAndGet()
                     )
                 );
             }
 
             BlockState blockState = World.getBlockState(x, y, z);
-            if (blockState.block() == BlockRegistry.AIR || blockBreakSpeed(blockState) < 1.0) {
+            if (BLOCK_DATA.isAir(blockState.block()) || blockBreakSpeed(blockState) < 1.0) {
                 this.isDestroying = true;
                 this.destroyBlockPosX = x;
                 this.destroyBlockPosY = y;
@@ -106,7 +103,7 @@ public class PlayerInteractionManager {
                 new ServerboundPlayerActionPacket(
                     PlayerAction.START_DIGGING,
                     x, y, z,
-                    face,
+                    face.mcpl(),
                     CACHE.getPlayerCache().getSeqId().incrementAndGet()));
         }
 
@@ -120,7 +117,7 @@ public class PlayerInteractionManager {
                 .send(new ServerboundPlayerActionPacket(
                     PlayerAction.CANCEL_DIGGING,
                     this.destroyBlockPosX, this.destroyBlockPosY, this.destroyBlockPosZ,
-                    Direction.DOWN,
+                    Direction.DOWN.mcpl(),
                     CACHE.getPlayerCache().getSeqId().incrementAndGet()
                 ));
         }
@@ -138,7 +135,7 @@ public class PlayerInteractionManager {
                 new ServerboundPlayerActionPacket(
                     PlayerAction.START_DIGGING,
                     x, y, z,
-                    directionFacing,
+                    directionFacing.mcpl(),
                     CACHE.getPlayerCache().getSeqId().incrementAndGet()
                 ));
             destroyBlock(x, y, z);
@@ -146,7 +143,7 @@ public class PlayerInteractionManager {
             return true;
         } else if (this.sameDestroyTarget(x, y, z)) {
             BlockState blockState = World.getBlockState(x, y, z);
-            if (blockState.block() == BlockRegistry.AIR) {
+            if (BLOCK_DATA.isAir(blockState.block())) {
                 this.isDestroying = false;
                 return false;
             } else {
@@ -158,7 +155,7 @@ public class PlayerInteractionManager {
                         new ServerboundPlayerActionPacket(
                             PlayerAction.FINISH_DIGGING,
                             x, y, z,
-                            directionFacing,
+                            directionFacing.mcpl(),
                             CACHE.getPlayerCache().getSeqId().incrementAndGet()
                         ));
                     destroyBlock(x, y, z);
@@ -180,14 +177,22 @@ public class PlayerInteractionManager {
 
     public double blockBreakSpeed(BlockState state) {
         double destroySpeed = state.block().destroySpeed();
-        double toolFactor = hasCorrectToolForDrops(state) ? 30.0 : 100.0;
+        double toolFactor = hasCorrectToolForDrops(state, CACHE.getPlayerCache().getEquipment(EquipmentSlot.MAIN_HAND))
+            ? 30.0
+            : 100.0;
         double playerDestroySpeed = getPlayerDestroySpeed(state);
         return playerDestroySpeed / destroySpeed / toolFactor;
     }
 
-    public boolean hasCorrectToolForDrops(BlockState state) {
+    public double blockBreakSpeed(BlockState state, ItemStack item) {
+        double destroySpeed = state.block().destroySpeed();
+        double toolFactor = hasCorrectToolForDrops(state, item) ? 30.0 : 100.0;
+        double playerDestroySpeed = getPlayerDestroySpeed(state);
+        return playerDestroySpeed / destroySpeed / toolFactor;
+    }
+
+    public boolean hasCorrectToolForDrops(BlockState state, ItemStack item) {
         if (!state.block().requiresCorrectToolForDrops()) return true;
-        var item = CACHE.getPlayerCache().getEquipment(EquipmentSlot.MAIN_HAND);
         if (item == Container.EMPTY_STACK) return false;
         ItemData itemData = ItemRegistry.REGISTRY.get(item.getId());
         if (itemData == null) return false;
@@ -320,7 +325,7 @@ public class PlayerInteractionManager {
     public InteractionResult useItemOn(Hand hand, BlockRaycastResult ray) {
         Proxy.getInstance().getClient().send(new ServerboundUseItemOnPacket(
             ray.x(), ray.y(), ray.z(),
-            ray.direction(),
+            ray.direction().mcpl(),
             hand,
             // todo: cursor raytrace
             0, 0, 0,

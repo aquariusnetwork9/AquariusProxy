@@ -124,6 +124,10 @@ public class BlockDataManager {
         return waterloggedStateIds.contains(blockStateId);
     }
 
+    public boolean isAir(Block block) {
+        return block == BlockRegistry.AIR || block == BlockRegistry.CAVE_AIR || block == BlockRegistry.VOID_AIR;
+    }
+
     public float getBlockSlipperiness(Block block) {
         float slippy = 0.6f;
         if (block == BlockRegistry.ICE) slippy = 0.98f;

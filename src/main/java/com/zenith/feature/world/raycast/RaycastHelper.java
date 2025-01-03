@@ -3,14 +3,10 @@ package com.zenith.feature.world.raycast;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.feature.world.World;
-import com.zenith.mc.block.Block;
-import com.zenith.mc.block.BlockRegistry;
-import com.zenith.mc.block.CollisionBox;
-import com.zenith.mc.block.LocalizedCollisionBox;
+import com.zenith.mc.block.*;
 import com.zenith.mc.entity.EntityData;
 import com.zenith.util.math.MathHelper;
 import org.cloudburstmc.math.vector.Vector3d;
-import org.geysermc.mcprotocollib.protocol.data.game.entity.object.Direction;
 
 import java.util.List;
 
@@ -41,7 +37,7 @@ public class RaycastHelper {
         int resY = MathHelper.floorI(startY);
         int resZ = MathHelper.floorI(startZ);
         Block block = getBlockAt(resX, resY, resZ, includeFluids);
-        if (!block.equals(BlockRegistry.AIR)) {
+        if (!BLOCK_DATA.isAir(block)) {
             return new BlockRaycastResult(true, resX, resY, resZ, Direction.DOWN, block);
         }
 
@@ -77,7 +73,7 @@ public class RaycastHelper {
 
             final int blockStateId = World.getBlockStateId(resX, resY, resZ);
             block = BLOCK_DATA.getBlockDataFromBlockStateId(blockStateId);
-            if (!block.equals(BlockRegistry.AIR)) {
+            if (!BLOCK_DATA.isAir(block)) {
                 var raycastResult = checkBlockRaycast(startX, startY, startZ, endX, endY, endZ, resX, resY, resZ, blockStateId, block, includeFluids);
                 if (raycastResult.hit()) return raycastResult;
             }

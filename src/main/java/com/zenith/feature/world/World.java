@@ -1,6 +1,8 @@
 package com.zenith.feature.world;
 
 import com.zenith.mc.block.*;
+import com.zenith.mc.dimension.DimensionData;
+import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.util.math.MathHelper;
 import com.zenith.util.math.MutableVec3d;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
@@ -8,6 +10,7 @@ import it.unimi.dsi.fastutil.longs.LongList;
 import lombok.experimental.UtilityClass;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.ChunkSection;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -15,7 +18,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static com.zenith.Shared.*;
-import static java.util.Arrays.asList;
 
 @UtilityClass
 public class World {
@@ -27,6 +29,20 @@ public class World {
             CLIENT_LOG.error("error finding chunk section for pos: {}, {}, {}", x, y, z, e);
         }
         return null;
+    }
+
+    public @NotNull DimensionData dimensionTypeWithFallback() {
+        DimensionData currentDimension = CACHE.getChunkCache().getCurrentDimension();
+        if (currentDimension == null) return DimensionRegistry.OVERWORLD;
+        return currentDimension;
+    }
+
+    public boolean isChunkLoadedBlockPos(final int blockX, final int blockZ) {
+        return CACHE.getChunkCache().isChunkLoaded(blockX >> 4, blockZ >> 4);
+    }
+
+    public boolean isChunkLoadedChunkPos(final int chunkX, final int chunkZ) {
+        return CACHE.getChunkCache().isChunkLoaded(chunkX, chunkZ);
     }
 
     public int getBlockStateId(final BlockPos blockPos) {
@@ -217,9 +233,9 @@ public class World {
         double flowX = 0;
         double flowZ = 0;
         for (var dir : Direction.HORIZONTALS) {
-            int x = localBlockState.x() + dir.x;
+            int x = localBlockState.x() + dir.x();
             int y = localBlockState.y();
-            int z = localBlockState.z() + dir.z;
+            int z = localBlockState.z() + dir.z();
             if (affectsFlow(localBlockState, x, y, z)) {
                 float fluidHDiffMult = 0.0F;
                 var offsetState = getBlockState(x, y, z);
@@ -236,8 +252,8 @@ public class World {
                 }
 
                 if (fluidHDiffMult != 0) {
-                    flowX += (float) dir.x * fluidHDiffMult;
-                    flowZ += (float) dir.z * fluidHDiffMult;
+                    flowX += (float) dir.x() * fluidHDiffMult;
+                    flowZ += (float) dir.z() * fluidHDiffMult;
                 }
             }
         }
@@ -245,8 +261,8 @@ public class World {
 
         if (isFluid(localBlockState.block()) && (localBlockState.id() - localBlockState.block().minStateId() >= 8)) {
             for (var dir : Direction.HORIZONTALS) {
-                var blockState = getBlockState(localBlockState.x() + dir.x, localBlockState.y(), localBlockState.z() + dir.z);
-                var blockStateAbove = getBlockState(localBlockState.x() + dir.x, localBlockState.y() + 1, localBlockState.z() + dir.z);
+                var blockState = getBlockState(localBlockState.x() + dir.x(), localBlockState.y(), localBlockState.z() + dir.z());
+                var blockStateAbove = getBlockState(localBlockState.x() + dir.x(), localBlockState.y() + 1, localBlockState.z() + dir.z());
                 if (blockState.isSolidBlock() || blockStateAbove.isSolidBlock()) {
                     flowVec.normalize();
                     flowVec.add(0, -6, 0);
@@ -265,7 +281,4 @@ public class World {
     }
 
 
-    record Direction(int x, int z) {
-        static final List<Direction> HORIZONTALS = asList(new Direction(0, -1), new Direction(1, 0), new Direction(0, 1), new Direction(-1, 0));
-    }
 }
