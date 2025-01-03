@@ -80,7 +80,15 @@ public class PlayerSimulation extends Module {
     @Getter private final PlayerInteractionManager interactions = new PlayerInteractionManager(this);
     public boolean holdLeftClickOverride = false;
     public boolean holdRightClickOverride = false;
+    public HoldRightClickMode holdRightClickMode = HoldRightClickMode.MAIN_HAND;
+    public boolean holdRightClickLastHand = false; // true if main hand, false if off hand
     private final Timer rightClickOverrideTimer = Timer.createTickTimer();
+
+    public enum HoldRightClickMode {
+        MAIN_HAND,
+        OFF_HAND,
+        ALTERNATE_HANDS
+    }
 
     @Override
     public void subscribeEvents() {
@@ -104,6 +112,7 @@ public class PlayerSimulation extends Module {
         syncFromCache(false);
         this.holdLeftClickOverride = false;
         this.holdRightClickOverride = false;
+        this.holdRightClickMode = HoldRightClickMode.MAIN_HAND;
     }
 
     public synchronized void handleClientTickStopped(final ClientBotTick.Stopped event) {
@@ -115,6 +124,7 @@ public class PlayerSimulation extends Module {
         }
         this.holdLeftClickOverride = false;
         this.holdRightClickOverride = false;
+        this.holdRightClickMode = HoldRightClickMode.MAIN_HAND;
     }
 
     public void doRotate(float yaw, float pitch) {
@@ -215,24 +225,37 @@ public class PlayerSimulation extends Module {
                     var rangeSq = Math.pow(CONFIG.client.extra.killAura.attackRange, 2);
                     double distanceSqToSelf = CACHE.getPlayerCache().distanceSqToSelf(raycast.entity().entity());
                     if (distanceSqToSelf <= rangeSq) {
+                        debug("Click attacking entity: {} [{}, {}, {}]", raycast.entity().entity().getEntityType(), raycast.entity().entity().getX(), raycast.entity().entity().getY(), raycast.entity().entity().getZ());
                         interactions.ensureHasSentCarriedItem();
                         interactions.attackEntity(raycast.entity());
                     }
                 }
             } else if (movementInput.isRightClick() || (holdRightClickOverride && rightClickOverrideTimer.tick(10))) {
                 var raycast = RaycastHelper.playerBlockOrEntityRaycast(4.5);
+                Hand hand = Hand.MAIN_HAND;
+                if (holdRightClickOverride) {
+                    hand = switch (holdRightClickMode) {
+                        case HoldRightClickMode.MAIN_HAND -> Hand.MAIN_HAND;
+                        case HoldRightClickMode.OFF_HAND -> Hand.OFF_HAND;
+                        case HoldRightClickMode.ALTERNATE_HANDS -> holdRightClickLastHand ? Hand.OFF_HAND : Hand.MAIN_HAND;
+                    };
+                    holdRightClickLastHand = hand == Hand.MAIN_HAND;
+                }
                 if (raycast.hit() && raycast.isBlock()) {
+                    debug("Right click {} block at: [{}, {}, {}]", hand, raycast.block().x(), raycast.block().y(), raycast.block().z());
                     interactions.ensureHasSentCarriedItem();
-                    interactions.useItemOn(Hand.MAIN_HAND, raycast.block());
-                    sendClientPacketAsync(new ServerboundSwingPacket(Hand.MAIN_HAND));
+                    interactions.useItemOn(hand, raycast.block());
+                    sendClientPacketAsync(new ServerboundSwingPacket(hand));
                 } else if (raycast.hit() && raycast.isEntity()) {
+                    debug("Right click {} entity: {} [{}, {}, {}]", hand, raycast.entity().entity().getEntityType(), raycast.entity().entity().getX(), raycast.entity().entity().getY(), raycast.entity().entity().getZ());
                     interactions.ensureHasSentCarriedItem();
-                    interactions.interactAt(Hand.MAIN_HAND, raycast.entity());
-                    sendClientPacketAsync(new ServerboundSwingPacket(Hand.MAIN_HAND));
+                    interactions.interactAt(hand, raycast.entity());
+                    sendClientPacketAsync(new ServerboundSwingPacket(hand));
                 } else if (!raycast.hit()) {
+                    debug("Right click {} use item", hand);
                     interactions.ensureHasSentCarriedItem();
-                    interactions.useItem(Hand.MAIN_HAND);
-                    sendClientPacketAsync(new ServerboundSwingPacket(Hand.MAIN_HAND));
+                    interactions.useItem(hand);
+                    sendClientPacketAsync(new ServerboundSwingPacket(hand));
                 }
             }
             interactions.stopDestroyBlock();
