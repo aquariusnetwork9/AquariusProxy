@@ -3,14 +3,10 @@ package com.zenith.feature.world.raycast;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.feature.world.World;
-import com.zenith.mc.block.Block;
-import com.zenith.mc.block.BlockRegistry;
-import com.zenith.mc.block.CollisionBox;
-import com.zenith.mc.block.LocalizedCollisionBox;
+import com.zenith.mc.block.*;
 import com.zenith.mc.entity.EntityData;
 import com.zenith.util.math.MathHelper;
 import org.cloudburstmc.math.vector.Vector3d;
-import org.geysermc.mcprotocollib.protocol.data.game.entity.object.Direction;
 
 import java.util.List;
 
@@ -41,7 +37,7 @@ public class RaycastHelper {
         int resY = MathHelper.floorI(startY);
         int resZ = MathHelper.floorI(startZ);
         Block block = getBlockAt(resX, resY, resZ, includeFluids);
-        if (!block.equals(BlockRegistry.AIR)) {
+        if (!BLOCK_DATA.isAir(block)) {
             return new BlockRaycastResult(true, resX, resY, resZ, Direction.DOWN, block);
         }
 
@@ -77,7 +73,7 @@ public class RaycastHelper {
 
             final int blockStateId = World.getBlockStateId(resX, resY, resZ);
             block = BLOCK_DATA.getBlockDataFromBlockStateId(blockStateId);
-            if (!block.equals(BlockRegistry.AIR)) {
+            if (!BLOCK_DATA.isAir(block)) {
                 var raycastResult = checkBlockRaycast(startX, startY, startZ, endX, endY, endZ, resX, resY, resZ, blockStateId, block, includeFluids);
                 if (raycastResult.hit()) return raycastResult;
             }
@@ -161,15 +157,16 @@ public class RaycastHelper {
         if (!includeFluids && World.isWater(block)) {
             return new BlockRaycastResult(false, 0, 0, 0, Direction.UP, BlockRegistry.AIR);
         }
-        final List<CollisionBox> collisionBoxes = BLOCK_DATA.getCollisionBoxesFromBlockStateId(blockStateId);
+        final List<CollisionBox> collisionBoxes = BLOCK_DATA.getInteractionBoxesFromBlockStateId(blockStateId);
         if (collisionBoxes == null || collisionBoxes.isEmpty()) return BlockRaycastResult.miss();
 
-        // replace stream with efficient for loop
         BlockRaycastResult result = BlockRaycastResult.miss();
         double prevLen = Double.MAX_VALUE;
 
-        for (CollisionBox collisionBox : collisionBoxes) {
-            final LocalizedCollisionBox cb = new LocalizedCollisionBox(collisionBox, blockX, blockY, blockZ);
+        List<LocalizedCollisionBox> localizedCollisionBoxes = BLOCK_DATA.localizeCollisionBoxes(collisionBoxes, block, blockX, blockY, blockZ);
+
+        for (int i = 0; i < localizedCollisionBoxes.size(); i++) {
+            final LocalizedCollisionBox cb = localizedCollisionBoxes.get(i);
             final LocalizedCollisionBox.RayIntersection intersection = cb.rayIntersection(x, y, z, x2, y2, z2);
             if (intersection == null) continue;
             final double thisLen = MathHelper.squareLen(intersection.x(), intersection.y(), intersection.z());

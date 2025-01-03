@@ -50,7 +50,7 @@ public class AutoRespawn extends Module {
 
     private void checkAndRespawn() {
         if (Proxy.getInstance().isConnected()
-            && CACHE.getPlayerCache().getThePlayer().getHealth() <= 0
+            && !CACHE.getPlayerCache().isAlive()
             && !Proxy.getInstance().hasActivePlayer()
         ) {
             info("Performing Respawn");

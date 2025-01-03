@@ -51,4 +51,9 @@ public class EntityLiving extends Entity {
     private boolean isSelfPlayer() {
         return this instanceof EntityPlayer player && player.isSelfPlayer();
     }
+
+    public boolean isAlive() {
+        var h = health;
+        return h != null && h > 0;
+    }
 }

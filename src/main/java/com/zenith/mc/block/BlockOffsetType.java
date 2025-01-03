@@ -6,18 +6,18 @@ import lombok.Getter;
 
 @Getter
 public enum BlockOffsetType {
-    NONE((blockState, x, y, z) -> MutableVec3d.ZERO),
-    XZ((blockState, x, y, z) -> {
+    NONE((block, x, y, z) -> MutableVec3d.ZERO),
+    XZ((block, x, y, z) -> {
         long seed = MathHelper.getSeed(x, 0, z);
-        float maxHorizontalOffset = blockState.block().maxHorizontalOffset();
+        float maxHorizontalOffset = block.maxHorizontalOffset();
         double xOffset = MathHelper.clamp(((double)((float)(seed & 15L) / 15.0F) - 0.5) * 0.5, -maxHorizontalOffset, maxHorizontalOffset);
         double zOffset = MathHelper.clamp(((double)((float)(seed >> 8 & 15L) / 15.0F) - 0.5) * 0.5, -maxHorizontalOffset, maxHorizontalOffset);
         return new MutableVec3d(xOffset, 0.0, zOffset);
     }),
-    XYZ((blockState, x, y, z) -> {
+    XYZ((block, x, y, z) -> {
         long seed = MathHelper.getSeed(x, 0, z);
-        double yOffset = ((double)((float)(seed >> 4 & 15L) / 15.0F) - 1.0) * (double)blockState.block().maxVerticalOffset();
-        float maxHorizontalOffset = blockState.block().maxHorizontalOffset();
+        double yOffset = ((double)((float)(seed >> 4 & 15L) / 15.0F) - 1.0) * (double)block.maxVerticalOffset();
+        float maxHorizontalOffset = block.maxHorizontalOffset();
         double xOffset = MathHelper.clamp(((double)((float)(seed & 15L) / 15.0F) - 0.5) * 0.5, -maxHorizontalOffset, maxHorizontalOffset);
         double zOffset = MathHelper.clamp(((double)((float)(seed >> 8 & 15L) / 15.0F) - 0.5) * 0.5, -maxHorizontalOffset, maxHorizontalOffset);
         return new MutableVec3d(xOffset, yOffset, zOffset);
@@ -30,6 +30,6 @@ public enum BlockOffsetType {
 
     @FunctionalInterface
     public interface OffsetFunction {
-        MutableVec3d offset(BlockState blockState, int x, int y, int z);
+        MutableVec3d offset(Block block, int x, int y, int z);
     }
 }

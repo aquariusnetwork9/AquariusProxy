@@ -1,7 +1,5 @@
 package com.zenith.mc.block;
 
-
-import org.geysermc.mcprotocollib.protocol.data.game.entity.object.Direction;
 import org.jetbrains.annotations.Nullable;
 
 /**

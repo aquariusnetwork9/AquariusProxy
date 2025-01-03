@@ -197,7 +197,7 @@ public class ChunkCache implements CachedData {
     // update any block entities implicitly affected by this block update
     // server doesn't send us tile entity update packets and relies on logic in client
     private void handleBlockUpdateBlockEntity(BlockChangeEntry record, int relativeX, int y, int relativeZ, Chunk chunk) {
-        if (record.getBlock() == BlockRegistry.AIR.id()) {
+        if (BLOCK_DATA.isAir(BlockRegistry.REGISTRY.get(record.getBlock()))) {
             chunk.blockEntities.removeIf(tileEntity -> tileEntity.getX() == relativeX && tileEntity.getY() == y && tileEntity.getZ() == relativeZ);
         } else {
             final var block = BLOCK_DATA.getBlockDataFromBlockStateId(record.getBlock());

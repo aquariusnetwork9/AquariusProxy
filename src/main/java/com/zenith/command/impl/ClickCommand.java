@@ -27,6 +27,7 @@ public class ClickCommand extends Command {
                 "left hold",
                 "right",
                 "right hold",
+                "right hold <mainHand/offHand/alternate>",
                 "stop"
             )
         );
@@ -93,19 +94,66 @@ public class ClickCommand extends Command {
                     .primaryColor();
                 return 1;
             })
-                      .then(literal("hold").executes(c -> {
-                          if (!Proxy.getInstance().isConnected()) {
-                              c.getSource().getEmbed()
-                                  .title("Not Connected")
-                                  .errorColor();
-                              return OK;
-                          }
-                          MODULE.get(PlayerSimulation.class).holdLeftClickOverride = false;
-                          MODULE.get(PlayerSimulation.class).holdRightClickOverride = true;
-                          c.getSource().getEmbed()
-                              .title("Right Click Hold")
-                              .primaryColor();
-                          return OK;
-                      })));
+                      .then(literal("hold")
+                                .executes(c -> {
+                                    if (!Proxy.getInstance().isConnected()) {
+                                        c.getSource().getEmbed()
+                                            .title("Not Connected")
+                                            .errorColor();
+                                        return OK;
+                                    }
+                                    MODULE.get(PlayerSimulation.class).holdLeftClickOverride = false;
+                                    MODULE.get(PlayerSimulation.class).holdRightClickOverride = true;
+                                    MODULE.get(PlayerSimulation.class).holdRightClickMode = PlayerSimulation.HoldRightClickMode.MAIN_HAND;
+                                    c.getSource().getEmbed()
+                                        .title("Right Click Hold")
+                                        .primaryColor();
+                                    return OK;
+                                })
+                                .then(literal("mainHand").executes(c -> {
+                                    if (!Proxy.getInstance().isConnected()) {
+                                        c.getSource().getEmbed()
+                                            .title("Not Connected")
+                                            .errorColor();
+                                        return OK;
+                                    }
+                                    MODULE.get(PlayerSimulation.class).holdLeftClickOverride = false;
+                                    MODULE.get(PlayerSimulation.class).holdRightClickOverride = true;
+                                    MODULE.get(PlayerSimulation.class).holdRightClickMode = PlayerSimulation.HoldRightClickMode.MAIN_HAND;
+                                    c.getSource().getEmbed()
+                                        .title("Right Click Hold (Main Hand)")
+                                        .primaryColor();
+                                    return OK;
+                                }))
+                                .then(literal("offHand").executes(c -> {
+                                    if (!Proxy.getInstance().isConnected()) {
+                                        c.getSource().getEmbed()
+                                            .title("Not Connected")
+                                            .errorColor();
+                                        return OK;
+                                    }
+                                    MODULE.get(PlayerSimulation.class).holdLeftClickOverride = false;
+                                    MODULE.get(PlayerSimulation.class).holdRightClickOverride = true;
+                                    MODULE.get(PlayerSimulation.class).holdRightClickMode = PlayerSimulation.HoldRightClickMode.OFF_HAND;
+                                    c.getSource().getEmbed()
+                                        .title("Right Click Hold (Offhand)")
+                                        .primaryColor();
+                                    return OK;
+                                }))
+                                .then(literal("alternate").executes(c -> {
+                                    if (!Proxy.getInstance().isConnected()) {
+                                        c.getSource().getEmbed()
+                                            .title("Not Connected")
+                                            .errorColor();
+                                        return OK;
+                                    }
+                                    MODULE.get(PlayerSimulation.class).holdLeftClickOverride = false;
+                                    MODULE.get(PlayerSimulation.class).holdRightClickOverride = true;
+                                    MODULE.get(PlayerSimulation.class).holdRightClickMode = PlayerSimulation.HoldRightClickMode.ALTERNATE_HANDS;
+                                    c.getSource().getEmbed()
+                                        .title("Right Click Hold (Alternate)")
+                                        .primaryColor();
+                                    return OK;
+                                }))));
     }
 }

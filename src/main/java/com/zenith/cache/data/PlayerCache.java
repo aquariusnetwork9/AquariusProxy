@@ -180,6 +180,10 @@ public class PlayerCache implements CachedData {
         }
     }
 
+    public boolean isAlive() {
+        return this.thePlayer.getHealth() > 0;
+    }
+
     public void setInventory(final int containerId, final ItemStack[] inventory) {
         this.inventoryCache.setInventory(containerId, inventory);
     }

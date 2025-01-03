@@ -11,6 +11,7 @@ import com.zenith.util.math.MathHelper;
 import com.zenith.util.math.MutableVec3d;
 import lombok.Getter;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.Attribute;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.AttributeModifier;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.AttributeType;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.ModifierOperation;
@@ -55,7 +56,7 @@ public class PlayerSimulation extends Module {
     private boolean isTouchingLava;
     private int ticksSinceLastPositionPacketSent;
     private final MutableVec3d stuckSpeedMultiplier = new MutableVec3d(0, 0, 0);
-    private final MutableVec3d velocity = new MutableVec3d(0, 0, 0);
+    @Getter private final MutableVec3d velocity = new MutableVec3d(0, 0, 0);
     private boolean wasLeftClicking = false;
     private final Timer entityAttackTimer = Timer.createTickTimer();
     private final Input movementInput = new Input();
@@ -63,7 +64,7 @@ public class PlayerSimulation extends Module {
     private int waitTicks = 0;
     private static final CollisionBox STANDING_COLLISION_BOX = new CollisionBox(-0.3, 0.3, 0, 1.8, -0.3, 0.3);
     private static final CollisionBox SNEAKING_COLLISION_BOX = new CollisionBox(-0.3, 0.3, 0, 1.5, -0.3, 0.3);
-    private LocalizedCollisionBox playerCollisionBox = new LocalizedCollisionBox(STANDING_COLLISION_BOX, 0, 0, 0);
+    @Getter private LocalizedCollisionBox playerCollisionBox = new LocalizedCollisionBox(STANDING_COLLISION_BOX, 0, 0, 0);
     private double gravity = 0.08;
     private float stepHeight = 0.6f;
     private float waterMovementEfficiency = 0.0f;
@@ -74,12 +75,21 @@ public class PlayerSimulation extends Module {
     private boolean forceUpdateSupportingBlockPos = false;
     private Optional<BlockPos> supportingBlockPos = Optional.empty();
     private int jumpingCooldown;
-    private boolean horizontalCollision = false;
-    private boolean verticalCollision = false;
-    private final PlayerInteractionManager interactions = new PlayerInteractionManager(this);
+    @Getter private boolean horizontalCollision = false;
+    private boolean horizontalCollisionMinor = false;
+    @Getter private boolean verticalCollision = false;
+    @Getter private final PlayerInteractionManager interactions = new PlayerInteractionManager(this);
     public boolean holdLeftClickOverride = false;
     public boolean holdRightClickOverride = false;
+    public HoldRightClickMode holdRightClickMode = HoldRightClickMode.MAIN_HAND;
+    public boolean holdRightClickLastHand = false; // true if main hand, false if off hand
     private final Timer rightClickOverrideTimer = Timer.createTickTimer();
+
+    public enum HoldRightClickMode {
+        MAIN_HAND,
+        OFF_HAND,
+        ALTERNATE_HANDS
+    }
 
     @Override
     public void subscribeEvents() {
@@ -104,6 +114,7 @@ public class PlayerSimulation extends Module {
         syncFromCache(false);
         this.holdLeftClickOverride = false;
         this.holdRightClickOverride = false;
+        this.holdRightClickMode = HoldRightClickMode.MAIN_HAND;
     }
 
     public synchronized void handleClientTickStopped(final ClientBotTick.Stopped event) {
@@ -115,6 +126,7 @@ public class PlayerSimulation extends Module {
         }
         this.holdLeftClickOverride = false;
         this.holdRightClickOverride = false;
+        this.holdRightClickMode = HoldRightClickMode.MAIN_HAND;
     }
 
     public void doRotate(float yaw, float pitch) {
@@ -185,7 +197,7 @@ public class PlayerSimulation extends Module {
     private void interactionTick() {
         try {
             if (movementInput.isLeftClick() || holdLeftClickOverride) {
-                var raycast = RaycastHelper.playerBlockOrEntityRaycast(4.5);
+                var raycast = RaycastHelper.playerBlockOrEntityRaycast(getBlockReachDistance());
                 if (raycast.hit() && raycast.isBlock()) {
                     // ensure synced
                     interactions.ensureHasSentCarriedItem();
@@ -215,24 +227,37 @@ public class PlayerSimulation extends Module {
                     var rangeSq = Math.pow(CONFIG.client.extra.killAura.attackRange, 2);
                     double distanceSqToSelf = CACHE.getPlayerCache().distanceSqToSelf(raycast.entity().entity());
                     if (distanceSqToSelf <= rangeSq) {
+                        debug("Click attacking entity: {} [{}, {}, {}]", raycast.entity().entity().getEntityType(), raycast.entity().entity().getX(), raycast.entity().entity().getY(), raycast.entity().entity().getZ());
                         interactions.ensureHasSentCarriedItem();
                         interactions.attackEntity(raycast.entity());
                     }
                 }
             } else if (movementInput.isRightClick() || (holdRightClickOverride && rightClickOverrideTimer.tick(10))) {
-                var raycast = RaycastHelper.playerBlockOrEntityRaycast(4.5);
+                var raycast = RaycastHelper.playerBlockOrEntityRaycast(getBlockReachDistance());
+                Hand hand = Hand.MAIN_HAND;
+                if (holdRightClickOverride) {
+                    hand = switch (holdRightClickMode) {
+                        case HoldRightClickMode.MAIN_HAND -> Hand.MAIN_HAND;
+                        case HoldRightClickMode.OFF_HAND -> Hand.OFF_HAND;
+                        case HoldRightClickMode.ALTERNATE_HANDS -> holdRightClickLastHand ? Hand.OFF_HAND : Hand.MAIN_HAND;
+                    };
+                    holdRightClickLastHand = hand == Hand.MAIN_HAND;
+                }
                 if (raycast.hit() && raycast.isBlock()) {
+                    debug("Right click {} block at: [{}, {}, {}]", hand, raycast.block().x(), raycast.block().y(), raycast.block().z());
                     interactions.ensureHasSentCarriedItem();
-                    interactions.useItemOn(Hand.MAIN_HAND, raycast.block());
-                    sendClientPacketAsync(new ServerboundSwingPacket(Hand.MAIN_HAND));
+                    interactions.useItemOn(hand, raycast.block());
+                    sendClientPacketAsync(new ServerboundSwingPacket(hand));
                 } else if (raycast.hit() && raycast.isEntity()) {
+                    debug("Right click {} entity: {} [{}, {}, {}]", hand, raycast.entity().entity().getEntityType(), raycast.entity().entity().getX(), raycast.entity().entity().getY(), raycast.entity().entity().getZ());
                     interactions.ensureHasSentCarriedItem();
-                    interactions.interactAt(Hand.MAIN_HAND, raycast.entity());
-                    sendClientPacketAsync(new ServerboundSwingPacket(Hand.MAIN_HAND));
+                    interactions.interactAt(hand, raycast.entity());
+                    sendClientPacketAsync(new ServerboundSwingPacket(hand));
                 } else if (!raycast.hit()) {
+                    debug("Right click {} use item", hand);
                     interactions.ensureHasSentCarriedItem();
-                    interactions.useItem(Hand.MAIN_HAND);
-                    sendClientPacketAsync(new ServerboundSwingPacket(Hand.MAIN_HAND));
+                    interactions.useItem(hand);
+                    sendClientPacketAsync(new ServerboundSwingPacket(hand));
                 }
             }
             interactions.stopDestroyBlock();
@@ -264,7 +289,13 @@ public class PlayerSimulation extends Module {
             isFallFlying = false;
         }
         isSneaking = movementInput.sneaking;
-        isSprinting = movementInput.sprinting;
+        isSprinting = movementInput.sprinting
+            && isOnGround()
+            && !isTouchingWater
+            && CACHE.getPlayerCache().getThePlayer().getFood() > 6
+            && !(horizontalCollision && !horizontalCollisionMinor);
+        if (isSprinting != lastSprinting) applySprintingSpeedAttributeModifier();
+
         updateInWaterStateAndDoFluidPushing();
 
         if (movementInput.isJumping()) {
@@ -362,6 +393,42 @@ public class PlayerSimulation extends Module {
         sendClientPacket(ServerboundClientTickEndPacket.INSTANCE);
     }
 
+    private static final String SPRINT_ATTRIBUTE_ID = "minecraft:sprinting";
+    private static final AttributeModifier SPRINT_ATTRIBUTE_MODIFIER = new AttributeModifier(
+        SPRINT_ATTRIBUTE_ID,
+        0.3f,
+        ModifierOperation.ADD_MULTIPLIED_TOTAL
+    );
+
+    // the server will send us this attribute
+    // but not in time for us to apply it on the first tick
+    // the vanilla client also applies this attribute locally ahead of time
+    private void applySprintingSpeedAttributeModifier() {
+        Attribute speedAttribute = CACHE.getPlayerCache()
+            .getThePlayer()
+            .getAttributes()
+            .get(AttributeType.Builtin.MOVEMENT_SPEED);
+        if (speedAttribute == null) return;
+        List<AttributeModifier> modifiers = speedAttribute.getModifiers();
+        if (isSprinting) {
+            for (AttributeModifier modifier : modifiers) {
+                if (SPRINT_ATTRIBUTE_ID.equals(modifier.getId())) {
+                    return;
+                }
+            }
+            modifiers.add(SPRINT_ATTRIBUTE_MODIFIER);
+            this.speed = getAttributeValue(AttributeType.Builtin.MOVEMENT_SPEED, 0.10000000149011612f);
+        } else {
+            for (AttributeModifier modifier : modifiers) {
+                if (SPRINT_ATTRIBUTE_ID.equals(modifier.getId())) {
+                    modifiers.remove(modifier);
+                    this.speed = getAttributeValue(AttributeType.Builtin.MOVEMENT_SPEED, 0.10000000149011612f);
+                    return;
+                }
+            }
+        }
+    }
+
     private MutableVec3d getMovementInputVec() {
         float strafe = 0.0F;
         if (movementInput.pressingLeft) --strafe;
@@ -377,12 +444,33 @@ public class PlayerSimulation extends Module {
     }
 
     private void jump() {
-        this.velocity.setY(jumpStrength);
-        if (this.isSprinting) {
-            float sprintAngle = yaw * (float) (Math.PI / 180.0);
-            this.velocity.setX(this.velocity.getX() - (Math.sin(sprintAngle) * 0.2F));
-            this.velocity.setY(Math.cos(sprintAngle) * 0.2F);
+        float jumpPower = getJumpPower();
+        if (!(jumpPower <= 1.0E-5f)) {
+            this.velocity.setY(jumpPower);
+            if (this.isSprinting) {
+                float sprintAngle = yaw * (float) (Math.PI / 180.0);
+                this.velocity.setX(this.velocity.getX() - (Math.sin(sprintAngle) * 0.2F));
+                this.velocity.setZ(this.velocity.getZ() + (Math.cos(sprintAngle) * 0.2F));
+            }
         }
+    }
+
+    private float getJumpPower() {
+        float blockJumpFactor = 1f;
+        Block inBlock = World.getBlockAtBlockPos(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z));
+        if (inBlock == BlockRegistry.HONEY_BLOCK)
+            blockJumpFactor = 0.5f;
+        else if (supportingBlockPos.isPresent()) {
+            Block supportingBlock = World.getBlockAtBlockPos(supportingBlockPos.get());
+            if (supportingBlock == BlockRegistry.HONEY_BLOCK)
+                blockJumpFactor = 0.5f;
+        }
+        float jumpBoostPower = 0f;
+        if (CACHE.getPlayerCache().getThePlayer().getPotionEffectMap().containsKey(Effect.JUMP_BOOST)) {
+            jumpBoostPower = 0.1f * (CACHE.getPlayerCache().getThePlayer().getPotionEffectMap().get(Effect.JUMP_BOOST).getAmplifier() + 1.0f);
+        }
+
+        return jumpStrength * blockJumpFactor + jumpBoostPower;
     }
 
     public synchronized void handlePlayerPosRotate(final int teleportId) {
@@ -530,6 +618,7 @@ public class PlayerSimulation extends Module {
             }
         }
         horizontalCollision = isXAdjusted || isZAdjusted;
+        horizontalCollisionMinor = horizontalCollision && isHorizontalCollisionMinor();
         verticalCollision = isYAdjusted;
         this.setOnGround(isYAdjusted && localVelocity.getY() < 0.0, adjustedMovement);
 
@@ -552,19 +641,50 @@ public class PlayerSimulation extends Module {
         velocity.multiply(velocityMultiplier, 1.0, velocityMultiplier);
     }
 
+    protected boolean isHorizontalCollisionMinor() {
+        float yawRads = yaw * (float) (Math.PI / 180.0);
+        double sinYaw = Math.sin(yawRads);
+        double cosYaw = Math.cos(yawRads);
+        double leftImpulse = movementInput.pressingLeft && movementInput.pressingRight
+            ? 0
+            : (movementInput.pressingRight
+                ? -1
+                : (movementInput.pressingLeft
+                    ? 1
+                    : 0));
+        double forwardImpulse = movementInput.pressingForward && movementInput.pressingBack
+            ? 0
+            : (movementInput.pressingBack
+                ? -1
+                : (movementInput.pressingForward
+                    ? 1
+                    : 0));
+        double g = leftImpulse * cosYaw - forwardImpulse * sinYaw;
+        double h = forwardImpulse * cosYaw + leftImpulse * sinYaw;
+        double i = MathHelper.square(g) + MathHelper.square(h);
+        double j = MathHelper.square(velocity.getX()) + MathHelper.square(velocity.getZ());
+        if (!(i < 1.0E-5F) && !(j < 1.0E-5F)) {
+            double k = g * velocity.getX() + h * velocity.getZ();
+            double l = Math.acos(k / Math.sqrt(i * j));
+            return l < 0.13962634F;
+        } else {
+            return false;
+        }
+    }
+
     private void tryCheckInsideBlocks() {
         var collidingBlockStates = World.getCollidingBlockStates(playerCollisionBox);
         if (collidingBlockStates.isEmpty()) return;
         for (int i = 0; i < collidingBlockStates.size(); i++) {
             var localState = collidingBlockStates.get(i);
             if (localState.id() == BlockRegistry.BUBBLE_COLUMN.minStateId()) {
-                if (World.getBlockAtBlockPos(localState.x(), localState.y() + 1, localState.z()) == BlockRegistry.AIR) {
+                if (BLOCK_DATA.isAir(World.getBlockAtBlockPos(localState.x(), localState.y() + 1, localState.z()))) {
                     velocity.setY(Math.max(-0.9, velocity.getY() - 0.03));
                 } else {
                     velocity.setY(Math.max(-0.3, velocity.getY() - 0.03));
                 }
             } else if (localState.id() == BlockRegistry.BUBBLE_COLUMN.maxStateId()) {
-                if (World.getBlockAtBlockPos(localState.x(), localState.y() + 1, localState.z()) == BlockRegistry.AIR) {
+                if (BLOCK_DATA.isAir(World.getBlockAtBlockPos(localState.x(), localState.y() + 1, localState.z()))) {
                     velocity.setY(Math.min(1.8, velocity.getY() + 0.1));
                 } else {
                     velocity.setY(Math.min(0.7, velocity.getY() + 0.06));
@@ -977,5 +1097,9 @@ public class PlayerSimulation extends Module {
 
     public double getEyeY() {
         return playerCollisionBox.maxY() - 0.18;
+    }
+
+    public double getBlockReachDistance() {
+        return getAttributeValue(AttributeType.Builtin.BLOCK_INTERACTION_RANGE, 4.5f);
     }
 }
