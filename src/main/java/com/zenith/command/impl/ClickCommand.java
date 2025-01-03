@@ -9,6 +9,8 @@ import com.zenith.command.brigadier.CommandContext;
 import com.zenith.feature.world.Input;
 import com.zenith.module.impl.PlayerSimulation;
 
+import static com.mojang.brigadier.arguments.FloatArgumentType.floatArg;
+import static com.mojang.brigadier.arguments.FloatArgumentType.getFloat;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.zenith.Shared.MODULE;
@@ -31,6 +33,7 @@ public class ClickCommand extends Command {
                 "right hold",
                 "right hold <mainHand/offHand/alternate>",
                 "right hold interval <ticks>",
+                "reach add <float>",
                 "stop"
             )
         );
@@ -165,6 +168,15 @@ public class ClickCommand extends Command {
                                         .addField("Ticks", MODULE.get(PlayerSimulation.class).holdRightClickInterval, false)
                                         .primaryColor();
                                     return OK;
-                                })))));
+                                })))))
+            .then(literal("reach").then(literal("add").then(argument("reach", floatArg(0, 10)).executes(c -> {
+                float f = getFloat(c, "reach");
+                MODULE.get(PlayerSimulation.class).additionalBlockReach = f;
+                c.getSource().getEmbed()
+                    .title("Additional Reach Set")
+                    .addField("Reach", f, false)
+                    .primaryColor();
+                return OK;
+            }))));
     }
 }

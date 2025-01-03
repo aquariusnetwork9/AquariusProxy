@@ -84,6 +84,7 @@ public class PlayerSimulation extends Module {
     public boolean holdRightClickLastHand = false; // true if main hand, false if off hand
     private final Timer rightClickOverrideTimer = Timer.createTickTimer();
     public int holdRightClickInterval = 5;
+    public float additionalBlockReach = 0;
 
     public enum HoldRightClickMode {
         MAIN_HAND,
@@ -115,6 +116,7 @@ public class PlayerSimulation extends Module {
         this.holdRightClickOverride = false;
         this.holdRightClickMode = HoldRightClickMode.MAIN_HAND;
         this.holdRightClickInterval = 5;
+        this.additionalBlockReach = 0;
     }
 
     public synchronized void handleClientTickStopped(final ClientBotTick.Stopped event) {
@@ -128,6 +130,7 @@ public class PlayerSimulation extends Module {
         this.holdRightClickOverride = false;
         this.holdRightClickMode = HoldRightClickMode.MAIN_HAND;
         this.holdRightClickInterval = 5;
+        this.additionalBlockReach = 0;
     }
 
     public void doRotate(float yaw, float pitch) {
@@ -1079,6 +1082,6 @@ public class PlayerSimulation extends Module {
     }
 
     public double getBlockReachDistance() {
-        return getAttributeValue(AttributeType.Builtin.PLAYER_BLOCK_INTERACTION_RANGE, 4.5f);
+        return getAttributeValue(AttributeType.Builtin.PLAYER_BLOCK_INTERACTION_RANGE, 4.5f) + additionalBlockReach;
     }
 }
