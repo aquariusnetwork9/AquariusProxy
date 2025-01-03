@@ -157,15 +157,16 @@ public class RaycastHelper {
         if (!includeFluids && World.isWater(block)) {
             return new BlockRaycastResult(false, 0, 0, 0, Direction.UP, BlockRegistry.AIR);
         }
-        final List<CollisionBox> collisionBoxes = BLOCK_DATA.getCollisionBoxesFromBlockStateId(blockStateId);
+        final List<CollisionBox> collisionBoxes = BLOCK_DATA.getInteractionBoxesFromBlockStateId(blockStateId);
         if (collisionBoxes == null || collisionBoxes.isEmpty()) return BlockRaycastResult.miss();
 
-        // replace stream with efficient for loop
         BlockRaycastResult result = BlockRaycastResult.miss();
         double prevLen = Double.MAX_VALUE;
 
-        for (CollisionBox collisionBox : collisionBoxes) {
-            final LocalizedCollisionBox cb = new LocalizedCollisionBox(collisionBox, blockX, blockY, blockZ);
+        List<LocalizedCollisionBox> localizedCollisionBoxes = BLOCK_DATA.localizeCollisionBoxes(collisionBoxes, block, blockX, blockY, blockZ);
+
+        for (int i = 0; i < localizedCollisionBoxes.size(); i++) {
+            final LocalizedCollisionBox cb = localizedCollisionBoxes.get(i);
             final LocalizedCollisionBox.RayIntersection intersection = cb.rayIntersection(x, y, z, x2, y2, z2);
             if (intersection == null) continue;
             final double thisLen = MathHelper.squareLen(intersection.x(), intersection.y(), intersection.z());

@@ -12,19 +12,18 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import lombok.SneakyThrows;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.DataPalette;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static com.zenith.Shared.OBJECT_MAPPER;
 
 public class BlockDataManager {
     private final Int2ObjectOpenHashMap<Block> blockStateIdToBlock;
     private final Int2ObjectOpenHashMap<List<CollisionBox>> blockStateIdToCollisionBoxes;
+    private final Int2ObjectOpenHashMap<List<CollisionBox>> blockStateIdToInteractionBoxes;
     private final IntOpenHashSet waterloggedStateIds = new IntOpenHashSet(9182 + 1, Maps.FAST_LOAD_FACTOR);
 
     public BlockDataManager() {
@@ -35,9 +34,15 @@ public class BlockDataManager {
             .orElseThrow();
         blockStateIdToBlock = new Int2ObjectOpenHashMap<>(blockStateIdCount, Maps.FAST_LOAD_FACTOR);
         blockStateIdToCollisionBoxes = new Int2ObjectOpenHashMap<>(blockStateIdCount, Maps.FAST_LOAD_FACTOR);
-        init();
+        blockStateIdToInteractionBoxes = new Int2ObjectOpenHashMap<>(blockStateIdCount, Maps.FAST_LOAD_FACTOR);
+        try {
+            init();
+        } catch (final Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
+    @SneakyThrows
     private void init() {
         for (Int2ObjectMap.Entry<Block> entry : BlockRegistry.REGISTRY.getIdMap().int2ObjectEntrySet()) {
             var block = entry.getValue();
@@ -45,8 +50,23 @@ public class BlockDataManager {
                 blockStateIdToBlock.put(i, block);
             }
         }
+        initShapeCache("blockCollisionShapes", blockStateIdToCollisionBoxes);
+        initShapeCache("blockInteractionShapes", blockStateIdToInteractionBoxes);
+        try (JsonParser waterloggedParser = OBJECT_MAPPER.createParser(getClass().getResourceAsStream(
+            "/mcdata/waterloggedBlockStateIds.json"))) {
+            TreeNode waterloggedNode = waterloggedParser.getCodec().readTree(waterloggedParser);
+            ArrayNode waterloggedArray = (ArrayNode) waterloggedNode;
+            waterloggedArray.elements().forEachRemaining((stateId) -> {
+                waterloggedStateIds.add(stateId.asInt());
+            });
+        }
+        DataPalette.GLOBAL_PALETTE_BITS_PER_ENTRY = MathHelper.log2Ceil(blockStateIdToBlock.size());
+    }
+
+    @SneakyThrows
+    private void initShapeCache(String name, Int2ObjectOpenHashMap<List<CollisionBox>> output) {
         try (JsonParser shapesParser = OBJECT_MAPPER.createParser(getClass().getResourceAsStream(
-            "/mcdata/blockCollisionShapes.json"))) {
+            "/mcdata/" + name + ".json"))) {
             final Int2ObjectOpenHashMap<List<CollisionBox>> shapeIdToCollisionBoxes = new Int2ObjectOpenHashMap<>(100);
             TreeNode node = shapesParser.getCodec().readTree(shapesParser);
             ObjectNode shapesNode = (ObjectNode) node.get("shapes");
@@ -91,20 +111,9 @@ public class BlockDataManager {
                     if (shapeIds.size() > 1)
                         nextShapeId = shapeIds.getInt(i - blockData.minStateId());
                     List<CollisionBox> collisionBoxes = shapeIdToCollisionBoxes.get(nextShapeId);
-                    blockStateIdToCollisionBoxes.put(i, collisionBoxes);
+                    output.put(i, collisionBoxes);
                 }
             }
-            try (JsonParser waterloggedParser = OBJECT_MAPPER.createParser(getClass().getResourceAsStream(
-                "/mcdata/waterloggedBlockStateIds.json"))) {
-                TreeNode waterloggedNode = waterloggedParser.getCodec().readTree(waterloggedParser);
-                ArrayNode waterloggedArray = (ArrayNode) waterloggedNode;
-                waterloggedArray.elements().forEachRemaining((stateId) -> {
-                    waterloggedStateIds.add(stateId.asInt());
-                });
-            }
-            DataPalette.GLOBAL_PALETTE_BITS_PER_ENTRY = MathHelper.log2Ceil(blockStateIdToBlock.size());
-        } catch (final Exception e) {
-            throw new RuntimeException(e);
         }
     }
 
@@ -114,10 +123,34 @@ public class BlockDataManager {
         return blockData;
     }
 
-    public @Nullable List<CollisionBox> getCollisionBoxesFromBlockStateId(int blockStateId) {
+    public List<CollisionBox> getCollisionBoxesFromBlockStateId(int blockStateId) {
         List<CollisionBox> collisionBoxes = blockStateIdToCollisionBoxes.get(blockStateId);
-        if (collisionBoxes == blockStateIdToCollisionBoxes.defaultReturnValue()) return null;
+        if (collisionBoxes == blockStateIdToCollisionBoxes.defaultReturnValue()) return Collections.emptyList();
         return collisionBoxes;
+    }
+
+    public List<CollisionBox> getInteractionBoxesFromBlockStateId(int blockStateId) {
+        List<CollisionBox> collisionBoxes = blockStateIdToInteractionBoxes.get(blockStateId);
+        if (collisionBoxes == blockStateIdToInteractionBoxes.defaultReturnValue()) return Collections.emptyList();
+        return collisionBoxes;
+    }
+
+    public List<LocalizedCollisionBox> localizeCollisionBoxes(List<CollisionBox> collisionBoxes, Block block, int x, int y, int z) {
+        var offsetVec = block.offsetType().getOffsetFunction().offset(block, x, y, z);
+        final List<LocalizedCollisionBox> localizedCollisionBoxes = new ArrayList<>(collisionBoxes.size());
+        for (int i = 0; i < collisionBoxes.size(); i++) {
+            var collisionBox = collisionBoxes.get(i);
+            localizedCollisionBoxes.add(new LocalizedCollisionBox(
+                collisionBox.minX() + offsetVec.getX() + x,
+                collisionBox.maxX() + offsetVec.getX() + x,
+                collisionBox.minY() + offsetVec.getY() + y,
+                collisionBox.maxY() + offsetVec.getY() + y,
+                collisionBox.minZ() + offsetVec.getZ() + z,
+                collisionBox.maxZ() + offsetVec.getZ() + z,
+                x, y, z
+            ));
+        }
+        return localizedCollisionBoxes;
     }
 
     public boolean isWaterLogged(int blockStateId) {

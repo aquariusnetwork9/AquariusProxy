@@ -7,6 +7,9 @@ import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
 import com.zenith.feature.world.World;
 import com.zenith.feature.world.raycast.RaycastHelper;
+import com.zenith.module.impl.PlayerSimulation;
+
+import static com.zenith.Shared.MODULE;
 
 public class RaycastCommand extends Command {
     @Override
@@ -48,7 +51,7 @@ public class RaycastCommand extends Command {
                     .primaryColor();
             }))
             .then(literal("b").executes(c -> {
-                var result = RaycastHelper.playerBlockRaycast(4.5, false);
+                var result = RaycastHelper.playerBlockRaycast(MODULE.get(PlayerSimulation.class).getBlockReachDistance(), false);
                 c.getSource().getEmbed()
                     .title("Raycast Result")
                     .addField("Hit", result.hit(), false)

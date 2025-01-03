@@ -195,7 +195,7 @@ public class PlayerSimulation extends Module {
     private void interactionTick() {
         try {
             if (movementInput.isLeftClick() || holdLeftClickOverride) {
-                var raycast = RaycastHelper.playerBlockOrEntityRaycast(4.5);
+                var raycast = RaycastHelper.playerBlockOrEntityRaycast(getBlockReachDistance());
                 if (raycast.hit() && raycast.isBlock()) {
                     // ensure synced
                     interactions.ensureHasSentCarriedItem();
@@ -231,7 +231,7 @@ public class PlayerSimulation extends Module {
                     }
                 }
             } else if (movementInput.isRightClick() || (holdRightClickOverride && rightClickOverrideTimer.tick(10))) {
-                var raycast = RaycastHelper.playerBlockOrEntityRaycast(4.5);
+                var raycast = RaycastHelper.playerBlockOrEntityRaycast(getBlockReachDistance());
                 Hand hand = Hand.MAIN_HAND;
                 if (holdRightClickOverride) {
                     hand = switch (holdRightClickMode) {
