@@ -55,18 +55,19 @@ public record LocalizedCollisionBox(
         return collidePushOut(this.minZ(), this.maxZ(), other.minZ(), other.maxZ(), z);
     }
 
+    private static final double EPSILON = 1.0E-7;
+
     public static double collidePushOut(double box1Min, double box1Max, double box2Min, double box2Max, double speed) {
-        if (speed > 0.0F && box2Max <= box1Min) {
+        if (speed == 0) return speed;
+        else if (speed > 0) {
             double collideMax = box1Min - box2Max;
-            if (collideMax < speed)
-                speed = collideMax;
-        }
-        if (speed < 0.0F && box2Min >= box1Max) {
+            if (collideMax < EPSILON) return speed;
+            return Math.min(collideMax, speed);
+        } else {
             double collideMax = box1Max - box2Min;
-            if (collideMax > speed)
-                speed = collideMax;
+            if (collideMax > EPSILON) return speed;
+            return Math.max(collideMax, speed);
         }
-        return speed;
     }
 
     public boolean noXIntersection(final LocalizedCollisionBox other) {
