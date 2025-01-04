@@ -61,7 +61,7 @@ public record LocalizedCollisionBox(
         if (speed == 0) return speed;
         else if (speed > 0) {
             double collideMax = box1Min - box2Max;
-            if (collideMax < EPSILON) return speed;
+            if (collideMax < -EPSILON) return speed;
             return Math.min(collideMax, speed);
         } else {
             double collideMax = box1Max - box2Min;

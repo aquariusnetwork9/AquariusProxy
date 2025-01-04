@@ -15,4 +15,13 @@ public class CollisionTest {
         double collisionResult = cb1.collideZ(cb2, -0.0978029544583795);
         Assertions.assertEquals(0, MathHelper.round(collisionResult, 10));
     }
+
+    @Test
+    public void collideZPushOutTest2() {
+        var cb1 = new LocalizedCollisionBox(-29.0, -28.0, 90.0, 91.0, 44.0, 45.0, -29.0, 90.0, 44.0);
+        var cb2 = new LocalizedCollisionBox(-28.80947147697667, -28.20947147697667, 90.0, 91.8, 43.399999988079074, 43.99999998807907, -28.50947147697667, 90.0, 43.69999998807907);
+
+        double collisionResult = cb1.collideZ(cb2, 0.0587181216390606);
+        Assertions.assertEquals(0, MathHelper.round(collisionResult, 7));
+    }
 }
