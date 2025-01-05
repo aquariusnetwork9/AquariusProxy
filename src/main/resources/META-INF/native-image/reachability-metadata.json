@@ -2133,6 +2133,14 @@
       ]
     },
     {
+      "type": "com.zenith.util.Config$Client$Extra$Click",
+      "allDeclaredFields": true
+    },
+    {
+      "type": "com.zenith.util.Config$Client$Extra$Click$HoldRightClickMode",
+      "allDeclaredFields": true
+    },
+    {
       "type": "com.zenith.util.Config$Client$Extra$KillAura",
       "allDeclaredFields": true,
       "methods": [

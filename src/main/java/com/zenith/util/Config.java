@@ -125,6 +125,24 @@ public final class Config {
             public final AutoMend autoMend = new AutoMend();
             public final QueueWarning queueWarning = new QueueWarning();
             public final Wander wander = new Wander();
+            public final Click click = new Click();
+
+            public static class Click {
+                public boolean enabled = true;
+                public boolean holdLeftClick = false;
+                public boolean holdRightClick = false;
+                public boolean hasRotation = false;
+                public float rotationYaw = 0;
+                public float rotationPitch = 0;
+                public HoldRightClickMode holdRightClickMode = HoldRightClickMode.MAIN_HAND;
+                public int holdRightClickInterval = 5;
+                public float additionalBlockReach = 0;
+                public enum HoldRightClickMode {
+                    MAIN_HAND,
+                    OFF_HAND,
+                    ALTERNATE_HANDS
+                }
+            }
 
             public static final class Wander {
                 public boolean enabled = false;

@@ -78,19 +78,6 @@ public class PlayerSimulation extends Module {
     private boolean horizontalCollisionMinor = false;
     @Getter private boolean verticalCollision = false;
     @Getter private final PlayerInteractionManager interactions = new PlayerInteractionManager(this);
-    public boolean holdLeftClickOverride = false;
-    public boolean holdRightClickOverride = false;
-    public HoldRightClickMode holdRightClickMode = HoldRightClickMode.MAIN_HAND;
-    public boolean holdRightClickLastHand = false; // true if main hand, false if off hand
-    private final Timer rightClickOverrideTimer = Timer.createTickTimer();
-    public int holdRightClickInterval = 5;
-    public float additionalBlockReach = 0;
-
-    public enum HoldRightClickMode {
-        MAIN_HAND,
-        OFF_HAND,
-        ALTERNATE_HANDS
-    }
 
     @Override
     public void subscribeEvents() {
@@ -112,11 +99,6 @@ public class PlayerSimulation extends Module {
 
     public synchronized void handleClientTickStarting(final ClientBotTick.Starting event) {
         syncFromCache(false);
-        this.holdLeftClickOverride = false;
-        this.holdRightClickOverride = false;
-        this.holdRightClickMode = HoldRightClickMode.MAIN_HAND;
-        this.holdRightClickInterval = 5;
-        this.additionalBlockReach = 0;
     }
 
     public synchronized void handleClientTickStopped(final ClientBotTick.Stopped event) {
@@ -126,11 +108,6 @@ public class PlayerSimulation extends Module {
         if (isSprinting) {
             sendClientPacketAsync(new ServerboundPlayerCommandPacket(CACHE.getPlayerCache().getEntityId(), PlayerState.STOP_SPRINTING));
         }
-        this.holdLeftClickOverride = false;
-        this.holdRightClickOverride = false;
-        this.holdRightClickMode = HoldRightClickMode.MAIN_HAND;
-        this.holdRightClickInterval = 5;
-        this.additionalBlockReach = 0;
     }
 
     public void doRotate(float yaw, float pitch) {
@@ -200,7 +177,7 @@ public class PlayerSimulation extends Module {
 
     private void interactionTick() {
         try {
-            if (movementInput.isLeftClick() || holdLeftClickOverride) {
+            if (movementInput.isLeftClick()) {
                 var raycast = RaycastHelper.playerBlockOrEntityRaycast(getBlockReachDistance());
                 if (raycast.hit() && raycast.isBlock()) {
                     // ensure synced
@@ -236,17 +213,9 @@ public class PlayerSimulation extends Module {
                         interactions.attackEntity(raycast.entity());
                     }
                 }
-            } else if (movementInput.isRightClick() || (holdRightClickOverride && rightClickOverrideTimer.tick(holdRightClickInterval))) {
+            } else if (movementInput.isRightClick()) {
                 var raycast = RaycastHelper.playerBlockOrEntityRaycast(getBlockReachDistance());
-                Hand hand = Hand.MAIN_HAND;
-                if (holdRightClickOverride) {
-                    hand = switch (holdRightClickMode) {
-                        case HoldRightClickMode.MAIN_HAND -> Hand.MAIN_HAND;
-                        case HoldRightClickMode.OFF_HAND -> Hand.OFF_HAND;
-                        case HoldRightClickMode.ALTERNATE_HANDS -> holdRightClickLastHand ? Hand.OFF_HAND : Hand.MAIN_HAND;
-                    };
-                    holdRightClickLastHand = hand == Hand.MAIN_HAND;
-                }
+                Hand hand = movementInput.clickMainHand ? Hand.MAIN_HAND : Hand.OFF_HAND;
                 if (raycast.hit() && raycast.isBlock()) {
                     debug("Right click {} block at: [{}, {}, {}]", hand, raycast.block().x(), raycast.block().y(), raycast.block().z());
                     interactions.ensureHasSentCarriedItem();
@@ -1082,6 +1051,6 @@ public class PlayerSimulation extends Module {
     }
 
     public double getBlockReachDistance() {
-        return getAttributeValue(AttributeType.Builtin.PLAYER_BLOCK_INTERACTION_RANGE, 4.5f) + additionalBlockReach;
+        return getAttributeValue(AttributeType.Builtin.PLAYER_BLOCK_INTERACTION_RANGE, 4.5f) + CONFIG.client.extra.click.additionalBlockReach;
     }
 }

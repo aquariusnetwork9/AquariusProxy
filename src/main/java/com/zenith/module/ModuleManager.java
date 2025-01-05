@@ -28,6 +28,7 @@ public class ModuleManager {
             new AutoRespawn(),
             new AutoTotem(),
             new ChatHistory(),
+            new Click(),
             new ESP(),
             new ExtraChat(),
             new KillAura(),
