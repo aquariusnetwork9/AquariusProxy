@@ -1,5 +1,6 @@
 package com.zenith.mc.block;
 
+import com.zenith.feature.world.raycast.RayIntersection;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -137,5 +138,4 @@ public record LocalizedCollisionBox(
         return new RayIntersection(x1 + tmin * xLen, y1 + tmin * yLen, z1 + tmin * zLen, intersectingFace);
     }
 
-    public record RayIntersection(double x, double y, double z, Direction intersectingFace) { }
 }

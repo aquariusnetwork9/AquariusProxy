@@ -6,9 +6,9 @@ import com.zenith.cache.data.entity.EntityStandard;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.jetbrains.annotations.Nullable;
 
-public record EntityRaycastResult(boolean hit, @Nullable Entity entity) {
+public record EntityRaycastResult(boolean hit, @Nullable RayIntersection intersection, @Nullable Entity entity) {
     public static EntityRaycastResult miss() {
-        return new EntityRaycastResult(false, null);
+        return new EntityRaycastResult(false, null, null);
     }
 
     public @Nullable EntityType entityType() {
