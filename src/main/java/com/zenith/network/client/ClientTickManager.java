@@ -60,11 +60,24 @@ public class ClientTickManager {
         }
     }
 
+    private static final long LONG_TICK_THRESHOLD_MS = 100L;
+    private static final long LONG_TICK_WARNING_INTERVAL_MS = TimeUnit.SECONDS.toMillis(60);
+    private long lastLongTickWarning = 0L;
+
     private final Runnable tickRunnable = () -> {
         try {
+            long before = System.nanoTime();
             EVENT_BUS.post(ClientTickEvent.INSTANCE);
             if (doBotTicks.get()) {
                 EVENT_BUS.post(ClientBotTick.INSTANCE);
+            }
+            long after = System.nanoTime();
+            long elapsedMs = TimeUnit.NANOSECONDS.toMillis(after - before);
+            if (elapsedMs > LONG_TICK_THRESHOLD_MS) {
+                if (System.currentTimeMillis() - lastLongTickWarning > LONG_TICK_WARNING_INTERVAL_MS) {
+                    CLIENT_LOG.warn("Slow Client Tick. Took {}ms", elapsedMs);
+                    lastLongTickWarning = System.currentTimeMillis();
+                }
             }
         } catch (final Throwable e) {
             CLIENT_LOG.error("Error during client tick", e);
