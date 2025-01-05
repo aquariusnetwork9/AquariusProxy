@@ -36,6 +36,26 @@ public class Input {
         this(in.pressingForward, in.pressingBack, in.pressingLeft, in.pressingRight, in.jumping, in.sneaking, in.sprinting, in.leftClick, in.rightClick, in.clickMainHand);
     }
 
+    public void apply(Input in) {
+        if (!pressingForward || !pressingBack) {
+            this.pressingForward = in.pressingForward;
+            this.pressingBack = in.pressingBack;
+        }
+        if (!in.pressingLeft || !in.pressingRight) {
+            this.pressingLeft = in.pressingLeft;
+            this.pressingRight = in.pressingRight;
+        }
+        this.jumping = in.jumping;
+        this.sneaking = in.sneaking;
+        this.sprinting = in.sprinting;
+        if (this.sprinting && (this.pressingBack || this.sneaking)) {
+            this.sprinting = false;
+        }
+        this.leftClick = in.leftClick;
+        this.rightClick = in.rightClick;
+        this.clickMainHand = in.clickMainHand;
+    }
+
     public void reset() {
         pressingForward = false;
         pressingBack = false;

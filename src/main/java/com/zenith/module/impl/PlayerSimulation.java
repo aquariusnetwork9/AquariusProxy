@@ -125,51 +125,8 @@ public class PlayerSimulation extends Module {
         return this.yaw + difference;
     }
 
-    public synchronized void doMovementInput(
-        boolean pressingForward,
-        boolean pressingBack,
-        boolean pressingLeft,
-        boolean pressingRight,
-        boolean jumping,
-        boolean sneaking,
-        boolean sprinting,
-        boolean leftClick,
-        boolean rightClick
-    ) {
-        if (!pressingForward || !pressingBack) {
-            this.movementInput.pressingForward = pressingForward;
-            this.movementInput.pressingBack = pressingBack;
-        }
-        if (!pressingLeft || !pressingRight) {
-            this.movementInput.pressingLeft = pressingLeft;
-            this.movementInput.pressingRight = pressingRight;
-        }
-        this.movementInput.jumping = jumping;
-        this.movementInput.sneaking = sneaking;
-        this.movementInput.sprinting = sprinting;
-        if (movementInput.sprinting && (movementInput.pressingBack || movementInput.sneaking)) {
-            movementInput.sprinting = false;
-        }
-        this.movementInput.leftClick = leftClick;
-        this.movementInput.rightClick = rightClick;
-    }
-
-    public synchronized void doMovementInput(final Input input) {
-        doMovementInput(
-            input.pressingForward,
-            input.pressingBack,
-            input.pressingLeft,
-            input.pressingRight,
-            input.jumping,
-            input.sneaking,
-            input.sprinting,
-            input.leftClick,
-            input.rightClick
-        );
-    }
-
-    public void doMovement(final MovementInputRequest request) {
-        request.input().ifPresent(this::doMovementInput);
+    public synchronized void doMovement(final MovementInputRequest request) {
+        request.input().ifPresent(this.movementInput::apply);
         if (request.yaw().isPresent() || request.pitch().isPresent()) {
             doRotate(request.yaw().orElse(this.yaw), request.pitch().orElse(this.pitch));
         }
@@ -225,6 +182,7 @@ public class PlayerSimulation extends Module {
                     debug("Right click {} entity: {} [{}, {}, {}]", hand, raycast.entity().entity().getEntityType(), raycast.entity().entity().getX(), raycast.entity().entity().getY(), raycast.entity().entity().getZ());
                     interactions.ensureHasSentCarriedItem();
                     interactions.interactAt(hand, raycast.entity());
+                    interactions.interact(hand, raycast.entity());
                     sendClientPacketAsync(new ServerboundSwingPacket(hand));
                 } else if (!raycast.hit()) {
                     debug("Right click {} use item", hand);
