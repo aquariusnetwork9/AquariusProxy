@@ -351,8 +351,7 @@ public class PlayerInteractionManager {
     public void ensureHasSentCarriedItem() {
         int heldItemSlot = CACHE.getPlayerCache().getHeldItemSlot();
         if (carriedIndex != heldItemSlot) {
-            player.debug("[{}] Syncing held item slot: {} -> {}", System.currentTimeMillis(), carriedIndex, heldItemSlot);
-            carriedIndex = heldItemSlot;
+            player.debug("[{}] Syncing held item slot: {} -> {}", System.currentTimeMillis(), heldItemSlot, carriedIndex);
             Proxy.getInstance().getClient().send(new ServerboundSetCarriedItemPacket(carriedIndex));
         }
     }
