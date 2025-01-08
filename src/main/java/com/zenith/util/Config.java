@@ -478,6 +478,7 @@ public final class Config {
             public String spectatorEntity = "cat";
             public boolean spectatorPublicChatEnabled = true;
             public boolean fullCommandsEnabled = false;
+            public boolean fullCommandsAcceptSlashCommands = true;
             public boolean fullCommandsRequireRegularWhitelist = true;
             public ArrayList<PlayerEntry> whitelist = new ArrayList<>();
         }
