@@ -583,6 +583,7 @@ public final class Config {
         public boolean slashCommandsReplacesServerCommands = false;
         public String prefix = "!";
         public boolean logToDiscord = true;
+        public boolean allowWhitelistedToUseAccountOwnerCommands = false;
     }
 
     public static final class Discord {

@@ -60,16 +60,23 @@ public abstract class Command {
         if (playerProfile == null) return false;
         final UUID playerUUID = playerProfile.getId();
         if (playerUUID == null) return false;
-        final GameProfile proxyProfile = CACHE.getProfileCache().getProfile();
-        if (proxyProfile == null) return false;
-        final UUID proxyUUID = proxyProfile.getId();
-        if (proxyUUID == null) return false;
-        final boolean allowed = playerUUID.equals(proxyUUID);// we have to be logged in with the owning MC account
+        boolean allowed;
+        if (CONFIG.inGameCommands.allowWhitelistedToUseAccountOwnerCommands) {
+            allowed = PLAYER_LISTS.getWhitelist().contains(playerUUID);
+        } else {
+            final GameProfile proxyProfile = CACHE.getProfileCache().getProfile();
+            if (proxyProfile == null) return false;
+            final UUID proxyUUID = proxyProfile.getId();
+            if (proxyUUID == null) return false;
+            allowed = playerUUID.equals(proxyUUID); // we have to be logged in with the owning MC account
+        }
         if (!allowed) {
             context.getEmbed()
                 .addField("Error",
-                          "Player: " + playerProfile.getName()
-                              + " is not authorized to execute this command! You must be logged in with the proxy's MC account!", false);
+                    "Player: " + playerProfile.getName()
+                        + " is not authorized to execute this command! "
+                        + (CONFIG.inGameCommands.allowWhitelistedToUseAccountOwnerCommands ? "You must be whitelisted!" : "You must be logged in with the proxy's MC account!"),
+                    false);
         }
         return allowed;
     }
