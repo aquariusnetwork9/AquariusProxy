@@ -227,6 +227,10 @@ public class PlayerSimulation extends Module {
             && !isTouchingWater
             && CACHE.getPlayerCache().getThePlayer().getFood() > 6
             && !(horizontalCollision && !horizontalCollisionMinor);
+        // cannot start sprinting while we have blindness
+        if (isSprinting && !lastSprinting && CACHE.getPlayerCache().getThePlayer().getPotionEffectMap().containsKey(Effect.BLINDNESS)) {
+            isSprinting = false;
+        }
         if (isSprinting != lastSprinting) applySprintingSpeedAttributeModifier();
 
         updateInWaterStateAndDoFluidPushing();
