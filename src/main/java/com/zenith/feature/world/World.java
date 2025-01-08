@@ -136,12 +136,12 @@ public class World {
     }
 
     public LongList getBlockPosLongListInCollisionBox(final LocalizedCollisionBox cb) {
-        int minX = MathHelper.floorI(cb.minX());
-        int maxX = MathHelper.ceilI(cb.maxX());
-        int minY = MathHelper.floorI(cb.minY());
-        int maxY = MathHelper.ceilI(cb.maxY());
-        int minZ = MathHelper.floorI(cb.minZ());
-        int maxZ = MathHelper.ceilI(cb.maxZ());
+        int minX = MathHelper.floorI(cb.minX()) - 1;
+        int maxX = MathHelper.ceilI(cb.maxX()) + 1;
+        int minY = MathHelper.floorI(cb.minY()) - 1;
+        int maxY = MathHelper.ceilI(cb.maxY()) + 1;
+        int minZ = MathHelper.floorI(cb.minZ()) - 1;
+        int maxZ = MathHelper.ceilI(cb.maxZ()) + 1;
         final LongArrayList blockPosList = new LongArrayList((maxX - minX) * (maxY - minY) * (maxZ - minZ));
         for (int x = minX; x < maxX; x++) {
             for (int y = minY; y < maxY; y++) {
