@@ -70,7 +70,7 @@ public class CustomServerInfoBuilder implements ServerInfoBuilder {
 
     private VersionInfo getVersionInfo(@Nullable Session session) {
         if (CONFIG.server.viaversion.enabled && session instanceof ServerSession)
-            return new VersionInfo("ZenithProxy", ((ServerSession) session).getProtocolVersion());
+            return new VersionInfo("ZenithProxy", ((ServerSession) session).getProtocolVersionId());
         return new VersionInfo(MinecraftCodec.CODEC.getMinecraftVersion(), MinecraftCodec.CODEC.getProtocolVersion());
     }
 

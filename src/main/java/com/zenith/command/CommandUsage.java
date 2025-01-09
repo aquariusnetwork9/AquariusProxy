@@ -45,21 +45,36 @@ public class CommandUsage {
         return new CommandUsage(name, category, description, usageLines, aliases);
     }
 
+    // serializes everything
     public String serialize(CommandSource commandSource) {
         var result = this.description
             + "\n**Commands**"
             + usageLines.stream()
             .map(line -> "\n" + COMMAND.getCommandPrefix(commandSource) + name + " " + line)
             .collect(Collectors.joining());
-        result += "\n\n[Commands Help Wiki](https://link.2b2t.vc/0)";
-        if (result.length() > 1024) {
-            DEFAULT_LOG.error("Command usage too long", new RuntimeException());
+        result += "\n\n[Commands Wiki](https://link.2b2t.vc/0)";
+        if (isTooLongForDiscordDescription(result)) {
+            DEFAULT_LOG.debug("Full command usage too long for discord description: {}", name);
+            return this.mediumSerialize(commandSource);
+        }
+        return result;
+    }
+
+    // serializes usage lines only
+    public String mediumSerialize(CommandSource commandSource) {
+        var result = "**Commands**"
+            + usageLines.stream()
+            .map(line -> "\n" + COMMAND.getCommandPrefix(commandSource) + name + " " + line)
+            .collect(Collectors.joining());
+        result += "\n\n[Commands Wiki](https://link.2b2t.vc/0)";
+        if (isTooLongForDiscordDescription(result)) {
+            DEFAULT_LOG.debug("Medium command usage too long for discord description: {}", name);
             return this.shortSerialize(commandSource);
         }
         return result;
-
     }
 
+    // serializes aliases only
     public String shortSerialize(CommandSource commandSource) {
         String result = COMMAND.getCommandPrefix(commandSource) + this.name;
         if (!aliases.isEmpty()) {
@@ -68,6 +83,11 @@ public class CommandUsage {
                             " / " + COMMAND.getCommandPrefix(commandSource),
                             ""));
         }
+        result += "\n\n[Commands Wiki](https://link.2b2t.vc/0)";
         return result;
+    }
+
+    private boolean isTooLongForDiscordDescription(String str) {
+        return str.length() > 1024;
     }
 }

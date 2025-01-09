@@ -43,12 +43,10 @@ import static java.util.Arrays.asList;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
-public class DiscordEventListener {
-    private final DiscordBot bot;
+public class NotificationEventListener {
+    public static final NotificationEventListener INSTANCE = new NotificationEventListener();
 
-    public DiscordEventListener(DiscordBot bot) {
-        this.bot = bot;
-    }
+    private NotificationEventListener() { }
 
     public void subscribeEvents() {
         if (EVENT_BUS.isSubscribed(this)) throw new RuntimeException("Event handlers already initialized");
@@ -109,7 +107,7 @@ public class DiscordEventListener {
         } else {
             sendEmbedMessage(embed);
         }
-        updatePresence(bot.defaultConnectedPresence.get());
+        updatePresence(DISCORD.defaultConnectedPresence.get());
     }
 
     public void handlePlayerOnlineEvent(PlayerOnlineEvent event) {
@@ -157,7 +155,7 @@ public class DiscordEventListener {
         } else {
             sendEmbedMessage(embed);
         }
-        EXECUTOR.execute(() -> updatePresence(bot.disconnectedPresence));
+        EXECUTOR.execute(() -> updatePresence(DISCORD.disconnectedPresence));
     }
 
     private void handleQueueWarning(QueueWarningEvent event) {
@@ -168,7 +166,7 @@ public class DiscordEventListener {
     }
 
     public void handleQueuePositionUpdateEvent(QueuePositionUpdateEvent event) {
-        updatePresence(bot.getQueuePresence());
+        updatePresence(DISCORD.getQueuePresence());
     }
 
     public void handleAutoEatOutOfFoodEvent(final AutoEatOutOfFoodEvent event) {
@@ -184,7 +182,7 @@ public class DiscordEventListener {
     }
 
     public void handleQueueCompleteEvent(QueueCompleteEvent event) {
-        updatePresence(bot.defaultConnectedPresence.get());
+        updatePresence(DISCORD.defaultConnectedPresence.get());
     }
 
     public void handleStartQueueEvent(StartQueueEvent event) {
@@ -203,7 +201,7 @@ public class DiscordEventListener {
         } else {
             sendEmbedMessage(embed);
         }
-        updatePresence(bot.getQueuePresence());
+        updatePresence(DISCORD.getQueuePresence());
     }
 
     public void handleDeathEvent(DeathEvent event) {
@@ -242,7 +240,8 @@ public class DiscordEventListener {
         if (!CONFIG.discord.clientConnectionMessages) return;
         var embed = Embed.builder()
             .title("Client Connected")
-            .addField("Username", escape(event.clientGameProfile().getName()), true)
+            .addField("Username", escape(event.clientGameProfile().getName()), false)
+            .addField("MC Version", event.session().getMCVersion(), false)
             .primaryColor();
         if (CONFIG.discord.mentionOnClientConnected) {
             sendEmbedMessage(notificationMention(), embed);
@@ -255,7 +254,8 @@ public class DiscordEventListener {
         if (!CONFIG.discord.clientConnectionMessages) return;
         var embed = Embed.builder()
             .title("Spectator Connected")
-            .addField("Username", escape(event.clientGameProfile().getName()), true)
+            .addField("Username", escape(event.clientGameProfile().getName()), false)
+            .addField("MC Version", event.session().getMCVersion(), false)
             .primaryColor();
         if (CONFIG.discord.mentionOnSpectatorConnected) {
             sendEmbedMessage(notificationMention(), embed);
@@ -323,10 +323,10 @@ public class DiscordEventListener {
             else
                 sendEmbedMessage(embedCreateSpec);
         else
-            if (!event.isFriend())
-                sendEmbedMessageWithButtons(embedCreateSpec, buttons, mapper, Duration.ofHours(1));
-            else
-                sendEmbedMessage(embedCreateSpec);
+        if (!event.isFriend())
+            sendEmbedMessageWithButtons(embedCreateSpec, buttons, mapper, Duration.ofHours(1));
+        else
+            sendEmbedMessage(embedCreateSpec);
     }
 
     public void handleVisualRangeLeaveEvent(final VisualRangeLeaveEvent event) {
@@ -639,13 +639,13 @@ public class DiscordEventListener {
             try {
                 final MessageData messageData = event.event().getMessage().getReferencedMessage().get().getData();
                 // abort if reply is not to a message sent by us
-                if (bot.client.getSelfId().asLong() != messageData.author().id().asLong()) return;
+                if (DISCORD.client.getSelfId().asLong() != messageData.author().id().asLong()) return;
                 final EmbedData embed = messageData.embeds().getFirst();
                 if (!embed.color().isAbsent() && embed.color().get().equals(PRIVATE_MESSAGE_EMBED_COLOR.getRGB())) {
                     // replying to private message
                     sendPrivateMessage(event.message(), event.event());
                 } else {
-                    final String sender = bot.extractRelayEmbedSenderUsername(embed.color(), embed.description().get());
+                    final String sender = DISCORD.extractRelayEmbedSenderUsername(embed.color(), embed.description().get());
                     boolean pm = false;
                     var connections = Proxy.getInstance().getActiveConnections().getArray();
                     for (int i = 0; i < connections.length; i++) {
@@ -669,7 +669,7 @@ public class DiscordEventListener {
                 Proxy.getInstance().getClient().sendAsync(new ServerboundChatPacket(event.message()));
             }
         }
-        bot.lastRelaymessage = Optional.of(Instant.now());
+        DISCORD.lastRelaymessage = Optional.of(Instant.now());
     }
 
     private void sendPrivateMessage(String message, MessageCreateEvent event) {
@@ -679,7 +679,7 @@ public class DiscordEventListener {
     }
 
     public void handleUpdateStartEvent(UpdateStartEvent event) {
-        sendEmbedMessage(bot.getUpdateMessage(event.newVersion()));
+        sendEmbedMessage(DISCORD.getUpdateMessage(event.newVersion()));
     }
 
     public void handleServerRestartingEvent(ServerRestartingEvent event) {
@@ -865,33 +865,33 @@ public class DiscordEventListener {
      * Convenience proxy methods
      */
     public void sendEmbedMessage(Embed embed) {
-        bot.sendEmbedMessage(embed);
+        DISCORD.sendEmbedMessage(embed);
     }
     public void sendEmbedMessage(String message, Embed embed) {
-        bot.sendEmbedMessage(message, embed);
+        DISCORD.sendEmbedMessage(message, embed);
     }
     public void sendMessage(final String message) {
-        bot.sendMessage(message);
+        DISCORD.sendMessage(message);
     }
     public void sendRelayEmbedMessage(Embed embedCreateSpec) {
-        bot.sendRelayEmbedMessage(embedCreateSpec);
+        DISCORD.sendRelayEmbedMessage(embedCreateSpec);
     }
     public void sendRelayEmbedMessage(String message, Embed embed) {
-        bot.sendRelayEmbedMessage(message, embed);
+        DISCORD.sendRelayEmbedMessage(message, embed);
     }
     public void sendRelayMessage(final String message) {
-        bot.sendRelayMessage(message);
+        DISCORD.sendRelayMessage(message);
     }
     void sendEmbedMessageWithButtons(String message, Embed embed, List<Button> buttons, Function<ButtonInteractionEvent, Publisher<Mono<?>>> mapper, Duration timeout) {
-        bot.sendEmbedMessageWithButtons(message, embed, buttons, mapper, timeout);
+        DISCORD.sendEmbedMessageWithButtons(message, embed, buttons, mapper, timeout);
     }
     void sendEmbedMessageWithButtons(Embed embed, List<Button> buttons, Function<ButtonInteractionEvent, Publisher<Mono<?>>> mapper, Duration timeout) {
-        bot.sendEmbedMessageWithButtons(embed, buttons, mapper, timeout);
+        DISCORD.sendEmbedMessageWithButtons(embed, buttons, mapper, timeout);
     }
     public void updatePresence(final ClientPresence presence) {
-        bot.updatePresence(presence);
+        DISCORD.updatePresence(presence);
     }
     public void sendEmbedMessageWithFileAttachment(Embed embed) {
-        bot.sendEmbedMessageWithFileAttachment(embed);
+        DISCORD.sendEmbedMessageWithFileAttachment(embed);
     }
 }

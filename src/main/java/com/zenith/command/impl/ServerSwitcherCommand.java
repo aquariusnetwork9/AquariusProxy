@@ -1,7 +1,6 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.viaversion.viaversion.api.Via;
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.zenith.Proxy;
 import com.zenith.command.Command;
@@ -13,7 +12,6 @@ import com.zenith.discord.Embed;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.Config.Server.Extra.ServerSwitcher.ServerSwitcherServer;
 
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
@@ -85,21 +83,14 @@ public class ServerSwitcherCommand extends Command {
                         .title("No player connected to transfer");
                     return OK;
                 }
-                if (CONFIG.server.viaversion.enabled) {
-                    Optional<ProtocolVersion> viaClientProtocolVersion = Via.getManager().getConnectionManager().getConnectedClients().values().stream()
-                        .filter(client -> client.getChannel() == currentPlayer.getChannel())
-                        .map(con -> con.getProtocolInfo().protocolVersion())
-                        .findFirst();
-                    if (viaClientProtocolVersion.isPresent() && viaClientProtocolVersion.get().olderThan(ProtocolVersion.v1_20_5)) {
-                        c.getSource().getEmbed()
-                            .title("Unsupported Client MC Version")
-                            .errorColor()
-                            .addField("Client Version", viaClientProtocolVersion.get().getName(), false)
-                            .addField("Error", "Client version must be at least 1.20.6", false);
-                        return ERROR;
-                    }
+                if (currentPlayer.getProtocolVersion().olderThan(ProtocolVersion.v1_20_5)) {
+                    c.getSource().getEmbed()
+                        .title("Unsupported Client MC Version")
+                        .errorColor()
+                        .addField("Client Version", currentPlayer.getProtocolVersion().getName(), false)
+                        .addField("Error", "Client version must be at least 1.20.6", false);
+                    return OK;
                 }
-
                 currentPlayer.transfer(server.address(), server.port());
                 c.getSource().getEmbed()
                     .title("Switched To Server")

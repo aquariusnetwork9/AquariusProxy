@@ -1,15 +1,16 @@
 package com.zenith.network.server.handler.player.postoutgoing;
 
 import com.viaversion.viaversion.api.Via;
-import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.zenith.Proxy;
 import com.zenith.cache.DataCache;
 import com.zenith.event.proxy.ProxyClientLoggedInEvent;
 import com.zenith.network.registry.PostOutgoingPacketHandler;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
+import com.zenith.via.ZenithViaInitializer;
 import lombok.NonNull;
 import net.raphimc.vialoader.netty.VLPipeline;
+import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 
@@ -58,18 +59,14 @@ public class LoginPostHandler implements PostOutgoingPacketHandler<ClientboundLo
 
     private void checkDisableServerVia(ServerSession session) {
         if (CONFIG.server.viaversion.enabled && CONFIG.server.viaversion.autoRemoveFromPipeline) {
-            // the ConnectedClients map is not populated with the connection until ClientboundLoginPacket is sent to the player
-            Via.getManager().getConnectionManager().getConnectedClients().values().stream()
-                .filter(c -> c.getChannel() == session.getChannel())
-                .findAny()
-                .filter(c -> c.getProtocolInfo().protocolVersion() == ProtocolVersion.getProtocol(session.getProtocolVersion()))
-                .ifPresent(c -> {
-                    SERVER_LOG.debug("Disabling ViaVersion for player: {}", session.getProfileCache().getProfile().getName());
-                    // remove via codec from channel pipeline
-                    c.getChannel().pipeline().remove(VLPipeline.VIA_CODEC_NAME);
-                    // dispose via connection state
-                    Via.getManager().getConnectionManager().onDisconnect(c);
-                });
+            if (session.getProtocolVersion().getVersion() == MinecraftCodec.CODEC.getProtocolVersion() && session.getChannel().hasAttr(ZenithViaInitializer.VIA_USER)) {
+                SERVER_LOG.debug("Disabling ViaVersion for player: {}", session.getProfileCache().getProfile().getName());
+                var viaUser = session.getChannel().attr(ZenithViaInitializer.VIA_USER).get();
+                // remove via codec from channel pipeline
+                viaUser.getChannel().pipeline().remove(VLPipeline.VIA_CODEC_NAME);
+                // dispose via connection state
+                Via.getManager().getConnectionManager().onDisconnect(viaUser);
+            }
         }
     }
 }

@@ -2134,7 +2134,13 @@
     },
     {
       "type": "com.zenith.util.Config$Client$Extra$Click",
-      "allDeclaredFields": true
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "com.zenith.util.Config$Client$Extra$Click$HoldRightClickMode",

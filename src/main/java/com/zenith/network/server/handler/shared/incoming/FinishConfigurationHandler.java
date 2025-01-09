@@ -3,8 +3,8 @@ package com.zenith.network.server.handler.shared.incoming;
 import com.zenith.network.KeepAliveTask;
 import com.zenith.network.registry.PacketHandler;
 import com.zenith.network.server.ServerSession;
+import com.zenith.network.server.handler.ProxyServerLoginHandler;
 import org.geysermc.mcprotocollib.protocol.MinecraftConstants;
-import org.geysermc.mcprotocollib.protocol.ServerLoginHandler;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.packet.configuration.serverbound.ServerboundFinishConfigurationPacket;
 
@@ -15,10 +15,7 @@ public class FinishConfigurationHandler implements PacketHandler<ServerboundFini
     public ServerboundFinishConfigurationPacket apply(final ServerboundFinishConfigurationPacket packet, final ServerSession session) {
         session.switchInboundState(ProtocolState.GAME);
         if (!session.isConfigured()) {
-            ServerLoginHandler handler = session.getFlag(MinecraftConstants.SERVER_LOGIN_HANDLER_KEY);
-            if (handler != null) {
-                handler.loggedIn(session);
-            }
+            ProxyServerLoginHandler.INSTANCE.loggedIn(session);
             if (session.getFlag(MinecraftConstants.AUTOMATIC_KEEP_ALIVE_MANAGEMENT, true)) {
                 EXECUTOR.execute(new KeepAliveTask(session));
             }
