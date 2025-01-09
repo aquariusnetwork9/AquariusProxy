@@ -18,7 +18,7 @@ public class StatusRequestHandler implements PacketHandler<ServerboundStatusRequ
         if (CONFIG.server.ping.logPings)
             SERVER_LOG.info("[Ping] Request from: {} [{}] to: {}:{}",
                             session.getRemoteAddress(),
-                            ProtocolVersion.getProtocol(session.getProtocolVersion()).getName(),
+                            ProtocolVersion.getProtocol(session.getProtocolVersionId()).getName(),
                             session.getConnectingServerAddress(),
                             session.getConnectingServerPort());
         ServerInfoBuilder builder = session.getFlag(MinecraftConstants.SERVER_INFO_BUILDER_KEY);

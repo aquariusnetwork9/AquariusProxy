@@ -5,6 +5,7 @@ import com.viaversion.viaversion.connection.UserConnectionImpl;
 import com.viaversion.viaversion.protocol.ProtocolPipelineImpl;
 import com.zenith.Proxy;
 import io.netty.channel.Channel;
+import io.netty.util.AttributeKey;
 import net.raphimc.vialoader.ViaLoader;
 import net.raphimc.vialoader.impl.platform.ViaBackwardsPlatformImpl;
 import net.raphimc.vialoader.netty.VLPipeline;
@@ -46,12 +47,15 @@ public class ZenithViaInitializer {
         }
     }
 
+    public static final AttributeKey<UserConnectionImpl> VIA_USER = AttributeKey.newInstance("ViaUser");
+
     public void serverViaChannelInitializer(final Channel channel) {
         if (!CONFIG.server.viaversion.enabled) return;
         init();
         var userConnection = new UserConnectionImpl(channel, false);
         new ProtocolPipelineImpl(userConnection);
         channel.pipeline().addBefore(TcpPacketCodec.ID, VLPipeline.VIA_CODEC_NAME, new ViaCodec(userConnection));
+        channel.attr(VIA_USER).set(userConnection);
     }
 
     private void updateClientViaProtocolVersion() {

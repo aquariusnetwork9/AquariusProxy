@@ -58,6 +58,7 @@ public class ZenithViaPlatform extends ViaVersionPlatformImpl {
     private Optional<ServerSession> getServerConnection(final UUID viaUuid) {
         if (viaUuid == null) return Optional.empty();
         UserConnection connectedClient = Via.getManager().getConnectionManager().getConnectedClient(viaUuid);
+        if (connectedClient == null) return Optional.empty();
         var channel = connectedClient.getChannel();
         var connections = Proxy.getInstance().getActiveConnections().getArray();
         for (int i = 0; i < connections.length; i++) {

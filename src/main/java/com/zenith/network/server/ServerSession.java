@@ -1,6 +1,5 @@
 package com.zenith.network.server;
 
-import com.viaversion.viaversion.api.Via;
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.zenith.Proxy;
 import com.zenith.cache.data.PlayerCache;
@@ -68,7 +67,7 @@ public class ServerSession extends TcpServerSession {
     private String username = "";
     // as requested by the player during login. may not be the same as what mojang api returns
     private @Nullable UUID loginProfileUUID;
-    private int protocolVersion; // as reported by the client when they connected
+    private int protocolVersionId; // as reported by the client when they connected
     private String connectingServerAddress; // as reported by the client when they connected
     private int connectingServerPort; // as reported by the client when they connected
     protected boolean isTransferring = false;
@@ -356,15 +355,16 @@ public class ServerSession extends TcpServerSession {
         SERVER_LOG.debug("Synced Team members: {} for {}", currentTeamMembers, this.profileCache.getProfile().getName());
     }
 
+    public String getMCVersion() {
+        return ProtocolVersion.getProtocol(protocolVersionId).getName();
+    }
+
+    public ProtocolVersion getProtocolVersion() {
+        return ProtocolVersion.getProtocol(protocolVersionId);
+    }
+
     public boolean canTransfer() {
-        if (CONFIG.server.viaversion.enabled) {
-            var viaClientProtocolVersion = Via.getManager().getConnectionManager().getConnectedClients().values().stream()
-                .filter(client -> client.getChannel() == getChannel())
-                .map(con -> con.getProtocolInfo().protocolVersion())
-                .findFirst();
-            return !(viaClientProtocolVersion.isPresent() && viaClientProtocolVersion.get().olderThan(ProtocolVersion.v1_20_5));
-        }
-        return true;
+        return getProtocolVersion().newerThanOrEqualTo(ProtocolVersion.v1_20_5);
     }
 
     public void transfer(final String address, final int port) {

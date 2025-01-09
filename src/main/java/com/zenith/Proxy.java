@@ -19,7 +19,6 @@ import com.zenith.network.server.CustomServerInfoBuilder;
 import com.zenith.network.server.LanBroadcaster;
 import com.zenith.network.server.ProxyServerListener;
 import com.zenith.network.server.ServerSession;
-import com.zenith.network.server.handler.ProxyServerLoginHandler;
 import com.zenith.util.ComponentSerializer;
 import com.zenith.util.FastArrayList;
 import com.zenith.util.Wait;
@@ -460,7 +459,6 @@ public class Proxy {
             this.lanBroadcaster = new LanBroadcaster(serverInfoBuilder);
             lanBroadcaster.start();
         }
-        this.server.setGlobalFlag(MinecraftConstants.SERVER_LOGIN_HANDLER_KEY, new ProxyServerLoginHandler());
         this.server.setGlobalFlag(MinecraftConstants.AUTOMATIC_KEEP_ALIVE_MANAGEMENT, true);
         this.server.addListener(new ProxyServerListener());
         this.server.bind(false);

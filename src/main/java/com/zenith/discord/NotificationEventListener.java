@@ -240,7 +240,8 @@ public class NotificationEventListener {
         if (!CONFIG.discord.clientConnectionMessages) return;
         var embed = Embed.builder()
             .title("Client Connected")
-            .addField("Username", escape(event.clientGameProfile().getName()), true)
+            .addField("Username", escape(event.clientGameProfile().getName()), false)
+            .addField("MC Version", event.session().getMCVersion(), false)
             .primaryColor();
         if (CONFIG.discord.mentionOnClientConnected) {
             sendEmbedMessage(notificationMention(), embed);
@@ -253,7 +254,8 @@ public class NotificationEventListener {
         if (!CONFIG.discord.clientConnectionMessages) return;
         var embed = Embed.builder()
             .title("Spectator Connected")
-            .addField("Username", escape(event.clientGameProfile().getName()), true)
+            .addField("Username", escape(event.clientGameProfile().getName()), false)
+            .addField("MC Version", event.session().getMCVersion(), false)
             .primaryColor();
         if (CONFIG.discord.mentionOnSpectatorConnected) {
             sendEmbedMessage(notificationMention(), embed);
