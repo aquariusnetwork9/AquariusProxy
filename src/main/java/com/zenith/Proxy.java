@@ -3,6 +3,7 @@ package com.zenith;
 import ch.qos.logback.classic.LoggerContext;
 import com.zenith.cache.CacheResetType;
 import com.zenith.discord.Embed;
+import com.zenith.discord.NotificationEventListener;
 import com.zenith.event.proxy.*;
 import com.zenith.feature.api.crafthead.CraftheadApi;
 import com.zenith.feature.api.mcsrvstatus.MCSrvStatusApi;
@@ -160,6 +161,7 @@ public class Proxy {
                 }
                 if (!err) DISCORD_LOG.info("Started Discord Bot");
             }
+            NotificationEventListener.INSTANCE.subscribeEvents();
             Queue.start();
             saveConfigAsync();
             MinecraftCodecHelper.useBinaryNbtComponentSerializer = CONFIG.debug.binaryNbtComponentSerializer;
@@ -197,10 +199,18 @@ public class Proxy {
                 DEFAULT_LOG.info("Started AutoUpdater");
             }
             DEFAULT_LOG.info("ZenithProxy started!");
-            if (!DISCORD.isRunning() && LAUNCH_CONFIG.release_channel.endsWith(".pre")) {
-                DEFAULT_LOG.warn("You are currently using a ZenithProxy prerelease");
-                DEFAULT_LOG.warn("Prereleases include experiments that may contain bugs and are not always updated with fixes");
-                DEFAULT_LOG.warn("Switch to a stable release with the `channel` command");
+            if (LAUNCH_CONFIG.release_channel.endsWith(".pre")) {
+                DISCORD.sendEmbedMessage(
+                    Embed.builder()
+                        .title("ZenithProxy Prerelease")
+                        .description(
+                            """
+                            You are currently using a ZenithProxy prerelease
+                            
+                            Prereleases include experiments that may contain bugs and are not always updated with fixes             
+                            
+                            Switch to a stable release with the `channel` command
+                            """));
             }
             if (!connected) {
                 DEFAULT_LOG.info("Commands Help: https://github.com/rfresh2/ZenithProxy/wiki/Commands");
@@ -245,14 +255,11 @@ public class Proxy {
                     
                     Shut down duplicate instances, or change the configured port: `serverConnection port <port>`
                     """.formatted(CONFIG.server.bind.port);
-                SERVER_LOG.error(errorMessage);
-                if (DISCORD.isRunning()) {
-                    DISCORD.sendEmbedMessage(
-                        Embed.builder()
-                            .title("ZenithProxy Server Error")
-                            .description(errorMessage)
-                            .errorColor());
-                }
+                DISCORD.sendEmbedMessage(
+                    Embed.builder()
+                        .title("ZenithProxy Server Error")
+                        .description(errorMessage)
+                        .errorColor());
             }
         }, 30, TimeUnit.SECONDS);
     }
@@ -696,25 +703,6 @@ public class Proxy {
         this.didQueueSkip = false;
         this.queuePosition = 0;
         TPS.reset();
-        if (!DISCORD.isRunning()
-            && isOn2b2t()
-            && !isPrio()
-            && event.reason().startsWith("You have lost connection")) {
-            if (event.onlineDuration().toSeconds() >= 0L
-                && event.onlineDuration().toSeconds() <= 1L) {
-                CLIENT_LOG.warn("""
-                                You have likely been kicked for reaching the 2b2t non-prio account IP limit.
-                                Consider configuring a connection proxy with the `clientConnection` command.
-                                Or migrate ZenithProxy instances to multiple hosts/IP's.
-                                """);
-            } else if (event.wasInQueue() && event.queuePosition() <= 1) {
-                CLIENT_LOG.warn("""
-                                You have likely been kicked due to being IP banned by 2b2t.
-                                
-                                To check, try connecting and waiting through queue with the same account from a different IP.
-                                """);
-            }
-        }
     }
 
     public void handleConnectEvent(ConnectEvent event) {
