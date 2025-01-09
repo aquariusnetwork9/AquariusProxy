@@ -163,8 +163,14 @@ public class World {
         for (int i = 0; i < blockPosList.size(); i++) {
             var blockPos = blockPosList.getLong(i);
             var blockState = getBlockState(blockPos);
-            if (blockState.id() == 0) continue; // air
-            blockStates.add(blockState);
+            if (BLOCK_DATA.isAir(blockState.block())) continue; // air
+            List<LocalizedCollisionBox> blockStateCBs = blockState.getLocalizedCollisionBoxes();
+            for (int j = 0; j < blockStateCBs.size(); j++) {
+                if (blockStateCBs.get(j).intersects(cb)) {
+                    blockStates.add(blockState);
+                    break;
+                }
+            }
         }
         return blockStates;
     }

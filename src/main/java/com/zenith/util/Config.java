@@ -478,6 +478,7 @@ public final class Config {
             public String spectatorEntity = "cat";
             public boolean spectatorPublicChatEnabled = true;
             public boolean fullCommandsEnabled = false;
+            public boolean fullCommandsAcceptSlashCommands = true;
             public boolean fullCommandsRequireRegularWhitelist = true;
             public ArrayList<PlayerEntry> whitelist = new ArrayList<>();
         }
@@ -583,6 +584,7 @@ public final class Config {
         public boolean slashCommandsReplacesServerCommands = false;
         public String prefix = "!";
         public boolean logToDiscord = true;
+        public boolean allowWhitelistedToUseAccountOwnerCommands = false;
     }
 
     public static final class Discord {

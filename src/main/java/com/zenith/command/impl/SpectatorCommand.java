@@ -48,6 +48,7 @@ public class SpectatorCommand extends Command {
                 "entity <entity>",
                 "chat on/off",
                 "fullCommands on/off",
+                "fullCommands slashCommands on/off",
                 "fullCommands requireRegularWhitelist on/off"
             )
         );
@@ -146,6 +147,13 @@ public class SpectatorCommand extends Command {
                               .primaryColor();
                           return OK;
                       }))
+                      .then(literal("slashCommands").then(argument("toggle", toggle()).executes(c -> {
+                          CONFIG.server.spectator.fullCommandsAcceptSlashCommands = getToggle(c, "toggle");
+                          c.getSource().getEmbed()
+                              .title("Full Spectator Commands Accept Slash Commands " + toggleStrCaps(CONFIG.server.spectator.fullCommandsAcceptSlashCommands))
+                              .primaryColor();
+                          return OK;
+                      })))
                       .then(literal("requireRegularWhitelist").then(argument("toggle", toggle()).executes(c -> {
                           CONFIG.server.spectator.fullCommandsRequireRegularWhitelist = getToggle(c, "toggle");
                           c.getSource().getEmbed()
@@ -170,6 +178,7 @@ public class SpectatorCommand extends Command {
             .addField("Chat", toggleStr(CONFIG.server.spectator.spectatorPublicChatEnabled), false)
             .addField("Entity", CONFIG.server.spectator.spectatorEntity, false)
             .addField("Full Commands", toggleStr(CONFIG.server.spectator.fullCommandsEnabled), false)
+            .addField("Full Commands Slash Commands", toggleStr(CONFIG.server.spectator.fullCommandsAcceptSlashCommands), false)
             .addField("Full Commands Require Regular Whitelist", toggleStr(CONFIG.server.spectator.fullCommandsRequireRegularWhitelist), false);
     }
 }

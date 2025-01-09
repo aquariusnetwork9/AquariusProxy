@@ -22,10 +22,7 @@ import com.zenith.network.server.handler.shared.outgoing.KeepAliveOutgoingHandle
 import com.zenith.network.server.handler.shared.outgoing.SLoginFinishedOutgoingHandler;
 import com.zenith.network.server.handler.shared.outgoing.ServerTablistDataOutgoingHandler;
 import com.zenith.network.server.handler.shared.postoutgoing.*;
-import com.zenith.network.server.handler.spectator.incoming.InteractEntitySpectatorHandler;
-import com.zenith.network.server.handler.spectator.incoming.PlayerCommandSpectatorHandler;
-import com.zenith.network.server.handler.spectator.incoming.ServerChatSpectatorHandler;
-import com.zenith.network.server.handler.spectator.incoming.TeleportToEntitySpectatorHandler;
+import com.zenith.network.server.handler.spectator.incoming.*;
 import com.zenith.network.server.handler.spectator.incoming.movement.PlayerPositionRotationSpectatorHandler;
 import com.zenith.network.server.handler.spectator.incoming.movement.PlayerPositionSpectatorHandler;
 import com.zenith.network.server.handler.spectator.incoming.movement.PlayerRotationSpectatorHandler;
@@ -257,6 +254,9 @@ public final class ZenithHandlerCodec {
                 .registerInbound(ServerboundPlayerCommandPacket.class, new PlayerCommandSpectatorHandler())
                 .registerInbound(ServerboundTeleportToEntityPacket.class, new TeleportToEntitySpectatorHandler())
                 .registerInbound(ServerboundInteractPacket.class, new InteractEntitySpectatorHandler())
+                .registerInbound(ServerboundChatCommandPacket.class, new ChatCommandSpectatorHandler())
+                .registerInbound(ServerboundChatCommandSignedPacket.class, new SignedChatCommandSpectatorHandler())
+                .registerOutbound(ClientboundCommandsPacket.class, new ClientCommandsSpectatorOutgoingHandler())
                 .registerOutbound(ClientboundContainerClosePacket.class, new ContainerCloseSpectatorOutgoingHandler())
                 .registerOutbound(ClientboundContainerSetContentPacket.class, new ContainerSetContentSpectatorOutgoingHandler())
                 .registerOutbound(ClientboundPlaceGhostRecipePacket.class, new PlaceGhostRecipeSpectatorOutgoingHandler())

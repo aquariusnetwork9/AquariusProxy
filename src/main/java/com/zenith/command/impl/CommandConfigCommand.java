@@ -29,7 +29,8 @@ public class CommandConfigCommand extends Command {
                 "ingame on/off",
                 "ingame slashCommands on/off",
                 "ingame slashCommands replaceServerCommands on/off",
-                "ingame prefix <string>"
+                "ingame prefix <string>",
+                "ingame allowWhitelistedToUseAccountOwnerCommands on/off"
                 // todo: might add command to config these at some point. But I think these should always be on
 //                "ingame logToDiscord on/off",
 //                "terminal logToDiscord on/off"
@@ -96,7 +97,13 @@ public class CommandConfigCommand extends Command {
                                                       .description("Set ingame prefix to " + CONFIG.inGameCommands.prefix);
                                                   return OK;
                                               }
-                                          }))));
+                                          })))
+                      .then(literal("allowWhitelistedToUseAccountOwnerCommands").then(argument("toggle", toggle()).executes(c -> {
+                          CONFIG.inGameCommands.allowWhitelistedToUseAccountOwnerCommands = getToggle(c, "toggle");
+                          c.getSource().getEmbed()
+                              .title("Allow Whitelisted Use Account Owner Commands " + toggleStrCaps(CONFIG.inGameCommands.allowWhitelistedToUseAccountOwnerCommands));
+                          return OK;
+                      }))));
     }
 
     private static void syncSlashCommandsToCurrentPlayer() {
@@ -114,6 +121,7 @@ public class CommandConfigCommand extends Command {
             .addField("Ingame Slash Commands", toggleStr(CONFIG.inGameCommands.slashCommands), false)
             .addField("Ingame Slash Commands Replace Server Commands", toggleStr(CONFIG.inGameCommands.slashCommandsReplacesServerCommands), false)
             .addField("Ingame Prefix", CONFIG.inGameCommands.prefix, false)
+            .addField("Ingame Allow Whitelisted To Use Account Owner Commands", toggleStr(CONFIG.inGameCommands.allowWhitelistedToUseAccountOwnerCommands), false)
             .primaryColor();
     }
 }
