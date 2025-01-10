@@ -2,6 +2,7 @@ package com.zenith.network.client.handler.incoming;
 
 import com.zenith.cache.CacheResetType;
 import com.zenith.feature.spectator.SpectatorSync;
+import com.zenith.feature.world.World;
 import com.zenith.module.impl.PlayerSimulation;
 import com.zenith.network.client.ClientSession;
 import com.zenith.network.registry.ClientEventLoopPacketHandler;
@@ -42,7 +43,7 @@ public class RespawnHandler implements ClientEventLoopPacketHandler<ClientboundR
             // delay is a hacky workaround and might still get caught in race condition sometimes
             EXECUTOR.schedule(this::spectatorRespawn, 3L, TimeUnit.SECONDS);
         }
-        if (!Objects.equals(CACHE.getChunkCache().getCurrentDimension().name(), packet.getCommonPlayerSpawnInfo().getDimension())) {
+        if (!Objects.equals(World.getCurrentDimension().id(), packet.getCommonPlayerSpawnInfo().getDimension())) {
             CACHE.reset(CacheResetType.RESPAWN);
         }
         CACHE.getPlayerCache()

@@ -12,6 +12,7 @@ import com.zenith.discord.DiscordBot;
 import com.zenith.discord.Embed;
 import com.zenith.feature.api.sessionserver.SessionServerApi;
 import com.zenith.feature.whitelist.PlayerListsManager;
+import com.zenith.feature.world.World;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
@@ -87,7 +88,7 @@ public class SkinCommand extends Command {
                 }));
                 session.sendAsync(new ClientboundRespawnPacket(
                     new PlayerSpawnInfo(
-                        CACHE.getChunkCache().getCurrentDimension().id(),
+                        World.getCurrentDimension().id(),
                         CACHE.getChunkCache().getWorldName(),
                         CACHE.getChunkCache().getHashedSeed(),
                         CACHE.getPlayerCache().getGameMode(),

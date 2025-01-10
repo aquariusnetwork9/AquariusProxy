@@ -1,5 +1,6 @@
 package com.zenith.feature.world;
 
+import com.zenith.cache.data.chunk.Chunk;
 import com.zenith.mc.block.*;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
@@ -31,7 +32,13 @@ public class World {
         return null;
     }
 
-    public @NotNull DimensionData dimensionTypeWithFallback() {
+    @Nullable
+    public static Chunk getChunk(final int chunkX, final int chunkZ) {
+        return CACHE.getChunkCache().get(chunkX, chunkZ);
+    }
+
+    // falls back to overworld if current dimension is null
+    public @NotNull DimensionData getCurrentDimension() {
         DimensionData currentDimension = CACHE.getChunkCache().getCurrentDimension();
         if (currentDimension == null) return DimensionRegistry.OVERWORLD;
         return currentDimension;
