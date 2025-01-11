@@ -587,7 +587,7 @@ public class PlayerSimulation extends Module {
     }
 
     private void tryCheckInsideBlocks() {
-        var collidingBlockStates = World.getCollidingBlockStates(playerCollisionBox);
+        var collidingBlockStates = World.getCollidingBlockStatesInside(playerCollisionBox);
         if (collidingBlockStates.isEmpty()) return;
         for (int i = 0; i < collidingBlockStates.size(); i++) {
             var localState = collidingBlockStates.get(i);

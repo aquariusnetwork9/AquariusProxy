@@ -153,6 +153,24 @@ public class World {
         return blockPosList;
     }
 
+    public LongList getBlockPosLongListInCollisionBoxInside(final LocalizedCollisionBox cb) {
+        int minX = MathHelper.floorI(cb.minX());
+        int maxX = MathHelper.ceilI(cb.maxX());
+        int minY = MathHelper.floorI(cb.minY());
+        int maxY = MathHelper.ceilI(cb.maxY());
+        int minZ = MathHelper.floorI(cb.minZ());
+        int maxZ = MathHelper.ceilI(cb.maxZ());
+        final LongArrayList blockPosList = new LongArrayList((maxX - minX) * (maxY - minY) * (maxZ - minZ));
+        for (int x = minX; x < maxX; x++) {
+            for (int y = minY; y < maxY; y++) {
+                for (int z = minZ; z < maxZ; z++) {
+                    blockPosList.add(BlockPos.asLong(x, y, z));
+                }
+            }
+        }
+        return blockPosList;
+    }
+
     public List<BlockState> getCollidingBlockStates(final LocalizedCollisionBox cb) {
         final List<BlockState> blockStates = new ArrayList<>(4);
         LongList blockPosList = getBlockPosLongListInCollisionBox(cb);
@@ -167,6 +185,18 @@ public class World {
                     break;
                 }
             }
+        }
+        return blockStates;
+    }
+
+    public List<BlockState> getCollidingBlockStatesInside(final LocalizedCollisionBox cb) {
+        final List<BlockState> blockStates = new ArrayList<>(4);
+        LongList blockPosList = getBlockPosLongListInCollisionBoxInside(cb);
+        for (int i = 0; i < blockPosList.size(); i++) {
+            var blockPos = blockPosList.getLong(i);
+            var blockState = getBlockState(blockPos);
+            if (BLOCK_DATA.isAir(blockState.block())) continue; // air
+            blockStates.add(blockState);
         }
         return blockStates;
     }
