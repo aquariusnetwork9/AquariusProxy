@@ -5,7 +5,6 @@ import com.zenith.event.proxy.DatabaseTickEvent;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.concurrent.TimeUnit;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
@@ -48,7 +47,7 @@ public class TimeDatabase extends LockingDatabase {
         // cached worldtime data is updated in-place
         // technically there is a possible race condition here
         // but should be pretty unlikely if we extract the data out quickly here
-        var timeInstant = Instant.ofEpochMilli(TimeUnit.NANOSECONDS.toMillis(worldTimeData.getLastUpdate()));
+        var timeInstant = Instant.ofEpochMilli(worldTimeData.getLastUpdate());
         var time = timeInstant.atOffset(ZoneOffset.UTC);
         long worldage = worldTimeData.getWorldAge();
         long worldtime = worldTimeData.getTime();

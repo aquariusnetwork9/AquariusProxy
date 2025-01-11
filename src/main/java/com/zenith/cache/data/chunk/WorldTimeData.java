@@ -10,14 +10,14 @@ public class WorldTimeData {
     private long time;
 
     public void update(ClientboundSetTimePacket packet) {
-        this.lastUpdate = System.nanoTime();
+        this.lastUpdate = System.currentTimeMillis();
         this.worldAge = packet.getWorldAge();
         this.time = packet.getTime();
     }
 
     public ClientboundSetTimePacket toPacket() {
         // The amount of ticks that have passed since the last time packet was received.
-        final long offset = (System.nanoTime() - this.lastUpdate) / 50000000;
+        final long offset = (System.currentTimeMillis() - this.lastUpdate) / 50;
 
         long worldAge = this.worldAge;
 
