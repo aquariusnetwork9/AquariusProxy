@@ -1,7 +1,9 @@
 package com.zenith.cache.data.chunk;
 
+import lombok.Data;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundSetTimePacket;
 
+@Data
 public class WorldTimeData {
     private long lastUpdate;
     private long worldAge;

@@ -26,6 +26,7 @@ public class DatabaseManager {
     private PlayerCountDatabase playerCountDatabase;
     private TablistDatabase tablistDatabase;
     private PlaytimeDatabase playtimeDatabase;
+    private TimeDatabase timeDatabase;
     private QueryExecutor queryExecutor;
     private RedisClient redisClient;
     private ScheduledFuture<?> databaseTickFuture;
@@ -63,6 +64,9 @@ public class DatabaseManager {
             }
             if (CONFIG.database.playtimeEnabled) {
                 startPlaytimeDatabase();
+            }
+            if (CONFIG.database.timeEnabled) {
+                startTimeDatabase();
             }
             if (databaseTickFuture != null) {
                 databaseTickFuture.cancel(false);
@@ -239,6 +243,22 @@ public class DatabaseManager {
             this.playtimeDatabase.stop();
         }
     }
+
+    public void startTimeDatabase() {
+        if (nonNull(this.timeDatabase)) {
+            this.timeDatabase.start();
+        } else {
+            this.timeDatabase = new TimeDatabase(queryExecutor, getRedisClient());
+            this.timeDatabase.start();
+        }
+    }
+
+    public void stopTimeDatabase() {
+        if (nonNull(this.timeDatabase)) {
+            this.timeDatabase.stop();
+        }
+    }
+
 
     private synchronized Jdbi getJdbi() {
         if (isNull(this.jdbi)) {
