@@ -11,7 +11,6 @@ import com.zenith.util.math.MathHelper;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import lombok.SneakyThrows;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.DataPalette;
 import org.jetbrains.annotations.Nullable;
@@ -24,7 +23,6 @@ public class BlockDataManager {
     private final Int2ObjectOpenHashMap<Block> blockStateIdToBlock;
     private final Int2ObjectOpenHashMap<List<CollisionBox>> blockStateIdToCollisionBoxes;
     private final Int2ObjectOpenHashMap<List<CollisionBox>> blockStateIdToInteractionBoxes;
-    private final IntOpenHashSet waterloggedStateIds = new IntOpenHashSet(9182 + 1, Maps.FAST_LOAD_FACTOR);
     private final Int2ObjectOpenHashMap<FluidState> blockStateIdToFluidState = new Int2ObjectOpenHashMap<>(100, Maps.FAST_LOAD_FACTOR);
 
     public BlockDataManager() {
@@ -53,14 +51,6 @@ public class BlockDataManager {
         }
         initShapeCache("blockCollisionShapes", blockStateIdToCollisionBoxes);
         initShapeCache("blockInteractionShapes", blockStateIdToInteractionBoxes);
-        try (JsonParser waterloggedParser = OBJECT_MAPPER.createParser(getClass().getResourceAsStream(
-            "/mcdata/waterloggedBlockStateIds.json"))) {
-            TreeNode waterloggedNode = waterloggedParser.getCodec().readTree(waterloggedParser);
-            ArrayNode waterloggedArray = (ArrayNode) waterloggedNode;
-            waterloggedArray.elements().forEachRemaining((stateId) -> {
-                waterloggedStateIds.add(stateId.asInt());
-            });
-        }
         try (JsonParser fluidsParse = OBJECT_MAPPER.createParser(getClass().getResourceAsStream(
             "/mcdata/fluidStates.json"))) {
             TreeNode treeNode = fluidsParse.getCodec().readTree(fluidsParse);
@@ -167,10 +157,6 @@ public class BlockDataManager {
             ));
         }
         return localizedCollisionBoxes;
-    }
-
-    public boolean isWaterLogged(int blockStateId) {
-        return waterloggedStateIds.contains(blockStateId);
     }
 
     @Nullable
