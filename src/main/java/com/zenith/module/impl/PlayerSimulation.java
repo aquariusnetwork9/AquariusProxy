@@ -918,12 +918,14 @@ public class PlayerSimulation extends Module {
                 for (int z = floorZ; z < ceilZ; z++) {
                     double fluidHeightToWorld;
                     var blockState = World.getBlockState(x, y, z);
+                    var fluidState = World.getFluidState(blockState.id());
+                    if (fluidState == null) continue;
                     if (waterFluid) {
                         if (blockState.block() != BlockRegistry.WATER) continue;
                     } else {
                         if (blockState.block() != BlockRegistry.LAVA) continue;
                     }
-                    float fluidHeight = World.getFluidHeight(blockState);
+                    float fluidHeight = World.getFluidHeight(fluidState);
                     if (fluidHeight == 0 || (fluidHeightToWorld = y + fluidHeight) < playerCollisionBox.minY() + 0.001) continue;
                     touched = true;
                     topFluidHDelta = Math.max(fluidHeightToWorld - (playerCollisionBox.minY() + 0.001), topFluidHDelta);

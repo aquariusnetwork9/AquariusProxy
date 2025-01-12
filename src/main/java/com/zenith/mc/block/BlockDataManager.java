@@ -14,8 +14,8 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import lombok.SneakyThrows;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.DataPalette;
+import org.jetbrains.annotations.Nullable;
 
-import javax.annotation.Nullable;
 import java.util.*;
 
 import static com.zenith.Shared.OBJECT_MAPPER;
@@ -25,6 +25,7 @@ public class BlockDataManager {
     private final Int2ObjectOpenHashMap<List<CollisionBox>> blockStateIdToCollisionBoxes;
     private final Int2ObjectOpenHashMap<List<CollisionBox>> blockStateIdToInteractionBoxes;
     private final IntOpenHashSet waterloggedStateIds = new IntOpenHashSet(9182 + 1, Maps.FAST_LOAD_FACTOR);
+    private final Int2ObjectOpenHashMap<FluidState> blockStateIdToFluidState = new Int2ObjectOpenHashMap<>(100, Maps.FAST_LOAD_FACTOR);
 
     public BlockDataManager() {
         int blockStateIdCount = BlockRegistry.REGISTRY.getIdMap().int2ObjectEntrySet().stream()
@@ -59,6 +60,21 @@ public class BlockDataManager {
             waterloggedArray.elements().forEachRemaining((stateId) -> {
                 waterloggedStateIds.add(stateId.asInt());
             });
+        }
+        try (JsonParser fluidsParse = OBJECT_MAPPER.createParser(getClass().getResourceAsStream(
+            "/mcdata/fluidStates.json"))) {
+            TreeNode treeNode = fluidsParse.getCodec().readTree(fluidsParse);
+            ObjectNode fluidStatesNode = (ObjectNode) treeNode;
+            for (Iterator<String> it = fluidStatesNode.fieldNames(); it.hasNext(); ) {
+                String stateIdString = it.next();
+                int stateId = Integer.parseInt(stateIdString);
+                ObjectNode fluidStateNode = (ObjectNode) fluidStatesNode.get(stateIdString);
+                boolean water = fluidStateNode.get("water").asBoolean();
+                boolean source = fluidStateNode.get("source").asBoolean();
+                int amount = fluidStateNode.get("amount").asInt();
+                boolean falling = fluidStateNode.get("falling").asBoolean();
+                blockStateIdToFluidState.put(stateId, new FluidState(water, source, amount, falling));
+            }
         }
         DataPalette.GLOBAL_PALETTE_BITS_PER_ENTRY = MathHelper.log2Ceil(blockStateIdToBlock.size());
     }
@@ -155,6 +171,11 @@ public class BlockDataManager {
 
     public boolean isWaterLogged(int blockStateId) {
         return waterloggedStateIds.contains(blockStateId);
+    }
+
+    @Nullable
+    public FluidState getFluidState(int blockStateId) {
+        return blockStateIdToFluidState.get(blockStateId);
     }
 
     public boolean isAir(Block block) {
