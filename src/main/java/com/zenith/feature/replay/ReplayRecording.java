@@ -3,6 +3,7 @@ package com.zenith.feature.replay;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.zenith.Proxy;
 import com.zenith.feature.spectator.SpectatorPacketProvider;
+import com.zenith.feature.world.World;
 import com.zenith.module.impl.ReplayMod;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -59,7 +60,7 @@ public class ReplayRecording implements Closeable {
         this.replayDirectory = replayDirectory;
     }
 
-    public void startRecording() throws Exception{
+    public synchronized void startRecording() throws Exception {
         // initialize output streams and metadata
         var serverName = CONFIG.client.server.address;
         if (CONFIG.client.server.port != 25565)
@@ -86,7 +87,7 @@ public class ReplayRecording implements Closeable {
     }
 
     // Start recording while we already have a logged in session
-    private void lateStartRecording() {
+    private synchronized void lateStartRecording() {
         writePacket0(0, new ClientboundLoginFinishedPacket(CACHE.getProfileCache().getProfile()), Proxy.getInstance().getClient(), ProtocolState.LOGIN);
         CACHE.getConfigurationCache().getPackets(
             packet -> writePacket0(System.currentTimeMillis(), (MinecraftPacket) packet, Proxy.getInstance().getClient(), ProtocolState.CONFIGURATION),
@@ -104,7 +105,7 @@ public class ReplayRecording implements Closeable {
             CACHE.getPlayerCache().isEnableRespawnScreen(),
             CACHE.getPlayerCache().isDoLimitedCrafting(),
             new PlayerSpawnInfo(
-                CACHE.getChunkCache().getCurrentDimension().id(),
+                World.getCurrentDimension().id(),
                 CACHE.getChunkCache().getWorldName(),
                 CACHE.getChunkCache().getHashedSeed(),
                 CACHE.getPlayerCache().getGameMode(),
@@ -142,7 +143,7 @@ public class ReplayRecording implements Closeable {
         if (!executor.isShutdown()) executor.execute(() -> writePacket0(time, packet, session, protocolState));
     }
 
-    private void writePacket0(final long time, final MinecraftPacket packet, final Session session, final ProtocolState protocolState) {
+    private synchronized void writePacket0(final long time, final MinecraftPacket packet, final Session session, final ProtocolState protocolState) {
         try {
             writeToFile(time, packet, session, protocolState);
         } catch (final Throwable e) {
@@ -150,7 +151,7 @@ public class ReplayRecording implements Closeable {
         }
     }
 
-    private void writeToFile(final long time, final MinecraftPacket packet, final Session session, final ProtocolState protocolState) {
+    private synchronized void writeToFile(final long time, final MinecraftPacket packet, final Session session, final ProtocolState protocolState) {
         int t = time == 0 ? 0 : (int) (time - startT);
         if (t == 0) startT = System.currentTimeMillis();
         final ByteBuf packetBuf = ALLOC.heapBuffer();
@@ -175,7 +176,7 @@ public class ReplayRecording implements Closeable {
     }
 
     @Override
-    public void close() throws IOException {
+    public synchronized void close() throws IOException {
         if (!executor.isShutdown()) {
             try {
                 executor.shutdown();

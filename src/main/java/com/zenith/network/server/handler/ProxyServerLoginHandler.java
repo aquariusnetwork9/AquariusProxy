@@ -5,6 +5,7 @@ import com.zenith.cache.data.PlayerCache;
 import com.zenith.event.proxy.PlayerLoginEvent;
 import com.zenith.event.proxy.ProxyClientConnectedEvent;
 import com.zenith.event.proxy.ProxySpectatorConnectedEvent;
+import com.zenith.feature.world.World;
 import com.zenith.network.server.CustomServerInfoBuilder;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.Maps;
@@ -66,7 +67,7 @@ public class ProxyServerLoginHandler {
                 CACHE.getPlayerCache().isEnableRespawnScreen(),
                 CACHE.getPlayerCache().isDoLimitedCrafting(),
                 new PlayerSpawnInfo(
-                    CACHE.getChunkCache().getCurrentDimension().id(),
+                    World.getCurrentDimension().id(),
                     CACHE.getChunkCache().getWorldName(),
                     CACHE.getChunkCache().getHashedSeed(),
                     GameMode.SPECTATOR,
@@ -92,7 +93,7 @@ public class ProxyServerLoginHandler {
                 CACHE.getPlayerCache().isEnableRespawnScreen(),
                 CACHE.getPlayerCache().isDoLimitedCrafting(),
                 new PlayerSpawnInfo(
-                    CACHE.getChunkCache().getCurrentDimension().id(),
+                    World.getCurrentDimension().id(),
                     CACHE.getChunkCache().getWorldName(),
                     CACHE.getChunkCache().getHashedSeed(),
                     CACHE.getPlayerCache().getGameMode(),

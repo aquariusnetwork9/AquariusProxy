@@ -11,6 +11,7 @@ import com.zenith.feature.api.fileio.FileIOApi;
 import com.zenith.feature.deathmessages.DeathMessageParseResult;
 import com.zenith.feature.deathmessages.KillerType;
 import com.zenith.feature.queue.Queue;
+import com.zenith.feature.world.World;
 import com.zenith.util.DisconnectReasonInfo;
 import discord4j.core.event.domain.interaction.ButtonInteractionEvent;
 import discord4j.core.event.domain.message.MessageCreateEvent;
@@ -208,8 +209,8 @@ public class NotificationEventListener {
         var embed = Embed.builder()
             .title("Player Death")
             .errorColor()
-            .addField("Coordinates", getCoordinates(CACHE.getPlayerCache()), false)
-            .addField("Dimension", CACHE.getChunkCache().getCurrentDimension().name(), false);
+            .addField("Coordinates", getCoordinates(CACHE.getPlayerCache().getThePlayer()), false)
+            .addField("Dimension", World.getCurrentDimension().name(), false);
         if (CONFIG.discord.mentionRoleOnDeath) {
             sendEmbedMessage(notificationMention(), embed);
         } else {

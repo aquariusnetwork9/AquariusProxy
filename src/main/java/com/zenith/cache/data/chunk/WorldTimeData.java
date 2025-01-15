@@ -1,8 +1,9 @@
 package com.zenith.cache.data.chunk;
 
+import lombok.Data;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundSetTimePacket;
 
-// todo: verify correct
+@Data
 public class WorldTimeData {
     private long lastUpdate;
     private long gameTime;
@@ -10,7 +11,7 @@ public class WorldTimeData {
     private boolean tickDayTime;
 
     public void update(ClientboundSetTimePacket packet) {
-        this.lastUpdate = System.nanoTime();
+        this.lastUpdate = System.currentTimeMillis();
         this.gameTime = packet.getGameTime();
         this.dayTime = packet.getDayTime();
         this.tickDayTime = packet.isTickDayTime();
@@ -18,7 +19,7 @@ public class WorldTimeData {
 
     public ClientboundSetTimePacket toPacket() {
         // The amount of ticks that have passed since the last time packet was received.
-        final long offset = (System.nanoTime() - this.lastUpdate) / 50000000;
+        final long offset = (System.currentTimeMillis() - this.lastUpdate) / 50;
 
         long worldAge = this.gameTime;
 

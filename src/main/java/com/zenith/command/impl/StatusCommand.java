@@ -2,7 +2,7 @@ package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
-import com.zenith.cache.data.PlayerCache;
+import com.zenith.cache.data.entity.Entity;
 import com.zenith.command.Command;
 import com.zenith.command.CommandUsage;
 import com.zenith.command.brigadier.CommandCategory;
@@ -38,12 +38,12 @@ public class StatusCommand extends Command {
         );
     }
 
-    public static String getCoordinates(final PlayerCache playerCache) {
+    public static String getCoordinates(final Entity entity) {
         if (CONFIG.discord.reportCoords) {
             return "||["
-                    + (int) playerCache.getX() + ", "
-                    + (int) playerCache.getY() + ", "
-                    + (int) playerCache.getZ()
+                    + (int) entity.getX() + ", "
+                    + (int) entity.getY() + ", "
+                    + (int) entity.getZ()
                     + "]||";
         } else {
             return "Coords disabled";
@@ -161,7 +161,7 @@ public class StatusCommand extends Command {
                 embed
                     .addField("2b2t Queue", getQueueStatus(), true);
                 if (CONFIG.discord.reportCoords)
-                    embed.addField("Coordinates", getCoordinates(CACHE.getPlayerCache()), true);
+                    embed.addField("Coordinates", getCoordinates(CACHE.getPlayerCache().getThePlayer()), true);
                 embed
                     .addField("AutoUpdate", toggleStr(LAUNCH_CONFIG.auto_update), true);
                  return OK;

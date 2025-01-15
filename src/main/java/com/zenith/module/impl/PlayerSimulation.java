@@ -162,7 +162,7 @@ public class PlayerSimulation extends Module {
                         return;
                     }
                     wasLeftClicking = false;
-                } else if (raycast.hit() && raycast.isEntity() && entityAttackTimer.tick(CONFIG.client.extra.killAura.attackDelayTicks)) {
+                } else if (raycast.hit() && raycast.isEntity() && raycast.entity().entityData().attackable() && entityAttackTimer.tick(CONFIG.client.extra.killAura.attackDelayTicks)) {
                     // todo: reduce entity raycast range to 3.5
                     var rangeSq = Math.pow(CONFIG.client.extra.killAura.attackRange, 2);
                     double distanceSqToSelf = CACHE.getPlayerCache().distanceSqToSelf(raycast.entity().entity());
@@ -610,7 +610,7 @@ public class PlayerSimulation extends Module {
     }
 
     private void tryCheckInsideBlocks() {
-        var collidingBlockStates = World.getCollidingBlockStates(playerCollisionBox);
+        var collidingBlockStates = World.getCollidingBlockStatesInside(playerCollisionBox);
         if (collidingBlockStates.isEmpty()) return;
         for (int i = 0; i < collidingBlockStates.size(); i++) {
             var localState = collidingBlockStates.get(i);
@@ -942,12 +942,14 @@ public class PlayerSimulation extends Module {
                 for (int z = floorZ; z < ceilZ; z++) {
                     double fluidHeightToWorld;
                     var blockState = World.getBlockState(x, y, z);
+                    var fluidState = World.getFluidState(blockState.id());
+                    if (fluidState == null) continue;
                     if (waterFluid) {
                         if (blockState.block() != BlockRegistry.WATER) continue;
                     } else {
                         if (blockState.block() != BlockRegistry.LAVA) continue;
                     }
-                    float fluidHeight = World.getFluidHeight(blockState);
+                    float fluidHeight = World.getFluidHeight(fluidState);
                     if (fluidHeight == 0 || (fluidHeightToWorld = y + fluidHeight) < playerCollisionBox.minY() + 0.001) continue;
                     touched = true;
                     topFluidHDelta = Math.max(fluidHeightToWorld - (playerCollisionBox.minY() + 0.001), topFluidHDelta);

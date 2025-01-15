@@ -34,7 +34,8 @@ public class DatabaseCommand extends Command {
                 "restarts on/off",
                 "playerCount on/off",
                 "tablist on/off",
-                "playtime on/off"
+                "playtime on/off",
+                "time on/off"
             ),
             asList("db")
         );
@@ -132,6 +133,15 @@ public class DatabaseCommand extends Command {
                           c.getSource().getEmbed()
                               .title("Playtime Database " + toggleStrCaps(CONFIG.database.playtimeEnabled));
                           return OK;
+                      })))
+            .then(literal("time")
+                      .then(argument("toggle", toggle()).executes(c -> {
+                            CONFIG.database.timeEnabled = getToggle(c, "toggle");
+                            if (CONFIG.database.timeEnabled) DATABASE.startTimeDatabase();
+                            else DATABASE.stopTimeDatabase();
+                            c.getSource().getEmbed()
+                                .title("Time Database " + toggleStrCaps(CONFIG.database.timeEnabled));
+                            return OK;
                       })));
     }
 
@@ -147,6 +157,7 @@ public class DatabaseCommand extends Command {
             .addField("Player Count", toggleStr(CONFIG.database.playerCountEnabled), false)
             .addField("Tablist", toggleStr(CONFIG.database.tablistEnabled), false)
             .addField("Playtime", toggleStr(CONFIG.database.playtimeEnabled), false)
+            .addField("Time", toggleStr(CONFIG.database.timeEnabled), false)
             .primaryColor();
     }
 }

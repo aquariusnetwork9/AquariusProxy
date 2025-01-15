@@ -166,14 +166,6 @@ public class ReplayMod extends Module {
         }
     }
 
-    public void handleHealthChangeEvent(PlayerHealthChangedEvent event) {
-        if (CONFIG.client.extra.replayMod.autoRecordMode == AutoRecordMode.HEALTH
-            && event.newHealth() > CONFIG.client.extra.replayMod.replayRecordingHealthThreshold) {
-            info("Stopping recording due to health above: {}", CONFIG.client.extra.replayMod.replayRecordingHealthThreshold);
-            disable();
-        }
-    }
-
     /**
      * Event listeners even when the module is disabled
      */

@@ -111,6 +111,7 @@ public class RaycastHelper {
             if (entityDistanceToStartPos > resultRaycastDistanceToStart) continue;
             EntityData data = ENTITY_DATA.getEntityData(e.getEntityType());
             if (data == null) continue;
+            if (!data.pickable()) continue;
             LocalizedCollisionBox cb = entityCollisionBox(e, data);
             RayIntersection intersection = cb.rayIntersection(startX, startY, startZ, endX, endY, endZ);
             if (intersection != null) {

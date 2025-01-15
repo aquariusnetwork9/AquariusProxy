@@ -89,7 +89,7 @@ public class EntityCache implements CachedData {
     //  if there are higher frequency use cases, consider building a secondary cached map of uuids to entity
     public Entity get(UUID uuid) {
         return this.entities.values().stream()
-            .filter(entity -> entity.getUuid().equals(uuid))
+            .filter(entity -> uuid.equals(entity.getUuid()))
             .findFirst()
             .orElse(null);
     }

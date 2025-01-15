@@ -665,6 +665,7 @@ public final class Config {
         public boolean playerCountEnabled = true;
         public boolean tablistEnabled = true;
         public boolean playtimeEnabled = true;
+        public boolean timeEnabled = true;
         public final Lock lock = new Lock();
 
         public static final class Lock {
