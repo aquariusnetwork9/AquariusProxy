@@ -154,18 +154,6 @@ public class DiscordBot {
         if (CONFIG.discord.chatRelay.enable)
             relayRestChannel = restClient.getChannelById(Snowflake.of(CONFIG.discord.chatRelay.channelId));
         client.getEventDispatcher().on(MessageCreateEvent.class).subscribe(this::handleDiscordMessageCreateEvent);
-        if (LAUNCH_CONFIG.release_channel.endsWith(".pre")) {
-            sendEmbedMessage(Embed.builder()
-                                 .title("ZenithProxy Prerelease")
-                                 .description(
-                                     """
-                                     You are currently using a ZenithProxy prerelease
-                                     
-                                     Prereleases include experiments that may contain bugs and are not always updated with fixes
-                                     
-                                     Switch to a stable release with the `channel` command
-                                     """));
-        }
     }
 
     private GatewayDiscordClient buildGatewayClient() {

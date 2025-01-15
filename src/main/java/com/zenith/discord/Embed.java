@@ -88,7 +88,10 @@ public class Embed {
 
     public EmbedCreateSpec toSpec() {
         if (!validateEmbed(this)) {
-            return EmbedCreateSpec.builder().build();
+            return EmbedCreateSpec.builder()
+                .description("Error: Embed validation failed. Most likely it had too many characters in the description or fields.")
+                .color(CONFIG.theme.error.discord())
+                .build();
         }
         return EmbedCreateSpec.builder()
             .title(title == null ? Possible.absent() : Possible.of(title))

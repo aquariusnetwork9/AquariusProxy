@@ -71,7 +71,7 @@ public class HelpCommand extends Command {
     private String getCommandUsages(final CommandSource src, final CommandCategory category) {
         return COMMAND.getCommands(category).stream()
             .sorted((c1, c2) -> c1.commandUsage().getName().compareToIgnoreCase(c2.commandUsage().getName()))
-            .map(command -> command.commandUsage().shortSerialize(src))
+            .map(command -> command.commandUsage().shortSerializeButNoWikiFooter(src))
             .collect(Collectors.joining("\n"));
     }
 
