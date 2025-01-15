@@ -87,6 +87,17 @@ public class CommandUsage {
         return result;
     }
 
+    public String shortSerializeButNoWikiFooter(CommandSource commandSource) {
+        String result = COMMAND.getCommandPrefix(commandSource) + this.name;
+        if (!aliases.isEmpty()) {
+            result += aliases.stream()
+                .collect(Collectors.joining(" / " + COMMAND.getCommandPrefix(commandSource),
+                                            " / " + COMMAND.getCommandPrefix(commandSource),
+                                            ""));
+        }
+        return result;
+    }
+
     private boolean isTooLongForDiscordDescription(String str) {
         return str.length() > 1024;
     }
