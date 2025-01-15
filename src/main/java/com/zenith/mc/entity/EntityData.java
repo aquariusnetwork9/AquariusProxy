@@ -8,5 +8,7 @@ public record EntityData(
     String name,
     float width,
     float height,
+    boolean attackable,
+    boolean pickable,
     EntityType mcplType
 ) implements RegistryData { }

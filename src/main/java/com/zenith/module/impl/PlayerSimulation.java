@@ -160,7 +160,7 @@ public class PlayerSimulation extends Module {
                         return;
                     }
                     wasLeftClicking = false;
-                } else if (raycast.hit() && raycast.isEntity() && entityAttackTimer.tick(CONFIG.client.extra.killAura.attackDelayTicks)) {
+                } else if (raycast.hit() && raycast.isEntity() && raycast.entity().entityData().attackable() && entityAttackTimer.tick(CONFIG.client.extra.killAura.attackDelayTicks)) {
                     // todo: reduce entity raycast range to 3.5
                     var rangeSq = Math.pow(CONFIG.client.extra.killAura.attackRange, 2);
                     double distanceSqToSelf = CACHE.getPlayerCache().distanceSqToSelf(raycast.entity().entity());
