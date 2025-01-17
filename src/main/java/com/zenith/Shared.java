@@ -23,6 +23,7 @@ import com.zenith.mc.language.TranslationRegistryInitializer;
 import com.zenith.mc.map.MapBlockColorManager;
 import com.zenith.module.ModuleManager;
 import com.zenith.network.server.handler.player.InGameCommandManager;
+import com.zenith.plugins.PluginManager;
 import com.zenith.terminal.TerminalManager;
 import com.zenith.util.Config;
 import com.zenith.util.ConfigVerifier;
@@ -55,6 +56,7 @@ public class Shared {
     public static final Logger DISCORD_LOG = LoggerFactory.getLogger("Discord");
     public static final Logger DATABASE_LOG = LoggerFactory.getLogger("Database");
     public static final Logger TERMINAL_LOG = LoggerFactory.getLogger("Terminal");
+    public static final Logger PLUGIN_LOG = LoggerFactory.getLogger("Plugin");
     public static final Logger PATH_LOG = LoggerFactory.getLogger("Pathfinder");
     public static final File CONFIG_FILE = new File("config.json");
     public static final File LAUNCH_CONFIG_FILE = new File("launch_config.json");
@@ -78,6 +80,7 @@ public class Shared {
     public static final CommandManager COMMAND;
     public static final PlayerInventoryManager INVENTORY;
     public static final ZenithViaInitializer VIA_INITIALIZER;
+    public static final PluginManager PLUGIN_MANAGER;
     public static synchronized Config loadConfig() {
         try {
             DEFAULT_LOG.info("Loading config...");
@@ -155,46 +158,35 @@ public class Shared {
     }
 
     public static synchronized void saveConfig() {
-        DEFAULT_LOG.debug("Saving config...");
+        saveConfig(CONFIG_FILE, CONFIG);
+        PLUGIN_MANAGER.getPluginConfigurations().forEach((name, config) -> {
+            File configFile = new File("plugins/" + name + ".json");
+            saveConfig(configFile, config.instance());
+        });
+    }
+    public static synchronized void saveLaunchConfig() {
+        saveConfig(LAUNCH_CONFIG_FILE, LAUNCH_CONFIG);
+    }
 
-        if (CONFIG == null) {
+    static void saveConfig(File file, Object config) {
+        DEFAULT_LOG.debug("Saving {}...", file.getName());
+
+        if (config == null) {
             DEFAULT_LOG.error("Cannot save unloaded config");
             return;
         }
 
         try {
-            final File tempFile = new File(CONFIG_FILE.getAbsolutePath() + ".tmp");
-            if (tempFile.exists()) tempFile.delete();
+            final File tempFile = File.createTempFile(file.getName(), null);
             try (Writer out = new FileWriter(tempFile)) {
-                GSON.toJson(CONFIG, out);
+                GSON.toJson(config, out);
             }
-            Files.move(tempFile, CONFIG_FILE);
+            Files.move(tempFile, file);
         } catch (IOException e) {
             throw new RuntimeException("Unable to save config!", e);
         }
 
-        DEFAULT_LOG.debug("Config saved.");
-    }
-    public static synchronized void saveLaunchConfig() {
-        DEFAULT_LOG.debug("Saving launch config...");
-
-        if (LAUNCH_CONFIG == null) {
-            DEFAULT_LOG.error("Cannot save unloaded launch config");
-            return;
-        }
-
-        try {
-            final File tempFile = new File(LAUNCH_CONFIG_FILE.getAbsolutePath() + ".tmp");
-            if (tempFile.exists()) tempFile.delete();
-            try (Writer out = new FileWriter(tempFile)) {
-                GSON.toJson(LAUNCH_CONFIG, out);
-            }
-            Files.move(tempFile, LAUNCH_CONFIG_FILE);
-        } catch (IOException e) {
-            throw new RuntimeException("Unable to save launch config!", e);
-        }
-
-        DEFAULT_LOG.debug("Launch config saved.");
+        DEFAULT_LOG.debug("Config {} saved.", file.getName());
     }
 
     static {
@@ -231,6 +223,7 @@ public class Shared {
             CONFIG = loadConfig();
             LAUNCH_CONFIG = loadLaunchConfig();
             ConfigVerifier.verifyConfigs();
+            PLUGIN_MANAGER = new PluginManager();
             PLAYER_LISTS.init(); // must be init after config
         } catch (final Throwable e) {
             DEFAULT_LOG.error("Unable to initialize!", e);

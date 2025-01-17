@@ -64,6 +64,11 @@ public class ModuleManager {
         }
     }
 
+    public void registerModule(Module module) {
+        addModule(module);
+        module.syncEnabledFromConfig();
+    }
+
     public List<Module> getModules() {
         return moduleClassMap.values().stream().toList();
     }
