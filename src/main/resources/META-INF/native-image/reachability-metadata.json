@@ -1602,6 +1602,18 @@
       ]
     },
     {
+      "type": "com.zenith.feature.api.vcapi.model.SessionTimeLimitResponse",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int"
+          ]
+        }
+      ]
+    },
+    {
       "type": "com.zenith.feature.api.vcapi.model.StatsResponse",
       "allDeclaredFields": true,
       "methods": [
@@ -2179,6 +2191,16 @@
     {
       "type": "com.zenith.util.Config$Client$Extra$ReplayMod$AutoRecordMode",
       "allDeclaredFields": true
+    },
+    {
+      "type": "com.zenith.util.Config$Client$Extra$SessionTimeLimit",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "com.zenith.util.Config$Client$Extra$Spammer",

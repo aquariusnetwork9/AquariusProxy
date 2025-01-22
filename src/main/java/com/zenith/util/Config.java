@@ -126,6 +126,12 @@ public final class Config {
             public final QueueWarning queueWarning = new QueueWarning();
             public final Wander wander = new Wander();
             public final Click click = new Click();
+            public final SessionTimeLimit sessionTimeLimit = new SessionTimeLimit();
+
+            public static class SessionTimeLimit {
+                public boolean enabled = true;
+                public boolean dynamic2b2tSessionTimeLimit = true;
+            }
 
             public static class Click {
                 public boolean enabled = true;
