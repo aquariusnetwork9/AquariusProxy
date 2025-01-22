@@ -12,7 +12,6 @@ import lombok.Getter;
 import net.kyori.adventure.key.Key;
 import org.geysermc.mcprotocollib.network.Session;
 import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
-import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodecHelper;
 import org.geysermc.mcprotocollib.protocol.codec.MinecraftPacket;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerSpawnInfo;
@@ -159,10 +158,9 @@ public class ReplayRecording implements Closeable {
             var lenIndex = packetBuf.writerIndex();
             packetBuf.writeInt(0); // write dummy length
             var packetProtocol = session.getPacketProtocol();
-            var codecHelper = (MinecraftCodecHelper) session.getCodecHelper();
             var packetId = MinecraftCodec.CODEC.getCodec(protocolState).getClientboundId(packet);
-            packetProtocol.getPacketHeader().writePacketId(packetBuf, codecHelper, packetId);
-            packet.serialize(packetBuf, codecHelper);
+            packetProtocol.getPacketHeader().writePacketId(packetBuf, packetId);
+            packet.serialize(packetBuf);
             var packetSize = packetBuf.readableBytes();
             var packetBodySize = packetSize - 8;
             packetBuf.setInt(lenIndex, packetBodySize); // write actual length

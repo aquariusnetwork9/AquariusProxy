@@ -4,7 +4,6 @@ import com.zenith.network.client.ClientSession;
 import com.zenith.network.registry.PacketHandler;
 import com.zenith.util.BrandSerializer;
 import net.kyori.adventure.key.Key;
-import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodecHelper;
 import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundCustomPayloadPacket;
 
 import static com.zenith.Shared.CACHE;
@@ -18,7 +17,7 @@ public class CustomPayloadHandler implements PacketHandler<ClientboundCustomPayl
             CACHE.getChunkCache().setServerBrand(packet.getData());
             return new ClientboundCustomPayloadPacket(
                 packet.getChannel(),
-                BrandSerializer.appendBrand((MinecraftCodecHelper) session.getCodecHelper(), packet.getData()));
+                BrandSerializer.appendBrand(packet.getData()));
         }
         return packet;
     }

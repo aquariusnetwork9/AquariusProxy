@@ -9,7 +9,7 @@ import com.zenith.command.CommandUsage;
 import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
 import com.zenith.discord.Embed;
-import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodecHelper;
+import org.geysermc.mcprotocollib.protocol.codec.MinecraftTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundRemoveMobEffectPacket;
 
@@ -135,7 +135,7 @@ public class DebugCommand extends Command {
             .then(literal("binaryNbtComponentSerializer")
                       .then(argument("toggle", toggle()).executes(c -> {
                           CONFIG.debug.binaryNbtComponentSerializer = getToggle(c, "toggle");
-                          MinecraftCodecHelper.useBinaryNbtComponentSerializer = CONFIG.debug.binaryNbtComponentSerializer;
+                          MinecraftTypes.useBinaryNbtComponentSerializer = CONFIG.debug.binaryNbtComponentSerializer;
                           c.getSource().getEmbed()
                               .title("Binary Nbt Component Serializer " + toggleStrCaps(CONFIG.debug.binaryNbtComponentSerializer));
                           return OK;

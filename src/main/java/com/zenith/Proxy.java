@@ -37,7 +37,7 @@ import org.geysermc.mcprotocollib.network.tcp.TcpConnectionManager;
 import org.geysermc.mcprotocollib.network.tcp.TcpServer;
 import org.geysermc.mcprotocollib.protocol.MinecraftConstants;
 import org.geysermc.mcprotocollib.protocol.MinecraftProtocol;
-import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodecHelper;
+import org.geysermc.mcprotocollib.protocol.codec.MinecraftTypes;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundTabListPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundSetCarriedItemPacket;
@@ -158,7 +158,7 @@ public class Proxy {
             NotificationEventListener.INSTANCE.subscribeEvents();
             Queue.start();
             saveConfigAsync();
-            MinecraftCodecHelper.useBinaryNbtComponentSerializer = CONFIG.debug.binaryNbtComponentSerializer;
+            MinecraftTypes.useBinaryNbtComponentSerializer = CONFIG.debug.binaryNbtComponentSerializer;
             MinecraftConstants.CHUNK_SECTION_COUNT_PROVIDER = CACHE.getSectionCountProvider();
             if (CONFIG.client.viaversion.enabled || CONFIG.server.viaversion.enabled) {
                 VIA_INITIALIZER.init();
