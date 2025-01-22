@@ -37,13 +37,9 @@ import org.geysermc.mcprotocollib.network.tcp.TcpConnectionManager;
 import org.geysermc.mcprotocollib.network.tcp.TcpServer;
 import org.geysermc.mcprotocollib.protocol.MinecraftConstants;
 import org.geysermc.mcprotocollib.protocol.MinecraftProtocol;
-import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodecHelper;
-import org.geysermc.mcprotocollib.protocol.data.game.level.sound.BuiltinSound;
-import org.geysermc.mcprotocollib.protocol.data.game.level.sound.SoundCategory;
+import org.geysermc.mcprotocollib.protocol.codec.MinecraftTypes;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundTabListPacket;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundSoundPacket;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.title.ClientboundSetActionBarTextPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundSetCarriedItemPacket;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -64,7 +60,6 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -163,7 +158,7 @@ public class Proxy {
             NotificationEventListener.INSTANCE.subscribeEvents();
             Queue.start();
             saveConfigAsync();
-            MinecraftCodecHelper.useBinaryNbtComponentSerializer = CONFIG.debug.binaryNbtComponentSerializer;
+            MinecraftTypes.useBinaryNbtComponentSerializer = CONFIG.debug.binaryNbtComponentSerializer;
             MinecraftConstants.CHUNK_SECTION_COUNT_PROVIDER = CACHE.getSectionCountProvider();
             if (CONFIG.client.viaversion.enabled || CONFIG.server.viaversion.enabled) {
                 VIA_INITIALIZER.init();
@@ -172,7 +167,6 @@ public class Proxy {
             CACHE.reset(CacheResetType.FULL);
             EXECUTOR.scheduleAtFixedRate(this::serverHealthCheck, 1L, 5L, TimeUnit.MINUTES);
             EXECUTOR.scheduleAtFixedRate(this::tablistUpdate, 20L, 3L, TimeUnit.SECONDS);
-            EXECUTOR.scheduleAtFixedRate(this::twoB2tTimeLimitKickWarningTick, twoB2tTimeLimit.minusMinutes(10L).toMinutes(), 1L, TimeUnit.MINUTES);
             EXECUTOR.scheduleAtFixedRate(this::maxPlaytimeTick, CONFIG.client.maxPlaytimeReconnectMins, 1L, TimeUnit.MINUTES);
             EXECUTOR.schedule(this::serverConnectionTest, 10L, TimeUnit.SECONDS);
             if (CONFIG.server.enabled && CONFIG.server.ping.favicon)
@@ -596,11 +590,21 @@ public class Proxy {
         return isOn2b2t() && isOnlineForAtLeastDuration(duration);
     }
 
+    public boolean isOnlineOn2b2tForAtLeastDurationWithQueueSkip(Duration duration) {
+        return isOn2b2t() && isOnlineForAtLeastDurationWithQueueSkip(duration);
+    }
+
     public boolean isOnlineForAtLeastDuration(Duration duration) {
         return isConnected()
             && !isInQueue()
             && nonNull(getConnectTime())
             && getConnectTime().isBefore(Instant.now().minus(duration));
+    }
+
+    public boolean isOnlineForAtLeastDurationWithQueueSkip(Duration duration) {
+        return isConnected()
+            && !isInQueue()
+            && getOnlineTimeSecondsWithQueueSkip() >= duration.getSeconds();
     }
 
     public void updateFavicon() {
@@ -637,37 +641,6 @@ public class Proxy {
         }
         if (DISCORD.isRunning() && this.serverIcon != null)
             if (CONFIG.discord.manageProfileImage) DISCORD.updateProfileImage(this.serverIcon);
-    }
-
-    public void twoB2tTimeLimitKickWarningTick() {
-        try {
-            if (this.isPrio() // Prio players don't get kicked
-                || !this.hasActivePlayer() // If no player is connected, nobody to warn
-                || !isOnlineOn2b2tForAtLeastDuration(twoB2tTimeLimit.minusMinutes(10L))
-            ) return;
-            final ServerSession playerConnection = this.currentPlayer.get();
-            final Duration durationUntilKick = twoB2tTimeLimit.minus(Duration.ofSeconds(Proxy.getInstance().getOnlineTimeSecondsWithQueueSkip()));
-            if (durationUntilKick.isNegative()) return; // sanity check just in case 2b's plugin changes
-            var actionBarPacket = new ClientboundSetActionBarTextPacket(
-                ComponentSerializer.minimessage((durationUntilKick.toMinutes() <= 3 ? "<red>" : "<blue>") + twoB2tTimeLimit.toHours() + "hr kick in: " + durationUntilKick.toMinutes() + "m"));
-            playerConnection.sendAsync(actionBarPacket);
-            // each packet will reset text render timer for 3 seconds
-            for (int i = 1; i <= 7; i++) { // render the text for about 10 seconds total
-                playerConnection.sendScheduledAsync(actionBarPacket, i, TimeUnit.SECONDS);
-            }
-            playerConnection.sendAsync(new ClientboundSoundPacket(
-                BuiltinSound.BLOCK_ANVIL_PLACE,
-                SoundCategory.AMBIENT,
-                CACHE.getPlayerCache().getX(),
-                CACHE.getPlayerCache().getY(),
-                CACHE.getPlayerCache().getZ(),
-                1.0f,
-                1.0f + (ThreadLocalRandom.current().nextFloat() / 10f), // slight pitch variations
-                0L
-            ));
-        } catch (final Throwable e) {
-            DEFAULT_LOG.error("Error in 2b2t time limit kick warning tick", e);
-        }
     }
 
     public boolean isOn2b2t() {

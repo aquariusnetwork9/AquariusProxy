@@ -80,6 +80,7 @@ public class CommandManager {
         new ServerCommand(),
         new ServerConnectionCommand(),
         new ServerSwitcherCommand(),
+        new SessionTimeLimitCommand(),
         new SkinCommand(),
         new SpammerCommand(),
         new SpectatorCommand(),

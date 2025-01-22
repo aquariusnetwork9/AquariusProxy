@@ -31,4 +31,8 @@ public class VcApi extends Api {
     public Optional<QueueEtaEquationResponse> getQueueEtaEquation() {
         return get("/queue/eta-equation", QueueEtaEquationResponse.class);
     }
+
+    public Optional<SessionTimeLimitResponse> getSessionTimeLimit() {
+        return get("/limits/session-time-limit", SessionTimeLimitResponse.class);
+    }
 }

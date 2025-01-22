@@ -88,8 +88,8 @@ public class ReplayReader {
         ByteBuf byteBuf = ALLOC.buffer();
         try {
             byteBuf.writeBytes(recordingStream, len);
-            int packetId = packetProtocol.getPacketHeader().readPacketId(byteBuf, packetProtocol.getHelper());
-            Packet packet = packetProtocol.getInboundPacketRegistry().createClientboundPacket(packetId, byteBuf, packetProtocol.getHelper());
+            int packetId = packetProtocol.getPacketHeader().readPacketId(byteBuf);
+            Packet packet = packetProtocol.getInboundPacketRegistry().createClientboundPacket(packetId, byteBuf);
             String out = "\n[" + t + "] " + packet.toString();
             outputWriter.write(out.getBytes(StandardCharsets.UTF_8));
             switch (packetProtocol.getInboundState()) {

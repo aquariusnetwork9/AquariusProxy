@@ -20,8 +20,6 @@ import lombok.Setter;
 import net.kyori.adventure.key.Key;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.network.tcp.TcpSession;
-import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
-import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodecHelper;
 import org.geysermc.mcprotocollib.protocol.data.game.RegistryEntry;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.ChunkBiomeData;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.ChunkSection;
@@ -67,7 +65,6 @@ public class ChunkCache implements CachedData {
     protected List<Key> worldNames = new ArrayList<>();
     protected int serverViewDistance = -1;
     protected int serverSimulationDistance = -1;
-    protected MinecraftCodecHelper codec;
     protected int centerX;
     protected int centerZ;
     protected int dimensionType;
@@ -88,7 +85,6 @@ public class ChunkCache implements CachedData {
                                      5L,
                                      5L,
                                      TimeUnit.MINUTES);
-        codec = MinecraftCodec.CODEC.getHelper();
         resetDimensionRegistry();
     }
 
@@ -315,8 +311,8 @@ public class ChunkCache implements CachedData {
 
     public byte[] getServerBrand() {
         return serverBrand == null
-            ? BrandSerializer.defaultBrand(codec)
-            : BrandSerializer.appendBrand(codec, serverBrand);
+            ? BrandSerializer.defaultBrand()
+            : BrandSerializer.appendBrand(serverBrand);
     }
 
     private static final byte[] fullBrightSkyLightData;
