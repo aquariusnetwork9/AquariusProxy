@@ -280,7 +280,7 @@ public class PlayerInteractionManager {
         speed *= player.getAttributeValue(AttributeType.Builtin.PLAYER_BLOCK_BREAK_SPEED, 1.0f);
 
         boolean isEyeInWater = World.isWater(
-            World.getBlockAtBlockPos(
+            World.getBlock(
                 MathHelper.floorI(player.getX()),
                 MathHelper.floorI(player.getEyeY()),
                 MathHelper.floorI(player.getZ())));

@@ -381,11 +381,11 @@ public class PlayerSimulation extends Module {
 
     private float getJumpPower() {
         float blockJumpFactor = 1f;
-        Block inBlock = World.getBlockAtBlockPos(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z));
+        Block inBlock = World.getBlock(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z));
         if (inBlock == BlockRegistry.HONEY_BLOCK)
             blockJumpFactor = 0.5f;
         else if (supportingBlockPos.isPresent()) {
-            Block supportingBlock = World.getBlockAtBlockPos(supportingBlockPos.get());
+            Block supportingBlock = World.getBlock(supportingBlockPos.get());
             if (supportingBlock == BlockRegistry.HONEY_BLOCK)
                 blockJumpFactor = 0.5f;
         }
@@ -478,7 +478,7 @@ public class PlayerSimulation extends Module {
             velocity.multiply(0.99, 0.98, 0.99);
             move();
         } else {
-            final Block floorBlock = World.getBlockAtBlockPos(getVelocityAffectingPos());
+            final Block floorBlock = World.getBlock(getVelocityAffectingPos());
             float floorSlipperiness = BLOCK_DATA.getBlockSlipperiness(floorBlock);
             float friction = this.onGround ? floorSlipperiness * 0.91f : 0.91F;
             applyMovementInput(movementInputVec, floorSlipperiness);
@@ -598,13 +598,13 @@ public class PlayerSimulation extends Module {
         for (int i = 0; i < collidingBlockStates.size(); i++) {
             var localState = collidingBlockStates.get(i);
             if (localState.id() == BlockRegistry.BUBBLE_COLUMN.minStateId()) {
-                if (BLOCK_DATA.isAir(World.getBlockAtBlockPos(localState.x(), localState.y() + 1, localState.z()))) {
+                if (BLOCK_DATA.isAir(World.getBlock(localState.x(), localState.y() + 1, localState.z()))) {
                     velocity.setY(Math.max(-0.9, velocity.getY() - 0.03));
                 } else {
                     velocity.setY(Math.max(-0.3, velocity.getY() - 0.03));
                 }
             } else if (localState.id() == BlockRegistry.BUBBLE_COLUMN.maxStateId()) {
-                if (BLOCK_DATA.isAir(World.getBlockAtBlockPos(localState.x(), localState.y() + 1, localState.z()))) {
+                if (BLOCK_DATA.isAir(World.getBlock(localState.x(), localState.y() + 1, localState.z()))) {
                     velocity.setY(Math.min(1.8, velocity.getY() + 0.1));
                 } else {
                     velocity.setY(Math.min(0.7, velocity.getY() + 0.06));
@@ -788,7 +788,7 @@ public class PlayerSimulation extends Module {
             double velZ = Math.clamp(velocity.getZ(), -maxV, maxV);
             double velY = Math.max(velocity.getY(), -maxV);
             if (velY < 0.0
-                && World.getBlockAtBlockPos(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z)) != BlockRegistry.SCAFFOLDING
+                && World.getBlock(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z)) != BlockRegistry.SCAFFOLDING
                 && isSneaking
             ) {
                 velY = 0.0;
@@ -919,10 +919,10 @@ public class PlayerSimulation extends Module {
 
     private float getBlockSpeedFactor() {
         if (this.isGliding || this.isFlying) return 1.0f;
-        Block inBlock = World.getBlockAtBlockPos(MathHelper.floorI(Pathing.getCurrentPlayerX()), MathHelper.floorI(Pathing.getCurrentPlayerY()), MathHelper.floorI(Pathing.getCurrentPlayerZ()));
+        Block inBlock = World.getBlock(MathHelper.floorI(Pathing.getCurrentPlayerX()), MathHelper.floorI(Pathing.getCurrentPlayerY()), MathHelper.floorI(Pathing.getCurrentPlayerZ()));
         float inBlockSpeedFactor = getBlockSpeedFactor(inBlock);
         if (inBlockSpeedFactor != 1.0f || World.isWater(inBlock)) return inBlockSpeedFactor;
-        Block underPlayer = World.getBlockAtBlockPos(MathHelper.floorI(Pathing.getCurrentPlayerX()), MathHelper.floorI(Pathing.getCurrentPlayerY()) - 1, MathHelper.floorI(Pathing.getCurrentPlayerZ()));
+        Block underPlayer = World.getBlock(MathHelper.floorI(Pathing.getCurrentPlayerX()), MathHelper.floorI(Pathing.getCurrentPlayerY()) - 1, MathHelper.floorI(Pathing.getCurrentPlayerZ()));
         return getBlockSpeedFactor(underPlayer);
     }
 
@@ -1049,7 +1049,7 @@ public class PlayerSimulation extends Module {
     }
 
     private boolean onClimbable() {
-        var inBlock = World.getBlockAtBlockPos(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z));
+        var inBlock = World.getBlock(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z));
         if (inBlock.blockTags().contains(BlockTags.CLIMBABLE)) return true;
 //        // todo: check trapdoor is open
 //        if (inBlock.name().endsWith("trapdoor")) {

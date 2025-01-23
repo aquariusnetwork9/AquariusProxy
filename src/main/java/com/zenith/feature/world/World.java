@@ -72,18 +72,18 @@ public class World {
     }
 
     public BlockState getBlockState(final int x, final int y, final int z) {
-        return new BlockState(getBlockAtBlockPos(x, y, z), getBlockStateId(x, y, z), x, y, z);
+        return new BlockState(getBlock(x, y, z), getBlockStateId(x, y, z), x, y, z);
     }
 
-    public Block getBlockAtBlockPos(final BlockPos blockPos) {
-        return getBlockAtBlockPos(blockPos.x(), blockPos.y(), blockPos.z());
+    public Block getBlock(final BlockPos blockPos) {
+        return getBlock(blockPos.x(), blockPos.y(), blockPos.z());
     }
 
-    public Block getBlockAtBlockPos(final long blockPos) {
-        return getBlockAtBlockPos(BlockPos.getX(blockPos), BlockPos.getY(blockPos), BlockPos.getZ(blockPos));
+    public Block getBlock(final long blockPos) {
+        return getBlock(BlockPos.getX(blockPos), BlockPos.getY(blockPos), BlockPos.getZ(blockPos));
     }
 
-    public Block getBlockAtBlockPos(final int x, final int y, final int z) {
+    public Block getBlock(final int x, final int y, final int z) {
         Block blockData = BLOCK_DATA.getBlockDataFromBlockStateId(getBlockStateId(x, y, z));
         if (blockData == null)
             return BlockRegistry.AIR;
