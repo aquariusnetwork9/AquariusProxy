@@ -872,22 +872,19 @@ public class PlayerSimulation extends Module {
             var entity = pushableEntities.get(i);
             var entityCB = ENTITY_DATA.getCollisionBox(entity);
             if (!playerCB.intersects(entityCB)) continue;
-            double d = entity.getX() - getX();
-            double e = entity.getZ() - getZ();
-            double f = MathHelper.absMax(d, e);
-            if (f >= 0.01) {
-                f = Math.sqrt(f);
-                d /= f;
-                e /= f;
-                double g = 1.0 / f;
-                if (g > 1.0) {
-                    g = 1.0;
-                }
-                d *= g;
-                e *= g;
-                d *= 0.05;
-                e *= 0.05;
-                velocity.add(-d, 0, -e);
+            double xDiff = entity.getX() - getX();
+            double zDiff = entity.getZ() - getZ();
+            double maxAbsDiff = MathHelper.absMax(xDiff, zDiff);
+            if (maxAbsDiff >= 0.01) {
+                maxAbsDiff = Math.sqrt(maxAbsDiff);
+                xDiff /= maxAbsDiff;
+                zDiff /= maxAbsDiff;
+                double inside = Math.min(1.0, 1.0 / maxAbsDiff);
+                xDiff *= inside;
+                zDiff *= inside;
+                xDiff *= 0.05;
+                zDiff *= 0.05;
+                velocity.add(-xDiff, 0, -zDiff);
             }
         }
     }

@@ -326,11 +326,12 @@ public class World {
         Block inBlock = getBlock(MathHelper.floorI(entity.getX()), MathHelper.floorI(entity.getY()), MathHelper.floorI(entity.getZ()));
         if (inBlock.blockTags().contains(BlockTags.CLIMBABLE)) {
             return true;
+        } else if (inBlock.name().endsWith("_trapdoor")) {
+            Block belowBlock = getBlock(MathHelper.floorI(entity.getX()), MathHelper.floorI(entity.getY()) - 1, MathHelper.floorI(entity.getZ()));
+            if (belowBlock.blockTags().contains(BlockTags.CLIMBABLE)) {
+                return true;
+            }
         }
-        // todo: trapdoors
-//        else if (inBlock.name().endsWith("_trapdoor") && trapdoorUsableAsLadder(inBlock, blockPos)) {
-//
-//        }
         return false;
     }
 
