@@ -1,6 +1,7 @@
 package com.zenith.feature.world;
 
 import com.zenith.cache.data.chunk.Chunk;
+import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.mc.block.*;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
@@ -321,5 +322,16 @@ public class World {
         return getFluidState(getBlockState(x, y, z).id());
     }
 
+    public static boolean onClimbable(EntityLiving entity) {
+        Block inBlock = getBlock(MathHelper.floorI(entity.getX()), MathHelper.floorI(entity.getY()), MathHelper.floorI(entity.getZ()));
+        if (inBlock.blockTags().contains(BlockTags.CLIMBABLE)) {
+            return true;
+        }
+        // todo: trapdoors
+//        else if (inBlock.name().endsWith("_trapdoor") && trapdoorUsableAsLadder(inBlock, blockPos)) {
+//
+//        }
+        return false;
+    }
 
 }

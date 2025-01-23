@@ -202,4 +202,14 @@ public class MathHelper {
         l = l * l * 42317861L + l * 11L;
         return l >> 16;
     }
+
+    public static double absMax(double x, double y) {
+        if (x < 0) {
+            x = -x;
+        }
+        if (y < 0) {
+            y = -y;
+        }
+        return Math.max(x, y);
+    }
 }

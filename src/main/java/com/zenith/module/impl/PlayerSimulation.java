@@ -1,15 +1,19 @@
 package com.zenith.module.impl;
 
+import com.zenith.cache.data.entity.EntityLiving;
+import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.event.module.ClientBotTick;
 import com.zenith.feature.world.*;
 import com.zenith.feature.world.raycast.RaycastHelper;
 import com.zenith.mc.block.*;
 import com.zenith.mc.dimension.DimensionRegistry;
+import com.zenith.mc.entity.EntityData;
 import com.zenith.module.Module;
 import com.zenith.util.Timer;
 import com.zenith.util.math.MathHelper;
 import com.zenith.util.math.MutableVec3d;
 import lombok.Getter;
+import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.Attribute;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.AttributeModifier;
@@ -25,6 +29,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.Serve
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundPlayerInputPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -309,6 +314,7 @@ public class PlayerSimulation extends Module {
             this.lastSprinting = this.isSprinting;
         }
         this.movementInput.reset();
+        tickEntityPushing();
     }
 
     private static final String SPRINT_ATTRIBUTE_ID = "minecraft:sprinting";
@@ -794,6 +800,94 @@ public class PlayerSimulation extends Module {
         if (horizontalCollision || movementInput.jumping) {
             if (onClimbable()) { // todo: or inside powder snow
                 velocity.setY(0.2);
+            }
+        }
+    }
+
+    private void tickEntityPushing() {
+        List<EntityLiving> pushableEntities = new ArrayList<>(0);
+        for (var it = CACHE.getEntityCache().getEntities().values().iterator(); it.hasNext(); ) {
+            var entity = it.next();
+            if (entity == CACHE.getPlayerCache().getThePlayer()) continue;
+            if (!(entity instanceof EntityLiving entityLiving)) continue;
+            if (CACHE.getPlayerCache().distanceSqToSelf(entity) > 16.0) continue;
+            EntityType entityType = entityLiving.getEntityType();
+            if (entityType == EntityType.HORSE
+                || entityType == EntityType.CAMEL
+                || entityType == EntityType.DONKEY
+                || entityType == EntityType.LLAMA
+                || entityType == EntityType.MULE
+                || entityType == EntityType.SKELETON_HORSE
+                || entityType == EntityType.TRADER_LLAMA
+                || entityType == EntityType.ZOMBIE_HORSE
+            ) {
+                boolean hasPassenger = CACHE.getEntityCache().getEntities().values().stream()
+                    .anyMatch(e -> e.isInVehicle() && e.getVehicleId() == entityLiving.getEntityId());
+                if (hasPassenger) continue;
+                else pushableEntities.add(entityLiving);
+            }
+            if (entityType == EntityType.MINECART
+                || entityType == EntityType.CHEST_MINECART
+                || entityType == EntityType.COMMAND_BLOCK_MINECART
+                || entityType == EntityType.FURNACE_MINECART
+                || entityType == EntityType.HOPPER_MINECART
+                || entityType == EntityType.TNT_MINECART
+                || entityType == EntityType.SPAWNER_MINECART
+            ) {
+                boolean hasPassenger = entityType == EntityType.MINECART
+                    && CACHE.getEntityCache().getEntities().values().stream()
+                        .anyMatch(e -> e.isInVehicle() && e.getVehicleId() == entityLiving.getEntityId());
+                if (hasPassenger) continue;
+                pushableEntities.add(entityLiving);
+            }
+            if (entityType == EntityType.ARMOR_STAND) continue;
+            if (entityType == EntityType.BAT) continue;
+            if (entityType == EntityType.BOAT || entityType == EntityType.CHEST_BOAT) {
+                boolean hasPassenger = CACHE.getEntityCache().getEntities().values().stream()
+                    .anyMatch(e -> e.isInVehicle() && e.getVehicleId() == entityLiving.getEntityId());
+                if (hasPassenger) continue;
+                pushableEntities.add(entityLiving);
+            }
+            if (entityType == EntityType.PARROT) {
+                pushableEntities.add(entityLiving);
+            }
+            EntityData entityData = ENTITY_DATA.getEntityData(entityType);
+            if (entityData == null) continue;
+            if (entityData.livingEntity()) {
+                boolean isSpectator = false;
+                if (entityLiving instanceof EntityPlayer player) {
+                    isSpectator = CACHE.getTabListCache().get(player.getUuid())
+                        .map(PlayerListEntry::getGameMode)
+                        .filter(gm -> gm == GameMode.SPECTATOR)
+                        .isPresent();
+                }
+                if (entityLiving.isAlive() && !isSpectator && !World.onClimbable(entityLiving)) {
+                    pushableEntities.add(entityLiving);
+                }
+            }
+        }
+        if (pushableEntities.isEmpty()) return;
+        var playerCB = getPlayerCollisionBox().inflate(0.2, -0.1, 0.2);
+        for (int i = 0; i < pushableEntities.size(); i++) {
+            var entity = pushableEntities.get(i);
+            var entityCB = ENTITY_DATA.getCollisionBox(entity);
+            if (!playerCB.intersects(entityCB)) continue;
+            double d = entity.getX() - getX();
+            double e = entity.getZ() - getZ();
+            double f = MathHelper.absMax(d, e);
+            if (f >= 0.01) {
+                f = Math.sqrt(f);
+                d /= f;
+                e /= f;
+                double g = 1.0 / f;
+                if (g > 1.0) {
+                    g = 1.0;
+                }
+                d *= g;
+                e *= g;
+                d *= 0.05;
+                e *= 0.05;
+                velocity.add(-d, 0, -e);
             }
         }
     }
