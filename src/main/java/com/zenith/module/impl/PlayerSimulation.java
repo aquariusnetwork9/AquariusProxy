@@ -76,7 +76,7 @@ public class PlayerSimulation extends Module {
     private float speed = 0.10000000149011612f;
     private float sneakSpeed = 0.3f;
     private float jumpStrength = 0.42f;
-    private boolean forceUpdateSupportingBlockPos = false;
+    private boolean onGroundNoBlocks = false;
     private Optional<BlockPos> supportingBlockPos = Optional.empty();
     private int jumpingCooldown;
     @Getter private boolean horizontalCollision = false;
@@ -663,21 +663,18 @@ public class PlayerSimulation extends Module {
                 playerCollisionBox.minX(), playerCollisionBox.maxX(),
                 playerCollisionBox.minY() - 1.0E-6, playerCollisionBox.minY(),
                 playerCollisionBox.minZ(), playerCollisionBox.maxZ(),
-                x, y, z);
+                x, y, z)
+                .move(movement.getX(), movement.getY(), movement.getZ());
             var supportPos = World.findSupportingBlockPos(cb);
-            if (supportPos.isPresent() || this.forceUpdateSupportingBlockPos) {
+            if (supportPos.isEmpty() && !this.onGroundNoBlocks) {
+                var beforeMoveCb = cb.move(-movement.getX(), 0, -movement.getZ());
+                this.supportingBlockPos = supportPos = World.findSupportingBlockPos(beforeMoveCb);
+            } else {
                 this.supportingBlockPos = supportPos;
-            } else if (movement != null) {
-                var moveAdjustedCb = new LocalizedCollisionBox(
-                    cb.minX() - movement.getX(), cb.maxX() - movement.getX(),
-                    cb.minY(), cb.maxY(),
-                    cb.minZ() - movement.getZ(), cb.maxZ() - movement.getZ(),
-                    x, y, z);
-                this.supportingBlockPos = supportPos = World.findSupportingBlockPos(moveAdjustedCb);
             }
-            this.forceUpdateSupportingBlockPos = supportPos.isEmpty();
+            this.onGroundNoBlocks = supportPos.isEmpty();
         } else {
-            this.forceUpdateSupportingBlockPos = false;
+            this.onGroundNoBlocks = false;
             if (this.supportingBlockPos.isPresent()) this.supportingBlockPos = Optional.empty();
         }
     }
@@ -946,7 +943,7 @@ public class PlayerSimulation extends Module {
         this.lastOnGround = true;
         this.velocity.set(0, 0, 0);
         this.supportingBlockPos = Optional.empty();
-        this.forceUpdateSupportingBlockPos = false;
+        this.onGroundNoBlocks = false;
         this.ticksSinceLastPositionPacketSent = 0;
         if (full) {
             this.isSneaking = this.wasSneaking = false;

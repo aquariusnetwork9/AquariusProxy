@@ -239,7 +239,7 @@ public class World {
             var blockStateCBs = getBlockState(blockPos2).getLocalizedCollisionBoxes();
             for (int j = 0; j < blockStateCBs.size(); j++) {
                 if (blockStateCBs.get(j).intersects(cb)) {
-                    final double curDist = MathHelper.distanceSq3d(x, y, z, cb.x(), cb.y(), cb.z());
+                    final double curDist = MathHelper.distanceSq3d(x + 0.5, y + 0.5, z + 0.5, cb.x(), cb.y(), cb.z());
                     if (curDist < dist || curDist == dist && (supportingBlock == null || BlockPos.compare(supportingBlock.x(), supportingBlock.y(), supportingBlock.z(), x, y, z) < 0)) {
                         supportingBlock = new BlockPos(x, y, z);
                         dist = curDist;
