@@ -66,17 +66,19 @@ public class ClientTickManager {
 
     private final Runnable tickRunnable = () -> {
         try {
-            long before = System.nanoTime();
+            long before = System.currentTimeMillis();
             EVENT_BUS.post(ClientTickEvent.INSTANCE);
             if (doBotTicks.get()) {
                 EVENT_BUS.post(ClientBotTick.INSTANCE);
             }
-            long after = System.nanoTime();
-            long elapsedMs = TimeUnit.NANOSECONDS.toMillis(after - before);
+            long after = System.currentTimeMillis();
+            long elapsedMs = after - before;
             if (elapsedMs > LONG_TICK_THRESHOLD_MS) {
                 if (System.currentTimeMillis() - lastLongTickWarning > LONG_TICK_WARNING_INTERVAL_MS) {
-                    CLIENT_LOG.warn("Slow Client Tick. Took {}ms", elapsedMs);
+                    CLIENT_LOG.warn("Slow Client Tick: {}ms", elapsedMs);
                     lastLongTickWarning = System.currentTimeMillis();
+                } else {
+                    CLIENT_LOG.debug("Slow Client Tick: {}ms", elapsedMs);
                 }
             }
         } catch (final Throwable e) {
