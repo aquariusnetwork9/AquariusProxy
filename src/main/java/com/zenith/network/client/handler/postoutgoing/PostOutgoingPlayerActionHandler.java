@@ -21,13 +21,13 @@ public class PostOutgoingPlayerActionHandler implements ClientEventLoopPacketHan
                     CACHE.getPlayerCache().getPlayerInventory().set(invIndex, null);
                 syncPlayerEquipmentWithSpectatorsFromCache();
             }
-            case DROP_ITEM_STACK -> {
+            case DROP_ALL_ITEMS -> {
                 var heldItemSlot = CACHE.getPlayerCache().getHeldItemSlot();
                 var invIndex = heldItemSlot + 36;
                 CACHE.getPlayerCache().getPlayerInventory().set(invIndex, null);
                 syncPlayerEquipmentWithSpectatorsFromCache();
             }
-            case SWAP_HANDS -> { // this seems to trigger the server to send an inventory update but let's just do it anyway
+            case SWAP_ITEM_WITH_OFFHAND -> { // this seems to trigger the server to send an inventory update but let's just do it anyway
                 var invIndex = CACHE.getPlayerCache().getHeldItemSlot() + 36;
                 var offHandIndex = 45;
                 var offHand = CACHE.getPlayerCache().getPlayerInventory().get(offHandIndex);
