@@ -70,10 +70,10 @@ public class PlayerInventoryManager {
             if (nextAction != null) {
                 var packet = nextAction.toPacket();
                 if (packet != null) {
-                    Proxy.getInstance().getClient().sendAsync(packet);
+                    Proxy.getInstance().getClient().sendAwait(packet);
                     if (CONFIG.debug.ncpStrictInventory) {
                         if (packet.getCarriedItem() == null)
-                            Proxy.getInstance().getClient().sendAsync(new ServerboundContainerClosePacket(0));
+                            Proxy.getInstance().getClient().sendAwait(new ServerboundContainerClosePacket(0));
                         else PATHING.stop(Integer.MAX_VALUE);
                     }
                 }

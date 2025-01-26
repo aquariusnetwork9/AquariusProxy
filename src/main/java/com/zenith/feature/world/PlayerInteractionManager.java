@@ -351,8 +351,7 @@ public class PlayerInteractionManager {
         int heldItemSlot = CACHE.getPlayerCache().getHeldItemSlot();
         if (carriedIndex != heldItemSlot) {
             player.debug("[{}] Syncing held item slot: {} -> {}", System.currentTimeMillis(), heldItemSlot, carriedIndex);
-            Proxy.getInstance().getClient().sendAsync(new ServerboundSetCarriedItemPacket(carriedIndex));
-            CACHE.getPlayerCache().setHeldItemSlot(carriedIndex); // packet handler is invoked async and will be processed before next tick
+            Proxy.getInstance().getClient().sendAwait(new ServerboundSetCarriedItemPacket(carriedIndex));
         }
     }
 

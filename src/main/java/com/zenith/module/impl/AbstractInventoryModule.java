@@ -93,7 +93,7 @@ public abstract class AbstractInventoryModule extends Module {
                 debug("[{}] Swapping item to slot {}", getClass().getSimpleName(), actionSlot.getId());
                 if (actionSlot != MoveToHotbarAction.OFF_HAND) {
                     if (CACHE.getPlayerCache().getHeldItemSlot() != targetMainHandHotbarSlot) {
-                        sendClientPacketAsync(new ServerboundSetCarriedItemPacket(targetMainHandHotbarSlot));
+                        sendClientPacketAwait(new ServerboundSetCarriedItemPacket(targetMainHandHotbarSlot));
                     }
                 }
                 return true;
