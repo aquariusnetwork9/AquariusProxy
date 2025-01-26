@@ -10,5 +10,6 @@ public record EntityData(
     float height,
     boolean attackable,
     boolean pickable,
+    boolean livingEntity,
     EntityType mcplType
 ) implements RegistryData { }

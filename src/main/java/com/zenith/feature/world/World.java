@@ -1,6 +1,7 @@
 package com.zenith.feature.world;
 
 import com.zenith.cache.data.chunk.Chunk;
+import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.mc.block.*;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
@@ -71,18 +72,18 @@ public class World {
     }
 
     public BlockState getBlockState(final int x, final int y, final int z) {
-        return new BlockState(getBlockAtBlockPos(x, y, z), getBlockStateId(x, y, z), x, y, z);
+        return new BlockState(getBlock(x, y, z), getBlockStateId(x, y, z), x, y, z);
     }
 
-    public Block getBlockAtBlockPos(final BlockPos blockPos) {
-        return getBlockAtBlockPos(blockPos.x(), blockPos.y(), blockPos.z());
+    public Block getBlock(final BlockPos blockPos) {
+        return getBlock(blockPos.x(), blockPos.y(), blockPos.z());
     }
 
-    public Block getBlockAtBlockPos(final long blockPos) {
-        return getBlockAtBlockPos(BlockPos.getX(blockPos), BlockPos.getY(blockPos), BlockPos.getZ(blockPos));
+    public Block getBlock(final long blockPos) {
+        return getBlock(BlockPos.getX(blockPos), BlockPos.getY(blockPos), BlockPos.getZ(blockPos));
     }
 
-    public Block getBlockAtBlockPos(final int x, final int y, final int z) {
+    public Block getBlock(final int x, final int y, final int z) {
         Block blockData = BLOCK_DATA.getBlockDataFromBlockStateId(getBlockStateId(x, y, z));
         if (blockData == null)
             return BlockRegistry.AIR;
@@ -242,7 +243,7 @@ public class World {
             var blockStateCBs = getBlockState(blockPos2).getLocalizedCollisionBoxes();
             for (int j = 0; j < blockStateCBs.size(); j++) {
                 if (blockStateCBs.get(j).intersects(cb)) {
-                    final double curDist = MathHelper.distanceSq3d(x, y, z, cb.x(), cb.y(), cb.z());
+                    final double curDist = MathHelper.distanceSq3d(x + 0.5, y + 0.5, z + 0.5, cb.x(), cb.y(), cb.z());
                     if (curDist < dist || curDist == dist && (supportingBlock == null || BlockPos.compare(supportingBlock.x(), supportingBlock.y(), supportingBlock.z(), x, y, z) < 0)) {
                         supportingBlock = new BlockPos(x, y, z);
                         dist = curDist;
@@ -325,5 +326,17 @@ public class World {
         return getFluidState(getBlockState(x, y, z).id());
     }
 
+    public static boolean onClimbable(EntityLiving entity) {
+        Block inBlock = getBlock(MathHelper.floorI(entity.getX()), MathHelper.floorI(entity.getY()), MathHelper.floorI(entity.getZ()));
+        if (inBlock.blockTags().contains(BlockTags.CLIMBABLE)) {
+            return true;
+        } else if (inBlock.name().endsWith("_trapdoor")) {
+            Block belowBlock = getBlock(MathHelper.floorI(entity.getX()), MathHelper.floorI(entity.getY()) - 1, MathHelper.floorI(entity.getZ()));
+            if (belowBlock.blockTags().contains(BlockTags.CLIMBABLE)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
 }

@@ -63,7 +63,7 @@ public class PlayerInteractionManager {
             player.debug("[{}] [{}, {}, {}] StartDestroyBlock START: Creative break", System.currentTimeMillis(), x, y, z);
             Proxy.getInstance().getClient().sendAsync(
                 new ServerboundPlayerActionPacket(
-                    PlayerAction.START_DIGGING,
+                    PlayerAction.START_DESTROY_BLOCK,
                     x, y, z,
                     face.mcpl(),
                     CACHE.getPlayerCache().getSeqId().incrementAndGet()
@@ -76,10 +76,10 @@ public class PlayerInteractionManager {
                 player.debug("[{}] [{}, {}, {}] StartDestroyBlock CANCEL: Changed destroy target", System.currentTimeMillis(), x, y, z);
                 Proxy.getInstance().getClient().sendAsync(
                     new ServerboundPlayerActionPacket(
-                        PlayerAction.CANCEL_DIGGING,
+                        PlayerAction.ABORT_DESTROY_BLOCK,
                         this.destroyBlockPosX, this.destroyBlockPosY, this.destroyBlockPosZ,
                         face.mcpl(),
-                        CACHE.getPlayerCache().getSeqId().incrementAndGet()
+                        0
                     )
                 );
             }
@@ -101,7 +101,7 @@ public class PlayerInteractionManager {
 
             Proxy.getInstance().getClient().send(
                 new ServerboundPlayerActionPacket(
-                    PlayerAction.START_DIGGING,
+                    PlayerAction.START_DESTROY_BLOCK,
                     x, y, z,
                     face.mcpl(),
                     CACHE.getPlayerCache().getSeqId().incrementAndGet()));
@@ -115,10 +115,10 @@ public class PlayerInteractionManager {
             player.debug("[{}] [{}, {}, {}] StopDestroyBlock CANCEL", System.currentTimeMillis(), this.destroyBlockPosX, this.destroyBlockPosY, this.destroyBlockPosZ);
             Proxy.getInstance().getClient()
                 .send(new ServerboundPlayerActionPacket(
-                    PlayerAction.CANCEL_DIGGING,
+                    PlayerAction.ABORT_DESTROY_BLOCK,
                     this.destroyBlockPosX, this.destroyBlockPosY, this.destroyBlockPosZ,
                     Direction.DOWN.mcpl(),
-                    CACHE.getPlayerCache().getSeqId().incrementAndGet()
+                    0
                 ));
         }
         this.isDestroying = false;
@@ -133,7 +133,7 @@ public class PlayerInteractionManager {
             this.destroyDelay = destroyDelayInterval;
             Proxy.getInstance().getClient().send(
                 new ServerboundPlayerActionPacket(
-                    PlayerAction.START_DIGGING,
+                    PlayerAction.START_DESTROY_BLOCK,
                     x, y, z,
                     directionFacing.mcpl(),
                     CACHE.getPlayerCache().getSeqId().incrementAndGet()
@@ -153,7 +153,7 @@ public class PlayerInteractionManager {
                     this.isDestroying = false;
                     Proxy.getInstance().getClient().send(
                         new ServerboundPlayerActionPacket(
-                            PlayerAction.FINISH_DIGGING,
+                            PlayerAction.STOP_DESTROY_BLOCK,
                             x, y, z,
                             directionFacing.mcpl(),
                             CACHE.getPlayerCache().getSeqId().incrementAndGet()
@@ -280,7 +280,7 @@ public class PlayerInteractionManager {
         speed *= player.getAttributeValue(AttributeType.Builtin.BLOCK_BREAK_SPEED, 1.0f);
 
         boolean isEyeInWater = World.isWater(
-            World.getBlockAtBlockPos(
+            World.getBlock(
                 MathHelper.floorI(player.getX()),
                 MathHelper.floorI(player.getEyeY()),
                 MathHelper.floorI(player.getZ())));
@@ -352,7 +352,7 @@ public class PlayerInteractionManager {
         int heldItemSlot = CACHE.getPlayerCache().getHeldItemSlot();
         if (carriedIndex != heldItemSlot) {
             player.debug("[{}] Syncing held item slot: {} -> {}", System.currentTimeMillis(), heldItemSlot, carriedIndex);
-            Proxy.getInstance().getClient().send(new ServerboundSetCarriedItemPacket(carriedIndex));
+            Proxy.getInstance().getClient().sendAwait(new ServerboundSetCarriedItemPacket(carriedIndex));
         }
     }
 

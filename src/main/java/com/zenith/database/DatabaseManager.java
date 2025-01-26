@@ -72,7 +72,7 @@ public class DatabaseManager {
                 databaseTickFuture.cancel(false);
             }
             databaseTickFuture = EXECUTOR
-                .scheduleAtFixedRate(this::postDatabaseTick,
+                .scheduleWithFixedDelay(this::postDatabaseTick,
                                      DatabaseTickEvent.TICK_INTERVAL_SECONDS,
                                      DatabaseTickEvent.TICK_INTERVAL_SECONDS,
                                      TimeUnit.SECONDS);

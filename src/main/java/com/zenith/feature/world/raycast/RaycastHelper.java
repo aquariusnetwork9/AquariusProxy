@@ -138,7 +138,7 @@ public class RaycastHelper {
     }
 
     private static Block getBlockAt(final int x, final int y, final int z, final boolean includeFluids) {
-        var block = World.getBlockAtBlockPos(x, y, z);
+        var block = World.getBlock(x, y, z);
         if (!includeFluids && World.isWater(block)) {
             return BlockRegistry.AIR;
         } else {

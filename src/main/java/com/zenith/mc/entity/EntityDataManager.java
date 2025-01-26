@@ -1,5 +1,7 @@
 package com.zenith.mc.entity;
 
+import com.zenith.cache.data.entity.EntityLiving;
+import com.zenith.mc.block.LocalizedCollisionBox;
 import com.zenith.util.Maps;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
@@ -27,5 +29,17 @@ public class EntityDataManager {
         var data = entityTypeToData.get(type);
         if (data == entityTypeToData.defaultReturnValue()) return null;
         return data;
+    }
+
+    public LocalizedCollisionBox getCollisionBox(final EntityLiving entity) {
+        var data = getEntityData(entity.getEntityType());
+        if (data == null) return null;
+        double w = data.width() / 2;
+        return new LocalizedCollisionBox(
+            entity.getX() - w, entity.getX() + w,
+            entity.getY(), entity.getY() + data.height(),
+            entity.getZ() - w, entity.getZ() + w,
+            entity.getX(), entity.getY(), entity.getZ()
+        );
     }
 }

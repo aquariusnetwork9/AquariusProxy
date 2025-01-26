@@ -1,15 +1,19 @@
 package com.zenith.module.impl;
 
+import com.zenith.cache.data.entity.EntityLiving;
+import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.event.module.ClientBotTick;
 import com.zenith.feature.world.*;
 import com.zenith.feature.world.raycast.RaycastHelper;
 import com.zenith.mc.block.*;
 import com.zenith.mc.dimension.DimensionRegistry;
+import com.zenith.mc.entity.EntityData;
 import com.zenith.module.Module;
 import com.zenith.util.Timer;
 import com.zenith.util.math.MathHelper;
 import com.zenith.util.math.MutableVec3d;
 import lombok.Getter;
+import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.Attribute;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.AttributeModifier;
@@ -19,12 +23,14 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.ByteEn
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerState;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundExplodePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundClientTickEndPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundAcceptTeleportationPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundPlayerInputPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -72,7 +78,7 @@ public class PlayerSimulation extends Module {
     private float speed = 0.10000000149011612f;
     private float sneakSpeed = 0.3f;
     private float jumpStrength = 0.42f;
-    private boolean forceUpdateSupportingBlockPos = false;
+    private boolean onGroundNoBlocks = false;
     private Optional<BlockPos> supportingBlockPos = Optional.empty();
     private int jumpingCooldown;
     @Getter private boolean horizontalCollision = false;
@@ -324,6 +330,7 @@ public class PlayerSimulation extends Module {
             this.lastSprinting = this.isSprinting;
         }
         this.movementInput.reset();
+        tickEntityPushing();
     }
 
     private void tickEnd(ClientBotTick event) {
@@ -394,11 +401,11 @@ public class PlayerSimulation extends Module {
 
     private float getJumpPower() {
         float blockJumpFactor = 1f;
-        Block inBlock = World.getBlockAtBlockPos(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z));
+        Block inBlock = World.getBlock(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z));
         if (inBlock == BlockRegistry.HONEY_BLOCK)
             blockJumpFactor = 0.5f;
         else if (supportingBlockPos.isPresent()) {
-            Block supportingBlock = World.getBlockAtBlockPos(supportingBlockPos.get());
+            Block supportingBlock = World.getBlock(supportingBlockPos.get());
             if (supportingBlock == BlockRegistry.HONEY_BLOCK)
                 blockJumpFactor = 0.5f;
         }
@@ -495,7 +502,7 @@ public class PlayerSimulation extends Module {
             velocity.multiply(0.99, 0.98, 0.99);
             move();
         } else {
-            final Block floorBlock = World.getBlockAtBlockPos(getVelocityAffectingPos());
+            final Block floorBlock = World.getBlock(getVelocityAffectingPos());
             float floorSlipperiness = BLOCK_DATA.getBlockSlipperiness(floorBlock);
             float friction = this.onGround ? floorSlipperiness * 0.91f : 0.91F;
             applyMovementInput(movementInputVec, floorSlipperiness);
@@ -615,13 +622,13 @@ public class PlayerSimulation extends Module {
         for (int i = 0; i < collidingBlockStates.size(); i++) {
             var localState = collidingBlockStates.get(i);
             if (localState.id() == BlockRegistry.BUBBLE_COLUMN.minStateId()) {
-                if (BLOCK_DATA.isAir(World.getBlockAtBlockPos(localState.x(), localState.y() + 1, localState.z()))) {
+                if (BLOCK_DATA.isAir(World.getBlock(localState.x(), localState.y() + 1, localState.z()))) {
                     velocity.setY(Math.max(-0.9, velocity.getY() - 0.03));
                 } else {
                     velocity.setY(Math.max(-0.3, velocity.getY() - 0.03));
                 }
             } else if (localState.id() == BlockRegistry.BUBBLE_COLUMN.maxStateId()) {
-                if (BLOCK_DATA.isAir(World.getBlockAtBlockPos(localState.x(), localState.y() + 1, localState.z()))) {
+                if (BLOCK_DATA.isAir(World.getBlock(localState.x(), localState.y() + 1, localState.z()))) {
                     velocity.setY(Math.min(1.8, velocity.getY() + 0.1));
                 } else {
                     velocity.setY(Math.min(0.7, velocity.getY() + 0.06));
@@ -681,21 +688,18 @@ public class PlayerSimulation extends Module {
                 playerCollisionBox.minX(), playerCollisionBox.maxX(),
                 playerCollisionBox.minY() - 1.0E-6, playerCollisionBox.minY(),
                 playerCollisionBox.minZ(), playerCollisionBox.maxZ(),
-                x, y, z);
+                x, y, z)
+                .move(movement.getX(), movement.getY(), movement.getZ());
             var supportPos = World.findSupportingBlockPos(cb);
-            if (supportPos.isPresent() || this.forceUpdateSupportingBlockPos) {
+            if (supportPos.isEmpty() && !this.onGroundNoBlocks) {
+                var beforeMoveCb = cb.move(-movement.getX(), 0, -movement.getZ());
+                this.supportingBlockPos = supportPos = World.findSupportingBlockPos(beforeMoveCb);
+            } else {
                 this.supportingBlockPos = supportPos;
-            } else if (movement != null) {
-                var moveAdjustedCb = new LocalizedCollisionBox(
-                    cb.minX() - movement.getX(), cb.maxX() - movement.getX(),
-                    cb.minY(), cb.maxY(),
-                    cb.minZ() - movement.getZ(), cb.maxZ() - movement.getZ(),
-                    x, y, z);
-                this.supportingBlockPos = supportPos = World.findSupportingBlockPos(moveAdjustedCb);
             }
-            this.forceUpdateSupportingBlockPos = supportPos.isEmpty();
+            this.onGroundNoBlocks = supportPos.isEmpty();
         } else {
-            this.forceUpdateSupportingBlockPos = false;
+            this.onGroundNoBlocks = false;
             if (this.supportingBlockPos.isPresent()) this.supportingBlockPos = Optional.empty();
         }
     }
@@ -806,7 +810,7 @@ public class PlayerSimulation extends Module {
             double velZ = Math.clamp(velocity.getZ(), -maxV, maxV);
             double velY = Math.max(velocity.getY(), -maxV);
             if (velY < 0.0
-                && World.getBlockAtBlockPos(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z)) != BlockRegistry.SCAFFOLDING
+                && World.getBlock(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z)) != BlockRegistry.SCAFFOLDING
                 && isSneaking
             ) {
                 velY = 0.0;
@@ -818,6 +822,91 @@ public class PlayerSimulation extends Module {
         if (horizontalCollision || movementInput.jumping) {
             if (onClimbable()) { // todo: or inside powder snow
                 velocity.setY(0.2);
+            }
+        }
+    }
+
+    private void tickEntityPushing() {
+        List<EntityLiving> pushableEntities = new ArrayList<>(0);
+        for (var it = CACHE.getEntityCache().getEntities().values().iterator(); it.hasNext(); ) {
+            var entity = it.next();
+            if (entity == CACHE.getPlayerCache().getThePlayer()) continue;
+            if (!(entity instanceof EntityLiving entityLiving)) continue;
+            if (CACHE.getPlayerCache().distanceSqToSelf(entity) > 16.0) continue;
+            EntityType entityType = entityLiving.getEntityType();
+            if (entityType == EntityType.HORSE
+                || entityType == EntityType.CAMEL
+                || entityType == EntityType.DONKEY
+                || entityType == EntityType.LLAMA
+                || entityType == EntityType.MULE
+                || entityType == EntityType.SKELETON_HORSE
+                || entityType == EntityType.TRADER_LLAMA
+                || entityType == EntityType.ZOMBIE_HORSE
+            ) {
+                boolean hasPassenger = CACHE.getEntityCache().getEntities().values().stream()
+                    .anyMatch(e -> e.isInVehicle() && e.getVehicleId() == entityLiving.getEntityId());
+                if (hasPassenger) continue;
+                else pushableEntities.add(entityLiving);
+            }
+            if (entityType == EntityType.MINECART
+                || entityType == EntityType.CHEST_MINECART
+                || entityType == EntityType.COMMAND_BLOCK_MINECART
+                || entityType == EntityType.FURNACE_MINECART
+                || entityType == EntityType.HOPPER_MINECART
+                || entityType == EntityType.TNT_MINECART
+                || entityType == EntityType.SPAWNER_MINECART
+            ) {
+                boolean hasPassenger = entityType == EntityType.MINECART
+                    && CACHE.getEntityCache().getEntities().values().stream()
+                        .anyMatch(e -> e.isInVehicle() && e.getVehicleId() == entityLiving.getEntityId());
+                if (hasPassenger) continue;
+                pushableEntities.add(entityLiving);
+            }
+            if (entityType == EntityType.ARMOR_STAND) continue;
+            if (entityType == EntityType.BAT) continue;
+            if (entityType.toString().endsWith("_BOAT") || entityType.toString().endsWith("_RAFT")) {
+                boolean hasPassenger = CACHE.getEntityCache().getEntities().values().stream()
+                    .anyMatch(e -> e.isInVehicle() && e.getVehicleId() == entityLiving.getEntityId());
+                if (hasPassenger) continue;
+                pushableEntities.add(entityLiving);
+            }
+            if (entityType == EntityType.PARROT) {
+                pushableEntities.add(entityLiving);
+            }
+            EntityData entityData = ENTITY_DATA.getEntityData(entityType);
+            if (entityData == null) continue;
+            if (entityData.livingEntity()) {
+                boolean isSpectator = false;
+                if (entityLiving instanceof EntityPlayer player) {
+                    isSpectator = CACHE.getTabListCache().get(player.getUuid())
+                        .map(PlayerListEntry::getGameMode)
+                        .filter(gm -> gm == GameMode.SPECTATOR)
+                        .isPresent();
+                }
+                if (entityLiving.isAlive() && !isSpectator && !World.onClimbable(entityLiving)) {
+                    pushableEntities.add(entityLiving);
+                }
+            }
+        }
+        if (pushableEntities.isEmpty()) return;
+        var playerCB = getPlayerCollisionBox().inflate(0.2, -0.1, 0.2);
+        for (int i = 0; i < pushableEntities.size(); i++) {
+            var entity = pushableEntities.get(i);
+            var entityCB = ENTITY_DATA.getCollisionBox(entity);
+            if (!playerCB.intersects(entityCB)) continue;
+            double xDiff = entity.getX() - getX();
+            double zDiff = entity.getZ() - getZ();
+            double maxAbsDiff = MathHelper.absMax(xDiff, zDiff);
+            if (maxAbsDiff >= 0.01) {
+                maxAbsDiff = Math.sqrt(maxAbsDiff);
+                xDiff /= maxAbsDiff;
+                zDiff /= maxAbsDiff;
+                double inside = Math.min(1.0, 1.0 / maxAbsDiff);
+                xDiff *= inside;
+                zDiff *= inside;
+                xDiff *= 0.05;
+                zDiff *= 0.05;
+                velocity.add(-xDiff, 0, -zDiff);
             }
         }
     }
@@ -849,10 +938,10 @@ public class PlayerSimulation extends Module {
 
     private float getBlockSpeedFactor() {
         if (this.isGliding || this.isFlying) return 1.0f;
-        Block inBlock = World.getBlockAtBlockPos(MathHelper.floorI(Pathing.getCurrentPlayerX()), MathHelper.floorI(Pathing.getCurrentPlayerY()), MathHelper.floorI(Pathing.getCurrentPlayerZ()));
+        Block inBlock = World.getBlock(MathHelper.floorI(Pathing.getCurrentPlayerX()), MathHelper.floorI(Pathing.getCurrentPlayerY()), MathHelper.floorI(Pathing.getCurrentPlayerZ()));
         float inBlockSpeedFactor = getBlockSpeedFactor(inBlock);
         if (inBlockSpeedFactor != 1.0f || World.isWater(inBlock)) return inBlockSpeedFactor;
-        Block underPlayer = World.getBlockAtBlockPos(MathHelper.floorI(Pathing.getCurrentPlayerX()), MathHelper.floorI(Pathing.getCurrentPlayerY()) - 1, MathHelper.floorI(Pathing.getCurrentPlayerZ()));
+        Block underPlayer = World.getBlock(MathHelper.floorI(Pathing.getCurrentPlayerX()), MathHelper.floorI(Pathing.getCurrentPlayerY()) - 1, MathHelper.floorI(Pathing.getCurrentPlayerZ()));
         return getBlockSpeedFactor(underPlayer);
     }
 
@@ -879,7 +968,7 @@ public class PlayerSimulation extends Module {
         this.lastOnGround = true;
         this.velocity.set(0, 0, 0);
         this.supportingBlockPos = Optional.empty();
-        this.forceUpdateSupportingBlockPos = false;
+        this.onGroundNoBlocks = false;
         this.ticksSinceLastPositionPacketSent = 0;
         if (full) {
             this.isSneaking = this.wasSneaking = false;
@@ -979,7 +1068,7 @@ public class PlayerSimulation extends Module {
     }
 
     private boolean onClimbable() {
-        var inBlock = World.getBlockAtBlockPos(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z));
+        var inBlock = World.getBlock(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z));
         if (inBlock.blockTags().contains(BlockTags.CLIMBABLE)) return true;
 //        // todo: check trapdoor is open
 //        if (inBlock.name().endsWith("trapdoor")) {

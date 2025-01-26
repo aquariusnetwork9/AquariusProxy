@@ -32,6 +32,17 @@ public record LocalizedCollisionBox(
         );
     }
 
+    public LocalizedCollisionBox inflate(double x, double y, double z) {
+        return new LocalizedCollisionBox(
+            minX() - x, maxX() + x,
+            minY() - y, maxY() + y,
+            minZ() - z, maxZ() + z,
+            this.x,
+            this.y,
+            this.z
+        );
+    }
+
     public LocalizedCollisionBox move(final double x, final double y, final double z) {
         return new LocalizedCollisionBox(
             this.minX() + x, this.maxX() + x,
