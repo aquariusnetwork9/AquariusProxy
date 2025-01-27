@@ -529,7 +529,7 @@ public final class BlockRegistry {
 
     public static final Block STONE_BUTTON = REGISTRY.register(new Block(259, "stone_button", false, 5917, 5940, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block SNOW = REGISTRY.register(new Block(260, "snow", false, 5941, 5948, 8, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, true, EnumSet.of(BlockTags.MINEABLE_WITH_SHOVEL)));
+    public static final Block SNOW = REGISTRY.register(new Block(260, "snow", true, 5941, 5948, 8, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, true, EnumSet.of(BlockTags.MINEABLE_WITH_SHOVEL)));
 
     public static final Block ICE = REGISTRY.register(new Block(261, "ice", true, 5949, 5949, 5, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
