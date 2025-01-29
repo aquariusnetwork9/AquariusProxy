@@ -1,6 +1,7 @@
 package com.zenith.feature.autoupdater;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.zenith.Proxy;
 import com.zenith.util.Pair;
 
 import java.net.URI;
@@ -46,7 +47,7 @@ public class RestAutoUpdater extends AutoUpdater {
     public void updateCheck() {
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(baseUrl + "/repos/" + LAUNCH_CONFIG.repo_owner + "/" + LAUNCH_CONFIG.repo_name + "/releases?per_page=100"))
-            .headers("User-Agent", "ZenithProxy/" + LAUNCH_CONFIG.version)
+            .headers("User-Agent", "ZenithProxy/" + Proxy.getInstance().getVersion())
             .headers("Accept", "application/vnd.github+json")
             .headers("X-GitHub-Api-Version", "2022-11-28")
             .timeout(Duration.ofSeconds(5))
@@ -61,13 +62,13 @@ public class RestAutoUpdater extends AutoUpdater {
             if (releaseIdToTag == null || releaseIdToTag.left() == null || releaseIdToTag.right() == null) {
                 return;
             }
-            if (versionLooksCorrect(releaseIdToTag.right())) {
-                if (!Objects.equals(LAUNCH_CONFIG.version, releaseIdToTag.right()) && versionIsLessThanCurrent(LAUNCH_CONFIG.version, releaseIdToTag.right())) {
+            if (versionLooksCorrect(releaseIdToTag.right()) && versionLooksCorrect(Proxy.getInstance().getVersion())) {
+                if (!Objects.equals(Proxy.getInstance().getVersion(), releaseIdToTag.right()) && versionIsLessThanCurrent(Proxy.getInstance().getVersion(), releaseIdToTag.right())) {
                     if (!getUpdateAvailable()) {
                         DEFAULT_LOG.info(
                             "New update on release channel {}! Current: {} New: {}!",
                             LAUNCH_CONFIG.release_channel,
-                            LAUNCH_CONFIG.version,
+                            Proxy.getInstance().getVersion(),
                             releaseIdToTag.right());
                     }
                     setUpdateAvailable(true, releaseIdToTag.right());

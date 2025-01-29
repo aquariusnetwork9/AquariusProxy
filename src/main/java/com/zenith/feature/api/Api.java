@@ -1,6 +1,8 @@
 package com.zenith.feature.api;
 
 
+import com.zenith.Proxy;
+
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -8,7 +10,8 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Shared.DEFAULT_LOG;
+import static com.zenith.Shared.OBJECT_MAPPER;
 
 public abstract class Api {
     final String baseUrl;
@@ -60,7 +63,7 @@ public abstract class Api {
     protected HttpRequest.Builder buildBaseRequest(final String uri) {
         return HttpRequest.newBuilder()
             .uri(URI.create(baseUrl + uri))
-            .headers("User-Agent", "ZenithProxy/" + LAUNCH_CONFIG.version)
+            .headers("User-Agent", "ZenithProxy/" + Proxy.getInstance().getVersion())
             .timeout(Duration.ofSeconds(15));
     }
 }

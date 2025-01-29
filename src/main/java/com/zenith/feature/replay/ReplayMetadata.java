@@ -1,11 +1,10 @@
 package com.zenith.feature.replay;
 
+import com.zenith.Proxy;
 import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static com.zenith.Shared.LAUNCH_CONFIG;
 
 @Data
 public class ReplayMetadata {
@@ -32,7 +31,7 @@ public class ReplayMetadata {
      * Minecraft protocol version. Mandatory for `fileFormatVersion >= 13`.
      */
     private int protocol;
-    private final String generator = "ZenithProxy " + LAUNCH_CONFIG.version;
+    private final String generator = "ZenithProxy " + Proxy.getInstance().getVersion();
     /**
      * The entity id of the player manually added to this replay which represents the recording player.
      * Must be a valid entity id (e.g. must not be -1). May not be set.
