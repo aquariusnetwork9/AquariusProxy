@@ -6,7 +6,8 @@ import com.zenith.event.module.ClientBotTick;
 import com.zenith.event.proxy.DisconnectEvent;
 import com.zenith.event.proxy.NewPlayerInVisualRangeEvent;
 import com.zenith.event.proxy.PlayerLeftVisualRangeEvent;
-import com.zenith.feature.world.Pathing;
+import com.zenith.feature.world.InputRequest;
+import com.zenith.feature.world.RotationHelper;
 import com.zenith.module.Module;
 import com.zenith.util.Timer;
 import com.zenith.util.math.MathHelper;
@@ -116,8 +117,11 @@ public class Spook extends Module {
                 targetEntity = -1;
                 return;
             }
-            var rotation = Pathing.rotationTo(entity.getX(), entity.getY() + 1.6, entity.getZ());
-            PATHING.rotate(rotation.getX(), rotation.getY(), MOVEMENT_PRIORITY);
+            var rotation = RotationHelper.rotationTo(entity.getX(), entity.getY() + 1.6, entity.getZ());
+            INPUTS.submit(InputRequest.builder()
+                              .yaw(rotation.getX())
+                              .pitch(rotation.getY())
+                              .build());
         }
     }
 

@@ -2,7 +2,7 @@ package com.zenith.module.impl;
 
 import com.zenith.event.module.ClientBotTick;
 import com.zenith.feature.world.Input;
-import com.zenith.feature.world.Pathing;
+import com.zenith.feature.world.InputRequest;
 import com.zenith.module.Module;
 import com.zenith.util.Timer;
 
@@ -34,19 +34,40 @@ public class Wander extends Module {
     }
 
     private void handleBotTick(ClientBotTick clientBotTick) {
-        Input defaultInput = CONFIG.client.extra.wander.sneak ? Pathing.forwardSneakInput : Pathing.forwardInput;
+        Input defaultInput = CONFIG.client.extra.wander.sneak ? Input.builder()
+            .pressingForward(true)
+            .sneaking(true)
+            .build() : Input.builder()
+            .pressingForward(true)
+            .build();
         if (CONFIG.client.extra.wander.turn && turnTimer.tick(20L * CONFIG.client.extra.wander.turnDelaySeconds)) {
-            PATHING.moveRot(defaultInput, (float) (Math.random() * 360), 0, MOVEMENT_PRIORITY);
+            INPUTS.submit(InputRequest.builder()
+                              .input(defaultInput)
+                              .yaw((float) (Math.random() * 360))
+                              .pitch(0)
+                              .priority(MOVEMENT_PRIORITY)
+                              .build());
         } else if (CONFIG.client.extra.wander.jump && jumpTimer.tick(20L * CONFIG.client.extra.wander.jumpDelaySeconds)) {
-            var input = new Input(Pathing.forwardInput);
-            input.jumping = true;
-            PATHING.move(input, MOVEMENT_PRIORITY);
+            INPUTS.submit(InputRequest.builder()
+                              .input(Input.builder()
+                                         .pressingForward(true)
+                                         .jumping(true)
+                                         .build())
+                              .priority(MOVEMENT_PRIORITY)
+                              .build());
         } else if (CONFIG.client.extra.wander.jump && CONFIG.client.extra.wander.alwaysJumpInWater && MODULE.get(PlayerSimulation.class).isTouchingWater()) {
-            var input = new Input(Pathing.forwardInput);
-            input.jumping = true;
-            PATHING.move(input, MOVEMENT_PRIORITY);
+            INPUTS.submit(InputRequest.builder()
+                              .input(Input.builder()
+                                         .pressingForward(true)
+                                         .jumping(true)
+                                         .build())
+                              .priority(MOVEMENT_PRIORITY)
+                              .build());
         } else {
-            PATHING.move(defaultInput, MOVEMENT_PRIORITY);
+            INPUTS.submit(InputRequest.builder()
+                              .input(defaultInput)
+                              .priority(MOVEMENT_PRIORITY)
+                              .build());
         }
     }
 }

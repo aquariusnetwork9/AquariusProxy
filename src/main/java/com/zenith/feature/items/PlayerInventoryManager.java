@@ -3,6 +3,7 @@ package com.zenith.feature.items;
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
 import com.zenith.event.module.ClientBotTick;
+import com.zenith.feature.world.InputRequest;
 import com.zenith.util.Timer;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ClickItemAction;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerActionType;
@@ -62,7 +63,9 @@ public class PlayerInventoryManager {
         if (currentActionRequest == DEFAULT_ACTION_REQUEST) return;
         if (CONFIG.debug.ncpStrictInventory) {
             if (CACHE.getPlayerCache().getInventoryCache().getMouseStack() != null) {
-                PATHING.stop(Integer.MAX_VALUE);
+                INPUTS.submit(InputRequest.builder()
+                                  .priority(Integer.MAX_VALUE)
+                                  .build());
             }
         }
         if (tickTimer.tick(actionDelayTicks)) {
@@ -74,7 +77,10 @@ public class PlayerInventoryManager {
                     if (CONFIG.debug.ncpStrictInventory) {
                         if (packet.getCarriedItem() == null)
                             Proxy.getInstance().getClient().sendAwait(new ServerboundContainerClosePacket(0));
-                        else PATHING.stop(Integer.MAX_VALUE);
+                        else
+                            INPUTS.submit(InputRequest.builder()
+                                              .priority(Integer.MAX_VALUE)
+                                              .build());
                     }
                 }
             }

@@ -15,7 +15,7 @@ import com.zenith.discord.DiscordBot;
 import com.zenith.feature.items.PlayerInventoryManager;
 import com.zenith.feature.tps.TPSCalculator;
 import com.zenith.feature.whitelist.PlayerListsManager;
-import com.zenith.feature.world.Pathing;
+import com.zenith.feature.world.InputManager;
 import com.zenith.mc.block.BlockDataManager;
 import com.zenith.mc.dimension.DimensionDataManager;
 import com.zenith.mc.entity.EntityDataManager;
@@ -77,7 +77,7 @@ public class Shared {
     public static final DatabaseManager DATABASE;
     public static final TPSCalculator TPS;
     public static final ModuleManager MODULE;
-    public static final Pathing PATHING;
+    public static final InputManager INPUTS;
     public static final TerminalManager TERMINAL;
     public static final InGameCommandManager IN_GAME_COMMAND;
     public static final CommandManager COMMAND;
@@ -226,7 +226,7 @@ public class Shared {
             DATABASE = new DatabaseManager();
             TPS = new TPSCalculator();
             MODULE = new ModuleManager();
-            PATHING = new Pathing();
+            INPUTS = new InputManager();
             TERMINAL = new TerminalManager();
             IN_GAME_COMMAND = new InGameCommandManager();
             COMMAND = new CommandManager();

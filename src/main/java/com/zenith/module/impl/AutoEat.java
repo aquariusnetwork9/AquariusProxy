@@ -3,6 +3,7 @@ package com.zenith.module.impl;
 import com.zenith.Proxy;
 import com.zenith.event.module.AutoEatOutOfFoodEvent;
 import com.zenith.event.module.ClientBotTick;
+import com.zenith.feature.world.InputRequest;
 import com.zenith.mc.food.FoodData;
 import com.zenith.mc.food.FoodRegistry;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
@@ -55,7 +56,9 @@ public class AutoEat extends AbstractInventoryModule {
                 }
             }
             if (isEating) {
-                PATHING.stop(MOVEMENT_PRIORITY);
+                INPUTS.submit(InputRequest.builder()
+                                  .priority(MOVEMENT_PRIORITY)
+                                  .build());
             }
         } else {
             isEating = false;
