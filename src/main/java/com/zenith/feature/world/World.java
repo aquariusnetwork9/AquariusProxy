@@ -339,4 +339,15 @@ public class World {
         return false;
     }
 
+    public static double getCurrentPlayerX() {
+        return MathHelper.round(CACHE.getPlayerCache().getX(), 5);
+    }
+
+    public static double getCurrentPlayerY() {
+        return MathHelper.round(CACHE.getPlayerCache().getY(), 5);
+    }
+
+    public static double getCurrentPlayerZ() {
+        return MathHelper.round(CACHE.getPlayerCache().getZ(), 5);
+    }
 }

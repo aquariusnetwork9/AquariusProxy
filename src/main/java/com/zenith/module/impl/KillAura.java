@@ -4,7 +4,8 @@ import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.cache.data.entity.EntityStandard;
 import com.zenith.event.module.ClientBotTick;
-import com.zenith.feature.world.Pathing;
+import com.zenith.feature.world.InputRequest;
+import com.zenith.feature.world.RotationHelper;
 import com.zenith.mc.item.ItemRegistry;
 import com.zenith.util.math.MathHelper;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -94,7 +95,9 @@ public class KillAura extends AbstractInventoryModule {
                     rotateTo(target);
                 else
                     // stop while doing inventory actions
-                    PATHING.stop(MOVEMENT_PRIORITY-1);
+                    INPUTS.submit(InputRequest.builder()
+                                      .priority(MOVEMENT_PRIORITY - 1)
+                                      .build());
                 return;
             }
         }
@@ -176,12 +179,16 @@ public class KillAura extends AbstractInventoryModule {
     }
 
     private void rotateTo(Entity entity) {
-        var rotation = Pathing.shortestRotationTo(entity);
-        PATHING.rotate(rotation.getX(), rotation.getY(), MOVEMENT_PRIORITY);
+        var rotation = RotationHelper.shortestRotationTo(entity);
+        INPUTS.submit(InputRequest.builder()
+                          .yaw(rotation.getX())
+                          .pitch(rotation.getY())
+                          .priority(MOVEMENT_PRIORITY)
+                          .build());
     }
 
     private boolean hasRotation(final Entity entity) {
-        var rotation = Pathing.shortestRotationTo(entity);
+        var rotation = RotationHelper.shortestRotationTo(entity);
         var sim = MODULE.get(PlayerSimulation.class);
         boolean yawNear = MathHelper.isYawInRange(sim.getYaw(), rotation.getX(), 0.1f);
         boolean pitchNear = MathHelper.isPitchInRange(sim.getPitch(), rotation.getY(), 0.1f);

@@ -3,10 +3,14 @@ package com.zenith.feature.items;
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
 import com.zenith.event.module.ClientBotTick;
+import com.zenith.feature.world.InputRequest;
+import com.zenith.util.RequestFuture;
 import com.zenith.util.Timer;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ClickItemAction;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerActionType;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClickPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClosePacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundSetCarriedItemPacket;
 
 import java.util.Collections;
 import java.util.List;
@@ -15,9 +19,11 @@ import static com.zenith.Shared.*;
 
 public class PlayerInventoryManager {
     private static final InventoryActionRequest DEFAULT_ACTION_REQUEST = new InventoryActionRequest(null, Collections.emptyList(), Integer.MIN_VALUE);
+    private static final RequestFuture DEFAULT_REQUEST_FUTURE = new RequestFuture();
     private final Timer tickTimer = Timer.createTickTimer();
     private final int actionDelayTicks = 5;
     private InventoryActionRequest currentActionRequest = DEFAULT_ACTION_REQUEST;
+    private RequestFuture currentRequestFuture = DEFAULT_REQUEST_FUTURE;
 
     public PlayerInventoryManager() {
         EVENT_BUS.subscribe(
@@ -31,7 +37,7 @@ public class PlayerInventoryManager {
     private void handleBotTickStarting(ClientBotTick.Starting event) {
         var openContainerId = CACHE.getPlayerCache().getInventoryCache().getOpenContainerId();
         if (openContainerId == 0) return;
-        Proxy.getInstance().getClient().sendAsync(new ServerboundContainerClosePacket(openContainerId));
+        Proxy.getInstance().getClient().sendAwait(new ServerboundContainerClosePacket(openContainerId));
     }
 
     public synchronized boolean isOwner(Object owner) {
@@ -46,23 +52,26 @@ public class PlayerInventoryManager {
         return currentActionRequest.isExecuting();
     }
 
-    public synchronized void invActionReq(final Object owner, final List<ContainerClickAction> actions, int priority) {
-        if (priority <= currentActionRequest.getPriority()) return;
-        if (isExecuting()) return;
+    public synchronized RequestFuture invActionReq(final Object owner, final List<ContainerClickAction> actions, int priority) {
+        if (priority <= currentActionRequest.getPriority()) return RequestFuture.rejected;
+        if (isExecuting()) return RequestFuture.rejected;
+        currentRequestFuture.complete(false);
         currentActionRequest = new InventoryActionRequest(owner, actions, priority);
+        currentRequestFuture = new RequestFuture();
+        return currentRequestFuture;
     }
 
-    public synchronized void invActionReq(final Object owner, final ContainerClickAction action, int priority) {
-        if (priority <= currentActionRequest.getPriority()) return;
-        if (isExecuting()) return;
-        currentActionRequest = new InventoryActionRequest(owner, List.of(action), priority);
+    public synchronized RequestFuture invActionReq(final Object owner, final ContainerClickAction action, int priority) {
+        return invActionReq(owner, List.of(action), priority);
     }
 
     public synchronized void handleTick(final ClientBotTick event) {
         if (currentActionRequest == DEFAULT_ACTION_REQUEST) return;
         if (CONFIG.debug.ncpStrictInventory) {
             if (CACHE.getPlayerCache().getInventoryCache().getMouseStack() != null) {
-                PATHING.stop(Integer.MAX_VALUE);
+                INPUTS.submit(InputRequest.builder()
+                                  .priority(Integer.MAX_VALUE)
+                                  .build());
             }
         }
         if (tickTimer.tick(actionDelayTicks)) {
@@ -72,13 +81,26 @@ public class PlayerInventoryManager {
                 if (packet != null) {
                     Proxy.getInstance().getClient().sendAwait(packet);
                     if (CONFIG.debug.ncpStrictInventory) {
-                        if (packet.getCarriedItem() == null)
+                        if (packet instanceof ServerboundContainerClickPacket clickPacket && clickPacket.getCarriedItem() == null)
                             Proxy.getInstance().getClient().sendAwait(new ServerboundContainerClosePacket(0));
-                        else PATHING.stop(Integer.MAX_VALUE);
+                        else
+                            INPUTS.submit(InputRequest.builder()
+                                              .priority(Integer.MAX_VALUE)
+                                              .build());
+                    }
+                    ContainerClickAction nextActionPeek = currentActionRequest.peek();
+                    if (packet instanceof ServerboundSetCarriedItemPacket
+                        || (nextActionPeek != null && nextActionPeek.isSetCarriedItem())) {
+                        // no delay needed for set carried item
+                        tickTimer.skip();
                     }
                 }
             }
-            if (currentActionRequest.isCompleted()) currentActionRequest = DEFAULT_ACTION_REQUEST;
+            if (currentActionRequest.isCompleted()) {
+                currentRequestFuture.complete(true);
+                currentActionRequest = DEFAULT_ACTION_REQUEST;
+                currentRequestFuture = DEFAULT_REQUEST_FUTURE;
+            }
         }
     }
 
@@ -89,5 +111,4 @@ public class PlayerInventoryManager {
             new ContainerClickAction(fromSlot, ContainerActionType.CLICK_ITEM, ClickItemAction.LEFT_CLICK)
         );
     }
-
 }

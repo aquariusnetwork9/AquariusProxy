@@ -6,11 +6,11 @@ import com.zenith.command.Command;
 import com.zenith.command.CommandUsage;
 import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
+import com.zenith.feature.world.InputRequest;
 
 import static com.mojang.brigadier.arguments.FloatArgumentType.floatArg;
 import static com.mojang.brigadier.arguments.FloatArgumentType.getFloat;
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.PATHING;
+import static com.zenith.Shared.INPUTS;
 import static java.util.Arrays.asList;
 
 public class RotateCommand extends Command {
@@ -54,7 +54,11 @@ public class RotateCommand extends Command {
                         .description("Cannot rotate while player is controlling");
                     return OK;
                 }
-                PATHING.rotate(yaw, pitch, MOVE_PRIORITY);
+                INPUTS.submit(InputRequest.builder()
+                                  .yaw(yaw)
+                                  .pitch(pitch)
+                                  .priority(MOVE_PRIORITY)
+                                  .build());
                 c.getSource().getEmbed()
                     .title("Rotated")
                     .successColor();
@@ -76,7 +80,10 @@ public class RotateCommand extends Command {
                         .description("Cannot rotate while player is controlling");
                     return OK;
                 }
-                PATHING.rotate(yaw, CACHE.getPlayerCache().getPitch(), MOVE_PRIORITY);
+                INPUTS.submit(InputRequest.builder()
+                                  .yaw(yaw)
+                                  .priority(MOVE_PRIORITY)
+                                  .build());
                 c.getSource().getEmbed()
                     .title("Rotated")
                     .successColor();
@@ -98,7 +105,10 @@ public class RotateCommand extends Command {
                         .description("Cannot rotate while player is controlling");
                     return OK;
                 }
-                PATHING.rotate(CACHE.getPlayerCache().getYaw(), pitch, MOVE_PRIORITY);
+                INPUTS.submit(InputRequest.builder()
+                                  .pitch(pitch)
+                                  .priority(MOVE_PRIORITY)
+                                  .build());
                 c.getSource().getEmbed()
                     .title("Rotated")
                     .successColor();

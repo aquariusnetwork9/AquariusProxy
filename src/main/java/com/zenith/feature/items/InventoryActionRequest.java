@@ -25,4 +25,10 @@ public class InventoryActionRequest {
         if (index >= actions.size()) return null;
         return actions.get(index);
     }
+
+    public @Nullable ContainerClickAction peek() {
+        var index = actionExecIndex;
+        if (index >= actions.size()) return null;
+        return actions.get(index);
+    }
 }

@@ -6,6 +6,7 @@ import com.zenith.cache.data.inventory.Container;
 import com.zenith.event.module.ClientBotTick;
 import com.zenith.event.module.EntityFishHookSpawnEvent;
 import com.zenith.event.module.SplashSoundEffectEvent;
+import com.zenith.feature.world.InputRequest;
 import com.zenith.mc.item.ItemRegistry;
 import com.zenith.util.Timer;
 import com.zenith.util.math.MathHelper;
@@ -115,7 +116,11 @@ public class AutoFish extends AbstractInventoryModule {
     }
 
     private void rotate() {
-        PATHING.rotate(CONFIG.client.extra.autoFish.yaw, CONFIG.client.extra.autoFish.pitch, MOVEMENT_PRIORITY);
+        INPUTS.submit(InputRequest.builder()
+                          .yaw(CONFIG.client.extra.autoFish.yaw)
+                          .pitch(CONFIG.client.extra.autoFish.pitch)
+                          .priority(MOVEMENT_PRIORITY)
+                          .build());
     }
 
     private boolean hasRotation() {

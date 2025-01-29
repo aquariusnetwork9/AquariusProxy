@@ -4,6 +4,7 @@ import lombok.SneakyThrows;
 
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.Supplier;
 
 public class Wait {
@@ -29,18 +30,22 @@ public class Wait {
     }
 
     public static boolean waitUntil(final Supplier<Boolean> conditionSupplier, int secondsToWait) {
-        final var beforeTime = getEpochSecond();
-        while (!conditionSupplier.get() && getEpochSecond() - beforeTime < secondsToWait) {
-            Wait.waitMs(50);
+        return waitUntil(conditionSupplier, 50, secondsToWait, TimeUnit.SECONDS);
+    }
+
+    @SneakyThrows
+    public static boolean waitUntil(final Supplier<Boolean> conditionSupplier, int checkIntervalMs, long timeout, TimeUnit unit) {
+        final var beforeTime = System.nanoTime();
+        while (!conditionSupplier.get() && TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - beforeTime) < unit.toMillis(timeout)) {
+            if (Thread.currentThread().isInterrupted()) {
+                throw new InterruptedException("Wait Interrupted");
+            }
+            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(checkIntervalMs));
         }
         return conditionSupplier.get();
     }
 
     public static void waitRandomMs(final int ms) {
         Wait.waitMs((int) (ThreadLocalRandom.current().nextDouble(ms)));
-    }
-
-    public static long getEpochSecond() {
-        return TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis());
     }
 }

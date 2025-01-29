@@ -1,5 +1,8 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Run ZenithProxy" type="Application" factoryName="Application">
+    <envs>
+      <env name="ZENITH_DEV" value="true" />
+    </envs>
     <option name="MAIN_CLASS_NAME" value="com.zenith.Proxy" />
     <module name="ZenithProxy.main" />
     <option name="VM_PARAMETERS" value="-Xmx300m -XX:+UseG1GC" />

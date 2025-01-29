@@ -1,8 +1,13 @@
 package com.zenith.feature.world;
 
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 
 @Data
+@Builder
+@AllArgsConstructor(access = AccessLevel.PROTECTED)
 public class Input {
     public boolean pressingForward;
     public boolean pressingBack;
@@ -14,23 +19,6 @@ public class Input {
     public boolean leftClick;
     public boolean rightClick;
     public boolean clickMainHand;
-
-    public Input(final boolean pressingForward, final boolean pressingBack, final boolean pressingLeft, final boolean pressingRight, final boolean jumping, final boolean sneaking, final boolean sprinting, final boolean leftClick, final boolean rightClick, final boolean clickMainHand) {
-        this.pressingForward = pressingForward;
-        this.pressingBack = pressingBack;
-        this.pressingLeft = pressingLeft;
-        this.pressingRight = pressingRight;
-        this.jumping = jumping;
-        this.sneaking = sneaking;
-        this.sprinting = sprinting;
-        this.leftClick = leftClick;
-        this.rightClick = rightClick;
-        this.clickMainHand = clickMainHand;
-    }
-
-    public Input() {
-        this(false, false, false, false, false, false, false, false, false, true);
-    }
 
     public Input(Input in) {
         this(in.pressingForward, in.pressingBack, in.pressingLeft, in.pressingRight, in.jumping, in.sneaking, in.sprinting, in.leftClick, in.rightClick, in.clickMainHand);

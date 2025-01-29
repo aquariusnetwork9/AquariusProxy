@@ -4,7 +4,9 @@ import com.google.common.collect.Iterators;
 import com.zenith.event.module.ClientBotTick;
 import com.zenith.event.proxy.DeathEvent;
 import com.zenith.feature.world.Input;
-import com.zenith.feature.world.Pathing;
+import com.zenith.feature.world.InputRequest;
+import com.zenith.feature.world.RotationHelper;
+import com.zenith.feature.world.World;
 import com.zenith.mc.block.BlockPos;
 import com.zenith.module.Module;
 import com.zenith.util.Timer;
@@ -77,9 +79,12 @@ public class AntiAFK extends Module {
     }
 
     private void sneakTick() {
-        var sneakInput = new Input();
-        sneakInput.sneaking = true;
-        PATHING.move(sneakInput, MOVEMENT_PRIORITY - 1);
+        INPUTS.submit(InputRequest.builder()
+                          .input(Input.builder()
+                                     .sneaking(true)
+                                     .build())
+                          .priority(MOVEMENT_PRIORITY - 1)
+                          .build());
     }
 
     public void handleDeathEvent(final DeathEvent event) {
@@ -107,18 +112,23 @@ public class AntiAFK extends Module {
 
     private void rotateTick() {
         if (rotateTimer.tick(CONFIG.client.extra.antiafk.actions.rotateDelayTicks)) {
-            PATHING.rotate(
-                -180 + (360 * ThreadLocalRandom.current().nextFloat()),
-                -90 + (180 * ThreadLocalRandom.current().nextFloat()),
-                MOVEMENT_PRIORITY - 1
-            );
+            INPUTS.submit(InputRequest.builder()
+                              .yaw(-180 + (360 * ThreadLocalRandom.current().nextFloat()))
+                              .pitch(-90 + (180 * ThreadLocalRandom.current().nextFloat()))
+                              .priority(MOVEMENT_PRIORITY - 1)
+                              .build());
         }
     }
 
     private void jumpTick() {
         if (jumpTimer.tick(CONFIG.client.extra.antiafk.actions.jumpDelayTicks)) {
             if (CONFIG.client.extra.antiafk.actions.jumpOnlyInWater && !MODULE.get(PlayerSimulation.class).isTouchingWater()) return;
-            PATHING.jump(MOVEMENT_PRIORITY + 1);
+            INPUTS.submit(InputRequest.builder()
+                              .input(Input.builder()
+                                         .jumping(true)
+                                         .build())
+                              .priority(MOVEMENT_PRIORITY + 1)
+                              .build());
         }
     }
 
@@ -130,29 +140,31 @@ public class AntiAFK extends Module {
         if (startWalkTickTimer.tick(CONFIG.client.extra.antiafk.actions.walkDelayTicks)) {
             shouldWalk = true;
             final WalkDirection directions = walkDirectionIterator.next();
-            var xGoal = Pathing.getCurrentPlayerX() + CONFIG.client.extra.antiafk.actions.walkDistance * directions.from;
-            var zGoal = Pathing.getCurrentPlayerZ() + CONFIG.client.extra.antiafk.actions.walkDistance * directions.to;
-            currentPathingGoal = new BlockPos(MathHelper.floorI(xGoal), MathHelper.floorI(Pathing.getCurrentPlayerY()), MathHelper.floorI(zGoal));
+            var xGoal = World.getCurrentPlayerX() + CONFIG.client.extra.antiafk.actions.walkDistance * directions.from;
+            var zGoal = World.getCurrentPlayerZ() + CONFIG.client.extra.antiafk.actions.walkDistance * directions.to;
+            currentPathingGoal = new BlockPos(MathHelper.floorI(xGoal), MathHelper.floorI(World.getCurrentPlayerY()), MathHelper.floorI(zGoal));
         }
         if (shouldWalk) {
             if (reachedPathingGoal()) {
                 shouldWalk = false;
             } else {
-                if (!MODULE.get(PlayerSimulation.class).isTouchingWater() && (CONFIG.client.extra.antiafk.actions.safeWalk || CONFIG.client.extra.antiafk.actions.sneak))
-                    PATHING.moveRotSneakTowardsBlockPos(currentPathingGoal.x(),
-                                                        currentPathingGoal.z(),
-                                                        MOVEMENT_PRIORITY);
-                else
-                    PATHING.moveRotTowardsBlockPos(currentPathingGoal.x(),
-                                                    currentPathingGoal.z(),
-                                                    MOVEMENT_PRIORITY);
+                var shouldSneak = !MODULE.get(PlayerSimulation.class).isTouchingWater()
+                    && (CONFIG.client.extra.antiafk.actions.safeWalk || CONFIG.client.extra.antiafk.actions.sneak);
+                INPUTS.submit(InputRequest.builder()
+                                  .input(Input.builder()
+                                             .pressingForward(true)
+                                             .sneaking(shouldSneak)
+                                             .build())
+                                  .yaw(RotationHelper.yawToXZ(currentPathingGoal.x() + 0.5, currentPathingGoal.z() + 0.5))
+                                  .priority(MOVEMENT_PRIORITY)
+                                  .build());
             }
         }
     }
 
     private boolean reachedPathingGoal() {
-        final int px = MathHelper.floorI(Pathing.getCurrentPlayerX());
-        final int pz = MathHelper.floorI(Pathing.getCurrentPlayerZ());
+        final int px = MathHelper.floorI(World.getCurrentPlayerX());
+        final int pz = MathHelper.floorI(World.getCurrentPlayerZ());
         return px == currentPathingGoal.x() && pz == currentPathingGoal.z();
     }
 

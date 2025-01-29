@@ -12,19 +12,19 @@ import com.zenith.discord.Embed;
 import com.zenith.feature.items.ContainerClickAction;
 import com.zenith.mc.item.ItemRegistry;
 import com.zenith.util.ComponentSerializer;
+import com.zenith.util.RequestFuture;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ClickItemAction;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerActionType;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.DropItemAction;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentType;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundSetCarriedItemPacket;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
-import static com.zenith.Shared.*;
+import static com.zenith.Shared.CACHE;
+import static com.zenith.Shared.INVENTORY;
 import static java.util.Arrays.asList;
 
 public class InventoryCommand extends Command {
@@ -60,27 +60,41 @@ public class InventoryCommand extends Command {
                 printInvAscii(c.getSource().getMultiLineOutput(), false);
             }))
             .then(literal("hold").then(argument("slot", integer(36, 44)).executes(c -> {
-                if (!verifyAbleToDoInvActions(c.getSource().getEmbed())) return 1;
+                if (!verifyAbleToDoInvActions(c.getSource().getEmbed())) return OK;
                 var slot = c.getArgument("slot", Integer.class);
-                Proxy.getInstance().getClient().send(new ServerboundSetCarriedItemPacket(slot - 36));
-                logInvDelayed();
-                c.getSource().setNoOutput(true);
-                return 1;
+                var accepted = INVENTORY.invActionReq(this, ContainerClickAction.setCarriedItem(slot - 36), INV_ACTION_PRIORITY).get();
+                if (accepted) {
+                    logInv();
+                    c.getSource().setNoOutput(true);
+                } else {
+                    c.getSource().getEmbed()
+                        .title("Failed")
+                        .description("Another inventory action has taken priority this tick, try again")
+                        .errorColor();
+                }
+                return OK;
             })))
             .then(literal("swap")
                       .then(argument("from", integer(0, 45)).then(argument("to", integer(0, 45)).executes(c -> {
-                          if (!verifyAbleToDoInvActions(c.getSource().getEmbed())) return 1;
+                          if (!verifyAbleToDoInvActions(c.getSource().getEmbed())) return OK;
                           var from = c.getArgument("from", Integer.class);
                           var to = c.getArgument("to", Integer.class);
-                          INVENTORY.invActionReq(this, INVENTORY.swapSlots(from, to), INV_ACTION_PRIORITY);
-                          logInvDelayed();
-                          c.getSource().setNoOutput(true);
-                          return 1;
+                          var accepted = INVENTORY.invActionReq(this, INVENTORY.swapSlots(from, to), INV_ACTION_PRIORITY).get();
+                          if (accepted) {
+                              logInv();
+                              c.getSource().setNoOutput(true);
+                          } else {
+                              c.getSource().getEmbed()
+                                  .title("Failed")
+                                  .description("Another inventory action has taken priority this tick, try again")
+                                  .errorColor();
+                          }
+                          return OK;
                       }))))
             .then(literal("drop")
                       .then(literal("stack")
                                 .then(argument("slot", integer(0, 44)).executes(c -> {
-                                    if (!verifyAbleToDoInvActions(c.getSource().getEmbed())) return 1;
+                                    if (!verifyAbleToDoInvActions(c.getSource().getEmbed())) return OK;
                                     var slot = c.getArgument("slot", Integer.class);
                                     var stack = CACHE.getPlayerCache().getPlayerInventory().get(slot);
                                     if (stack == Container.EMPTY_STACK) {
@@ -88,15 +102,22 @@ public class InventoryCommand extends Command {
                                             .title("Error")
                                             .description("Slot: " + slot + " is empty")
                                             .errorColor();
-                                        return 1;
+                                        return OK;
                                     }
-                                    drop(slot, true);
-                                    logInvDelayed();
-                                    c.getSource().setNoOutput(true);
-                                    return 1;
+                                    var accepted = drop(slot, true).get();
+                                    if (accepted) {
+                                        logInv();
+                                        c.getSource().setNoOutput(true);
+                                    } else {
+                                        c.getSource().getEmbed()
+                                            .title("Failed")
+                                            .description("Another inventory action has taken priority this tick, try again")
+                                            .errorColor();
+                                    }
+                                    return OK;
                                 })))
                       .then(argument("slot", integer(0, 44)).executes(c -> {
-                          if (!verifyAbleToDoInvActions(c.getSource().getEmbed())) return 1;
+                          if (!verifyAbleToDoInvActions(c.getSource().getEmbed())) return OK;
                           var slot = c.getArgument("slot", Integer.class);
                           var stack = CACHE.getPlayerCache().getPlayerInventory().get(slot);
                           if (stack == Container.EMPTY_STACK) {
@@ -104,16 +125,23 @@ public class InventoryCommand extends Command {
                                   .title("Error")
                                   .description("Slot: " + slot + " is empty")
                                   .errorColor();
-                              return 1;
+                              return OK;
                           }
-                          drop(slot, false);
-                          logInvDelayed();
-                          c.getSource().setNoOutput(true);
-                          return 1;
+                          var accepted = drop(slot, false).get();
+                          if (accepted) {
+                              logInv();
+                              c.getSource().setNoOutput(true);
+                          } else {
+                              c.getSource().getEmbed()
+                                  .title("Failed")
+                                  .description("Another inventory action has taken priority this tick, try again")
+                                  .errorColor();
+                          }
+                          return OK;
                       })));
     }
 
-    private void drop(final int slot, final boolean dropStack) {
+    private RequestFuture drop(final int slot, final boolean dropStack) {
         var actionList = new ArrayList<ContainerClickAction>();
         if (CACHE.getPlayerCache().getInventoryCache().getMouseStack() != Container.EMPTY_STACK) {
             // drop the item in the mouse stack
@@ -128,18 +156,16 @@ public class InventoryCommand extends Command {
             ContainerActionType.DROP_ITEM,
             dropStack ? DropItemAction.DROP_SELECTED_STACK : DropItemAction.DROP_FROM_SELECTED
         ));
-        INVENTORY.invActionReq(
+        return INVENTORY.invActionReq(
             this,
             actionList,
             INV_ACTION_PRIORITY);
     }
 
-    private void logInvDelayed() {
-        EXECUTOR.schedule(() -> {
-            final List<String> output = new ArrayList<>();
-            printInvAscii(output, false);
-            CommandOutputHelper.logMultiLineOutput(output);
-        }, 1, TimeUnit.SECONDS);
+    private void logInv() {
+        final List<String> output = new ArrayList<>();
+        printInvAscii(output, false);
+        CommandOutputHelper.logMultiLineOutput(output);
     }
 
     private void printInvAscii(final List<String> multiLineOutput, final boolean showAllSlotIds) {

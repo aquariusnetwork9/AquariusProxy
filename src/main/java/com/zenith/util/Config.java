@@ -138,6 +138,7 @@ public final class Config {
                 public boolean holdLeftClick = false;
                 public boolean holdRightClick = false;
                 public boolean hasRotation = false;
+                public boolean holdSneak = false;
                 public float rotationYaw = 0;
                 public float rotationPitch = 0;
                 public HoldRightClickMode holdRightClickMode = HoldRightClickMode.MAIN_HAND;

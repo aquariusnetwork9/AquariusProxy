@@ -3,7 +3,10 @@ package com.zenith.module.impl;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.event.module.ClientBotTick;
-import com.zenith.feature.world.*;
+import com.zenith.feature.world.Input;
+import com.zenith.feature.world.InputRequest;
+import com.zenith.feature.world.PlayerInteractionManager;
+import com.zenith.feature.world.World;
 import com.zenith.feature.world.raycast.RaycastHelper;
 import com.zenith.mc.block.*;
 import com.zenith.mc.dimension.DimensionRegistry;
@@ -65,7 +68,7 @@ public class PlayerSimulation extends Module {
     @Getter private final MutableVec3d velocity = new MutableVec3d(0, 0, 0);
     private boolean wasLeftClicking = false;
     private final Timer entityAttackTimer = Timer.createTickTimer();
-    private final Input movementInput = new Input();
+    private final Input movementInput = Input.builder().build();
     private Input lastSentMovementInput = new Input(movementInput);
     private int waitTicks = 0;
     private static final CollisionBox STANDING_COLLISION_BOX = new CollisionBox(-0.3, 0.3, 0, 1.8, -0.3, 0.3);
@@ -133,7 +136,7 @@ public class PlayerSimulation extends Module {
         return this.yaw + difference;
     }
 
-    public synchronized void doMovement(final MovementInputRequest request) {
+    public synchronized void doMovement(final InputRequest request) {
         request.input().ifPresent(this.movementInput::apply);
         if (request.yaw().isPresent() || request.pitch().isPresent()) {
             doRotate(request.yaw().orElse(this.yaw), request.pitch().orElse(this.pitch));
@@ -145,8 +148,6 @@ public class PlayerSimulation extends Module {
             if (movementInput.isLeftClick()) {
                 var raycast = RaycastHelper.playerBlockOrEntityRaycast(getBlockReachDistance());
                 if (raycast.hit() && raycast.isBlock()) {
-                    // ensure synced
-                    interactions.ensureHasSentCarriedItem();
                     if (!wasLeftClicking && !interactions.isDestroying()) {
                         debug("Starting destroy block at: [{}, {}, {}]", raycast.block().x(), raycast.block().y(), raycast.block().z());
                         interactions.startDestroyBlock(
@@ -174,7 +175,6 @@ public class PlayerSimulation extends Module {
                     double distanceSqToSelf = CACHE.getPlayerCache().distanceSqToSelf(raycast.entity().entity());
                     if (distanceSqToSelf <= rangeSq) {
                         debug("Click attacking entity: {} [{}, {}, {}]", raycast.entity().entity().getEntityType(), raycast.entity().entity().getX(), raycast.entity().entity().getY(), raycast.entity().entity().getZ());
-                        interactions.ensureHasSentCarriedItem();
                         interactions.attackEntity(raycast.entity());
                     }
                 }
@@ -183,18 +183,15 @@ public class PlayerSimulation extends Module {
                 Hand hand = movementInput.clickMainHand ? Hand.MAIN_HAND : Hand.OFF_HAND;
                 if (raycast.hit() && raycast.isBlock()) {
                     debug("Right click {} block at: [{}, {}, {}]", hand, raycast.block().x(), raycast.block().y(), raycast.block().z());
-                    interactions.ensureHasSentCarriedItem();
                     interactions.useItemOn(hand, raycast.block());
                     sendClientPacketAsync(new ServerboundSwingPacket(hand));
                 } else if (raycast.hit() && raycast.isEntity()) {
                     debug("Right click {} entity: {} [{}, {}, {}]", hand, raycast.entity().entity().getEntityType(), raycast.entity().entity().getX(), raycast.entity().entity().getY(), raycast.entity().entity().getZ());
-                    interactions.ensureHasSentCarriedItem();
                     interactions.interactAt(hand, raycast.entity());
                     interactions.interact(hand, raycast.entity());
                     sendClientPacketAsync(new ServerboundSwingPacket(hand));
                 } else if (!raycast.hit()) {
                     debug("Right click {} use item", hand);
-                    interactions.ensureHasSentCarriedItem();
                     interactions.useItem(hand);
                     sendClientPacketAsync(new ServerboundSwingPacket(hand));
                 }
@@ -269,7 +266,7 @@ public class PlayerSimulation extends Module {
                 new ServerboundMovePlayerRotPacket(false, horizontalCollision, this.yaw, this.pitch),
                 new ServerboundPlayerInputPacket(false, false, false, false, false, false, false)
             );
-            lastSentMovementInput = new Input();
+            lastSentMovementInput = Input.builder().build();
             // todo: handle vehicle travel movement
         } else {
             // send movement packets based on position
@@ -938,10 +935,12 @@ public class PlayerSimulation extends Module {
 
     private float getBlockSpeedFactor() {
         if (this.isGliding || this.isFlying) return 1.0f;
-        Block inBlock = World.getBlock(MathHelper.floorI(Pathing.getCurrentPlayerX()), MathHelper.floorI(Pathing.getCurrentPlayerY()), MathHelper.floorI(Pathing.getCurrentPlayerZ()));
+        Block inBlock = World.getBlock(MathHelper.floorI(World.getCurrentPlayerX()), MathHelper.floorI(
+            World.getCurrentPlayerY()), MathHelper.floorI(World.getCurrentPlayerZ()));
         float inBlockSpeedFactor = getBlockSpeedFactor(inBlock);
         if (inBlockSpeedFactor != 1.0f || World.isWater(inBlock)) return inBlockSpeedFactor;
-        Block underPlayer = World.getBlock(MathHelper.floorI(Pathing.getCurrentPlayerX()), MathHelper.floorI(Pathing.getCurrentPlayerY()) - 1, MathHelper.floorI(Pathing.getCurrentPlayerZ()));
+        Block underPlayer = World.getBlock(MathHelper.floorI(World.getCurrentPlayerX()), MathHelper.floorI(
+            World.getCurrentPlayerY()) - 1, MathHelper.floorI(World.getCurrentPlayerZ()));
         return getBlockSpeedFactor(underPlayer);
     }
 
