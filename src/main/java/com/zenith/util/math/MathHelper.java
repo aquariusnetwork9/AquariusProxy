@@ -77,6 +77,10 @@ public class MathHelper {
         return Math.max(min, Math.min(max, value));
     }
 
+    public static int clamp(final int value, final int min, final int max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
     public static double distance2d(double x1, double y1, double x2, double y2) {
         return Math.sqrt(square(x1 - x2) + square(y1 - y2));
     }

@@ -360,7 +360,6 @@ public class Proxy {
         var client = this.client;
 
         try {
-            // must send direct to avoid any caching issues from outbound handlers
             client.send(new ServerboundSetCarriedItemPacket(10)).get();
         } catch (final Exception e) {
             CLIENT_LOG.error("Error performing kick disconnect", e);

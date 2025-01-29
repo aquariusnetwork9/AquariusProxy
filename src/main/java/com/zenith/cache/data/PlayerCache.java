@@ -130,7 +130,6 @@ public class PlayerCache implements CachedData {
             this.maxPlayers = -1;
             // server should reset our inventory contents through packets automatically on respawn?
             this.inventoryCache.reset();
-            this.heldItemSlot = 0;
             this.doLimitedCrafting = false;
             this.teleportQueue.clear();
             this.teleportQueue.trim();
@@ -148,6 +147,7 @@ public class PlayerCache implements CachedData {
         this.thePlayer.setSaturation(5);
         this.thePlayer.getPotionEffectMap().clear();
         this.isSneaking = this.isSprinting = false;
+        this.heldItemSlot = 0;
     }
 
     @Override

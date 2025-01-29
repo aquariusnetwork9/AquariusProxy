@@ -10,13 +10,13 @@ import org.geysermc.mcprotocollib.protocol.data.game.inventory.ClickItemAction;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerActionType;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.MoveToHotbarAction;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundSetCarriedItemPacket;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
 import static com.zenith.Shared.CACHE;
 import static com.zenith.Shared.INVENTORY;
+import static java.util.Arrays.asList;
 import static java.util.Objects.nonNull;
 
 /**
@@ -85,17 +85,18 @@ public abstract class AbstractInventoryModule extends Module {
             ItemStack itemStack = inventory.get(i);
             if (nonNull(itemStack) && itemPredicate(itemStack)) {
                 var actionSlot = getActionSlot();
+                var actions = asList(new ContainerClickAction(i, ContainerActionType.MOVE_TO_HOTBAR_SLOT, actionSlot));
+                debug("[{}] Swapping item to slot {}", getClass().getSimpleName(), actionSlot.getId());
+                if (actionSlot != MoveToHotbarAction.OFF_HAND
+                    && CACHE.getPlayerCache().getHeldItemSlot() != targetMainHandHotbarSlot
+                ) {
+                    actions.add(ContainerClickAction.setCarriedItem(targetMainHandHotbarSlot));
+                }
                 INVENTORY.invActionReq(
                     this,
-                    new ContainerClickAction(i, ContainerActionType.MOVE_TO_HOTBAR_SLOT, actionSlot),
+                    actions,
                     inventoryActionPriority
                 );
-                debug("[{}] Swapping item to slot {}", getClass().getSimpleName(), actionSlot.getId());
-                if (actionSlot != MoveToHotbarAction.OFF_HAND) {
-                    if (CACHE.getPlayerCache().getHeldItemSlot() != targetMainHandHotbarSlot) {
-                        sendClientPacketAwait(new ServerboundSetCarriedItemPacket(targetMainHandHotbarSlot));
-                    }
-                }
                 return true;
             }
         }

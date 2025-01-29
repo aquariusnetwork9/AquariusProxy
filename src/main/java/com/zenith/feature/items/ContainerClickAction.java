@@ -2,24 +2,29 @@ package com.zenith.feature.items;
 
 import com.zenith.cache.data.inventory.Container;
 import com.zenith.mc.item.ItemRegistry;
+import com.zenith.util.math.MathHelper;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
+import org.geysermc.mcprotocollib.protocol.codec.MinecraftPacket;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.*;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClickPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundSetCarriedItemPacket;
 import org.jetbrains.annotations.Nullable;
 
 import static com.zenith.Shared.CACHE;
 import static com.zenith.Shared.CLIENT_LOG;
 
 public record ContainerClickAction(int slotId, ContainerActionType actionType, ContainerAction param) {
-    public @Nullable ServerboundContainerClickPacket toPacket() {
+    public @Nullable MinecraftPacket toPacket() {
         try {
             return switch (actionType()) {
                 case CLICK_ITEM -> clickItem();
                 case MOVE_TO_HOTBAR_SLOT -> moveToHotbarSlot();
                 case DROP_ITEM -> dropItem();
+                // todo: refactor out dependency on MCPL enum definition so we can define this more clearly
+                case null -> new ServerboundSetCarriedItemPacket(MathHelper.clamp(slotId, 0, 8));
                 // todo: implement the other action types
                 default -> {
                     CLIENT_LOG.debug("[{}, {}, {}] Unhandled container action type", slotId, actionType, param);
@@ -30,6 +35,14 @@ public record ContainerClickAction(int slotId, ContainerActionType actionType, C
             CLIENT_LOG.error("Error processing container click action: {}", this, e);
             return null;
         }
+    }
+
+    public static ContainerClickAction setCarriedItem(int hotbarSlot) {
+        return new ContainerClickAction(hotbarSlot, null, null);
+    }
+
+    public boolean isSetCarriedItem() {
+        return actionType() == null;
     }
 
     private ServerboundContainerClickPacket clickItem() {

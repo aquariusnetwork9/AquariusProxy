@@ -145,8 +145,6 @@ public class PlayerSimulation extends Module {
             if (movementInput.isLeftClick()) {
                 var raycast = RaycastHelper.playerBlockOrEntityRaycast(getBlockReachDistance());
                 if (raycast.hit() && raycast.isBlock()) {
-                    // ensure synced
-                    interactions.ensureHasSentCarriedItem();
                     if (!wasLeftClicking && !interactions.isDestroying()) {
                         debug("Starting destroy block at: [{}, {}, {}]", raycast.block().x(), raycast.block().y(), raycast.block().z());
                         interactions.startDestroyBlock(
@@ -174,7 +172,6 @@ public class PlayerSimulation extends Module {
                     double distanceSqToSelf = CACHE.getPlayerCache().distanceSqToSelf(raycast.entity().entity());
                     if (distanceSqToSelf <= rangeSq) {
                         debug("Click attacking entity: {} [{}, {}, {}]", raycast.entity().entity().getEntityType(), raycast.entity().entity().getX(), raycast.entity().entity().getY(), raycast.entity().entity().getZ());
-                        interactions.ensureHasSentCarriedItem();
                         interactions.attackEntity(raycast.entity());
                     }
                 }
@@ -183,18 +180,15 @@ public class PlayerSimulation extends Module {
                 Hand hand = movementInput.clickMainHand ? Hand.MAIN_HAND : Hand.OFF_HAND;
                 if (raycast.hit() && raycast.isBlock()) {
                     debug("Right click {} block at: [{}, {}, {}]", hand, raycast.block().x(), raycast.block().y(), raycast.block().z());
-                    interactions.ensureHasSentCarriedItem();
                     interactions.useItemOn(hand, raycast.block());
                     sendClientPacketAsync(new ServerboundSwingPacket(hand));
                 } else if (raycast.hit() && raycast.isEntity()) {
                     debug("Right click {} entity: {} [{}, {}, {}]", hand, raycast.entity().entity().getEntityType(), raycast.entity().entity().getX(), raycast.entity().entity().getY(), raycast.entity().entity().getZ());
-                    interactions.ensureHasSentCarriedItem();
                     interactions.interactAt(hand, raycast.entity());
                     interactions.interact(hand, raycast.entity());
                     sendClientPacketAsync(new ServerboundSwingPacket(hand));
                 } else if (!raycast.hit()) {
                     debug("Right click {} use item", hand);
-                    interactions.ensureHasSentCarriedItem();
                     interactions.useItem(hand);
                     sendClientPacketAsync(new ServerboundSwingPacket(hand));
                 }

@@ -12,6 +12,7 @@ import com.zenith.mc.item.ToolTag;
 import com.zenith.mc.item.ToolTier;
 import com.zenith.module.impl.PlayerSimulation;
 import com.zenith.util.math.MathHelper;
+import lombok.Getter;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.AttributeType;
@@ -31,6 +32,7 @@ import java.util.Objects;
 import static com.zenith.Shared.BLOCK_DATA;
 import static com.zenith.Shared.CACHE;
 
+@Getter
 public class PlayerInteractionManager {
     private int destroyBlockPosX = -1;
     private int destroyBlockPosY = -1;
@@ -42,7 +44,6 @@ public class PlayerInteractionManager {
     private final int destroyDelayInterval = 6;
     private boolean isDestroying;
     private final PlayerSimulation player;
-    private int carriedIndex;
 
     public PlayerInteractionManager(final PlayerSimulation playerSimulation) {
         this.player = playerSimulation;
@@ -52,10 +53,6 @@ public class PlayerInteractionManager {
         ItemStack itemStack = CACHE.getPlayerCache().getEquipment(EquipmentSlot.MAIN_HAND);
         return x == this.destroyBlockPosX && y == this.destroyBlockPosY && z == this.destroyBlockPosZ
             && Objects.equals(this.destroyingItem, itemStack);
-    }
-
-    public boolean isDestroying() {
-        return this.isDestroying;
     }
 
     public boolean startDestroyBlock(final int x, final int y, final int z, Direction face) {
@@ -345,14 +342,6 @@ public class PlayerInteractionManager {
             player.getPitch()
         ));
         return InteractionResult.PASS;
-    }
-
-    public void ensureHasSentCarriedItem() {
-        int heldItemSlot = CACHE.getPlayerCache().getHeldItemSlot();
-        if (carriedIndex != heldItemSlot) {
-            player.debug("[{}] Syncing held item slot: {} -> {}", System.currentTimeMillis(), heldItemSlot, carriedIndex);
-            Proxy.getInstance().getClient().sendAwait(new ServerboundSetCarriedItemPacket(carriedIndex));
-        }
     }
 
     public void attackEntity(final EntityRaycastResult entity) {

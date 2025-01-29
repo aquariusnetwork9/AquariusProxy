@@ -21,6 +21,10 @@ public class Timer {
         this.time = System.currentTimeMillis();
     }
 
+    public void skip() {
+        this.time = 0L;
+    }
+
     public boolean tick(final long delay) {
         return tick(delay, true);
     }
