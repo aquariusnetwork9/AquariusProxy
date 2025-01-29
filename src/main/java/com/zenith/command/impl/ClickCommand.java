@@ -39,6 +39,7 @@ public class ClickCommand extends Command {
                 "reach add <float>",
                 "hold forceRotation on/off",
                 "hold forceRotation <yaw> <pitch>",
+                "hold sneak on/off",
                 "stop"
             )
         );
@@ -150,7 +151,14 @@ public class ClickCommand extends Command {
                                         .title("Hold Force Rotation Set")
                                         .primaryColor();
                                     return OK;
-                                })))));
+                                }))))
+                      .then(literal("sneak").then(argument("toggle", toggle()).executes(c -> {
+                          CONFIG.client.extra.click.holdSneak = getToggle(c, "toggle");
+                          c.getSource().getEmbed()
+                              .title("Hold Sneak Set")
+                              .primaryColor();
+                          return OK;
+                      }))));
     }
 
     private boolean isClientConnected() {
@@ -165,6 +173,7 @@ public class ClickCommand extends Command {
                 CONFIG.client.extra.click.hasRotation
                     ? " [" + String.format("%.2f", CONFIG.client.extra.click.rotationYaw) + ", " + String.format("%.2f", CONFIG.client.extra.click.rotationPitch) + "]"
                     : ""), false)
+            .addField("Click Hold Sneak", toggleStr(CONFIG.client.extra.click.holdSneak), false)
             .addField("Right Click Hold Mode", rightClickHoldModeToString(CONFIG.client.extra.click.holdRightClickMode), false)
             .addField("Right Click Hold Interval", CONFIG.client.extra.click.holdRightClickInterval + " ticks", false)
             .addField("Additional Reach", CONFIG.client.extra.click.additionalBlockReach, false)

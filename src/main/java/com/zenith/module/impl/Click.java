@@ -51,25 +51,34 @@ public class Click extends Module {
                 yaw = Optional.empty();
                 pitch = Optional.empty();
             }
+            in.sneaking = CONFIG.client.extra.click.holdSneak;
             PATHING.moveReq(new MovementInputRequest(Optional.of(in), yaw, pitch, MOVEMENT_PRIORITY));
-        } else if (CONFIG.client.extra.click.holdRightClick && holdRightClickTimer.tick(CONFIG.client.extra.click.holdRightClickInterval)) {
-            var in = new Input(rightClickInput);
-            switch (CONFIG.client.extra.click.holdRightClickMode) {
-                case MAIN_HAND -> in.clickMainHand = true;
-                case OFF_HAND -> in.clickMainHand = false;
-                case ALTERNATE_HANDS -> in.clickMainHand = !holdRightClickLastHand;
+        } else if (CONFIG.client.extra.click.holdRightClick) {
+            if (holdRightClickTimer.tick(CONFIG.client.extra.click.holdRightClickInterval)) {
+                var in = new Input(rightClickInput);
+                switch (CONFIG.client.extra.click.holdRightClickMode) {
+                    case MAIN_HAND -> in.clickMainHand = true;
+                    case OFF_HAND -> in.clickMainHand = false;
+                    case ALTERNATE_HANDS -> in.clickMainHand = !holdRightClickLastHand;
+                }
+                holdRightClickLastHand = in.clickMainHand;
+                Optional<Float> yaw;
+                Optional<Float> pitch;
+                if (CONFIG.client.extra.click.hasRotation) {
+                    yaw = Optional.of(CONFIG.client.extra.click.rotationYaw);
+                    pitch = Optional.of(CONFIG.client.extra.click.rotationPitch);
+                } else {
+                    yaw = Optional.empty();
+                    pitch = Optional.empty();
+                }
+                in.sneaking = CONFIG.client.extra.click.holdSneak;
+                PATHING.moveReq(new MovementInputRequest(Optional.of(in), yaw, pitch, MOVEMENT_PRIORITY));
+            } else if (CONFIG.client.extra.click.holdSneak) {
+                var in = new Input();
+                in.sneaking = true;
+                // 0 priority allows other modules to override this if needed
+                PATHING.move(in, 0);
             }
-            holdRightClickLastHand = in.clickMainHand;
-            Optional<Float> yaw;
-            Optional<Float> pitch;
-            if (CONFIG.client.extra.click.hasRotation) {
-                yaw = Optional.of(CONFIG.client.extra.click.rotationYaw);
-                pitch = Optional.of(CONFIG.client.extra.click.rotationPitch);
-            } else {
-                yaw = Optional.empty();
-                pitch = Optional.empty();
-            }
-            PATHING.moveReq(new MovementInputRequest(Optional.of(in), yaw, pitch, MOVEMENT_PRIORITY));
         }
     }
 }
