@@ -160,6 +160,7 @@ tasks {
         workingDir = projectDir
         commandLine = "git describe --tags --abbrev=0".split(" ")
         standardOutput = ByteArrayOutputStream()
+        isIgnoreExitValue = true
         doLast {
             val buildTag = standardOutput.toString().trim()
             if (buildTag.length > 5) {
