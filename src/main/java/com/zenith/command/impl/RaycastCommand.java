@@ -24,25 +24,26 @@ public class RaycastCommand extends Command {
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
         return command("raycast").executes(c -> {
-           var result = RaycastHelper.playerBlockOrEntityRaycast(4.5);
-           var embed = c.getSource().getEmbed();
-           embed.title("Raycast Result")
-               .addField("Hit", result.hit(), false)
-               .primaryColor();
-           if (result.isBlock()) {
-                embed.addField("Block", result.block().block().toString(), false)
-                     .addField("Pos", result.block().x() + ", " + result.block().y() + ", " + result.block().z(), false)
-                     .addField("Direction", result.block().direction().name(), false);
-                if (result.hit()) {
-                    embed.addField("State", World.getBlockState(result.block().x(), result.block().y(), result.block().z()).toString(), false);
-                }
-           } else if (result.isEntity()) {
-               var type = result.entity().entityType();
-               embed.addField("Entity", type != null ? type : "N/A", false);
-           }
-        })
+                var sim = MODULE.get(PlayerSimulation.class);
+                var result = RaycastHelper.playerBlockOrEntityRaycast(sim.getBlockReachDistance(), sim.getEntityInteractDistance());
+                var embed = c.getSource().getEmbed();
+                embed.title("Raycast Result")
+                    .addField("Hit", result.hit(), false)
+                    .primaryColor();
+                if (result.isBlock()) {
+                    embed.addField("Block", result.block().block().toString(), false)
+                        .addField("Pos", result.block().x() + ", " + result.block().y() + ", " + result.block().z(), false)
+                        .addField("Direction", result.block().direction().name(), false);
+                    if (result.hit()) {
+                        embed.addField("State", World.getBlockState(result.block().x(), result.block().y(), result.block().z()).toString(), false);
+                    }
+                } else if (result.isEntity()) {
+                    var type = result.entity().entityType();
+                    embed.addField("Entity", type != null ? type : "N/A", false);
+                }})
             .then(literal("e").executes(c -> {
-                var result = RaycastHelper.playerEntityRaycast(4.5);
+                var sim = MODULE.get(PlayerSimulation.class);
+                var result = RaycastHelper.playerEntityRaycast(sim.getEntityInteractDistance());
                 c.getSource().getEmbed()
                     .title("Raycast Result")
                     .addField("Hit", result.hit(), false)
@@ -51,7 +52,8 @@ public class RaycastCommand extends Command {
                     .primaryColor();
             }))
             .then(literal("b").executes(c -> {
-                var result = RaycastHelper.playerBlockRaycast(MODULE.get(PlayerSimulation.class).getBlockReachDistance(), false);
+                var sim = MODULE.get(PlayerSimulation.class);
+                var result = RaycastHelper.playerBlockRaycast(sim.getBlockReachDistance(), false);
                 c.getSource().getEmbed()
                     .title("Raycast Result")
                     .addField("Hit", result.hit(), false)
