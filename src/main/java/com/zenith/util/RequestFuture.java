@@ -1,5 +1,6 @@
 package com.zenith.util;
 
+import com.zenith.Proxy;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 
@@ -47,6 +48,10 @@ public class RequestFuture implements Future<Boolean> {
     @SneakyThrows
     @Override
     public Boolean get() {
+        var client = Proxy.getInstance().getClient();
+        if (client != null && client.getClientEventLoop().inEventLoop()) {
+            throw new IllegalStateException("Cannot block on RequestFuture in client event loop");
+        }
         Wait.waitUntil(() -> completed, 1, 1L, TimeUnit.SECONDS);
         return accepted;
     }
@@ -54,7 +59,16 @@ public class RequestFuture implements Future<Boolean> {
     @SneakyThrows
     @Override
     public Boolean get(final long timeout, @NotNull final TimeUnit unit) {
+        var client = Proxy.getInstance().getClient();
+        if (client != null && client.getClientEventLoop().inEventLoop()) {
+            throw new IllegalStateException("Cannot block on RequestFuture in client event loop");
+        }
         Wait.waitUntil(() -> completed, 1, timeout, unit);
+        return accepted;
+    }
+
+    public boolean getNow() {
+        if (!completed) return false;
         return accepted;
     }
 }
