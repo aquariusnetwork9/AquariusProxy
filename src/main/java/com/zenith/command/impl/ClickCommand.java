@@ -37,7 +37,8 @@ public class ClickCommand extends Command {
                 "right hold",
                 "right hold <mainHand/offHand/alternate>",
                 "right hold interval <ticks>",
-                "reach add <float>",
+                "addedBlockReach <float>",
+                "addedEntityReach <float>",
                 "hold forceRotation on/off",
                 "hold forceRotation <yaw> <pitch>",
                 "hold sneak on/off",
@@ -133,14 +134,22 @@ public class ClickCommand extends Command {
                                         .primaryColor();
                                     return OK;
                                 })))))
-            .then(literal("reach").then(literal("add").then(argument("reach", floatArg(0, 10)).executes(c -> {
+            .then(literal("addedBlockReach").then(argument("reach", floatArg(0, 10)).executes(c -> {
                 float f = getFloat(c, "reach");
                 CONFIG.client.extra.click.additionalBlockReach = f;
                 c.getSource().getEmbed()
-                    .title("Additional Reach Set")
+                    .title("Additional Block Reach Set")
                     .primaryColor();
                 return OK;
-            }))))
+            })))
+            .then(literal("addedEntityReach").then(argument("reach", floatArg(0, 10)).executes(c -> {
+                float f = getFloat(c, "reach");
+                CONFIG.client.extra.click.additionalEntityReach = f;
+                c.getSource().getEmbed()
+                    .title("Additional Entity Reach Set")
+                    .primaryColor();
+                return OK;
+            })))
             .then(literal("hold")
                       .then(literal("forceRotation")
                                 .then(argument("toggle", toggle()).executes(c -> {
@@ -183,7 +192,8 @@ public class ClickCommand extends Command {
             .addField("Click Hold Sneak", toggleStr(CONFIG.client.extra.click.holdSneak), false)
             .addField("Right Click Hold Mode", rightClickHoldModeToString(CONFIG.client.extra.click.holdRightClickMode), false)
             .addField("Right Click Hold Interval", CONFIG.client.extra.click.holdRightClickInterval + " ticks", false)
-            .addField("Additional Reach", CONFIG.client.extra.click.additionalBlockReach, false)
+            .addField("Added Block Reach", CONFIG.client.extra.click.additionalBlockReach, false)
+            .addField("Added Entity Reach", CONFIG.client.extra.click.additionalEntityReach, false)
             .primaryColor();
     }
 

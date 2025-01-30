@@ -144,6 +144,7 @@ public final class Config {
                 public HoldRightClickMode holdRightClickMode = HoldRightClickMode.MAIN_HAND;
                 public int holdRightClickInterval = 5;
                 public float additionalBlockReach = 0;
+                public float additionalEntityReach = 0;
                 public enum HoldRightClickMode {
                     MAIN_HAND,
                     OFF_HAND,

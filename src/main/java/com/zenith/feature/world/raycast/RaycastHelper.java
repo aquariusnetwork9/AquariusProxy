@@ -180,31 +180,36 @@ public class RaycastHelper {
         return result;
     }
 
-    public static BlockOrEntityRaycastResult playerBlockOrEntityRaycast(double maxDistance) {
-        return blockOrEntityRaycastFromPos(CACHE.getPlayerCache().getX(), CACHE.getPlayerCache().getEyeY(), CACHE.getPlayerCache().getZ(), CACHE.getPlayerCache().getYaw(), CACHE.getPlayerCache().getPitch(), maxDistance);
+    public static BlockOrEntityRaycastResult playerBlockOrEntityRaycast(double blockReachDistance, double entityReachDistance) {
+        return blockOrEntityRaycastFromPos(
+            CACHE.getPlayerCache().getX(), CACHE.getPlayerCache().getEyeY(), CACHE.getPlayerCache().getZ(),
+            CACHE.getPlayerCache().getYaw(), CACHE.getPlayerCache().getPitch(),
+            blockReachDistance, entityReachDistance
+        );
     }
 
-    public static BlockOrEntityRaycastResult blockOrEntityRaycastFromPos(final double x, final double y, final double z, final float yaw, final float pitch, final double maxDistance) {
-        final Vector3d rayEndPos = MathHelper.calculateRayEndPos(x, y, z, yaw, pitch, maxDistance);
-        return blockOrEntityRaycast(x, y, z, rayEndPos.getX(), rayEndPos.getY(), rayEndPos.getZ());
+    public static BlockOrEntityRaycastResult blockOrEntityRaycastFromPos(final double x, final double y, final double z, final float yaw, final float pitch, final double blockReachDistance, final double entityReachDistance) {
+        final Vector3d blockRayEndPos = MathHelper.calculateRayEndPos(x, y, z, yaw, pitch, blockReachDistance);
+        final Vector3d entityRayEndPos = MathHelper.calculateRayEndPos(x, y, z, yaw, pitch, entityReachDistance);
+        return blockOrEntityRaycast(x, y, z, blockRayEndPos, entityRayEndPos);
     }
 
-    private static BlockOrEntityRaycastResult blockOrEntityRaycast(final double x, final double y, final double z, final double x2, final double y2, final double z2) {
-        final BlockRaycastResult blockRaycastResult = blockRaycast(x, y, z, x2, y2, z2, false);
-        final EntityRaycastResult entityRaycastResult = entityRaycast(x, y, z, x2, y2, z2);
+    private static BlockOrEntityRaycastResult blockOrEntityRaycast(final double x, final double y, final double z, Vector3d blockRayEndPos, Vector3d entityRayEndPos) {
+        final BlockRaycastResult blockRaycastResult = blockRaycast(x, y, z, blockRayEndPos.getX(), blockRayEndPos.getY(), blockRayEndPos.getZ(), false);
+        final EntityRaycastResult entityRaycastResult = entityRaycast(x, y, z, entityRayEndPos.getX(), entityRayEndPos.getY(), entityRayEndPos.getZ());
         // if both hit, return the one that is closer to the start point
         if (blockRaycastResult.hit() && entityRaycastResult.hit()) {
             final double blockDist = MathHelper.distanceSq3d(x, y, z, blockRaycastResult.intersection().x(), blockRaycastResult.intersection().y(), blockRaycastResult.intersection().z());
             final double entityDist = MathHelper.distanceSq3d(x, y, z, entityRaycastResult.intersection().x(), entityRaycastResult.intersection().y(), entityRaycastResult.intersection().z());
             if (blockDist < entityDist) {
-                return new BlockOrEntityRaycastResult(true, blockRaycastResult, null);
+                return BlockOrEntityRaycastResult.wrap(blockRaycastResult);
             } else {
-                return new BlockOrEntityRaycastResult(true, null, entityRaycastResult);
+                return BlockOrEntityRaycastResult.wrap(entityRaycastResult);
             }
         } else if (blockRaycastResult.hit()) {
-            return new BlockOrEntityRaycastResult(true, blockRaycastResult, null);
+            return BlockOrEntityRaycastResult.wrap(blockRaycastResult);
         } else if (entityRaycastResult.hit()) {
-            return new BlockOrEntityRaycastResult(true, null, entityRaycastResult);
+            return BlockOrEntityRaycastResult.wrap(entityRaycastResult);
         }
         return BlockOrEntityRaycastResult.miss();
     }

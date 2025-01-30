@@ -4,6 +4,7 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 
 @Data
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
@@ -18,14 +19,21 @@ public class Input {
     public boolean sprinting;
     public boolean leftClick;
     public boolean rightClick;
-    public boolean clickMainHand = true;
+    public ClickOptions clickOptions = ClickOptions.DEFAULT;
+
+    public record ClickOptions(Hand hand, ClickTarget target) {
+        public enum ClickTarget {
+            BLOCK_OR_ENTITY, BLOCK, ENTITY;
+        }
+        public static final ClickOptions DEFAULT = new ClickOptions(Hand.MAIN_HAND, ClickTarget.BLOCK_OR_ENTITY);
+    }
 
     public static Builder builder() {
         return new Builder();
     }
 
     public Input(Input in) {
-        this(in.pressingForward, in.pressingBack, in.pressingLeft, in.pressingRight, in.jumping, in.sneaking, in.sprinting, in.leftClick, in.rightClick, in.clickMainHand);
+        this(in.pressingForward, in.pressingBack, in.pressingLeft, in.pressingRight, in.jumping, in.sneaking, in.sprinting, in.leftClick, in.rightClick, in.clickOptions);
     }
 
     public void apply(Input in) {
@@ -45,7 +53,7 @@ public class Input {
         }
         this.leftClick = in.leftClick;
         this.rightClick = in.rightClick;
-        this.clickMainHand = in.clickMainHand;
+        this.clickOptions = in.clickOptions;
     }
 
     public void reset() {
@@ -58,7 +66,7 @@ public class Input {
         sprinting = false;
         leftClick = false;
         rightClick = false;
-        clickMainHand = true;
+        clickOptions = ClickOptions.DEFAULT;
     }
 
     public String log() {
@@ -104,7 +112,7 @@ public class Input {
         private boolean sprinting;
         private boolean leftClick;
         private boolean rightClick;
-        private boolean clickMainHand = true;
+        private ClickOptions clickOptions = ClickOptions.DEFAULT;
 
         private Builder() {}
 
@@ -153,8 +161,8 @@ public class Input {
             return this;
         }
 
-        public Builder clickMainHand(boolean clickMainHand) {
-            this.clickMainHand = clickMainHand;
+        public Builder clickOptions(ClickOptions clickOptions) {
+            this.clickOptions = clickOptions;
             return this;
         }
 
@@ -169,7 +177,7 @@ public class Input {
             input.setSprinting(sprinting);
             input.setLeftClick(leftClick);
             input.setRightClick(rightClick);
-            input.setClickMainHand(clickMainHand);
+            input.setClickOptions(clickOptions);
             return input;
         }
     }

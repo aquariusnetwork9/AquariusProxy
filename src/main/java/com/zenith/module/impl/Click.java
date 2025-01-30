@@ -2,9 +2,11 @@ package com.zenith.module.impl;
 
 import com.zenith.event.module.ClientBotTick;
 import com.zenith.feature.world.Input;
+import com.zenith.feature.world.Input.ClickOptions.ClickTarget;
 import com.zenith.feature.world.InputRequest;
 import com.zenith.module.Module;
 import com.zenith.util.Timer;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
@@ -14,7 +16,7 @@ public class Click extends Module {
     public static final int MOVEMENT_PRIORITY = 501;
 
     private final Timer holdRightClickTimer = Timer.createTickTimer();
-    private boolean holdRightClickLastHand = false; // true if main hand, false if off hand
+    private Hand holdRightClickLastHand = Hand.MAIN_HAND;
 
     @Override
     public void subscribeEvents() {
@@ -43,13 +45,13 @@ public class Click extends Module {
             if (holdRightClickTimer.tick(CONFIG.client.extra.click.holdRightClickInterval)) {
                 var req = InputRequest.builder().priority(MOVEMENT_PRIORITY);
                 var in = Input.builder().rightClick(true);
-                boolean mainhand = switch (CONFIG.client.extra.click.holdRightClickMode) {
-                    case MAIN_HAND -> true;
-                    case OFF_HAND -> false;
-                    case ALTERNATE_HANDS -> !holdRightClickLastHand;
+                Hand hand = switch (CONFIG.client.extra.click.holdRightClickMode) {
+                    case MAIN_HAND -> Hand.MAIN_HAND;
+                    case OFF_HAND -> Hand.OFF_HAND;
+                    case ALTERNATE_HANDS -> holdRightClickLastHand == Hand.MAIN_HAND ? Hand.OFF_HAND : Hand.MAIN_HAND;
                 };
-                holdRightClickLastHand = mainhand;
-                in.clickMainHand(mainhand);
+                holdRightClickLastHand = hand;
+                in.clickOptions(new Input.ClickOptions(hand, ClickTarget.BLOCK_OR_ENTITY));
                 if (CONFIG.client.extra.click.hasRotation) {
                     req.yaw(CONFIG.client.extra.click.rotationYaw)
                         .pitch(CONFIG.client.extra.click.rotationPitch);

@@ -7,6 +7,7 @@ import com.zenith.feature.world.Input;
 import com.zenith.feature.world.InputRequest;
 import com.zenith.feature.world.PlayerInteractionManager;
 import com.zenith.feature.world.World;
+import com.zenith.feature.world.raycast.BlockOrEntityRaycastResult;
 import com.zenith.feature.world.raycast.RaycastHelper;
 import com.zenith.mc.block.*;
 import com.zenith.mc.dimension.DimensionRegistry;
@@ -143,7 +144,11 @@ public class PlayerSimulation extends Module {
     private void interactionTick() {
         try {
             if (movementInput.isLeftClick()) {
-                var raycast = RaycastHelper.playerBlockOrEntityRaycast(getBlockReachDistance());
+                BlockOrEntityRaycastResult raycast = switch (movementInput.clickOptions.target()) {
+                    case BLOCK_OR_ENTITY -> RaycastHelper.playerBlockOrEntityRaycast(getBlockReachDistance(), getEntityInteractDistance());
+                    case BLOCK -> BlockOrEntityRaycastResult.wrap(RaycastHelper.playerBlockRaycast(getBlockReachDistance(), false));
+                    case ENTITY -> BlockOrEntityRaycastResult.wrap(RaycastHelper.playerEntityRaycast(getEntityInteractDistance()));
+                };
                 if (raycast.hit() && raycast.isBlock()) {
                     if (!wasLeftClicking && !interactions.isDestroying()) {
                         debug("Starting destroy block at: [{}, {}, {}]", raycast.block().x(), raycast.block().y(), raycast.block().z());
@@ -176,8 +181,12 @@ public class PlayerSimulation extends Module {
                     }
                 }
             } else if (movementInput.isRightClick()) {
-                var raycast = RaycastHelper.playerBlockOrEntityRaycast(getBlockReachDistance());
-                Hand hand = movementInput.clickMainHand ? Hand.MAIN_HAND : Hand.OFF_HAND;
+                BlockOrEntityRaycastResult raycast = switch (movementInput.clickOptions.target()) {
+                    case BLOCK_OR_ENTITY -> RaycastHelper.playerBlockOrEntityRaycast(getBlockReachDistance(), getEntityInteractDistance());
+                    case BLOCK -> BlockOrEntityRaycastResult.wrap(RaycastHelper.playerBlockRaycast(getBlockReachDistance(), false));
+                    case ENTITY -> BlockOrEntityRaycastResult.wrap(RaycastHelper.playerEntityRaycast(getEntityInteractDistance()));
+                };
+                Hand hand = movementInput.clickOptions.hand();
                 if (raycast.hit() && raycast.isBlock()) {
                     debug("Right click {} block at: [{}, {}, {}]", hand, raycast.block().x(), raycast.block().y(), raycast.block().z());
                     interactions.useItemOn(hand, raycast.block());
@@ -1103,5 +1112,9 @@ public class PlayerSimulation extends Module {
 
     public double getBlockReachDistance() {
         return getAttributeValue(AttributeType.Builtin.PLAYER_BLOCK_INTERACTION_RANGE, 4.5f) + CONFIG.client.extra.click.additionalBlockReach;
+    }
+
+    public double getEntityInteractDistance() {
+        return getAttributeValue(AttributeType.Builtin.PLAYER_ENTITY_INTERACTION_RANGE, 3.0f) + CONFIG.client.extra.click.additionalEntityReach;
     }
 }
