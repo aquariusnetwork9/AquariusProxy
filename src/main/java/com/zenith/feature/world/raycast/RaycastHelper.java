@@ -5,6 +5,7 @@ import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.feature.world.World;
 import com.zenith.mc.block.*;
 import com.zenith.mc.entity.EntityData;
+import com.zenith.module.impl.PlayerSimulation;
 import com.zenith.util.math.MathHelper;
 import org.cloudburstmc.math.vector.Vector3d;
 
@@ -15,7 +16,8 @@ import static com.zenith.Shared.*;
 public class RaycastHelper {
 
     public static BlockRaycastResult playerBlockRaycast(double maxDistance, boolean includeFluids) {
-        return blockRaycastFromPos(CACHE.getPlayerCache().getX(), CACHE.getPlayerCache().getEyeY(), CACHE.getPlayerCache().getZ(), CACHE.getPlayerCache().getYaw(), CACHE.getPlayerCache().getPitch(), maxDistance, includeFluids);
+        var sim = MODULE.get(PlayerSimulation.class);
+        return blockRaycastFromPos(sim.getX(), sim.getEyeY(), sim.getZ(), sim.getYaw(), sim.getPitch(), maxDistance, includeFluids);
     }
 
     public static BlockRaycastResult blockRaycastFromPos(double x, double y, double z, double yaw, double pitch, double maxDistance, boolean includeFluids) {
@@ -83,7 +85,8 @@ public class RaycastHelper {
     }
 
     public static EntityRaycastResult playerEntityRaycast(double maxDistance) {
-        return entityRaycastFromPos(CACHE.getPlayerCache().getX(), CACHE.getPlayerCache().getEyeY(), CACHE.getPlayerCache().getZ(), CACHE.getPlayerCache().getYaw(), CACHE.getPlayerCache().getPitch(), maxDistance);
+        var sim = MODULE.get(PlayerSimulation.class);
+        return entityRaycastFromPos(sim.getX(), sim.getEyeY(), sim.getZ(), sim.getYaw(), sim.getPitch(), maxDistance);
     }
 
     public static EntityRaycastResult entityRaycastFromPos(final double x, final double y, final double z, final float yaw, final float pitch, final double maxDistance) {
@@ -118,6 +121,35 @@ public class RaycastHelper {
                 resultRaycastDistanceToStart = entityDistanceToStartPos;
                 resultRaycast = new EntityRaycastResult(true, intersection, e);
             }
+        }
+        return resultRaycast;
+    }
+
+    // ignoring all intersections with other blocks and entities
+    public static EntityRaycastResult playerEyeRaycastThroughToTarget(Entity target, double entityReachDistance) {
+        var sim = MODULE.get(PlayerSimulation.class);
+        return playerEyeRaycastThroughToTarget(target, sim.getYaw(), sim.getPitch(), entityReachDistance);
+    }
+
+    public static EntityRaycastResult playerEyeRaycastThroughToTarget(Entity target, float yaw, float pitch, double entityReachDistance) {
+        var sim = MODULE.get(PlayerSimulation.class);
+        final double x1 = sim.getX();
+        final double y1 = sim.getEyeY();
+        final double z1 = sim.getZ();
+        var rayEndPos = MathHelper.calculateRayEndPos(x1, y1, z1, yaw, pitch, entityReachDistance);
+        final double startX = MathHelper.lerp(-1.0E-7, x1, rayEndPos.getX());
+        final double startY = MathHelper.lerp(-1.0E-7, y1, rayEndPos.getY());
+        final double startZ = MathHelper.lerp(-1.0E-7, z1, rayEndPos.getZ());
+        final double endX = MathHelper.lerp(-1.0E-7, rayEndPos.getX(), x1);
+        final double endY = MathHelper.lerp(-1.0E-7, rayEndPos.getY(), y1);
+        final double endZ = MathHelper.lerp(-1.0E-7, rayEndPos.getZ(), z1);
+        EntityRaycastResult resultRaycast = EntityRaycastResult.miss();
+        EntityData data = ENTITY_DATA.getEntityData(target.getEntityType());
+        if (data == null) return resultRaycast;
+        LocalizedCollisionBox cb = entityCollisionBox(target, data);
+        RayIntersection intersection = cb.rayIntersection(startX, startY, startZ, endX, endY, endZ);
+        if (intersection != null) {
+            resultRaycast = new EntityRaycastResult(true, intersection, target);
         }
         return resultRaycast;
     }
@@ -181,11 +213,8 @@ public class RaycastHelper {
     }
 
     public static BlockOrEntityRaycastResult playerBlockOrEntityRaycast(double blockReachDistance, double entityReachDistance) {
-        return blockOrEntityRaycastFromPos(
-            CACHE.getPlayerCache().getX(), CACHE.getPlayerCache().getEyeY(), CACHE.getPlayerCache().getZ(),
-            CACHE.getPlayerCache().getYaw(), CACHE.getPlayerCache().getPitch(),
-            blockReachDistance, entityReachDistance
-        );
+        var sim = MODULE.get(PlayerSimulation.class);
+        return blockOrEntityRaycastFromPos(sim.getX(), sim.getEyeY(), sim.getZ(), sim.getYaw(), sim.getPitch(), blockReachDistance, entityReachDistance);
     }
 
     public static BlockOrEntityRaycastResult blockOrEntityRaycastFromPos(final double x, final double y, final double z, final float yaw, final float pitch, final double blockReachDistance, final double entityReachDistance) {

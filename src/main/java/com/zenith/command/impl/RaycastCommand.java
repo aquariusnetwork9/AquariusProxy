@@ -1,6 +1,7 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.zenith.Proxy;
 import com.zenith.command.Command;
 import com.zenith.command.CommandUsage;
 import com.zenith.command.brigadier.CommandCategory;
@@ -25,6 +26,7 @@ public class RaycastCommand extends Command {
     public LiteralArgumentBuilder<CommandContext> register() {
         return command("raycast").executes(c -> {
                 var sim = MODULE.get(PlayerSimulation.class);
+                if (Proxy.getInstance().hasActivePlayer()) sim.syncFromCache(true);
                 var result = RaycastHelper.playerBlockOrEntityRaycast(sim.getBlockReachDistance(), sim.getEntityInteractDistance());
                 var embed = c.getSource().getEmbed();
                 embed.title("Raycast Result")
@@ -43,6 +45,7 @@ public class RaycastCommand extends Command {
                 }})
             .then(literal("e").executes(c -> {
                 var sim = MODULE.get(PlayerSimulation.class);
+                if (Proxy.getInstance().hasActivePlayer()) sim.syncFromCache(true);
                 var result = RaycastHelper.playerEntityRaycast(sim.getEntityInteractDistance());
                 c.getSource().getEmbed()
                     .title("Raycast Result")
@@ -53,6 +56,7 @@ public class RaycastCommand extends Command {
             }))
             .then(literal("b").executes(c -> {
                 var sim = MODULE.get(PlayerSimulation.class);
+                if (Proxy.getInstance().hasActivePlayer()) sim.syncFromCache(true);
                 var result = RaycastHelper.playerBlockRaycast(sim.getBlockReachDistance(), false);
                 c.getSource().getEmbed()
                     .title("Raycast Result")

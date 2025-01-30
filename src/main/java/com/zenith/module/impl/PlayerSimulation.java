@@ -941,7 +941,7 @@ public class PlayerSimulation extends Module {
         this.velocity.add(packet.getPushX(), packet.getPushY(), packet.getPushZ());
     }
 
-    private void syncFromCache(boolean full) {
+    public void syncFromCache(boolean full) {
         this.x = this.lastX = CACHE.getPlayerCache().getX();
         this.y = this.lastY = CACHE.getPlayerCache().getY();
         this.z = this.lastZ = CACHE.getPlayerCache().getZ();
