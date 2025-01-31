@@ -593,7 +593,12 @@ public class DiscordBot {
     }
 
     public void updatePresence(final ClientPresence presence) {
-        if (isRunning())
-            this.client.updatePresence(presence).block(BLOCK_TIMEOUT);
+        if (isRunning()) {
+            try {
+                this.client.updatePresence(presence).block(BLOCK_TIMEOUT);
+            } catch (final Exception e) {
+                DISCORD_LOG.debug("Failed updating discord presence", e);
+            }
+        }
     }
 }
