@@ -141,7 +141,7 @@ public abstract class LockingDatabase extends Database {
                     "Player=" + CONFIG.authentication.username + ", " +
                     "IP=" + CONFIG.server.proxyIP + ", " +
                     "Time=" + Instant.now().toString() + ", " +
-                    "Version=" + Proxy.getInstance().getVersion()
+                    "Version=" + LAUNCH_CONFIG.version
                 );
         } catch (final Exception e) {
             DATABASE_LOG.warn("Error writing lock info for database: {}", getLockKey(), e);

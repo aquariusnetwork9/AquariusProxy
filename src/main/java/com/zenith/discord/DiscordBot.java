@@ -351,7 +351,7 @@ public class DiscordBot {
         saveConfigAsync();
         sendEmbedMessage(Embed.builder()
                              .title("Update complete!")
-                             .description("Current Version: `" + escape(Proxy.getInstance().getVersion()) + "`")
+                             .description("Current Version: `" + escape(LAUNCH_CONFIG.version) + "`")
                              .successColor());
     }
 
@@ -392,7 +392,7 @@ public class DiscordBot {
     }
 
     public Embed getUpdateMessage(final Optional<String> newVersion) {
-        String verString = "Current Version: `" + escape(Proxy.getInstance().getVersion()) + "`";
+        String verString = "Current Version: `" + escape(LAUNCH_CONFIG.version) + "`";
         if (newVersion.isPresent()) verString += "\nNew Version: `" + escape(newVersion.get()) + "`";
         var embed = Embed.builder()
             .title("Updating and restarting...")

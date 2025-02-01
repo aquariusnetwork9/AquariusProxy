@@ -774,7 +774,7 @@ public class NotificationEventListener {
             .title("Update Available!")
             .primaryColor();
         event.getVersion().ifPresent(v -> embed
-            .addField("Current", "`" + escape(Proxy.getInstance().getVersion()) + "`", false)
+            .addField("Current", "`" + escape(LAUNCH_CONFIG.version) + "`", false)
             .addField("New", "`" + escape(v) + "`", false));
         embed.addField(
             "Info",

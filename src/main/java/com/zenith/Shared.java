@@ -145,10 +145,6 @@ public class Shared {
         return readResourceTxt("zenith_release.txt");
     }
 
-    public static @Nullable String getExecutableTag() {
-        return readResourceTxt("zenith_tag.txt");
-    }
-
     private static @Nullable String readResourceTxt(final String name) {
         try (InputStream in = Shared.class.getClassLoader().getResourceAsStream(name)) {
             if (in == null) return null;
