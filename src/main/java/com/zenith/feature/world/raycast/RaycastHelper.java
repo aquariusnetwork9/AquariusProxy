@@ -3,7 +3,10 @@ package com.zenith.feature.world.raycast;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.feature.world.World;
-import com.zenith.mc.block.*;
+import com.zenith.mc.block.Block;
+import com.zenith.mc.block.BlockRegistry;
+import com.zenith.mc.block.CollisionBox;
+import com.zenith.mc.block.LocalizedCollisionBox;
 import com.zenith.mc.entity.EntityData;
 import com.zenith.module.impl.PlayerSimulation;
 import com.zenith.util.math.MathHelper;
@@ -38,9 +41,12 @@ public class RaycastHelper {
         int resX = MathHelper.floorI(startX);
         int resY = MathHelper.floorI(startY);
         int resZ = MathHelper.floorI(startZ);
-        Block block = getBlockAt(resX, resY, resZ, includeFluids);
+
+        final int insideBlockState = World.getBlockStateId(resX, resY, resZ);
+        Block block = BLOCK_DATA.getBlockDataFromBlockStateId(insideBlockState);
         if (!BLOCK_DATA.isAir(block)) {
-            return new BlockRaycastResult(true, resX, resY, resZ, new RayIntersection(startX, startY, startZ, Direction.DOWN), block);
+            var raycastResult = checkBlockRaycast(startX, startY, startZ, endX, endY, endZ, resX, resY, resZ, insideBlockState, block, includeFluids);
+            if (raycastResult.hit()) return raycastResult;
         }
 
         final double dx = endX - startX;
@@ -169,17 +175,6 @@ public class RaycastHelper {
         return new LocalizedCollisionBox(minX, maxX, minY, maxY, minZ, maxZ, x, y, z);
     }
 
-    private static Block getBlockAt(final int x, final int y, final int z, final boolean includeFluids) {
-        var block = World.getBlock(x, y, z);
-        if (!includeFluids && World.isWater(block)) {
-            return BlockRegistry.AIR;
-        } else {
-            return block;
-        }
-    }
-
-    // TODO: Does not work for blocks with incongruent interaction boxes
-    //   e.g. torches, flowers, etc. Blocks that you don't collide with but can interact with
     private static BlockRaycastResult checkBlockRaycast(
         double x, double y, double z,
         double x2, double y2, double z2,
