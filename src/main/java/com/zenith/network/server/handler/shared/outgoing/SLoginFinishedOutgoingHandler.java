@@ -121,8 +121,10 @@ public class SLoginFinishedOutgoingHandler implements PacketHandler<ClientboundL
         session.getProfileCache().setProfile(clientGameProfile);
         if (!onlySpectator.orElse(false) && Proxy.getInstance().getCurrentPlayer().compareAndSet(null, session)) {
             SERVER_LOG.info("Logging in {} [{}] ({}) as controlling player", clientGameProfile.getName(), clientGameProfile.getId().toString(), session.getMCVersion());
-            session.sendAsync(new ClientboundLoginFinishedPacket(CACHE.getProfileCache().getProfile()));
-            session.switchOutboundState(ProtocolState.CONFIGURATION);
+            session.getEventLoop().execute(() -> {
+                session.send(new ClientboundLoginFinishedPacket(CACHE.getProfileCache().getProfile()));
+                session.switchOutboundState(ProtocolState.CONFIGURATION);
+            });
             return;
         }
         if (onlySpectator.isPresent() && !onlySpectator.get()) { // the above operation failed and we don't want to be put into spectator
@@ -144,8 +146,10 @@ public class SLoginFinishedOutgoingHandler implements PacketHandler<ClientboundL
             spectatorFakeProfile.setProperties(clientGameProfile.getProperties());
         }
         session.getSpectatorFakeProfileCache().setProfile(spectatorFakeProfile);
-        session.sendAsync(new ClientboundLoginFinishedPacket(spectatorFakeProfile));
-        session.switchOutboundState(ProtocolState.CONFIGURATION);
+        session.getEventLoop().execute(() -> {
+            session.send(new ClientboundLoginFinishedPacket(spectatorFakeProfile));
+            session.switchOutboundState(ProtocolState.CONFIGURATION);
+        });
         return;
     }
 }

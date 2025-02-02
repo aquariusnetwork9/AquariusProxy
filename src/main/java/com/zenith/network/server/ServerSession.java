@@ -195,7 +195,6 @@ public class ServerSession extends TcpServerSession {
         }
         if (this.isPlayer) {
             final String reasonStr = ComponentSerializer.serializePlain(reason);
-
             if (!isSpectator()) {
                 SERVER_LOG.info("Player disconnected: UUID: {}, Username: {}, Address: {}, Reason {}",
                                 Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getId).orElse(null),
@@ -209,12 +208,21 @@ public class ServerSession extends TcpServerSession {
                     SERVER_LOG.info("Could not get game profile of disconnecting player");
                     EVENT_BUS.post(new ProxyClientDisconnectedEvent(reasonStr));
                 }
+                Proxy.getInstance().getSpectatorConnections().forEach(s -> {
+                    s.sendAsyncAlert("<red>" + Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getName).orElse("?") + " disconnected from controlling player");
+                });
             } else {
+                SERVER_LOG.info("Spectator disconnected: UUID: {}, Username: {}, Address: {}, Reason {}",
+                                Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getId).orElse(null),
+                                Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getName).orElse(null),
+                                getRemoteAddress(),
+                                reasonStr,
+                                cause);
                 var connections = Proxy.getInstance().getActiveConnections().getArray();
                 for (int i = 0; i < connections.length; i++) {
                     var connection = connections[i];
                     connection.send(new ClientboundRemoveEntitiesPacket(new int[]{this.spectatorEntityId}));
-                    connection.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>" + Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getName).orElse("?") + " disconnected"), false));
+                    connection.sendAsyncAlert("<red>" + Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getName).orElse("?") + " disconnected from spectator");
                 }
                 EVENT_BUS.postAsync(new ProxySpectatorDisconnectedEvent(profileCache.getProfile()));
             }

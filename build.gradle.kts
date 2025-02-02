@@ -154,27 +154,6 @@ tasks {
         }
         outputs.upToDateWhen { false }
     }
-    val buildTagTask = register<Exec>("writeBuildTag") {
-        group = "build"
-        description = "Write latest git tag to file"
-        workingDir = projectDir
-        commandLine = "git describe --tags --abbrev=0".split(" ")
-        standardOutput = ByteArrayOutputStream()
-        isIgnoreExitValue = true
-        doLast {
-            val buildTag = standardOutput.toString().trim()
-            if (buildTag.length > 5) {
-                file(layout.buildDirectory.asFile.get().absolutePath + "/resources/main/zenith_tag.txt").apply {
-                    parentFile.mkdirs()
-                    println("Writing build tag: $buildTag")
-                    writeText(buildTag)
-                }
-            } else {
-                println("Unable to determine build tag")
-            }
-        }
-        outputs.upToDateWhen { false }
-    }
     val runGroup = "run"
     register("run", JavaExec::class.java) {
         group = runGroup
@@ -182,7 +161,6 @@ tasks {
         classpath = sourceSets.main.get().runtimeClasspath
         mainClass.set("com.zenith.Proxy")
         jvmArgs = listOf("-Xmx300m", "-XX:+UseG1GC")
-        environment("ZENITH_DEV", "true")
         standardInput = System.`in`
         outputs.upToDateWhen { false }
     }
@@ -207,7 +185,7 @@ tasks {
             }
         }
     }
-    processResources{ finalizedBy(commitHashTask, releaseTagTask, buildTagTask) }
+    processResources{ finalizedBy(commitHashTask, releaseTagTask) }
     jar { enabled = false }
     shadowJar {
         from(collectReachabilityMetadata)

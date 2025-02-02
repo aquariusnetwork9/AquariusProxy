@@ -351,7 +351,7 @@ public class DiscordBot {
         saveConfigAsync();
         sendEmbedMessage(Embed.builder()
                              .title("Update complete!")
-                             .description("Current Version: `" + escape(Proxy.getInstance().getVersion()) + "`")
+                             .description("Current Version: `" + escape(LAUNCH_CONFIG.version) + "`")
                              .successColor());
     }
 
@@ -392,7 +392,7 @@ public class DiscordBot {
     }
 
     public Embed getUpdateMessage(final Optional<String> newVersion) {
-        String verString = "Current Version: `" + escape(Proxy.getInstance().getVersion()) + "`";
+        String verString = "Current Version: `" + escape(LAUNCH_CONFIG.version) + "`";
         if (newVersion.isPresent()) verString += "\nNew Version: `" + escape(newVersion.get()) + "`";
         var embed = Embed.builder()
             .title("Updating and restarting...")
@@ -593,7 +593,12 @@ public class DiscordBot {
     }
 
     public void updatePresence(final ClientPresence presence) {
-        if (isRunning())
-            this.client.updatePresence(presence).block(BLOCK_TIMEOUT);
+        if (isRunning()) {
+            try {
+                this.client.updatePresence(presence).block(BLOCK_TIMEOUT);
+            } catch (final Exception e) {
+                DISCORD_LOG.debug("Failed updating discord presence", e);
+            }
+        }
     }
 }

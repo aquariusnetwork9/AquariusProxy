@@ -92,7 +92,6 @@ public class Proxy {
     @Setter @NotNull private AutoUpdater autoUpdater = NoOpAutoUpdater.INSTANCE;
     private LanBroadcaster lanBroadcaster;
     private TcpConnectionManager tcpManager;
-    private String version = LAUNCH_CONFIG.version;
 
     public static void main(String... args) {
         Locale.setDefault(Locale.ENGLISH);
@@ -123,8 +122,16 @@ public class Proxy {
     }
 
     public void start() {
-        initVersion();
-        DEFAULT_LOG.info("Starting ZenithProxy-{}", version);
+        DEFAULT_LOG.info("Starting ZenithProxy-{}", LAUNCH_CONFIG.version);
+        @Nullable String exeReleaseVersion = getExecutableReleaseVersion();
+        if (exeReleaseVersion == null) {
+            DEFAULT_LOG.warn("Detected unofficial ZenithProxy development build!");
+        } else if (!LAUNCH_CONFIG.version.split("\\+")[0].equals(exeReleaseVersion.split("\\+")[0])) {
+            DEFAULT_LOG.warn("launch_config.json version: {} and embedded ZenithProxy version: {} do not match!", LAUNCH_CONFIG.version, exeReleaseVersion);
+            if (LAUNCH_CONFIG.auto_update)
+                DEFAULT_LOG.warn("AutoUpdater is enabled but will break!");
+            DEFAULT_LOG.warn("Use the official launcher: https://github.com/rfresh2/ZenithProxy/releases/tag/launcher-v3");
+        }
         initEventHandlers();
         try {
             if (CONFIG.debug.clearOldLogs) EXECUTOR.schedule(Proxy::clearOldLogs, 10L, TimeUnit.SECONDS);
@@ -208,28 +215,6 @@ public class Proxy {
             DEFAULT_LOG.info("Shutting down...");
             if (this.server != null) this.server.close(true);
             saveConfig();
-        }
-    }
-
-    private void initVersion() {
-        @Nullable String exeReleaseVersion = getExecutableReleaseVersion();
-        if (exeReleaseVersion == null) {
-            DEFAULT_LOG.warn("Detected unofficial ZenithProxy build!");
-            @Nullable String commit = getExecutableCommit();
-            @Nullable String tag = getExecutableTag();
-            if (tag != null) {
-                version = tag;
-            }
-            if (commit != null) {
-                version += "-" + commit;
-            }
-        } else if (!LAUNCH_CONFIG.version.split("\\+")[0].equals(exeReleaseVersion.split("\\+")[0])) {
-            DEFAULT_LOG.warn("launch_config.json version: {} and embedded ZenithProxy version: {} do not match!", LAUNCH_CONFIG.version, exeReleaseVersion);
-            DEFAULT_LOG.warn("Use the official launcher: https://github.com/rfresh2/ZenithProxy/releases/tag/launcher-v3");
-            DEFAULT_LOG.warn("Writing embedded version: {} to launch_config.json", exeReleaseVersion);
-            version = exeReleaseVersion;
-            LAUNCH_CONFIG.version = exeReleaseVersion;
-            Shared.saveLaunchConfig();
         }
     }
 
@@ -644,7 +629,7 @@ public class Proxy {
                           https://discord.gg/nJZrSaRKtb
                         **Github**:
                           https://github.com/rfresh2/ZenithProxy
-                        """.formatted(version));
+                        """.formatted(LAUNCH_CONFIG.version));
                 }
             } catch (final Throwable e) {
                 SERVER_LOG.error("Failed updating favicon");
