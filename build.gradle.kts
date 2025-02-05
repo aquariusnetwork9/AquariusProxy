@@ -162,6 +162,7 @@ tasks {
         mainClass.set("com.zenith.Proxy")
         jvmArgs = listOf("-Xmx300m", "-XX:+UseG1GC")
         standardInput = System.`in`
+        environment("ZENITH_DEV", "true")
         outputs.upToDateWhen { false }
     }
     val javaPathTask = register("javaPath", Task::class.java) {
