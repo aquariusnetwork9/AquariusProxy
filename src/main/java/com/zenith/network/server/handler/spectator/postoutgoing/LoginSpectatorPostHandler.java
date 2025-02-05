@@ -11,7 +11,9 @@ import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntryAction;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundPlayerInfoUpdatePacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSetCameraPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundRemoveEntitiesPacket;
 
 import java.util.EnumSet;
 
@@ -61,6 +63,15 @@ public class LoginSpectatorPostHandler implements PostOutgoingPacketHandler<Clie
         ServerSession currentPlayer = Proxy.getInstance().getCurrentPlayer().get();
         if (currentPlayer != null) currentPlayer.syncTeamMembers();
         SpectatorSync.syncPlayerEquipmentWithSpectatorsFromCache();
+        if (CONFIG.server.spectator.playerCamOnJoin) {
+            session.setCameraTarget(CACHE.getPlayerCache().getThePlayer());
+            session.sendAsync(new ClientboundSetCameraPacket(CACHE.getPlayerCache().getEntityId()));
+            var sessions = Proxy.getInstance().getActiveConnections().getArray();
+            for (int i = 0; i < sessions.length; i++) {
+                var connection = sessions[i];
+                connection.sendAsync(new ClientboundRemoveEntitiesPacket(new int[]{session.getSpectatorEntityId()}));
+            }
+        }
         // send command help
         session.sendAsyncAlert("<green>Spectating <red>" + CACHE.getProfileCache().getProfile().getName());
         if (CONFIG.inGameCommands.enable) {

@@ -488,6 +488,7 @@ public final class Config {
             public boolean fullCommandsEnabled = false;
             public boolean fullCommandsAcceptSlashCommands = true;
             public boolean fullCommandsRequireRegularWhitelist = true;
+            public boolean playerCamOnJoin = false;
             public ArrayList<PlayerEntry> whitelist = new ArrayList<>();
         }
 
