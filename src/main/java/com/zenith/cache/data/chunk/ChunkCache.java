@@ -107,7 +107,6 @@ public class ChunkCache implements CachedData {
             if (dimensionData == null) {
                 CACHE_LOG.error("Undefined dimension registry data for name: {} and ID: {}", name, id);
                 dimensionData = DIMENSION_DATA.getDimensionData(0); // fill in with overworld data just so we don't crash ourselves
-                continue;
             }
             CACHE_LOG.debug("Adding dimension from registry: {} {} {} {}", name, id, dimensionData.height(), dimensionData.minY());
             dimensionRegistry.put(id, dimensionData);
