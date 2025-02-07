@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.zenith.Proxy;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.event.module.ClientBotTick;
@@ -29,6 +30,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerState;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundExplodePacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClosePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundAcceptTeleportationPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundPlayerInputPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.*;
@@ -143,12 +145,6 @@ public class PlayerSimulation extends Module {
 
     private void interactionTick() {
         try {
-            if (CACHE.getPlayerCache().getInventoryCache().getOpenContainerId() != 0) {
-                if (movementInput.isLeftClick() || movementInput.isRightClick()) {
-                    debug("Unable to perform click interactions while a container is open: {}", CACHE.getPlayerCache().getInventoryCache().getOpenContainerId());
-                }
-                return;
-            }
             if (movementInput.isLeftClick()) {
                 BlockOrEntityRaycastResult raycast = switch (movementInput.clickOptions.target()) {
                     case BLOCK_OR_ENTITY -> RaycastHelper.playerBlockOrEntityRaycast(getBlockReachDistance(), getEntityInteractDistance());
@@ -215,11 +211,24 @@ public class PlayerSimulation extends Module {
         }
     }
 
+    /**
+     * rationale: all inventory actions assume no container is open
+     * the id's are shifted and we have no handling for that
+     * will also cause issues for modules as the player should not be able to
+     * do many actions like moving
+     */
+    private void closeOpenContainers() {
+        var openContainerId = CACHE.getPlayerCache().getInventoryCache().getOpenContainerId();
+        if (openContainerId == 0) return;
+        Proxy.getInstance().getClient().sendAwait(new ServerboundContainerClosePacket(openContainerId));
+    }
+
     private synchronized void tick(final ClientBotTick event) {
         if (this.jumpingCooldown > 0) --this.jumpingCooldown;
         if (!CACHE.getChunkCache().isChunkLoaded((int) x >> 4, (int) z >> 4)) return;
         if (waitTicks-- > 0) return;
         if (waitTicks < 0) waitTicks = 0;
+        closeOpenContainers();
 
         if (resyncTeleport()) return;
 
