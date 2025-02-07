@@ -19,21 +19,15 @@ public class Input {
     public boolean sprinting;
     public boolean leftClick;
     public boolean rightClick;
-    public ClickOptions clickOptions = ClickOptions.DEFAULT;
-
-    public record ClickOptions(Hand hand, ClickTarget target) {
-        public enum ClickTarget {
-            BLOCK_OR_ENTITY, BLOCK, ENTITY;
-        }
-        public static final ClickOptions DEFAULT = new ClickOptions(Hand.MAIN_HAND, ClickTarget.BLOCK_OR_ENTITY);
-    }
+    public Hand hand;
+    public ClickTarget clickTarget;
 
     public static Builder builder() {
         return new Builder();
     }
 
     public Input(Input in) {
-        this(in.pressingForward, in.pressingBack, in.pressingLeft, in.pressingRight, in.jumping, in.sneaking, in.sprinting, in.leftClick, in.rightClick, in.clickOptions);
+        this(in.pressingForward, in.pressingBack, in.pressingLeft, in.pressingRight, in.jumping, in.sneaking, in.sprinting, in.leftClick, in.rightClick, in.hand, in.clickTarget);
     }
 
     public void apply(Input in) {
@@ -53,7 +47,8 @@ public class Input {
         }
         this.leftClick = in.leftClick;
         this.rightClick = in.rightClick;
-        this.clickOptions = in.clickOptions;
+        this.hand = in.hand;
+        this.clickTarget = in.clickTarget;
     }
 
     public void reset() {
@@ -66,7 +61,8 @@ public class Input {
         sprinting = false;
         leftClick = false;
         rightClick = false;
-        clickOptions = ClickOptions.DEFAULT;
+        hand = Hand.MAIN_HAND;
+        clickTarget = ClickTarget.Any.INSTANCE;
     }
 
     public String log() {
@@ -112,7 +108,8 @@ public class Input {
         private boolean sprinting;
         private boolean leftClick;
         private boolean rightClick;
-        private ClickOptions clickOptions = ClickOptions.DEFAULT;
+        private Hand hand = Hand.MAIN_HAND;
+        private ClickTarget clickTarget = ClickTarget.Any.INSTANCE;
 
         private Builder() {}
 
@@ -161,8 +158,13 @@ public class Input {
             return this;
         }
 
-        public Builder clickOptions(ClickOptions clickOptions) {
-            this.clickOptions = clickOptions;
+        public Builder hand(Hand hand) {
+            this.hand = hand;
+            return this;
+        }
+
+        public Builder clickTarget(ClickTarget clickTarget) {
+            this.clickTarget = clickTarget;
             return this;
         }
 
@@ -177,7 +179,8 @@ public class Input {
             input.setSprinting(sprinting);
             input.setLeftClick(leftClick);
             input.setRightClick(rightClick);
-            input.setClickOptions(clickOptions);
+            input.setHand(hand);
+            input.setClickTarget(clickTarget);
             return input;
         }
     }

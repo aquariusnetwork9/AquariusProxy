@@ -146,11 +146,7 @@ public class PlayerSimulation extends Module {
     private void interactionTick() {
         try {
             if (movementInput.isLeftClick()) {
-                BlockOrEntityRaycastResult raycast = switch (movementInput.clickOptions.target()) {
-                    case BLOCK_OR_ENTITY -> RaycastHelper.playerBlockOrEntityRaycast(getBlockReachDistance(), getEntityInteractDistance());
-                    case BLOCK -> BlockOrEntityRaycastResult.wrap(RaycastHelper.playerBlockRaycast(getBlockReachDistance(), false));
-                    case ENTITY -> BlockOrEntityRaycastResult.wrap(RaycastHelper.playerEntityRaycast(getEntityInteractDistance()));
-                };
+                var raycast = movementInput.clickTarget.apply(getBlockReachDistance(), getEntityInteractDistance());
                 if (raycast.hit() && raycast.isBlock()) {
                     if (!wasLeftClicking && !interactions.isDestroying()) {
                         debug("Starting destroy block at: [{}, {}, {}]", raycast.block().x(), raycast.block().y(), raycast.block().z());
@@ -183,12 +179,8 @@ public class PlayerSimulation extends Module {
                     }
                 }
             } else if (movementInput.isRightClick()) {
-                BlockOrEntityRaycastResult raycast = switch (movementInput.clickOptions.target()) {
-                    case BLOCK_OR_ENTITY -> RaycastHelper.playerBlockOrEntityRaycast(getBlockReachDistance(), getEntityInteractDistance());
-                    case BLOCK -> BlockOrEntityRaycastResult.wrap(RaycastHelper.playerBlockRaycast(getBlockReachDistance(), false));
-                    case ENTITY -> BlockOrEntityRaycastResult.wrap(RaycastHelper.playerEntityRaycast(getEntityInteractDistance()));
-                };
-                Hand hand = movementInput.clickOptions.hand();
+                var raycast = movementInput.clickTarget.apply(getBlockReachDistance(), getEntityInteractDistance());
+                Hand hand = movementInput.hand;
                 if (raycast.hit() && raycast.isBlock()) {
                     debug("Right click {} block at: [{}, {}, {}]", hand, raycast.block().x(), raycast.block().y(), raycast.block().z());
                     interactions.useItemOn(hand, raycast.block());

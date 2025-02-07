@@ -2,7 +2,6 @@ package com.zenith.module.impl;
 
 import com.zenith.event.module.ClientBotTick;
 import com.zenith.feature.world.Input;
-import com.zenith.feature.world.Input.ClickOptions.ClickTarget;
 import com.zenith.feature.world.InputRequest;
 import com.zenith.module.Module;
 import com.zenith.util.Timer;
@@ -51,7 +50,7 @@ public class Click extends Module {
                     case ALTERNATE_HANDS -> holdRightClickLastHand == Hand.MAIN_HAND ? Hand.OFF_HAND : Hand.MAIN_HAND;
                 };
                 holdRightClickLastHand = hand;
-                in.clickOptions(new Input.ClickOptions(hand, ClickTarget.BLOCK_OR_ENTITY));
+                in.hand(hand);
                 if (CONFIG.client.extra.click.hasRotation) {
                     req.yaw(CONFIG.client.extra.click.rotationYaw)
                         .pitch(CONFIG.client.extra.click.rotationPitch);
