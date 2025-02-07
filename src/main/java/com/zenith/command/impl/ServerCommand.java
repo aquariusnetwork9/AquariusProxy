@@ -98,9 +98,16 @@ public class ServerCommand extends Command {
                                   .title("Server Updated!");
                               return OK;
                           } else {
+                              if (ip.startsWith("<")) {
+                                  c.getSource().getEmbed()
+                                      .title("Error")
+                                      .description("Invalid IP format.");
+                                  return OK;
+                              }
+                              CONFIG.client.server.address = ip;
+                              CONFIG.client.server.port = 25565;
                               c.getSource().getEmbed()
-                                  .title("Error")
-                                  .description("Invalid IP format.");
+                                  .title("Server Updated!");
                               return OK;
                           }
                       }));
