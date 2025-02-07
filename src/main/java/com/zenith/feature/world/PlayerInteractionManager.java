@@ -334,6 +334,7 @@ public class PlayerInteractionManager {
         return InteractionResult.PASS;
     }
 
+    // todo: is this allowed if we are not holding a usable item? or any item at all?
     public InteractionResult useItem(Hand hand) {
         Proxy.getInstance().getClient().send(new ServerboundUseItemPacket(
             hand,
