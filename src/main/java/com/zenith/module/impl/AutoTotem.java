@@ -30,7 +30,7 @@ public class AutoTotem extends AbstractInventoryModule {
     private static final Duration noTotemsAlertCooldown = Duration.ofMinutes(30);
 
     public AutoTotem() {
-        super(true, -1, MOVEMENT_PRIORITY);
+        super(HandRestriction.OFF_HAND, -1, MOVEMENT_PRIORITY);
     }
 
     @Override

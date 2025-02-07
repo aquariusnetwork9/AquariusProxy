@@ -13,7 +13,7 @@ public class AutoMend extends AbstractInventoryModule {
     int delay = 0;
 
     public AutoMend() {
-        super(true, 0, 50);
+        super(HandRestriction.OFF_HAND, 0, 50);
     }
 
     @Override

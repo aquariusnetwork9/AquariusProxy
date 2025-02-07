@@ -22,7 +22,7 @@ public class AutoEat extends AbstractInventoryModule {
     private static final int MOVEMENT_PRIORITY = 1000;
 
     public AutoEat() {
-        super(false, 0, MOVEMENT_PRIORITY);
+        super(HandRestriction.EITHER, 0, MOVEMENT_PRIORITY);
     }
 
     @Override

@@ -156,6 +156,7 @@ public class PlayerSimulation extends Module {
                         sendClientPacketAsync(new ServerboundSwingPacket(Hand.MAIN_HAND));
                         wasLeftClicking = true;
                         inputRequestFuture.setClickResult(ClickResult.LeftClickResult.startDestroyBlock(blockX, blockY, blockZ, raycast.block().block()));
+                        return;
                     } else {
                         if (interactions.continueDestroyBlock(
                             MathHelper.floorI(blockX),
@@ -167,13 +168,16 @@ public class PlayerSimulation extends Module {
                         } else {
                             // we could not continue breaking this block for some reason
                             wasLeftClicking = false;
+                            interactions.stopDestroyBlock();
                             sendClientPacketAsync(new ServerboundSwingPacket(Hand.MAIN_HAND));
                         }
                         inputRequestFuture.setClickResult(ClickResult.LeftClickResult.continueDestroyBlock(blockX, blockY, blockZ, raycast.block().block()));
+                        return;
                     }
                 } else if (raycast.hit() && raycast.isEntity() && raycast.entity().entityData().attackable()) {
                     debug("Click attacking entity: {} [{}, {}, {}]", raycast.entity().entity().getEntityType(), raycast.entity().entity().getX(), raycast.entity().entity().getY(), raycast.entity().entity().getZ());
                     interactions.attackEntity(raycast.entity());
+                    sendClientPacketAsync(new ServerboundSwingPacket(Hand.MAIN_HAND));
                     inputRequestFuture.setClickResult(ClickResult.LeftClickResult.attackEntity(raycast.entity().entity()));
                 } else {
                     debug("Left click swing");
@@ -331,6 +335,7 @@ public class PlayerSimulation extends Module {
         }
         this.movementInput.reset();
         tickEntityPushing();
+        interactionTick();
     }
 
     private static final String SPRINT_ATTRIBUTE_ID = "minecraft:sprinting";

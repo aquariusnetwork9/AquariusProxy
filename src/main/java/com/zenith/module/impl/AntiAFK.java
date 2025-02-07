@@ -3,16 +3,11 @@ package com.zenith.module.impl;
 import com.google.common.collect.Iterators;
 import com.zenith.event.module.ClientBotTick;
 import com.zenith.event.proxy.DeathEvent;
-import com.zenith.feature.world.Input;
-import com.zenith.feature.world.InputRequest;
-import com.zenith.feature.world.RotationHelper;
-import com.zenith.feature.world.World;
+import com.zenith.feature.world.*;
 import com.zenith.mc.block.BlockPos;
 import com.zenith.module.Module;
 import com.zenith.util.Timer;
 import com.zenith.util.math.MathHelper;
-import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundSwingPacket;
 
 import java.util.Iterator;
 import java.util.List;
@@ -170,8 +165,16 @@ public class AntiAFK extends Module {
 
     private void swingTick() {
         if (swingTickTimer.tick(CONFIG.client.extra.antiafk.actions.swingDelayTicks)) {
-            // todo: move this to PlayerSimulation and assign priority so it doesn't conflict with other modules
-            sendClientPacketAsync(new ServerboundSwingPacket(Hand.MAIN_HAND));
+            // todo: add a way to request a swing without requiring movement to be stopped
+            //  would need some way to mark this input as partial, and logic for combining inputs
+            INPUTS.submit(InputRequest.builder()
+                              .input(Input.builder()
+                                         .leftClick(true)
+                                         .clickTarget(ClickTarget.None.INSTANCE)
+                                         .sneaking((CONFIG.client.extra.antiafk.actions.walk && CONFIG.client.extra.antiafk.actions.safeWalk) || CONFIG.client.extra.antiafk.actions.sneak)
+                                         .build())
+                              .priority(MOVEMENT_PRIORITY * 10)
+                              .build());
         }
     }
 
