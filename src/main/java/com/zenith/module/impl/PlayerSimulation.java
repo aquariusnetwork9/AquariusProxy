@@ -143,6 +143,12 @@ public class PlayerSimulation extends Module {
 
     private void interactionTick() {
         try {
+            if (CACHE.getPlayerCache().getInventoryCache().getOpenContainerId() != 0) {
+                if (movementInput.isLeftClick() || movementInput.isRightClick()) {
+                    debug("Unable to perform click interactions while a container is open: {}", CACHE.getPlayerCache().getInventoryCache().getOpenContainerId());
+                }
+                return;
+            }
             if (movementInput.isLeftClick()) {
                 BlockOrEntityRaycastResult raycast = switch (movementInput.clickOptions.target()) {
                     case BLOCK_OR_ENTITY -> RaycastHelper.playerBlockOrEntityRaycast(getBlockReachDistance(), getEntityInteractDistance());
