@@ -43,8 +43,7 @@ public class AutoFish extends AbstractInventoryModule {
             of(SplashSoundEffectEvent.class, this::handleSplashSoundEffectEvent),
             of(ClientBotTick.class, this::handleClientTick),
             of(ClientBotTick.Starting.class, this::handleBotTickStarting),
-            of(ClientBotTick.Stopped.class, this::handleBotTickStopped),
-            of(ClientBotTick.class, -30000 + MOVEMENT_PRIORITY, this::handlePostTick)
+            of(ClientBotTick.Stopped.class, this::handleBotTickStopped)
         );
     }
 
@@ -105,10 +104,6 @@ public class AutoFish extends AbstractInventoryModule {
             requestUseRod();
             castTimer.reset();
         }
-    }
-
-    private void handlePostTick(ClientBotTick event) {
-
     }
 
     private boolean isRodInHand() {

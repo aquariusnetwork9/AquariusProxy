@@ -92,6 +92,7 @@ public class PlayerSimulation extends Module {
             // to allow other modules to update the player's input
             // other modules can also do actions after this tick by setting an even lower priority
             of(ClientBotTick.class, -20000, this::tick),
+            of(ClientBotTick.class, -30000, this::postTick),
             of(ClientBotTick.Starting.class, this::handleClientTickStarting),
             of(ClientBotTick.Stopped.class, this::handleClientTickStopped)
         );
@@ -336,6 +337,11 @@ public class PlayerSimulation extends Module {
         tickEntityPushing();
         interactionTick();
         this.movementInput.reset();
+    }
+
+    private void postTick(ClientBotTick event) {
+        this.inputRequestFuture.notifyListeners();
+        this.inputRequestFuture = InputRequestFuture.rejected;
     }
 
     private static final String SPRINT_ATTRIBUTE_ID = "minecraft:sprinting";

@@ -41,7 +41,6 @@ public class KillAura extends AbstractInventoryModule {
     private int delay = 0;
     private final WeakReference<EntityLiving> nullRef = new WeakReference<>(null);
     private WeakReference<EntityLiving> attackTarget = nullRef;
-    private InputRequestFuture attackInputFuture = InputRequestFuture.rejected;
     private static final int MOVEMENT_PRIORITY = 500;
     private final IntSet swords = IntSet.of(
         ItemRegistry.DIAMOND_SWORD.id(),
@@ -67,8 +66,7 @@ public class KillAura extends AbstractInventoryModule {
         EVENT_BUS.subscribe(
             this,
             of(ClientBotTick.class, this::handleClientTick),
-            of(ClientBotTick.Stopped.class, this::handleBotTickStopped),
-            of(ClientBotTick.class, -30000 + MOVEMENT_PRIORITY, this::handlePostTick)
+            of(ClientBotTick.Stopped.class, this::handleBotTickStopped)
         );
     }
 
@@ -81,11 +79,9 @@ public class KillAura extends AbstractInventoryModule {
     public void onDisable() {
         delay = 0;
         attackTarget = nullRef;
-        attackInputFuture = InputRequestFuture.rejected;
     }
 
     private void handleClientTick(final ClientBotTick event) {
-        attackInputFuture = InputRequestFuture.rejected;
         if (delay > 0) {
             delay--;
             EntityLiving target = attackTarget.get();
@@ -103,13 +99,12 @@ public class KillAura extends AbstractInventoryModule {
                 if (!attackTarget.refersTo(target))
                     attackTarget = new WeakReference<>(target);
                 if (switchToWeapon()) {
-                    attackInputFuture = attack(target);
+                    attack(target).addInputExecutedListener(this::onAttackInputExecuted);
                 } else {
                     // stop while doing inventory actions
                     INPUTS.submit(InputRequest.builder()
                                       .priority(MOVEMENT_PRIORITY - 1)
                                       .build());
-                    attackInputFuture = InputRequestFuture.rejected;
                 }
                 return;
             }
@@ -117,13 +112,11 @@ public class KillAura extends AbstractInventoryModule {
         attackTarget = nullRef;
     }
 
-    private void handlePostTick(ClientBotTick event) {
-        if (attackInputFuture.getNow()) {
-            if (attackInputFuture.getClickResult() instanceof ClickResult.LeftClickResult leftClickResult) {
-                if (leftClickResult.getEntity() != null && leftClickResult.getEntity() == attackTarget.get()) {
-                    delay = CONFIG.client.extra.killAura.attackDelayTicks;
-                }
-            }
+
+    private void onAttackInputExecuted(InputRequestFuture future) {
+        if (future.getClickResult() instanceof ClickResult.LeftClickResult leftClickResult
+            && leftClickResult.getEntity() != null && leftClickResult.getEntity() == attackTarget.get()) {
+            delay = CONFIG.client.extra.killAura.attackDelayTicks;
         }
     }
 

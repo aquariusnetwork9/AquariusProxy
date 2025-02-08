@@ -7,6 +7,8 @@ import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 
+import static com.zenith.Shared.CACHE;
+
 public interface ClickTarget {
     default BlockOrEntityRaycastResult apply(double blockReachDistance, double entityInteractDistance) {
         var ray = raycast(blockReachDistance, entityInteractDistance);
@@ -62,6 +64,11 @@ public interface ClickTarget {
                 && raycastResult.block().y() == y
                 && raycastResult.block().z() == z;
         }
+
+        @Override
+        public BlockOrEntityRaycastResult raycast(final double blockReachDistance, final double entityInteractDistance) {
+            return BlockOrEntityRaycastResult.wrap(RaycastHelper.playerEyeRaycastThroughToBlockTarget(x, y, z));
+        }
     }
 
     class AnyEntity implements ClickTarget {
@@ -82,6 +89,13 @@ public interface ClickTarget {
             return raycastResult.isEntity()
                 && raycastResult.entity().hit()
                 && raycastResult.entity().entity().getEntityId() == entityId;
+        }
+
+        @Override
+        public BlockOrEntityRaycastResult raycast(final double blockReachDistance, final double entityInteractDistance) {
+            var entity = CACHE.getEntityCache().get(entityId);
+            if (entity == null) return BlockOrEntityRaycastResult.miss();
+            return BlockOrEntityRaycastResult.wrap(RaycastHelper.playerEyeRaycastThroughToTarget(entity, entityInteractDistance));
         }
     }
 
@@ -106,6 +120,11 @@ public interface ClickTarget {
             return raycastResult.isEntity()
                 && raycastResult.entity().hit()
                 && raycastResult.entity().entity().equals(entity);
+        }
+
+        @Override
+        public BlockOrEntityRaycastResult raycast(final double blockReachDistance, final double entityInteractDistance) {
+            return BlockOrEntityRaycastResult.wrap(RaycastHelper.playerEyeRaycastThroughToTarget(entity, entityInteractDistance));
         }
     }
 }

@@ -90,6 +90,48 @@ public class RaycastHelper {
         return BlockRaycastResult.miss();
     }
 
+    public static BlockRaycastResult playerEyeRaycastThroughToBlockTarget(int blockX, int blockY, int blockZ) {
+        var sim = MODULE.get(PlayerSimulation.class);
+        return playerEyeRaycastThroughToBlockTarget(blockX, blockY, blockZ, sim.getYaw(), sim.getPitch(), sim.getBlockReachDistance());
+    }
+
+    public static BlockRaycastResult playerEyeRaycastThroughToBlockTarget(int blockX, int blockY, int blockZ, float yaw, float pitch) {
+        return playerEyeRaycastThroughToBlockTarget(blockX, blockY, blockZ, yaw, pitch, MODULE.get(PlayerSimulation.class).getBlockReachDistance());
+    }
+
+    public static BlockRaycastResult playerEyeRaycastThroughToBlockTarget(int blockX, int blockY, int blockZ, float yaw, float pitch, double blockReachDistance) {
+        var sim = MODULE.get(PlayerSimulation.class);
+        final double x1 = sim.getX();
+        final double y1 = sim.getEyeY();
+        final double z1 = sim.getZ();
+        var rayEndPos = MathHelper.calculateRayEndPos(x1, y1, z1, yaw, pitch, blockReachDistance);
+        final double startX = MathHelper.lerp(-1.0E-7, x1, rayEndPos.getX());
+        final double startY = MathHelper.lerp(-1.0E-7, y1, rayEndPos.getY());
+        final double startZ = MathHelper.lerp(-1.0E-7, z1, rayEndPos.getZ());
+        final double endX = MathHelper.lerp(-1.0E-7, rayEndPos.getX(), x1);
+        final double endY = MathHelper.lerp(-1.0E-7, rayEndPos.getY(), y1);
+        final double endZ = MathHelper.lerp(-1.0E-7, rayEndPos.getZ(), z1);
+        final int blockStateId = World.getBlockStateId(blockX, blockY, blockZ);
+        Block block = BLOCK_DATA.getBlockDataFromBlockStateId(blockStateId);
+        if (block == null || BLOCK_DATA.isAir(block)) return BlockRaycastResult.miss();
+        final List<CollisionBox> collisionBoxes = BLOCK_DATA.getInteractionBoxesFromBlockStateId(blockStateId);
+        if (collisionBoxes == null || collisionBoxes.isEmpty()) return BlockRaycastResult.miss();
+        BlockRaycastResult result = BlockRaycastResult.miss();
+        double prevLen = Double.MAX_VALUE;
+        List<LocalizedCollisionBox> localizedCollisionBoxes = BLOCK_DATA.localizeCollisionBoxes(collisionBoxes, block, blockX, blockY, blockZ);
+        for (int i = 0; i < localizedCollisionBoxes.size(); i++) {
+            final LocalizedCollisionBox cb = localizedCollisionBoxes.get(i);
+            final RayIntersection intersection = cb.rayIntersection(startX, startY, startZ, endX, endY, endZ);
+            if (intersection == null) continue;
+            final double thisLen = MathHelper.squareLen(intersection.x(), intersection.y(), intersection.z());
+            if (thisLen < prevLen) {
+                result = new BlockRaycastResult(true, blockX, blockY, blockZ, intersection, block);
+                prevLen = thisLen;
+            }
+        }
+        return result;
+    }
+
     public static EntityRaycastResult playerEntityRaycast(double maxDistance) {
         var sim = MODULE.get(PlayerSimulation.class);
         return entityRaycastFromPos(sim.getX(), sim.getEyeY(), sim.getZ(), sim.getYaw(), sim.getPitch(), maxDistance);
