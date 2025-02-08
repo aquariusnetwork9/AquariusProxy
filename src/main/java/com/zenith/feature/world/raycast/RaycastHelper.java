@@ -115,17 +115,20 @@ public class RaycastHelper {
         for (Entity e : CACHE.getEntityCache().getEntities().values()) {
             if (e instanceof EntityPlayer p && p.isSelfPlayer()) continue;
             // filter out entities that are too far away to possibly intersect
-            final double entityDistanceToStartPos = MathHelper.distanceSq3d(x1, y1, z1, e.getX(), e.getY(), e.getZ());
-            if (rayLength <= entityDistanceToStartPos) continue;
-            if (entityDistanceToStartPos > resultRaycastDistanceToStart) continue;
+            // add 10 block leniency to account for the entity position not calculating the interaction box
+            // we can avoid a few object heap allocations for the localized cb's by doing this
+            if (rayLength + 100 <= MathHelper.distanceSq3d(x1, y1, z1, e.getX(), e.getY(), e.getZ())) continue;
             EntityData data = ENTITY_DATA.getEntityData(e.getEntityType());
             if (data == null) continue;
             if (!data.pickable()) continue;
             LocalizedCollisionBox cb = entityCollisionBox(e, data);
             RayIntersection intersection = cb.rayIntersection(startX, startY, startZ, endX, endY, endZ);
             if (intersection != null) {
-                resultRaycastDistanceToStart = entityDistanceToStartPos;
-                resultRaycast = new EntityRaycastResult(true, intersection, e);
+                double intersectingRayLen = MathHelper.distanceSq3d(startX, startY, startZ, intersection.x(), intersection.y(), intersection.z());
+                if (intersectingRayLen < resultRaycastDistanceToStart) {
+                    resultRaycastDistanceToStart = intersectingRayLen;
+                    resultRaycast = new EntityRaycastResult(true, intersection, e);
+                }
             }
         }
         return resultRaycast;

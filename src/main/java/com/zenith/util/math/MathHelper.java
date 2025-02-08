@@ -82,7 +82,11 @@ public class MathHelper {
     }
 
     public static double distance2d(double x1, double y1, double x2, double y2) {
-        return Math.sqrt(square(x1 - x2) + square(y1 - y2));
+        return Math.sqrt(distanceSq2d(x1, y1, x2, y2));
+    }
+
+    public static double distanceSq2d(double x1, double y1, double x2, double y2) {
+        return square(x1 - x2) + square(y1 - y2);
     }
 
     public static double manhattanDistance2d(double x1, double y1, double x2, double y2) {
