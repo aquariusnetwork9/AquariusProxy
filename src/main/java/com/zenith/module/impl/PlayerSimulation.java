@@ -333,9 +333,9 @@ public class PlayerSimulation extends Module {
             this.wasSneaking = this.isSneaking;
             this.lastSprinting = this.isSprinting;
         }
-        this.movementInput.reset();
         tickEntityPushing();
         interactionTick();
+        this.movementInput.reset();
     }
 
     private static final String SPRINT_ATTRIBUTE_ID = "minecraft:sprinting";

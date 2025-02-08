@@ -137,6 +137,10 @@ public class RaycastHelper {
         return playerEyeRaycastThroughToTarget(target, sim.getYaw(), sim.getPitch(), entityReachDistance);
     }
 
+    public static EntityRaycastResult playerEyeRaycastThroughToTarget(Entity target) {
+        return playerEyeRaycastThroughToTarget(target, MODULE.get(PlayerSimulation.class).getEntityInteractDistance());
+    }
+
     public static EntityRaycastResult playerEyeRaycastThroughToTarget(Entity target, float yaw, float pitch, double entityReachDistance) {
         var sim = MODULE.get(PlayerSimulation.class);
         final double x1 = sim.getX();
@@ -158,6 +162,10 @@ public class RaycastHelper {
             resultRaycast = new EntityRaycastResult(true, intersection, target);
         }
         return resultRaycast;
+    }
+
+    public static EntityRaycastResult playerEyeRaycastThroughToTarget(Entity target, float yaw, float pitch) {
+        return playerEyeRaycastThroughToTarget(target, yaw, pitch, MODULE.get(PlayerSimulation.class).getEntityInteractDistance());
     }
 
     private static LocalizedCollisionBox entityCollisionBox(final Entity entity, final EntityData data) {

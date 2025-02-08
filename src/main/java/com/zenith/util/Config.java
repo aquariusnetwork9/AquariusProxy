@@ -240,7 +240,6 @@ public final class Config {
                 public boolean switchWeapon = true;
                 public boolean targetArmorStands = false;
                 public int attackDelayTicks = 10;
-                public double attackRange = 3.5;
                 public final ArrayList<EntityType> customTargets = new ArrayList<>();
             }
 

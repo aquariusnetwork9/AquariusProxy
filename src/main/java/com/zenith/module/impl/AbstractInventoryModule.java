@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.google.common.collect.Lists;
 import com.zenith.cache.data.inventory.Container;
 import com.zenith.feature.items.ContainerClickAction;
 import com.zenith.module.Module;
@@ -16,7 +17,6 @@ import java.util.List;
 
 import static com.zenith.Shared.CACHE;
 import static com.zenith.Shared.INVENTORY;
-import static java.util.Arrays.asList;
 import static java.util.Objects.nonNull;
 
 /**
@@ -94,7 +94,7 @@ public abstract class AbstractInventoryModule extends Module {
             ItemStack itemStack = inventory.get(i);
             if (nonNull(itemStack) && itemPredicate(itemStack)) {
                 var actionSlot = getActionSlot();
-                var actions = asList(new ContainerClickAction(i, ContainerActionType.MOVE_TO_HOTBAR_SLOT, actionSlot));
+                var actions = Lists.newArrayList(new ContainerClickAction(i, ContainerActionType.MOVE_TO_HOTBAR_SLOT, actionSlot));
                 debug("[{}] Swapping item to slot {}", getClass().getSimpleName(), actionSlot.getId());
                 if (actionSlot != MoveToHotbarAction.OFF_HAND
                     && CACHE.getPlayerCache().getHeldItemSlot() != targetMainHandHotbarSlot

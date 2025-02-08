@@ -9,6 +9,7 @@ import lombok.NonNull;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.network.tcp.TcpSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.spawn.ClientboundAddEntityPacket;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.*;
@@ -71,7 +72,8 @@ public class EntityCache implements CachedData {
     }
 
     public Entity remove(int id)  {
-        Entity entity = this.entities.remove(id);
+        @Nullable var entity = this.entities.remove(id);
+        if (entity != null) entity.setRemoved(true);
         if (entity instanceof EntityPlayer player)
             this.recentlyRemovedPlayers.put(player.getUuid(), player);
         return entity;
@@ -83,6 +85,10 @@ public class EntityCache implements CachedData {
 
     public Entity get(int id) {
         return this.entities.get(id);
+    }
+
+    public Entity get(Entity entity) {
+        return this.entities.get(entity.getEntityId());
     }
 
     // todo: this is not particularly efficient but is currently used infrequently.

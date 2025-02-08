@@ -1,7 +1,8 @@
 package com.zenith.cache.data.entity;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
+import com.zenith.mc.entity.EntityData;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import lombok.Data;
 import lombok.NonNull;
@@ -23,6 +24,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
+import static com.zenith.Shared.ENTITY_DATA;
+
 
 @Data
 @Accessors(chain = true)
@@ -42,12 +45,12 @@ public abstract class Entity {
     protected int leashedId;
     protected boolean isLeashed;
     protected Map<AttributeType, Attribute> attributes = new ConcurrentHashMap<>();
-    protected Int2ObjectMap<EntityMetadata<?, ?>> metadata = new Int2ObjectArrayMap<>();
+    protected Int2ObjectMap<EntityMetadata<?, ?>> metadata = new Int2ObjectOpenHashMap<>();
     protected IntArrayList passengerIds = new IntArrayList();
     protected boolean isInVehicle;
     protected int vehicleId;
     protected ObjectData objectData;
-
+    protected boolean removed = false;
 
     public void addPackets(@NonNull Consumer<Packet> consumer)  {
         if (!this.attributes.isEmpty()) {
@@ -75,5 +78,9 @@ public abstract class Entity {
     public void dismountVehicle() {
         this.isInVehicle = false;
         this.vehicleId = -1;
+    }
+
+    public EntityData getEntityData() {
+        return ENTITY_DATA.getEntityData(entityType);
     }
 }

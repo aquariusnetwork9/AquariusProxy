@@ -11,8 +11,6 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 
 import java.util.stream.Collectors;
 
-import static com.mojang.brigadier.arguments.DoubleArgumentType.doubleArg;
-import static com.mojang.brigadier.arguments.DoubleArgumentType.getDouble;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.mojang.brigadier.arguments.StringArgumentType.string;
 import static com.zenith.Shared.CONFIG;
@@ -41,8 +39,8 @@ public class KillAuraCommand extends Command {
                                         "targetArmorStands on/off",
                                         "targetCustom on/off",
                                         "targetCustom add/del <entityType>",
-                                        "weaponSwitch on/off",
-                                        "range <number>"),
+                                        "weaponSwitch on/off"
+                                 ),
                                  asList("ka")
         );
     }
@@ -112,12 +110,6 @@ public class KillAuraCommand extends Command {
                                          .title("Weapon Switching " + toggleStrCaps(CONFIG.client.extra.killAura.switchWeapon));
                             return 1;
                       })))
-            .then(literal("range").then(argument("range", doubleArg(0.01, 5.0)).executes(c -> {
-                CONFIG.client.extra.killAura.attackRange = getDouble(c, "range");
-                c.getSource().getEmbed()
-                             .title("Attack Range Set!");
-                return 1;
-            })))
             .then(literal("targetCustom")
                       .then(argument("toggle", toggle()).executes(c -> {
                             CONFIG.client.extra.killAura.targetCustom = getToggle(c, "toggle");
@@ -173,7 +165,6 @@ public class KillAuraCommand extends Command {
             .addField("Target Armor Stands", toggleStr(CONFIG.client.extra.killAura.targetArmorStands), false)
             .addField("Weapon Switching", toggleStr(CONFIG.client.extra.killAura.switchWeapon), false)
             .addField("Attack Delay Ticks", CONFIG.client.extra.killAura.attackDelayTicks, false)
-            .addField("Attack Range", CONFIG.client.extra.killAura.attackRange, false)
             .primaryColor();
         if (CONFIG.client.extra.killAura.targetCustom) {
             builder.description("**Custom Targets**\n" + CONFIG.client.extra.killAura.customTargets.stream().map(Enum::name).collect(
