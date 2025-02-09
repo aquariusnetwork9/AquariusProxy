@@ -13,7 +13,6 @@ import com.zenith.feature.replay.ReplayModPacketHandlerCodec;
 import com.zenith.feature.replay.ReplayRecording;
 import com.zenith.module.Module;
 import com.zenith.network.registry.PacketHandlerCodec;
-import com.zenith.network.registry.ZenithHandlerCodec;
 import com.zenith.util.Config.Client.Extra.ReplayMod.AutoRecordMode;
 import org.geysermc.mcprotocollib.network.Session;
 import org.geysermc.mcprotocollib.network.packet.Packet;
@@ -31,7 +30,6 @@ import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
 
 public class ReplayMod extends Module {
-    private final PacketHandlerCodec codec = new ReplayModPacketHandlerCodec(this, Integer.MIN_VALUE, "replay-mod");
     private final Path replayDirectory = Paths.get("replays");
     private ReplayRecording replayRecording = new ReplayRecording(replayDirectory);
     private final ReplayModPersistentEventListener persistentEventListener = new ReplayModPersistentEventListener(this);
@@ -57,14 +55,17 @@ public class ReplayMod extends Module {
     }
 
     @Override
+    public PacketHandlerCodec registerClientPacketHandlerCodec() {
+        return new ReplayModPacketHandlerCodec(this, Integer.MIN_VALUE, "replay-mod");
+    }
+
+    @Override
     public void onEnable() {
         startRecording();
-        ZenithHandlerCodec.CLIENT_REGISTRY.register(codec);
     }
 
     @Override
     public void onDisable() {
-        ZenithHandlerCodec.CLIENT_REGISTRY.unregister(codec);
         stopRecording();
     }
 

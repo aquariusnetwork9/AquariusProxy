@@ -10,7 +10,6 @@ import com.zenith.feature.actionlimiter.handlers.outbound.ALPlayerPositionHandle
 import com.zenith.module.Module;
 import com.zenith.network.registry.PacketHandlerCodec;
 import com.zenith.network.registry.PacketHandlerStateCodec;
-import com.zenith.network.registry.ZenithHandlerCodec;
 import com.zenith.network.server.ServerSession;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ReferenceSet;
@@ -34,15 +33,11 @@ import static com.zenith.Shared.CACHE;
 import static com.zenith.Shared.CONFIG;
 
 public class ActionLimiter extends Module {
-    private PacketHandlerCodec codec;
     private final ReferenceSet<ServerSession> limitedConnections = new ReferenceOpenHashSet<>();
 
-    public ActionLimiter() {
-        initializeHandlers();
-    }
-
-    private void initializeHandlers() {
-        codec = PacketHandlerCodec.builder()
+    @Override
+    public PacketHandlerCodec registerServerPacketHandlerCodec() {
+        return PacketHandlerCodec.builder()
             .setId("action-limiter")
             .setPriority(1000)
             .setActivePredicate((session) -> shouldLimit((ServerSession) session))
@@ -79,16 +74,6 @@ public class ActionLimiter extends Module {
     @Override
     public boolean enabledSetting() {
         return CONFIG.client.extra.actionLimiter.enabled;
-    }
-
-    @Override
-    public void onEnable() {
-        ZenithHandlerCodec.SERVER_REGISTRY.register(codec);
-    }
-
-    @Override
-    public void onDisable() {
-        ZenithHandlerCodec.SERVER_REGISTRY.unregister(codec);
     }
 
     public void onPlayerLoginEvent(final PlayerLoginEvent event) {

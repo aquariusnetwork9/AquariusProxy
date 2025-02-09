@@ -3,6 +3,8 @@ package com.zenith.module;
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
 import com.zenith.network.client.ClientSession;
+import com.zenith.network.registry.PacketHandlerCodec;
+import com.zenith.network.registry.ZenithHandlerCodec;
 import lombok.Getter;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 
@@ -19,14 +21,20 @@ import static com.zenith.Shared.MODULE_LOG;
 public abstract class Module {
     boolean enabled = false;
 
-    public Module() {
-
-    }
+    public Module() {}
 
     public synchronized void enable() {
         if (!enabled) {
             subscribeEvents();
             enabled = true;
+            var clientCodec = registerClientPacketHandlerCodec();
+            if (clientCodec != null) {
+                ZenithHandlerCodec.CLIENT_REGISTRY.register(clientCodec);
+            }
+            var serverCodec = registerServerPacketHandlerCodec();
+            if (serverCodec != null) {
+                ZenithHandlerCodec.SERVER_REGISTRY.register(serverCodec);
+            }
             onEnable();
         }
     }
@@ -46,6 +54,8 @@ public abstract class Module {
             disable();
         }
     }
+
+    public abstract boolean enabledSetting();
 
     public synchronized void syncEnabledFromConfig() {
         setEnabled(enabledSetting());
@@ -67,7 +77,13 @@ public abstract class Module {
         EVENT_BUS.unsubscribe(this);
     }
 
-    public abstract boolean enabledSetting();
+    public PacketHandlerCodec registerClientPacketHandlerCodec() {
+        return null;
+    }
+
+    public PacketHandlerCodec registerServerPacketHandlerCodec() {
+        return null;
+    }
 
     public void sendClientPacketAsync(final Packet packet) {
         ClientSession clientSession = Proxy.getInstance().getClient();

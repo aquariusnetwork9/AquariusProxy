@@ -11,7 +11,6 @@ import com.zenith.feature.extrachat.ECSystemChatOutgoingHandler;
 import com.zenith.module.Module;
 import com.zenith.network.registry.PacketHandlerCodec;
 import com.zenith.network.registry.PacketHandlerStateCodec;
-import com.zenith.network.registry.ZenithHandlerCodec;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
@@ -27,18 +26,6 @@ import static com.zenith.Shared.CONFIG;
 import static java.util.Objects.nonNull;
 
 public class ExtraChat extends Module {
-    private final PacketHandlerCodec codec = PacketHandlerCodec.builder()
-        .setId("extra-chat")
-        .setPriority(-1)
-        .state(ProtocolState.GAME, PacketHandlerStateCodec.<ServerSession>builder()
-            .allowUnhandledInbound(true)
-            .registerOutbound(ClientboundSystemChatPacket.class, new ECSystemChatOutgoingHandler())
-            .registerOutbound(ClientboundPlayerChatPacket.class, new ECPlayerChatOutgoingHandler())
-            .registerInbound(ServerboundChatCommandPacket.class, new ECChatCommandIncomingHandler())
-            .registerInbound(ServerboundChatCommandSignedPacket.class, new ECSignedChatCommandIncomingHandler())
-            .build())
-        .build();
-
     @Override
     public boolean enabledSetting() {
         return CONFIG.client.extra.chat.enabled;
@@ -53,13 +40,18 @@ public class ExtraChat extends Module {
     }
 
     @Override
-    public void onEnable() {
-        ZenithHandlerCodec.SERVER_REGISTRY.register(codec);
-    }
-
-    @Override
-    public void onDisable() {
-        ZenithHandlerCodec.SERVER_REGISTRY.unregister(codec);
+    public PacketHandlerCodec registerServerPacketHandlerCodec() {
+        return PacketHandlerCodec.builder()
+            .setId("extra-chat")
+            .setPriority(-1)
+            .state(ProtocolState.GAME, PacketHandlerStateCodec.<ServerSession>builder()
+                .allowUnhandledInbound(true)
+                .registerOutbound(ClientboundSystemChatPacket.class, new ECSystemChatOutgoingHandler())
+                .registerOutbound(ClientboundPlayerChatPacket.class, new ECPlayerChatOutgoingHandler())
+                .registerInbound(ServerboundChatCommandPacket.class, new ECChatCommandIncomingHandler())
+                .registerInbound(ServerboundChatCommandSignedPacket.class, new ECSignedChatCommandIncomingHandler())
+                .build())
+            .build();
     }
 
     private void handleServerPlayerDisconnected(ServerPlayerDisconnectedEvent event) {
