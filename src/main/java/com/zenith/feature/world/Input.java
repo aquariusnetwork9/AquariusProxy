@@ -21,13 +21,14 @@ public class Input {
     public boolean rightClick;
     public Hand hand;
     public ClickTarget clickTarget;
+    public boolean clickRequiresRotation = true;
 
     public static Builder builder() {
         return new Builder();
     }
 
     public Input(Input in) {
-        this(in.pressingForward, in.pressingBack, in.pressingLeft, in.pressingRight, in.jumping, in.sneaking, in.sprinting, in.leftClick, in.rightClick, in.hand, in.clickTarget);
+        this(in.pressingForward, in.pressingBack, in.pressingLeft, in.pressingRight, in.jumping, in.sneaking, in.sprinting, in.leftClick, in.rightClick, in.hand, in.clickTarget, in.clickRequiresRotation);
     }
 
     public void apply(Input in) {
@@ -63,6 +64,7 @@ public class Input {
         rightClick = false;
         hand = Hand.MAIN_HAND;
         clickTarget = ClickTarget.Any.INSTANCE;
+        clickRequiresRotation = true;
     }
 
     public String log() {
@@ -110,6 +112,7 @@ public class Input {
         private boolean rightClick;
         private Hand hand = Hand.MAIN_HAND;
         private ClickTarget clickTarget = ClickTarget.Any.INSTANCE;
+        private boolean clickRequiresRotation = true;
 
         private Builder() {}
 
@@ -168,20 +171,13 @@ public class Input {
             return this;
         }
 
+        public Builder clickRequiresRotation(boolean clickRequiresRotation) {
+            this.clickRequiresRotation = clickRequiresRotation;
+            return this;
+        }
+
         public Input build() {
-            Input input = new Input();
-            input.setPressingForward(pressingForward);
-            input.setPressingBack(pressingBack);
-            input.setPressingLeft(pressingLeft);
-            input.setPressingRight(pressingRight);
-            input.setJumping(jumping);
-            input.setSneaking(sneaking);
-            input.setSprinting(sprinting);
-            input.setLeftClick(leftClick);
-            input.setRightClick(rightClick);
-            input.setHand(hand);
-            input.setClickTarget(clickTarget);
-            return input;
+            return new Input(pressingForward, pressingBack, pressingLeft, pressingRight, jumping, sneaking, sprinting, leftClick, rightClick, hand, clickTarget, clickRequiresRotation);
         }
     }
 }

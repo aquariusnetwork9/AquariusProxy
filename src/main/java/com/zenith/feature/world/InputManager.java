@@ -40,7 +40,7 @@ public class InputManager {
 
     private synchronized void handleTick(final ClientBotTick event) {
         if (currentMovementInputRequest == DEFAULT_MOVEMENT_INPUT_REQUEST) return;
-        MODULE.get(PlayerSimulation.class).doMovement(currentMovementInputRequest, currentMovementInputRequestFuture);
+        MODULE.get(PlayerSimulation.class).requestMovement(currentMovementInputRequest, currentMovementInputRequestFuture);
         currentMovementInputRequest = DEFAULT_MOVEMENT_INPUT_REQUEST;
         currentMovementInputRequestFuture.complete(true);
         currentMovementInputRequestFuture = DEFAULT_REQUEST_FUTURE;
