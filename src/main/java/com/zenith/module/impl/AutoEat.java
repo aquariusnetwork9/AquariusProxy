@@ -3,14 +3,16 @@ package com.zenith.module.impl;
 import com.zenith.Proxy;
 import com.zenith.event.module.AutoEatOutOfFoodEvent;
 import com.zenith.event.module.ClientBotTick;
+import com.zenith.feature.world.ClickTarget;
+import com.zenith.feature.world.Input;
 import com.zenith.feature.world.InputRequest;
 import com.zenith.mc.food.FoodData;
 import com.zenith.mc.food.FoodRegistry;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundUseItemPacket;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
@@ -49,16 +51,16 @@ public class AutoEat extends AbstractInventoryModule {
                 && Proxy.getInstance().getOnlineTimeSeconds() > 10) {
             if (delay > 0) {
                 delay--;
-                return;
-            } else {
-                if (switchToFood()) {
-                    startEating();
+                if (isEating) {
+                    INPUTS.submit(InputRequest.builder()
+                                      .priority(MOVEMENT_PRIORITY)
+                                      .build());
+                    INVENTORY.invActionReq(this, Collections.emptyList(), MOVEMENT_PRIORITY);
                 }
+                return;
             }
-            if (isEating) {
-                INPUTS.submit(InputRequest.builder()
-                                  .priority(MOVEMENT_PRIORITY)
-                                  .build());
+            if (switchToFood()) {
+                startEating();
             }
         } else {
             isEating = false;
@@ -84,9 +86,17 @@ public class AutoEat extends AbstractInventoryModule {
     public void startEating() {
         var hand = getHand();
         if (hand == null) return;
-        isEating = true;
-        delay = 50;
-        sendClientPacketAsync(new ServerboundUseItemPacket(hand, CACHE.getPlayerCache().getActionId().incrementAndGet(), CACHE.getPlayerCache().getYaw(), CACHE.getPlayerCache().getPitch()));
+        INPUTS.submit(InputRequest.builder()
+                          .input(Input.builder()
+                                     .rightClick(true)
+                                     .clickTarget(ClickTarget.None.INSTANCE)
+                                     .build())
+                          .priority(MOVEMENT_PRIORITY)
+                          .build())
+            .addInputExecutedListener(future -> {
+                isEating = true;
+                delay = 50;
+            });
     }
 
     public void handleBotTickStarting(final ClientBotTick.Starting event) {
