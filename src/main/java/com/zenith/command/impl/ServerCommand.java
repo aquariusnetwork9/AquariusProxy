@@ -19,8 +19,10 @@ import static java.util.Arrays.asList;
 
 public class ServerCommand extends Command {
     private final Pattern ipWithPortPattern = Pattern.compile("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}:[0-9]{1,5}$");
-    private final Pattern domainWithPortPattern = Pattern.compile("^[a-zA-Z0-9]+:[0-9]{1,5}$");
+    private final Pattern domainPattern = Pattern.compile("^[a-zA-Z0-9.]+$");
+    private final Pattern domainWithPortPattern = Pattern.compile("^[a-zA-Z0-9.]+:[0-9]{1,5}$");
     private final Pattern ipv6Pattern = Pattern.compile("^((([0-9A-Fa-f]{1,4}:){1,6}:)|(([0-9A-Fa-f]{1,4}:){7}))([0-9A-Fa-f]{1,4})$");
+
     @Override
     public CommandUsage commandUsage() {
         return CommandUsage.args(
@@ -92,6 +94,12 @@ public class ServerCommand extends Command {
                                   .title("Server Updated!");
                               return OK;
                           } else if (ipv6Pattern.matcher(ip).matches()) {
+                              CONFIG.client.server.address = ip;
+                              CONFIG.client.server.port = 25565;
+                              c.getSource().getEmbed()
+                                  .title("Server Updated!");
+                              return OK;
+                          } else if (domainPattern.matcher(ip).matches()) {
                               CONFIG.client.server.address = ip;
                               CONFIG.client.server.port = 25565;
                               c.getSource().getEmbed()

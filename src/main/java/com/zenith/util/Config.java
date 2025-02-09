@@ -240,7 +240,6 @@ public final class Config {
                 public boolean switchWeapon = true;
                 public boolean targetArmorStands = false;
                 public int attackDelayTicks = 10;
-                public double attackRange = 3.5;
                 public final ArrayList<EntityType> customTargets = new ArrayList<>();
             }
 
@@ -488,6 +487,7 @@ public final class Config {
             public boolean fullCommandsEnabled = false;
             public boolean fullCommandsAcceptSlashCommands = true;
             public boolean fullCommandsRequireRegularWhitelist = true;
+            public boolean playerCamOnJoin = false;
             public ArrayList<PlayerEntry> whitelist = new ArrayList<>();
         }
 

@@ -79,6 +79,7 @@ public class PlayerInventoryManager {
             if (nextAction != null) {
                 var packet = nextAction.toPacket();
                 if (packet != null) {
+                    CLIENT_LOG.debug("[Inventory Manager] Executing action: {} requester: {}", nextAction.actionType(), currentActionRequest.getOwner().getClass().getSimpleName());
                     Proxy.getInstance().getClient().sendAwait(packet);
                     if (CONFIG.debug.ncpStrictInventory) {
                         if (packet instanceof ServerboundContainerClickPacket clickPacket && clickPacket.getCarriedItem() == null)

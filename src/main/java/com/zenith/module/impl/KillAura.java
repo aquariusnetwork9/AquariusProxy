@@ -1,26 +1,23 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.cache.data.entity.Entity;
+import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.cache.data.entity.EntityStandard;
 import com.zenith.event.module.ClientBotTick;
-import com.zenith.feature.world.InputRequest;
-import com.zenith.feature.world.RotationHelper;
+import com.zenith.feature.world.*;
+import com.zenith.feature.world.raycast.RaycastHelper;
 import com.zenith.mc.item.ItemRegistry;
-import com.zenith.util.math.MathHelper;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
-import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.ByteEntityMetadata;
-import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
-import org.geysermc.mcprotocollib.protocol.data.game.entity.player.InteractAction;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundInteractPacket;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundSwingPacket;
 
 import javax.annotation.Nullable;
 import java.lang.ref.WeakReference;
+import java.util.List;
 import java.util.Set;
 
 import static com.github.rfresh2.EventConsumer.of;
@@ -44,9 +41,8 @@ public class KillAura extends AbstractInventoryModule {
         EntityType.ZOMBIFIED_PIGLIN
     );
     private int delay = 0;
-    private final WeakReference<Entity> nullRef = new WeakReference<>(null);
-    private WeakReference<Entity> attackTarget = nullRef;
-    private EquipmentSlot weaponSlot = EquipmentSlot.MAIN_HAND;
+    private final WeakReference<EntityLiving> nullRef = new WeakReference<>(null);
+    private WeakReference<EntityLiving> attackTarget = nullRef;
     private static final int MOVEMENT_PRIORITY = 500;
     private final IntSet swords = IntSet.of(
         ItemRegistry.DIAMOND_SWORD.id(),
@@ -60,7 +56,7 @@ public class KillAura extends AbstractInventoryModule {
     );
 
     public KillAura() {
-        super(false, 1, MOVEMENT_PRIORITY);
+        super(HandRestriction.MAIN_HAND, 1, MOVEMENT_PRIORITY);
     }
 
     public boolean isActive() {
@@ -68,12 +64,10 @@ public class KillAura extends AbstractInventoryModule {
     }
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(ClientBotTick.class, this::handleClientTick),
-            of(ClientBotTick.Stopped.class, this::handleBotTickStopped),
-            of(ClientBotTick.class, -30000 + MOVEMENT_PRIORITY, this::handlePostTick)
+            of(ClientBotTick.Stopped.class, this::handleBotTickStopped)
         );
     }
 
@@ -82,22 +76,37 @@ public class KillAura extends AbstractInventoryModule {
         return CONFIG.client.extra.killAura.enabled;
     }
 
+    @Override
+    public void onDisable() {
+        delay = 0;
+        attackTarget = nullRef;
+    }
+
     private void handleClientTick(final ClientBotTick event) {
+        if (delay > 0) {
+            delay--;
+            EntityLiving target = attackTarget.get();
+            if (target != null && canPossiblyReach(target)) {
+                if (!hasRotation(target)) {
+                    rotateTo(target);
+                }
+            }
+            return;
+        }
         if (CACHE.getPlayerCache().getThePlayer().isAlive()
-                && !MODULE.get(AutoEat.class).isEating()
-                && delay <= 0
-                && MODULE.get(PlayerSimulation.class).isOnGround()) {
-            final Entity target = findTarget();
+                && !MODULE.get(AutoEat.class).isEating()) {
+            final EntityLiving target = findTarget();
             if (target != null) {
                 if (!attackTarget.refersTo(target))
                     attackTarget = new WeakReference<>(target);
-                if (switchToWeapon())
-                    rotateTo(target);
-                else
+                if (switchToWeapon()) {
+                    attack(target).addInputExecutedListener(this::onAttackInputExecuted);
+                } else {
                     // stop while doing inventory actions
                     INPUTS.submit(InputRequest.builder()
                                       .priority(MOVEMENT_PRIORITY - 1)
                                       .build());
+                }
                 return;
             }
         }
@@ -105,31 +114,26 @@ public class KillAura extends AbstractInventoryModule {
     }
 
 
-    private void handlePostTick(ClientBotTick event) {
-        if (delay > 0) {
-            delay--;
-            return;
-        }
-        var target = attackTarget.get();
-        if (target == null) return;
-        if (hasRotation(target)) {
-            attack(target);
+    private void onAttackInputExecuted(InputRequestFuture future) {
+        if (future.getClickResult() instanceof ClickResult.LeftClickResult leftClickResult
+            && leftClickResult.getEntity() != null && leftClickResult.getEntity() == attackTarget.get()) {
             delay = CONFIG.client.extra.killAura.attackDelayTicks;
         }
     }
 
     @Nullable
-    private Entity findTarget() {
-        var rangeSq = Math.pow(CONFIG.client.extra.killAura.attackRange, 2);
-        for (Entity entity : CACHE.getEntityCache().getEntities().values()) {
+    private EntityLiving findTarget() {
+        for (Entity e : CACHE.getEntityCache().getEntities().values()) {
+            if (!(e instanceof EntityLiving entity)) continue;
+            if (!entity.isAlive()) continue;
             if (!validTarget(entity)) continue;
-            if (CACHE.getPlayerCache().distanceSqToSelf(entity) > rangeSq) continue;
+            if (!canPossiblyReach(entity)) continue;
             return entity;
         }
         return null;
     }
 
-    private boolean validTarget(Entity entity) {
+    private boolean validTarget(EntityLiving entity) {
         if (CONFIG.client.extra.killAura.targetPlayers && entity instanceof EntityPlayer player) {
             if (player.isSelfPlayer()) return false;
             return !PLAYER_LISTS.getFriendsList().contains(player.getUuid())
@@ -155,7 +159,7 @@ public class KillAura extends AbstractInventoryModule {
         return false;
     }
 
-    private static boolean isAggressive(final Entity entity) {
+    private static boolean isAggressive(final EntityLiving entity) {
         // https://wiki.vg/Entity_metadata#Mob
         var byteMetadata = entity.getMetadata().get(15);
         if (byteMetadata == null) return false;
@@ -171,14 +175,20 @@ public class KillAura extends AbstractInventoryModule {
         attackTarget = nullRef;
     }
 
-    private void attack(final Entity entity) {
-        sendClientPacketsAsync(
-            new ServerboundInteractPacket(entity.getEntityId(), InteractAction.ATTACK, false),
-            new ServerboundSwingPacket(weaponSlot == EquipmentSlot.MAIN_HAND ? Hand.MAIN_HAND : Hand.OFF_HAND)
-        );
+    private InputRequestFuture attack(final EntityLiving entity) {
+        var rotation = RotationHelper.shortestRotationTo(entity);
+        return INPUTS.submit(InputRequest.builder()
+                                 .input(Input.builder()
+                                            .leftClick(true)
+                                            .clickTarget(new ClickTarget.EntityInstance(entity))
+                                            .build())
+                                 .yaw(rotation.getX())
+                                 .pitch(rotation.getY())
+                                 .priority(MOVEMENT_PRIORITY)
+                                 .build());
     }
 
-    private void rotateTo(Entity entity) {
+    private void rotateTo(EntityLiving entity) {
         var rotation = RotationHelper.shortestRotationTo(entity);
         INPUTS.submit(InputRequest.builder()
                           .yaw(rotation.getX())
@@ -187,19 +197,22 @@ public class KillAura extends AbstractInventoryModule {
                           .build());
     }
 
-    private boolean hasRotation(final Entity entity) {
+    private boolean hasRotation(final EntityLiving entity) {
+        var entityRaycastResult = RaycastHelper.playerEyeRaycastThroughToTarget(entity);
+        return entityRaycastResult.hit();
+    }
+
+    private boolean canPossiblyReach(final EntityLiving entity) {
+        var rangeSq = Math.pow(MODULE.get(PlayerSimulation.class).getEntityInteractDistance(), 2) + 5;
+        if (CACHE.getPlayerCache().distanceSqToSelf(entity) > rangeSq) return false;
         var rotation = RotationHelper.shortestRotationTo(entity);
-        var sim = MODULE.get(PlayerSimulation.class);
-        boolean yawNear = MathHelper.isYawInRange(sim.getYaw(), rotation.getX(), 0.1f);
-        boolean pitchNear = MathHelper.isPitchInRange(sim.getPitch(), rotation.getY(), 0.1f);
-        return yawNear && pitchNear;
+        var entityRaycastResult = RaycastHelper.playerEyeRaycastThroughToTarget(entity, rotation.getX(), rotation.getY());
+        return entityRaycastResult.hit();
     }
 
     public boolean switchToWeapon() {
         if (!CONFIG.client.extra.killAura.switchWeapon) return true;
         delay = doInventoryActions();
-        var hand = getHand();
-        weaponSlot = hand == Hand.OFF_HAND ? EquipmentSlot.OFF_HAND : EquipmentSlot.MAIN_HAND;
         return delay == 0;
     }
 

@@ -1,21 +1,26 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
 import com.zenith.event.module.OutboundChatEvent;
 import com.zenith.module.Module;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
 
+import java.util.List;
 import java.util.regex.Pattern;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Shared.CACHE;
+import static com.zenith.Shared.CONFIG;
 
 public class AntiLeak extends Module {
     private final Pattern notNumber = Pattern.compile("[^0-9]");
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(this, OutboundChatEvent.class, this::handleOutgoingChat);
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
+            EventConsumer.of(OutboundChatEvent.class, this::handleOutgoingChat)
+        );
     }
 
     @Override

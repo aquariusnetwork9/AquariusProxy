@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
 import com.zenith.event.proxy.ServerPlayerConnectedEvent;
 import com.zenith.event.proxy.ServerPlayerDisconnectedEvent;
@@ -10,7 +11,6 @@ import com.zenith.feature.extrachat.ECSystemChatOutgoingHandler;
 import com.zenith.module.Module;
 import com.zenith.network.registry.PacketHandlerCodec;
 import com.zenith.network.registry.PacketHandlerStateCodec;
-import com.zenith.network.registry.ZenithHandlerCodec;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
@@ -19,46 +19,39 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.Clientbound
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandSignedPacket;
 
+import java.util.List;
+
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.EVENT_BUS;
 import static java.util.Objects.nonNull;
 
 public class ExtraChat extends Module {
-    private final PacketHandlerCodec codec = PacketHandlerCodec.builder()
-        .setId("extra-chat")
-        .setPriority(-1)
-        .state(ProtocolState.GAME, PacketHandlerStateCodec.<ServerSession>builder()
-            .allowUnhandledInbound(true)
-            .registerOutbound(ClientboundSystemChatPacket.class, new ECSystemChatOutgoingHandler())
-            .registerOutbound(ClientboundPlayerChatPacket.class, new ECPlayerChatOutgoingHandler())
-            .registerInbound(ServerboundChatCommandPacket.class, new ECChatCommandIncomingHandler())
-            .registerInbound(ServerboundChatCommandSignedPacket.class, new ECSignedChatCommandIncomingHandler())
-            .build())
-        .build();
-
     @Override
     public boolean enabledSetting() {
         return CONFIG.client.extra.chat.enabled;
     }
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(ServerPlayerConnectedEvent.class, this::handleServerPlayerConnected),
             of(ServerPlayerDisconnectedEvent.class, this::handleServerPlayerDisconnected)
         );
     }
 
     @Override
-    public void onEnable() {
-        ZenithHandlerCodec.SERVER_REGISTRY.register(codec);
-    }
-
-    @Override
-    public void onDisable() {
-        ZenithHandlerCodec.SERVER_REGISTRY.unregister(codec);
+    public PacketHandlerCodec registerServerPacketHandlerCodec() {
+        return PacketHandlerCodec.builder()
+            .setId("extra-chat")
+            .setPriority(-1)
+            .state(ProtocolState.GAME, PacketHandlerStateCodec.<ServerSession>builder()
+                .allowUnhandledInbound(true)
+                .registerOutbound(ClientboundSystemChatPacket.class, new ECSystemChatOutgoingHandler())
+                .registerOutbound(ClientboundPlayerChatPacket.class, new ECPlayerChatOutgoingHandler())
+                .registerInbound(ServerboundChatCommandPacket.class, new ECChatCommandIncomingHandler())
+                .registerInbound(ServerboundChatCommandSignedPacket.class, new ECSignedChatCommandIncomingHandler())
+                .build())
+            .build();
     }
 
     private void handleServerPlayerDisconnected(ServerPlayerDisconnectedEvent event) {

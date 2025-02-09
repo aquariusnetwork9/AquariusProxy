@@ -1,15 +1,18 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.event.module.ClientBotTick;
 import com.zenith.feature.world.Input;
-import com.zenith.feature.world.Input.ClickOptions.ClickTarget;
 import com.zenith.feature.world.InputRequest;
 import com.zenith.module.Module;
 import com.zenith.util.Timer;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 
+import java.util.List;
+
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Shared.CONFIG;
+import static com.zenith.Shared.INPUTS;
 
 public class Click extends Module {
 
@@ -19,9 +22,8 @@ public class Click extends Module {
     private Hand holdRightClickLastHand = Hand.MAIN_HAND;
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(ClientBotTick.class, this::onClientBotTick)
         );
     }
@@ -51,7 +53,7 @@ public class Click extends Module {
                     case ALTERNATE_HANDS -> holdRightClickLastHand == Hand.MAIN_HAND ? Hand.OFF_HAND : Hand.MAIN_HAND;
                 };
                 holdRightClickLastHand = hand;
-                in.clickOptions(new Input.ClickOptions(hand, ClickTarget.BLOCK_OR_ENTITY));
+                in.hand(hand);
                 if (CONFIG.client.extra.click.hasRotation) {
                     req.yaw(CONFIG.client.extra.click.rotationYaw)
                         .pitch(CONFIG.client.extra.click.rotationPitch);

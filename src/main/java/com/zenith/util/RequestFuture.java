@@ -1,6 +1,8 @@
 package com.zenith.util;
 
 import com.zenith.Proxy;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 
@@ -9,8 +11,10 @@ import java.util.concurrent.TimeUnit;
 
 public class RequestFuture implements Future<Boolean> {
     // whether the future has completed
+    @Getter @Setter
     private volatile boolean completed = false;
     // whether this request was accepted
+    @Getter @Setter
     private volatile boolean accepted = false;
 
     public static final RequestFuture rejected = immediateFuture(false);

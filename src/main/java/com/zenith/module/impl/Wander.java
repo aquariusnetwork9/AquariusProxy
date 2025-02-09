@@ -1,10 +1,13 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.event.module.ClientBotTick;
 import com.zenith.feature.world.Input;
 import com.zenith.feature.world.InputRequest;
 import com.zenith.module.Module;
 import com.zenith.util.Timer;
+
+import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
@@ -15,9 +18,8 @@ public class Wander extends Module {
     public static final int MOVEMENT_PRIORITY = 1337;
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(ClientBotTick.class, this::handleBotTick),
             of(ClientBotTick.Starting.class, this::handleBotTickStarting)
         );

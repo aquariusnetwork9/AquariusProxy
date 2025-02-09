@@ -47,6 +47,7 @@ public class SpectatorCommand extends Command {
                 "entity list",
                 "entity <entity>",
                 "chat on/off",
+                "playerCamOnJoin on/off",
                 "fullCommands on/off",
                 "fullCommands slashCommands on/off",
                 "fullCommands requireRegularWhitelist on/off"
@@ -139,6 +140,13 @@ public class SpectatorCommand extends Command {
                                 .description(spectatorWhitelist());
                             return 1;
                       })))
+            .then(literal("playerCamOnJoin").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.server.spectator.playerCamOnJoin = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("Player Cam On Join " + toggleStrCaps(CONFIG.server.spectator.playerCamOnJoin))
+                    .primaryColor();
+                return OK;
+            })))
             .then(literal("fullCommands").requires(Command::validateAccountOwner)
                       .then(argument("toggle", toggle()).executes(c -> {
                           CONFIG.server.spectator.fullCommandsEnabled = getToggle(c, "toggle");
@@ -177,6 +185,7 @@ public class SpectatorCommand extends Command {
             .addField("Spectators", toggleStr(CONFIG.server.spectator.allowSpectator), false)
             .addField("Chat", toggleStr(CONFIG.server.spectator.spectatorPublicChatEnabled), false)
             .addField("Entity", CONFIG.server.spectator.spectatorEntity, false)
+            .addField("PlayerCam On Join", toggleStr(CONFIG.server.spectator.playerCamOnJoin), false)
             .addField("Full Commands", toggleStr(CONFIG.server.spectator.fullCommandsEnabled), false)
             .addField("Full Commands Slash Commands", toggleStr(CONFIG.server.spectator.fullCommandsAcceptSlashCommands), false)
             .addField("Full Commands Require Regular Whitelist", toggleStr(CONFIG.server.spectator.fullCommandsRequireRegularWhitelist), false);

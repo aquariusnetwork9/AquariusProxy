@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.event.module.ClientBotTick;
@@ -13,6 +14,8 @@ import com.zenith.util.Timer;
 import com.zenith.util.math.MathHelper;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 
+import java.util.List;
+
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
 
@@ -25,13 +28,13 @@ public class Spook extends Module {
     private static final int SEARCH_DELAY_TICKS = 50;
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(ClientBotTick.class, this::handleClientTickEvent),
             of(DisconnectEvent.class, this::handleDisconnectEvent),
             of(NewPlayerInVisualRangeEvent.class, this::handleNewPlayerInVisualRangeEvent),
-            of(PlayerLeftVisualRangeEvent.class, this::handlePlayerLeftVisualRangeEvent));
+            of(PlayerLeftVisualRangeEvent.class, this::handlePlayerLeftVisualRangeEvent)
+        );
     }
 
     @Override

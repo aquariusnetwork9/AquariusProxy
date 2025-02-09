@@ -1,9 +1,12 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.discord.DiscordBot;
 import com.zenith.event.module.QueueWarningEvent;
 import com.zenith.event.proxy.QueuePositionUpdateEvent;
 import com.zenith.module.Module;
+
+import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.CONFIG;
@@ -11,9 +14,8 @@ import static com.zenith.Shared.EVENT_BUS;
 
 public class QueueWarning extends Module {
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(QueuePositionUpdateEvent.class, this::onQueuePositionUpdate)
         );
     }

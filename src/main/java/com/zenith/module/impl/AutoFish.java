@@ -1,23 +1,26 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityStandard;
 import com.zenith.cache.data.inventory.Container;
 import com.zenith.event.module.ClientBotTick;
 import com.zenith.event.module.EntityFishHookSpawnEvent;
 import com.zenith.event.module.SplashSoundEffectEvent;
+import com.zenith.feature.world.ClickTarget;
+import com.zenith.feature.world.Input;
 import com.zenith.feature.world.InputRequest;
+import com.zenith.feature.world.InputRequestFuture;
 import com.zenith.mc.item.ItemRegistry;
 import com.zenith.util.Timer;
-import com.zenith.util.math.MathHelper;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.object.ProjectileData;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundUseItemPacket;
 
 import java.time.Instant;
+import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
@@ -31,19 +34,17 @@ public class AutoFish extends AbstractInventoryModule {
     private Instant castTime = Instant.EPOCH;
 
     public AutoFish() {
-        super(false, 2, MOVEMENT_PRIORITY);
+        super(HandRestriction.EITHER, 2, MOVEMENT_PRIORITY);
     }
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(EntityFishHookSpawnEvent.class, this::handleEntityFishHookSpawnEvent),
             of(SplashSoundEffectEvent.class, this::handleSplashSoundEffectEvent),
             of(ClientBotTick.class, this::handleClientTick),
             of(ClientBotTick.Starting.class, this::handleBotTickStarting),
-            of(ClientBotTick.Stopped.class, this::handleBotTickStopped),
-            of(ClientBotTick.class, -30000 + MOVEMENT_PRIORITY, this::handlePostTick)
+            of(ClientBotTick.Stopped.class, this::handleBotTickStopped)
         );
     }
 
@@ -79,22 +80,13 @@ public class AutoFish extends AbstractInventoryModule {
     public void handleSplashSoundEffectEvent(final SplashSoundEffectEvent event) {
         if (isFishing()) {
             // reel in
-            sendClientPacketAsync(new ServerboundUseItemPacket(rodHand, CACHE.getPlayerCache().getActionId().incrementAndGet(), CACHE.getPlayerCache().getYaw(), CACHE.getPlayerCache().getPitch()));
+            requestUseRod();
             castTimer.reset();
             fishHookEntityId = -1;
         }
     }
 
     public void handleClientTick(final ClientBotTick event) {
-        if (delay > 0) return;
-        if (MODULE.get(AutoEat.class).isEating() || MODULE.get(KillAura.class).isActive()) return;
-        if (!isFishing() && switchToFishingRod()) {
-            // cast
-            rotate();
-        }
-    }
-
-    private void handlePostTick(ClientBotTick event) {
         if (delay > 0) {
             delay--;
             return;
@@ -102,31 +94,17 @@ public class AutoFish extends AbstractInventoryModule {
         if (MODULE.get(AutoEat.class).isEating() || MODULE.get(KillAura.class).isActive()) return;
         if (castTimer.tick(CONFIG.client.extra.autoFish.castDelay)
             && !isFishing()
-            && isRodInHand()
-            && hasRotation()) {
+            && switchToFishingRod()
+            && isRodInHand()) {
             cast();
         }
         if (isFishing() && Instant.now().getEpochSecond() - castTime.getEpochSecond() > 60) {
             // something's wrong, probably don't have hook in water
             warn("Probably don't have hook in water. reeling in");
             fishHookEntityId = -1;
-            sendClientPacketAsync(new ServerboundUseItemPacket(rodHand, CACHE.getPlayerCache().getActionId().incrementAndGet(), CACHE.getPlayerCache().getYaw(), CACHE.getPlayerCache().getPitch()));
+            requestUseRod();
             castTimer.reset();
         }
-    }
-
-    private void rotate() {
-        INPUTS.submit(InputRequest.builder()
-                          .yaw(CONFIG.client.extra.autoFish.yaw)
-                          .pitch(CONFIG.client.extra.autoFish.pitch)
-                          .priority(MOVEMENT_PRIORITY)
-                          .build());
-    }
-
-    private boolean hasRotation() {
-        var sim = MODULE.get(PlayerSimulation.class);
-        return MathHelper.isYawInRange(sim.getYaw(), CONFIG.client.extra.autoFish.yaw, 0.1f)
-            && MathHelper.isPitchInRange(sim.getPitch(), CONFIG.client.extra.autoFish.pitch, 0.1f);
     }
 
     private boolean isRodInHand() {
@@ -137,8 +115,21 @@ public class AutoFish extends AbstractInventoryModule {
         };
     }
 
+    private InputRequestFuture requestUseRod() {
+        return INPUTS.submit(InputRequest.builder()
+                          .input(Input.builder()
+                                     .rightClick(true)
+                                     .clickTarget(ClickTarget.None.INSTANCE)
+                                     .hand(rodHand)
+                                     .build())
+                          .yaw(CONFIG.client.extra.autoFish.yaw)
+                          .pitch(CONFIG.client.extra.autoFish.pitch)
+                          .priority(MOVEMENT_PRIORITY)
+                          .build());
+    }
+
     private void cast() {
-        sendClientPacketAsync(new ServerboundUseItemPacket(rodHand, CACHE.getPlayerCache().getActionId().incrementAndGet(), CACHE.getPlayerCache().getYaw(), CACHE.getPlayerCache().getPitch()));
+        requestUseRod();
         castTime = Instant.now();
         delay = 5;
     }

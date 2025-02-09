@@ -6,7 +6,10 @@ import lombok.experimental.Accessors;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.EntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.Equipment;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.MetadataType;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.Pose;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundSetEquipmentPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundUpdateMobEffectPacket;
@@ -53,7 +56,12 @@ public class EntityLiving extends Entity {
     }
 
     public boolean isAlive() {
-        var h = health;
-        return h != null && h > 0;
+        if (removed) return false;
+        EntityMetadata<?, ?> poseMetadata = getMetadata().get(6);
+        if (poseMetadata != null && poseMetadata.getType() == MetadataType.POSE) {
+            var pose = (Pose) poseMetadata.getValue();
+            if (pose == Pose.DYING) return false;
+        }
+        return true;
     }
 }

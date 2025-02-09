@@ -4,7 +4,6 @@ import com.zenith.feature.esp.GlowingEntityMetadataPacketHandler;
 import com.zenith.module.Module;
 import com.zenith.network.registry.PacketHandlerCodec;
 import com.zenith.network.registry.PacketHandlerStateCodec;
-import com.zenith.network.registry.ZenithHandlerCodec;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundSetEntityDataPacket;
@@ -12,10 +11,9 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.Clie
 import static com.zenith.Shared.CONFIG;
 
 public class ESP extends Module {
-    private final PacketHandlerCodec codec;
-
-    public ESP() {
-        codec = PacketHandlerCodec.builder()
+    @Override
+    public PacketHandlerCodec registerServerPacketHandlerCodec() {
+        return PacketHandlerCodec.builder()
             .setId("esp")
             .setPriority(1000)
             .state(ProtocolState.GAME, PacketHandlerStateCodec.<ServerSession>builder()
@@ -25,20 +23,7 @@ public class ESP extends Module {
     }
 
     @Override
-    public void subscribeEvents() {}
-
-    @Override
     public boolean enabledSetting() {
         return CONFIG.server.extra.esp.enable;
-    }
-
-    @Override
-    public void onEnable() {
-        ZenithHandlerCodec.SERVER_REGISTRY.register(codec);
-    }
-
-    @Override
-    public void onDisable() {
-        ZenithHandlerCodec.SERVER_REGISTRY.unregister(codec);
     }
 }

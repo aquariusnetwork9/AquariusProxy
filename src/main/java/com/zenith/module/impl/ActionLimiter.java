@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.event.proxy.PlayerLoginEvent;
 import com.zenith.event.proxy.ServerConnectionRemovedEvent;
 import com.zenith.feature.actionlimiter.handlers.inbound.*;
@@ -9,7 +10,6 @@ import com.zenith.feature.actionlimiter.handlers.outbound.ALPlayerPositionHandle
 import com.zenith.module.Module;
 import com.zenith.network.registry.PacketHandlerCodec;
 import com.zenith.network.registry.PacketHandlerStateCodec;
-import com.zenith.network.registry.ZenithHandlerCodec;
 import com.zenith.network.server.ServerSession;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ReferenceSet;
@@ -26,19 +26,18 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.S
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundMoveVehiclePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.*;
 
+import java.util.List;
+
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Shared.CACHE;
+import static com.zenith.Shared.CONFIG;
 
 public class ActionLimiter extends Module {
-    private PacketHandlerCodec codec;
     private final ReferenceSet<ServerSession> limitedConnections = new ReferenceOpenHashSet<>();
 
-    public ActionLimiter() {
-        initializeHandlers();
-    }
-
-    private void initializeHandlers() {
-        codec = PacketHandlerCodec.builder()
+    @Override
+    public PacketHandlerCodec registerServerPacketHandlerCodec() {
+        return PacketHandlerCodec.builder()
             .setId("action-limiter")
             .setPriority(1000)
             .setActivePredicate((session) -> shouldLimit((ServerSession) session))
@@ -65,26 +64,16 @@ public class ActionLimiter extends Module {
     }
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(this,
-                            of(PlayerLoginEvent.class, this::onPlayerLoginEvent),
-                            of(ServerConnectionRemovedEvent.class, this::onServerConnectionRemoved)
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
+            of(PlayerLoginEvent.class, this::onPlayerLoginEvent),
+            of(ServerConnectionRemovedEvent.class, this::onServerConnectionRemoved)
         );
     }
 
     @Override
     public boolean enabledSetting() {
         return CONFIG.client.extra.actionLimiter.enabled;
-    }
-
-    @Override
-    public void onEnable() {
-        ZenithHandlerCodec.SERVER_REGISTRY.register(codec);
-    }
-
-    @Override
-    public void onDisable() {
-        ZenithHandlerCodec.SERVER_REGISTRY.unregister(codec);
     }
 
     public void onPlayerLoginEvent(final PlayerLoginEvent event) {

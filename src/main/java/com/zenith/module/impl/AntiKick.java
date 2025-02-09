@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
 import com.zenith.event.module.ClientSwingEvent;
 import com.zenith.event.module.ClientTickEvent;
@@ -11,9 +12,11 @@ import com.zenith.util.math.MathHelper;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Shared.CACHE;
+import static com.zenith.Shared.CONFIG;
 
 public class AntiKick extends Module {
     private double lastPosX = 0;
@@ -24,9 +27,8 @@ public class AntiKick extends Module {
     private final Timer timer = new Timer();
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(ProxyClientConnectedEvent.class, this::onProxyClientConnectedEvent),
             of(ClientTickEvent.class, this::onClientTick),
             of(EntityFishHookSpawnEvent.class, this::onEntityFishHookSpawnEvent),

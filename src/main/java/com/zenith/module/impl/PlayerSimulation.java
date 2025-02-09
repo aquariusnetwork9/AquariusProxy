@@ -1,19 +1,15 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
+import com.zenith.Proxy;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.event.module.ClientBotTick;
-import com.zenith.feature.world.Input;
-import com.zenith.feature.world.InputRequest;
-import com.zenith.feature.world.PlayerInteractionManager;
-import com.zenith.feature.world.World;
-import com.zenith.feature.world.raycast.BlockOrEntityRaycastResult;
-import com.zenith.feature.world.raycast.RaycastHelper;
+import com.zenith.feature.world.*;
 import com.zenith.mc.block.*;
 import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.mc.entity.EntityData;
 import com.zenith.module.Module;
-import com.zenith.util.Timer;
 import com.zenith.util.math.MathHelper;
 import com.zenith.util.math.MutableVec3d;
 import lombok.Getter;
@@ -30,6 +26,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerState;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundExplodePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundClientTickEndPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClosePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundAcceptTeleportationPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundPlayerInputPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.*;
@@ -68,8 +65,8 @@ public class PlayerSimulation extends Module {
     private final MutableVec3d stuckSpeedMultiplier = new MutableVec3d(0, 0, 0);
     @Getter private final MutableVec3d velocity = new MutableVec3d(0, 0, 0);
     private boolean wasLeftClicking = false;
-    private final Timer entityAttackTimer = Timer.createTickTimer();
     private final Input movementInput = Input.builder().build();
+    private InputRequestFuture inputRequestFuture = InputRequestFuture.rejected;
     private Input lastSentMovementInput = new Input(movementInput);
     private int waitTicks = 0;
     private static final CollisionBox STANDING_COLLISION_BOX = new CollisionBox(-0.3, 0.3, 0, 1.8, -0.3, 0.3);
@@ -91,14 +88,13 @@ public class PlayerSimulation extends Module {
     @Getter private final PlayerInteractionManager interactions = new PlayerInteractionManager(this);
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             // we want this to be one of the last thing that happens in the tick
             // to allow other modules to update the player's input
             // other modules can also do actions after this tick by setting an even lower priority
             of(ClientBotTick.class, -20000, this::tick),
-            of(ClientBotTick.class, -1000000, this::tickEnd),
+            of(ClientBotTick.class, -30000, this::postTick),
             of(ClientBotTick.Starting.class, this::handleClientTickStarting),
             of(ClientBotTick.Stopped.class, this::handleClientTickStopped)
         );
@@ -137,72 +133,79 @@ public class PlayerSimulation extends Module {
         return this.yaw + difference;
     }
 
-    public synchronized void doMovement(final InputRequest request) {
+    public synchronized void doMovement(final InputRequest request, final InputRequestFuture inputRequestFuture) {
         request.input().ifPresent(this.movementInput::apply);
         if (request.yaw().isPresent() || request.pitch().isPresent()) {
             doRotate(request.yaw().orElse(this.yaw), request.pitch().orElse(this.pitch));
         }
+        this.inputRequestFuture = inputRequestFuture;
     }
 
     private void interactionTick() {
         try {
             if (movementInput.isLeftClick()) {
-                BlockOrEntityRaycastResult raycast = switch (movementInput.clickOptions.target()) {
-                    case BLOCK_OR_ENTITY -> RaycastHelper.playerBlockOrEntityRaycast(getBlockReachDistance(), getEntityInteractDistance());
-                    case BLOCK -> BlockOrEntityRaycastResult.wrap(RaycastHelper.playerBlockRaycast(getBlockReachDistance(), false));
-                    case ENTITY -> BlockOrEntityRaycastResult.wrap(RaycastHelper.playerEntityRaycast(getEntityInteractDistance()));
-                };
+                var raycast = movementInput.clickTarget.apply(getBlockReachDistance(), getEntityInteractDistance());
                 if (raycast.hit() && raycast.isBlock()) {
+                    int blockX = raycast.block().x();
+                    int blockY = raycast.block().y();
+                    int blockZ = raycast.block().z();
                     if (!wasLeftClicking && !interactions.isDestroying()) {
-                        debug("Starting destroy block at: [{}, {}, {}]", raycast.block().x(), raycast.block().y(), raycast.block().z());
+                        debug("Starting destroy block at: [{}, {}, {}]", blockX, blockY, blockZ);
                         interactions.startDestroyBlock(
-                            MathHelper.floorI(raycast.block().x()),
-                            MathHelper.floorI(raycast.block().y()),
-                            MathHelper.floorI(raycast.block().z()),
+                            MathHelper.floorI(blockX),
+                            MathHelper.floorI(blockY),
+                            MathHelper.floorI(blockZ),
                             raycast.block().direction());
                         sendClientPacketAsync(new ServerboundSwingPacket(Hand.MAIN_HAND));
                         wasLeftClicking = true;
-                    }
-//                    debug("Continue destroy block at: [{}, {}, {}]", raycast.block().x(), raycast.block().y(), raycast.block().z());
-                    if (interactions.continueDestroyBlock(
-                        MathHelper.floorI(raycast.block().x()),
-                        MathHelper.floorI(raycast.block().y()),
-                        MathHelper.floorI(raycast.block().z()),
-                        raycast.block().direction())) {
-                        sendClientPacketAsync(new ServerboundSwingPacket(Hand.MAIN_HAND));
-                        wasLeftClicking = true;
+                        inputRequestFuture.setClickResult(ClickResult.LeftClickResult.startDestroyBlock(blockX, blockY, blockZ, raycast.block().block()));
+                        return;
+                    } else {
+                        if (interactions.continueDestroyBlock(
+                            MathHelper.floorI(blockX),
+                            MathHelper.floorI(blockY),
+                            MathHelper.floorI(blockZ),
+                            raycast.block().direction())) {
+                            sendClientPacketAsync(new ServerboundSwingPacket(Hand.MAIN_HAND));
+                            wasLeftClicking = true;
+                        } else {
+                            // we could not continue breaking this block for some reason
+                            wasLeftClicking = false;
+                            interactions.stopDestroyBlock();
+                            sendClientPacketAsync(new ServerboundSwingPacket(Hand.MAIN_HAND));
+                        }
+                        inputRequestFuture.setClickResult(ClickResult.LeftClickResult.continueDestroyBlock(blockX, blockY, blockZ, raycast.block().block()));
                         return;
                     }
-                    wasLeftClicking = false;
-                } else if (raycast.hit() && raycast.isEntity() && raycast.entity().entityData().attackable() && entityAttackTimer.tick(CONFIG.client.extra.killAura.attackDelayTicks)) {
-                    // todo: reduce entity raycast range to 3.5
-                    var rangeSq = Math.pow(CONFIG.client.extra.killAura.attackRange, 2);
-                    double distanceSqToSelf = CACHE.getPlayerCache().distanceSqToSelf(raycast.entity().entity());
-                    if (distanceSqToSelf <= rangeSq) {
-                        debug("Click attacking entity: {} [{}, {}, {}]", raycast.entity().entity().getEntityType(), raycast.entity().entity().getX(), raycast.entity().entity().getY(), raycast.entity().entity().getZ());
-                        interactions.attackEntity(raycast.entity());
-                    }
+                } else if (raycast.hit() && raycast.isEntity() && raycast.entity().entityData().attackable()) {
+                    debug("Click attacking entity: {} [{}, {}, {}]", raycast.entity().entity().getEntityType(), raycast.entity().entity().getX(), raycast.entity().entity().getY(), raycast.entity().entity().getZ());
+                    interactions.attackEntity(raycast.entity());
+                    sendClientPacketAsync(new ServerboundSwingPacket(Hand.MAIN_HAND));
+                    inputRequestFuture.setClickResult(ClickResult.LeftClickResult.attackEntity(raycast.entity().entity()));
+                } else {
+                    debug("Left click swing");
+                    sendClientPacketAsync(new ServerboundSwingPacket(Hand.MAIN_HAND));
+                    inputRequestFuture.setClickResult(ClickResult.LeftClickResult.swing());
                 }
             } else if (movementInput.isRightClick()) {
-                BlockOrEntityRaycastResult raycast = switch (movementInput.clickOptions.target()) {
-                    case BLOCK_OR_ENTITY -> RaycastHelper.playerBlockOrEntityRaycast(getBlockReachDistance(), getEntityInteractDistance());
-                    case BLOCK -> BlockOrEntityRaycastResult.wrap(RaycastHelper.playerBlockRaycast(getBlockReachDistance(), false));
-                    case ENTITY -> BlockOrEntityRaycastResult.wrap(RaycastHelper.playerEntityRaycast(getEntityInteractDistance()));
-                };
-                Hand hand = movementInput.clickOptions.hand();
+                var raycast = movementInput.clickTarget.apply(getBlockReachDistance(), getEntityInteractDistance());
+                Hand hand = movementInput.hand;
                 if (raycast.hit() && raycast.isBlock()) {
                     debug("Right click {} block at: [{}, {}, {}]", hand, raycast.block().x(), raycast.block().y(), raycast.block().z());
                     interactions.useItemOn(hand, raycast.block());
                     sendClientPacketAsync(new ServerboundSwingPacket(hand));
+                    inputRequestFuture.setClickResult(ClickResult.RightClickResult.useItemOnBlock(raycast.block().x(), raycast.block().y(), raycast.block().z(), raycast.block().block()));
                 } else if (raycast.hit() && raycast.isEntity()) {
                     debug("Right click {} entity: {} [{}, {}, {}]", hand, raycast.entity().entity().getEntityType(), raycast.entity().entity().getX(), raycast.entity().entity().getY(), raycast.entity().entity().getZ());
                     interactions.interactAt(hand, raycast.entity());
                     interactions.interact(hand, raycast.entity());
                     sendClientPacketAsync(new ServerboundSwingPacket(hand));
-                } else if (!raycast.hit()) {
+                    inputRequestFuture.setClickResult(ClickResult.RightClickResult.useItemOnEntity(raycast.entity().entity()));
+                } else {
                     debug("Right click {} use item", hand);
                     interactions.useItem(hand);
                     sendClientPacketAsync(new ServerboundSwingPacket(hand));
+                    inputRequestFuture.setClickResult(ClickResult.RightClickResult.useItem());
                 }
             }
             interactions.stopDestroyBlock();
@@ -212,15 +215,26 @@ public class PlayerSimulation extends Module {
         }
     }
 
+    /**
+     * rationale: all inventory actions assume no container is open
+     * the id's are shifted and we have no handling for that
+     * will also cause issues for modules as the player should not be able to
+     * do many actions like moving
+     */
+    private void closeOpenContainers() {
+        var openContainerId = CACHE.getPlayerCache().getInventoryCache().getOpenContainerId();
+        if (openContainerId == 0) return;
+        Proxy.getInstance().getClient().sendAwait(new ServerboundContainerClosePacket(openContainerId));
+    }
+
     private synchronized void tick(final ClientBotTick event) {
         if (this.jumpingCooldown > 0) --this.jumpingCooldown;
         if (!CACHE.getChunkCache().isChunkLoaded((int) x >> 4, (int) z >> 4)) return;
         if (waitTicks-- > 0) return;
         if (waitTicks < 0) waitTicks = 0;
+        closeOpenContainers();
 
         if (resyncTeleport()) return;
-
-        interactionTick();
 
         if (Math.abs(velocity.getX()) < 0.003) velocity.setX(0);
         if (Math.abs(velocity.getY()) < 0.003) velocity.setY(0);
@@ -335,11 +349,14 @@ public class PlayerSimulation extends Module {
             this.wasSneaking = this.isSneaking;
             this.lastSprinting = this.isSprinting;
         }
-        this.movementInput.reset();
         tickEntityPushing();
+        interactionTick();
+        this.movementInput.reset();
     }
 
-    private void tickEnd(ClientBotTick event) {
+    private void postTick(ClientBotTick event) {
+        this.inputRequestFuture.notifyListeners();
+        this.inputRequestFuture = InputRequestFuture.rejected;
         sendClientPacket(ServerboundClientTickEndPacket.INSTANCE);
     }
 
