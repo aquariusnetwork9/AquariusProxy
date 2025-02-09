@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.event.proxy.PlayerLoginEvent;
 import com.zenith.event.proxy.ServerConnectionRemovedEvent;
 import com.zenith.feature.actionlimiter.handlers.inbound.*;
@@ -26,8 +27,11 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.S
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundMoveVehiclePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.*;
 
+import java.util.List;
+
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Shared.CACHE;
+import static com.zenith.Shared.CONFIG;
 
 public class ActionLimiter extends Module {
     private PacketHandlerCodec codec;
@@ -65,10 +69,10 @@ public class ActionLimiter extends Module {
     }
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(this,
-                            of(PlayerLoginEvent.class, this::onPlayerLoginEvent),
-                            of(ServerConnectionRemovedEvent.class, this::onServerConnectionRemoved)
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
+            of(PlayerLoginEvent.class, this::onPlayerLoginEvent),
+            of(ServerConnectionRemovedEvent.class, this::onServerConnectionRemoved)
         );
     }
 

@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
 import com.zenith.event.proxy.ServerPlayerConnectedEvent;
 import com.zenith.event.proxy.ServerPlayerDisconnectedEvent;
@@ -19,9 +20,10 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.Clientbound
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandSignedPacket;
 
+import java.util.List;
+
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.EVENT_BUS;
 import static java.util.Objects.nonNull;
 
 public class ExtraChat extends Module {
@@ -43,9 +45,8 @@ public class ExtraChat extends Module {
     }
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(ServerPlayerConnectedEvent.class, this::handleServerPlayerConnected),
             of(ServerPlayerDisconnectedEvent.class, this::handleServerPlayerDisconnected)
         );

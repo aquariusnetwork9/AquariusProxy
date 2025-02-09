@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.google.common.collect.Sets;
 import com.zenith.Proxy;
 import com.zenith.event.proxy.AutoReconnectEvent;
@@ -10,6 +11,7 @@ import com.zenith.util.Wait;
 import org.geysermc.mcprotocollib.protocol.MinecraftConstants;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Future;
 
@@ -20,9 +22,8 @@ public class AutoReconnect extends Module {
     private @Nullable Future<?> autoReconnectFuture;
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(DisconnectEvent.class, this::handleDisconnectEvent),
             of(ConnectEvent.class, this::handleConnectEvent)
         );

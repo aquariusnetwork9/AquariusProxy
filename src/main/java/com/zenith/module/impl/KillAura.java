@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.cache.data.entity.EntityPlayer;
@@ -16,6 +17,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 
 import javax.annotation.Nullable;
 import java.lang.ref.WeakReference;
+import java.util.List;
 import java.util.Set;
 
 import static com.github.rfresh2.EventConsumer.of;
@@ -62,9 +64,8 @@ public class KillAura extends AbstractInventoryModule {
     }
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(ClientBotTick.class, this::handleClientTick),
             of(ClientBotTick.Stopped.class, this::handleBotTickStopped)
         );

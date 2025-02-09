@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
 import com.zenith.event.module.AutoEatOutOfFoodEvent;
 import com.zenith.event.module.ClientBotTick;
@@ -13,6 +14,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
@@ -28,9 +30,8 @@ public class AutoEat extends AbstractInventoryModule {
     }
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(ClientBotTick.class, this::handleClientTick),
             of(ClientBotTick.Starting.class, this::handleBotTickStarting)
         );

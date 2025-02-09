@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
 import com.zenith.event.module.PlayerHealthChangedEvent;
 import com.zenith.event.module.WeatherChangeEvent;
@@ -8,6 +9,8 @@ import com.zenith.event.proxy.NewPlayerInVisualRangeEvent;
 import com.zenith.event.proxy.ProxyClientDisconnectedEvent;
 import com.zenith.event.proxy.TotemPopEvent;
 import com.zenith.module.Module;
+
+import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
@@ -21,9 +24,8 @@ public class AutoDisconnect extends Module {
     }
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(PlayerHealthChangedEvent.class, this::handleLowPlayerHealthEvent),
             of(WeatherChangeEvent.class, this::handleWeatherChangeEvent),
             of(ProxyClientDisconnectedEvent.class, this::handleProxyClientDisconnectedEvent),

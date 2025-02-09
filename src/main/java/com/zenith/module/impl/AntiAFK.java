@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.google.common.collect.Iterators;
 import com.zenith.event.module.ClientBotTick;
 import com.zenith.event.proxy.DeathEvent;
@@ -37,9 +38,8 @@ public class AntiAFK extends Module {
     public static final int MOVEMENT_PRIORITY = 100;
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(ClientBotTick.class, this::handleClientTickEvent),
             of(ClientBotTick.Starting.class, this::handleClientBotTickStarting),
             of(ClientBotTick.Stopped.class, this::handleClientBotTickStopped),

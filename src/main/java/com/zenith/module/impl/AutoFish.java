@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityStandard;
 import com.zenith.cache.data.inventory.Container;
@@ -19,6 +20,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 
 import java.time.Instant;
+import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
@@ -36,9 +38,8 @@ public class AutoFish extends AbstractInventoryModule {
     }
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(EntityFishHookSpawnEvent.class, this::handleEntityFishHookSpawnEvent),
             of(SplashSoundEffectEvent.class, this::handleSplashSoundEffectEvent),
             of(ClientBotTick.class, this::handleClientTick),

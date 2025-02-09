@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.event.module.ClientTickEvent;
 import com.zenith.event.module.PlayerHealthChangedEvent;
 import com.zenith.event.module.ReplayStartedEvent;
@@ -21,6 +22,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
@@ -41,9 +43,8 @@ public class ReplayMod extends Module {
     }
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(DisconnectEvent.class, this::onDisconnectEvent),
             of(ClientTickEvent.class, this::onClientTick),
             of(ProxyClientDisconnectedEvent.class, this::handleProxyClientDisconnectedEvent)

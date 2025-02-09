@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.cache.data.entity.EntityPlayer;
@@ -85,9 +86,8 @@ public class PlayerSimulation extends Module {
     @Getter private final PlayerInteractionManager interactions = new PlayerInteractionManager(this);
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             // we want this to be one of the last thing that happens in the tick
             // to allow other modules to update the player's input
             // other modules can also do actions after this tick by setting an even lower priority

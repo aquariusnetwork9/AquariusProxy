@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.event.module.VisualRangeEnterEvent;
@@ -12,6 +13,7 @@ import com.zenith.module.Module;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandPacket;
 
 import java.time.Instant;
+import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
@@ -21,9 +23,8 @@ public class VisualRange extends Module {
     private Instant lastWhisper = Instant.EPOCH;
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(NewPlayerInVisualRangeEvent.class, this::handleNewPlayerInVisualRangeEvent),
             of(PlayerLeftVisualRangeEvent.class, this::handlePlayerLeftVisualRangeEvent),
             of(PlayerLogoutInVisualRangeEvent.class, this::handlePlayerLogoutInVisualRangeEvent),

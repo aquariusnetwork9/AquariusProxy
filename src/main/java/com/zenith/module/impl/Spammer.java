@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
 import com.zenith.event.module.ClientTickEvent;
 import com.zenith.module.Module;
@@ -10,10 +11,12 @@ import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.HashSet;
+import java.util.List;
 import java.util.UUID;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Shared.CACHE;
+import static com.zenith.Shared.CONFIG;
 
 public class Spammer extends Module {
     private final Timer tickTimer = Timer.createTickTimer();
@@ -21,9 +24,8 @@ public class Spammer extends Module {
     private final HashSet<String> whisperedPlayers = new HashSet<>();
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(ClientTickEvent.class, this::handleClientTickEvent),
             of(ClientTickEvent.Starting.class, this::clientTickStarting)
         );

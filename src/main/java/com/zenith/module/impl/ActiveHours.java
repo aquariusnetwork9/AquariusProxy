@@ -20,9 +20,6 @@ public class ActiveHours extends Module {
     private Instant lastActiveHoursConnect = Instant.EPOCH;
 
     @Override
-    public void subscribeEvents() {}
-
-    @Override
     public boolean enabledSetting() {
         return CONFIG.client.extra.utility.actions.activeHours.enabled;
     }

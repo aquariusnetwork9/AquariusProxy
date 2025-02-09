@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.event.proxy.DisconnectEvent;
 import com.zenith.event.proxy.ProxyClientLoggedInEvent;
 import com.zenith.event.proxy.ProxySpectatorLoggedInEvent;
@@ -13,19 +14,18 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.Clientbound
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Queue;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.EVENT_BUS;
 
 public class ChatHistory extends Module {
     private Queue<StoredChat> chatHistory = new CircularFifoQueue<>(CONFIG.server.extra.chatHistory.maxCount);
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(PublicChatEvent.class, this::handlePublicChat),
             of(WhisperChatEvent.class, this::handleWhisperChat),
             of(SystemChatEvent.class, this::handleSystemChat),

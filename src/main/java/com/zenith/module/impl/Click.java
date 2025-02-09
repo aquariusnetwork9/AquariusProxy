@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.event.module.ClientBotTick;
 import com.zenith.feature.world.Input;
 import com.zenith.feature.world.InputRequest;
@@ -7,8 +8,11 @@ import com.zenith.module.Module;
 import com.zenith.util.Timer;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 
+import java.util.List;
+
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Shared.CONFIG;
+import static com.zenith.Shared.INPUTS;
 
 public class Click extends Module {
 
@@ -18,9 +22,8 @@ public class Click extends Module {
     private Hand holdRightClickLastHand = Hand.MAIN_HAND;
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(ClientBotTick.class, this::onClientBotTick)
         );
     }

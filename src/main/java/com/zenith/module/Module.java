@@ -1,9 +1,13 @@
 package com.zenith.module;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
 import com.zenith.network.client.ClientSession;
 import lombok.Getter;
 import org.geysermc.mcprotocollib.network.packet.Packet;
+
+import java.util.Collections;
+import java.util.List;
 
 import static com.zenith.Shared.EVENT_BUS;
 import static com.zenith.Shared.MODULE_LOG;
@@ -30,7 +34,7 @@ public abstract class Module {
     public synchronized void disable() {
         if (enabled) {
             enabled = false;
-            EVENT_BUS.unsubscribe(this);
+            unsubscribeEvents();
             onDisable();
         }
     }
@@ -51,7 +55,17 @@ public abstract class Module {
 
     public void onDisable() { }
 
-    public abstract void subscribeEvents();
+    public void subscribeEvents() {
+        EVENT_BUS.subscribe(this, registerEvents().toArray(new EventConsumer[0]));
+    }
+
+    public List<EventConsumer<?>> registerEvents() {
+        return Collections.emptyList();
+    }
+
+    public void unsubscribeEvents() {
+        EVENT_BUS.unsubscribe(this);
+    }
 
     public abstract boolean enabledSetting();
 

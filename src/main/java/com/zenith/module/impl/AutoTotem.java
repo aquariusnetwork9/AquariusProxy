@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
 import com.zenith.cache.data.inventory.Container;
 import com.zenith.event.module.ClientBotTick;
@@ -34,9 +35,8 @@ public class AutoTotem extends AbstractInventoryModule {
     }
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(ClientBotTick.class, this::handleClientBotTick),
             of(ClientBotTick.Starting.class, this::handleBotTickStarting),
             of(TotemPopEvent.class, this::onTotemPopEvent),
