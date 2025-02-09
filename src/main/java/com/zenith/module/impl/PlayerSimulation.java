@@ -47,6 +47,8 @@ public class PlayerSimulation extends Module {
     private double lastZ;
     @Getter private float yaw;
     @Getter private float pitch;
+    private float requestedYaw;
+    private float requestedPitch;
     private float lastYaw;
     private float lastPitch;
     @Getter private boolean onGround;
@@ -65,7 +67,7 @@ public class PlayerSimulation extends Module {
     private final MutableVec3d stuckSpeedMultiplier = new MutableVec3d(0, 0, 0);
     @Getter private final MutableVec3d velocity = new MutableVec3d(0, 0, 0);
     private boolean wasLeftClicking = false;
-    private final Input movementInput = Input.builder().build();
+    private final Input movementInput = new Input();
     private InputRequestFuture inputRequestFuture = InputRequestFuture.rejected;
     private Input lastSentMovementInput = new Input(movementInput);
     private int waitTicks = 0;
@@ -118,12 +120,12 @@ public class PlayerSimulation extends Module {
         }
     }
 
-    public void doRotate(float yaw, float pitch) {
+    public void requestRotation(float yaw, float pitch) {
         yaw = shortestRotation(yaw);
         pitch = MathHelper.clamp(pitch, -90.0F, 90.0F);
         pitch = ((int) (pitch * 10.0f)) / 10.0f; // always clamp pitch to 1 decimal place to avoid flagging for very small adjustments
-        this.yaw = yaw;
-        this.pitch = pitch;
+        this.requestedYaw = yaw;
+        this.requestedPitch = pitch;
     }
 
     public float shortestRotation(float targetYaw) {
@@ -133,16 +135,23 @@ public class PlayerSimulation extends Module {
         return this.yaw + difference;
     }
 
-    public synchronized void doMovement(final InputRequest request, final InputRequestFuture inputRequestFuture) {
+    public synchronized void requestMovement(final InputRequest request, final InputRequestFuture inputRequestFuture) {
         request.input().ifPresent(this.movementInput::apply);
         if (request.yaw().isPresent() || request.pitch().isPresent()) {
-            doRotate(request.yaw().orElse(this.yaw), request.pitch().orElse(this.pitch));
+            requestRotation(request.yaw().orElse(this.yaw), request.pitch().orElse(this.pitch));
         }
         this.inputRequestFuture = inputRequestFuture;
     }
 
     private void interactionTick() {
         try {
+            if (movementInput.clickRequiresRotation) {
+                if (!MathHelper.isYawInRange(requestedYaw, yaw, 0.1f) || !MathHelper.isPitchInRange(requestedPitch, pitch, 0.1f)) {
+                    interactions.stopDestroyBlock();
+                    wasLeftClicking = false;
+                    return;
+                }
+            }
             if (movementInput.isLeftClick()) {
                 var raycast = movementInput.clickTarget.apply(getBlockReachDistance(), getEntityInteractDistance());
                 if (raycast.hit() && raycast.isBlock()) {
@@ -233,8 +242,12 @@ public class PlayerSimulation extends Module {
         if (waitTicks-- > 0) return;
         if (waitTicks < 0) waitTicks = 0;
         closeOpenContainers();
-
         if (resyncTeleport()) return;
+
+        interactionTick();
+
+        this.yaw = requestedYaw;
+        this.pitch = requestedPitch;
 
         if (Math.abs(velocity.getX()) < 0.003) velocity.setX(0);
         if (Math.abs(velocity.getY()) < 0.003) velocity.setY(0);
@@ -350,7 +363,6 @@ public class PlayerSimulation extends Module {
             this.lastSprinting = this.isSprinting;
         }
         tickEntityPushing();
-        interactionTick();
         this.movementInput.reset();
     }
 

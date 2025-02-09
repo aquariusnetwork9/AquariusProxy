@@ -36,7 +36,7 @@ public interface ClickResult {
         private final Entity entity;
         private final LeftClickType type;
 
-        enum LeftClickType {
+        public enum LeftClickType {
             START_DESTROY_BLOCK,
             CONTINUE_DESTROY_BLOCK,
             ATTACK_ENTITY,
@@ -70,7 +70,7 @@ public interface ClickResult {
         private final Entity entity;
         private final RightClickType type;
 
-        enum RightClickType {
+        public enum RightClickType {
             USE_ITEM_ON_BLOCK,
             USE_ITEM_ON_ENTITY,
             USE_ITEM
