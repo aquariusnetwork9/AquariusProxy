@@ -28,12 +28,14 @@ public class WhitelistCommand extends Command {
             Manages the list of players allowed to login.
             
             Whitelisted players are allowed to both control the account in-game and spectate.
+            
+            `autoAddZenithAccount` will add the MC account you have logged in Zenith with to the whitelist.
             """,
             asList(
                 "add/del <player>",
                 "list",
                 "clear",
-                "autoAddClient on/off"
+                "autoAddZenithAccount on/off"
             ),
             asList("wl")
         );
@@ -70,11 +72,11 @@ public class WhitelistCommand extends Command {
                     Proxy.getInstance().kickNonWhitelistedPlayers();
                     return 1;
                 }))
-            .then(literal("autoAddClient").requires(Command::validateAccountOwner)
+            .then(literal("autoAddZenithAccount").requires(Command::validateAccountOwner)
                       .then(argument("toggle", toggle()).executes(c -> {
                           CONFIG.server.extra.whitelist.autoAddClient = getToggle(c, "toggle");
                           c.getSource().getEmbed()
-                              .title("Auto Add Client " + toggleStrCaps(CONFIG.server.extra.whitelist.autoAddClient));
+                              .title("Auto Add Zenith Account " + toggleStrCaps(CONFIG.server.extra.whitelist.autoAddClient));
                           return 1;
                       })));
     }
@@ -83,7 +85,7 @@ public class WhitelistCommand extends Command {
     public void postPopulate(final Embed builder) {
         builder
             .description(playerListToString(PLAYER_LISTS.getWhitelist()))
-            .addField("Auto Add Client", toggleStr(CONFIG.server.extra.whitelist.autoAddClient), false)
+            .addField("Auto Add Zenith Account", toggleStr(CONFIG.server.extra.whitelist.autoAddClient), false)
             .primaryColor();
     }
 }

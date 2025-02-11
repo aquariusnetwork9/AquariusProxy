@@ -23,7 +23,7 @@ public class ESPCommand extends Command {
         return CommandUsage.args(
             "esp",
             CommandCategory.MODULE,
-            "Manages the entity ESP module",
+            "Renders the spectral effect around all entities",
             asList(
                 "on/off"
             )

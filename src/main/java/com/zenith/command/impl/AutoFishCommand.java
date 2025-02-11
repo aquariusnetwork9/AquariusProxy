@@ -28,7 +28,6 @@ public class AutoFishCommand extends Command {
                                  """,
                                  asList(
                                      "on/off",
-                                     "castDelay <ticks>",
                                      "rotation <yaw> <pitch>",
                                      "rotation sync"
                                  ));
@@ -44,13 +43,6 @@ public class AutoFishCommand extends Command {
                     .title("AutoFish " + toggleStr(CONFIG.client.extra.autoFish.enabled));
                 return OK;
             }))
-            .then(literal("castDelay")
-                      .then(argument("delay", integer(0, 2000)).executes(c -> {
-                          CONFIG.client.extra.autoFish.castDelay = IntegerArgumentType.getInteger(c, "delay");
-                          c.getSource().getEmbed()
-                              .title("Cast Delay set to " + CONFIG.client.extra.autoFish.castDelay + " ticks");
-                          return OK;
-                      })))
             .then(literal("rotation")
                       .then(literal("sync").executes(c -> {
                           // normalize yaw and pitch to -180 to 180 and -90 to 90
@@ -73,7 +65,6 @@ public class AutoFishCommand extends Command {
     public void postPopulate(final Embed builder) {
         builder
             .addField("AutoFish", toggleStr(CONFIG.client.extra.autoFish.enabled), false)
-            .addField("Cast Delay", CONFIG.client.extra.autoFish.castDelay + " ticks", false)
             .addField("Yaw", CONFIG.client.extra.autoFish.yaw, false)
             .addField("Pitch", CONFIG.client.extra.autoFish.pitch, false)
             .primaryColor();
