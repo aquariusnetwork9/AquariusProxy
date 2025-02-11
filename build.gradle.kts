@@ -51,7 +51,7 @@ shade.extendsFrom(configurations.implementation.get())
 
 dependencies {
     implementation("com.github.rfresh2:JDA:5.3.3")
-    implementation("com.github.rfresh2:MCProtocolLib:1.21.0.29") {
+    implementation("com.github.rfresh2:MCProtocolLib:1.21.0.30") {
         exclude(group = "io.netty")
     }
     val nettyVersion = "4.1.118.Final"
@@ -203,7 +203,6 @@ tasks {
             exclude(dependency("org.slf4j:slf4j-api:.*"))
             exclude(dependency("ch.qos.logback:.*:.*"))
             exclude(dependency("org.jline:.*:.*"))
-            exclude(dependency("com.github.rfresh2.discord4j:discord4j-core:.*"))
             exclude(dependency("com.github.ben-manes.caffeine:caffeine:.*"))
             exclude(dependency("org.postgresql:postgresql:.*"))
             exclude(dependency("io.netty:netty-codec-http:.*"))
