@@ -417,12 +417,9 @@ public final class Config {
         public final PacketLog packetLog = new PacketLog();
         public final Server server = new Server();
         public boolean clearOldLogs = false;
-        public boolean binaryNbtComponentSerializer = true;
         public boolean kickDisconnect = false;
-        public boolean resyncTeleports = true;
         public boolean ncpStrictInventory = false;
         public boolean debugLogs = false;
-        public boolean enforcePlayerSpawnSequence = true;
 
         public static final class PacketLog {
             public boolean enabled = false;
@@ -534,7 +531,7 @@ public final class Config {
 
         public static final class Ping {
             public boolean enabled = true;
-            public boolean onlinePlayers = true;
+            public boolean onlinePlayers = false;
             public boolean onlinePlayerCount = true;
             public boolean favicon = true;
             public int maxPlayers = Integer.MAX_VALUE;
@@ -542,7 +539,7 @@ public final class Config {
             public boolean responseCaching = true;
             // could probably be increased 2-3x without issue
             public int responseCacheSeconds = 10;
-            public boolean logPings = false;
+            public boolean logPings = true;
         }
 
         public static final class ServerViaVersion {
