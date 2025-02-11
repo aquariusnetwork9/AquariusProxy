@@ -79,7 +79,7 @@ public class TerminalConsoleAppender extends ConsoleAppender<ILoggingEvent> {
             if (terminal != null) {
                 try {
                     terminal.close();
-                } catch (IOException e) {
+                } catch (Exception e) {
                     addStatus(new ErrorStatus("Failed to close terminal", this, e));
                 }
             }

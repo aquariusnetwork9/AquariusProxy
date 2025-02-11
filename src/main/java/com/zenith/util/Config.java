@@ -584,6 +584,7 @@ public final class Config {
         public boolean enable = true;
         public boolean logToDiscord = true;
         public boolean allowDumbTerminal = true;
+        public boolean alwaysOnCompletions = true;
     }
 
     public static final class InGameCommands {

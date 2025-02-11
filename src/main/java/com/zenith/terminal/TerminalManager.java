@@ -38,11 +38,16 @@ public class TerminalManager {
                 .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
                 .option(LineReader.Option.CASE_INSENSITIVE, true)
                 .option(LineReader.Option.INSERT_TAB, false)
+                .option(LineReader.Option.EMPTY_WORD_OPTIONS, false)
                 .completer(new TerminalCommandCompleter())
                 .build();
             // always show completions below prompt
-            var tailtip = new TailTipWidgets(lineReader, null, TailTipWidgets.TipType.COMPLETER);
-            tailtip.enable();
+            TailTipWidgets alwaysOnCompleter = new TailTipWidgets(lineReader, null, TailTipWidgets.TipType.COMPLETER);
+            if (!(terminal instanceof DumbTerminal) && CONFIG.interactiveTerminal.alwaysOnCompletions) {
+                alwaysOnCompleter.enable();
+            } else {
+                alwaysOnCompleter.disable();
+            }
             TerminalConsoleAppender.setReader(lineReader);
             var terminalThread = new Thread(interactiveRunnable, "ZenithProxy Terminal");
             terminalThread.setDaemon(true);
