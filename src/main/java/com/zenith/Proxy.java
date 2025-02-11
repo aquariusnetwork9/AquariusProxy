@@ -15,7 +15,6 @@ import com.zenith.feature.queue.Queue;
 import com.zenith.module.impl.AutoReconnect;
 import com.zenith.network.client.Authenticator;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.server.CustomServerInfoBuilder;
 import com.zenith.network.server.LanBroadcaster;
 import com.zenith.network.server.ProxyServerListener;
 import com.zenith.network.server.ServerSession;
@@ -37,7 +36,6 @@ import org.geysermc.mcprotocollib.network.tcp.TcpConnectionManager;
 import org.geysermc.mcprotocollib.network.tcp.TcpServer;
 import org.geysermc.mcprotocollib.protocol.MinecraftConstants;
 import org.geysermc.mcprotocollib.protocol.MinecraftProtocol;
-import org.geysermc.mcprotocollib.protocol.codec.MinecraftTypes;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundTabListPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundSetCarriedItemPacket;
@@ -156,7 +154,6 @@ public class Proxy {
             NotificationEventListener.INSTANCE.subscribeEvents();
             Queue.start();
             saveConfigAsync();
-            MinecraftTypes.useBinaryNbtComponentSerializer = CONFIG.debug.binaryNbtComponentSerializer;
             MinecraftConstants.CHUNK_SECTION_COUNT_PROVIDER = CACHE.getSectionCountProvider();
             if (CONFIG.client.viaversion.enabled || CONFIG.server.viaversion.enabled) {
                 VIA_INITIALIZER.init();
@@ -440,10 +437,8 @@ public class Proxy {
         SERVER_LOG.info("Starting server on {}:{}...", address, port);
         this.server = new TcpServer(address, port, MinecraftProtocol::new, tcpManager, (socketAddress) -> new ServerSession(socketAddress.getHostName(), socketAddress.getPort(), (MinecraftProtocol) server.createPacketProtocol(), server));
         this.server.setGlobalFlag(MinecraftConstants.SERVER_CHANNEL_INITIALIZER, ZenithServerChannelInitializer.FACTORY);
-        var serverInfoBuilder = new CustomServerInfoBuilder();
-        this.server.setGlobalFlag(MinecraftConstants.SERVER_INFO_BUILDER_KEY, serverInfoBuilder);
         if (this.lanBroadcaster == null && CONFIG.server.ping.lanBroadcast) {
-            this.lanBroadcaster = new LanBroadcaster(serverInfoBuilder);
+            this.lanBroadcaster = new LanBroadcaster();
             lanBroadcaster.start();
         }
         this.server.setGlobalFlag(MinecraftConstants.AUTOMATIC_KEEP_ALIVE_MANAGEMENT, true);

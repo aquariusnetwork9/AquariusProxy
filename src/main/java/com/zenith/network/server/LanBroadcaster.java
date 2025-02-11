@@ -2,7 +2,6 @@ package com.zenith.network.server;
 
 import com.google.common.base.Suppliers;
 import com.zenith.util.ComponentSerializer;
-import org.geysermc.mcprotocollib.protocol.data.status.handler.ServerInfoBuilder;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -18,7 +17,6 @@ import static com.zenith.Shared.*;
 public class LanBroadcaster {
 
     private ScheduledFuture<?> broadcastFuture;
-    private final ServerInfoBuilder serverInfoBuilder;
     private final AtomicInteger errorCount = new AtomicInteger(0);
     private DatagramSocket datagramSocket;
     private final Supplier<DatagramPacket> motdSupplier;
@@ -30,12 +28,11 @@ public class LanBroadcaster {
         }
     });
 
-    public LanBroadcaster(ServerInfoBuilder serverInfoBuilder) {
-        this.serverInfoBuilder = serverInfoBuilder;
+    public LanBroadcaster() {
         // micro-optimization to reduce cpu load
         this.motdSupplier = Suppliers.memoizeWithExpiration(() -> {
             try {
-                var serverStatusInfo = this.serverInfoBuilder.buildInfo(null);
+                var serverStatusInfo = ZenithServerInfoBuilder.INSTANCE.buildInfo(null);
                 if (serverStatusInfo != null) {
                     var bytes = ("[MOTD]" + stripLegacyFormatting(ComponentSerializer.serializePlain(serverStatusInfo.getDescription())) + "[/MOTD]"
                         + "[AD]" + CONFIG.server.bind.port + "[/AD]")

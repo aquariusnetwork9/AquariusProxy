@@ -3,6 +3,7 @@ package com.zenith.network.server;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.zenith.Proxy;
+import com.zenith.event.proxy.*;
 import com.zenith.feature.queue.Queue;
 import com.zenith.util.ComponentSerializer;
 import net.kyori.adventure.text.Component;
@@ -13,7 +14,6 @@ import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
 import org.geysermc.mcprotocollib.protocol.data.status.PlayerInfo;
 import org.geysermc.mcprotocollib.protocol.data.status.ServerStatusInfo;
 import org.geysermc.mcprotocollib.protocol.data.status.VersionInfo;
-import org.geysermc.mcprotocollib.protocol.data.status.handler.ServerInfoBuilder;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
@@ -21,17 +21,28 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.SERVER_LOG;
+import static com.github.rfresh2.EventConsumer.of;
+import static com.zenith.Shared.*;
 
-public class CustomServerInfoBuilder implements ServerInfoBuilder {
+public class ZenithServerInfoBuilder {
+    public static final ZenithServerInfoBuilder INSTANCE = new ZenithServerInfoBuilder();
 
     private final Cache<String, ServerStatusInfo> infoCache = CacheBuilder.newBuilder()
         .expireAfterWrite(Duration.ofSeconds(CONFIG.server.ping.responseCacheSeconds))
         .maximumSize(10)
         .build();
 
-    @Override
+    private ZenithServerInfoBuilder() {
+        EVENT_BUS.subscribe(
+            this,
+            of(ConnectEvent.class, e -> infoCache.invalidateAll()),
+            of(StartQueueEvent.class, e -> infoCache.invalidateAll()),
+            of(QueueCompleteEvent.class, e -> infoCache.invalidateAll()),
+            of(PlayerOnlineEvent.class, e -> infoCache.invalidateAll()),
+            of(DisconnectEvent.class, e -> infoCache.invalidateAll())
+        );
+    }
+
     public @Nullable ServerStatusInfo buildInfo(@Nullable Session session) {
         if (!CONFIG.server.ping.enabled) return null;
         if (CONFIG.server.ping.responseCaching) {
