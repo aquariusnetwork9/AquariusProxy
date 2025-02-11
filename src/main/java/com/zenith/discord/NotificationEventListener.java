@@ -13,18 +13,15 @@ import com.zenith.feature.deathmessages.KillerType;
 import com.zenith.feature.queue.Queue;
 import com.zenith.feature.world.World;
 import com.zenith.util.DisconnectReasonInfo;
-import discord4j.core.event.domain.interaction.ButtonInteractionEvent;
-import discord4j.core.event.domain.message.MessageCreateEvent;
-import discord4j.core.object.component.Button;
-import discord4j.core.object.entity.User;
-import discord4j.core.object.presence.ClientPresence;
-import discord4j.discordjson.json.EmbedData;
-import discord4j.discordjson.json.MessageData;
-import discord4j.rest.util.Color;
+import net.dv8tion.jda.api.OnlineStatus;
+import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import net.dv8tion.jda.api.utils.Color;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
-import org.reactivestreams.Publisher;
-import reactor.core.publisher.Mono;
 
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
@@ -33,7 +30,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.Function;
+import java.util.function.Consumer;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
@@ -46,9 +43,6 @@ import static java.util.Objects.nonNull;
 
 public class NotificationEventListener {
     public static final NotificationEventListener INSTANCE = new NotificationEventListener();
-
-    private NotificationEventListener() { }
-
     public void subscribeEvents() {
         if (EVENT_BUS.isSubscribed(this)) throw new RuntimeException("Event handlers already initialized");
         EVENT_BUS.subscribe(
@@ -108,7 +102,7 @@ public class NotificationEventListener {
         } else {
             sendEmbedMessage(embed);
         }
-        updatePresence(DISCORD.defaultConnectedPresence.get());
+        updatePresence();
     }
 
     public void handlePlayerOnlineEvent(PlayerOnlineEvent event) {
@@ -156,7 +150,7 @@ public class NotificationEventListener {
         } else {
             sendEmbedMessage(embed);
         }
-        EXECUTOR.execute(() -> updatePresence(DISCORD.disconnectedPresence));
+        EXECUTOR.execute(this::updatePresence);
     }
 
     private void handleQueueWarning(QueueWarningEvent event) {
@@ -167,7 +161,7 @@ public class NotificationEventListener {
     }
 
     public void handleQueuePositionUpdateEvent(QueuePositionUpdateEvent event) {
-        updatePresence(DISCORD.getQueuePresence());
+        updatePresence();
     }
 
     public void handleAutoEatOutOfFoodEvent(final AutoEatOutOfFoodEvent event) {
@@ -183,7 +177,7 @@ public class NotificationEventListener {
     }
 
     public void handleQueueCompleteEvent(QueueCompleteEvent event) {
-        updatePresence(DISCORD.defaultConnectedPresence.get());
+        updatePresence();
     }
 
     public void handleStartQueueEvent(StartQueueEvent event) {
@@ -202,7 +196,7 @@ public class NotificationEventListener {
         } else {
             sendEmbedMessage(embed);
         }
-        updatePresence(DISCORD.getQueuePresence());
+        updatePresence();
     }
 
     public void handleDeathEvent(DeathEvent event) {
@@ -286,7 +280,7 @@ public class NotificationEventListener {
     public void handleVisualRangeEnterEvent(VisualRangeEnterEvent event) {
         var embedCreateSpec = Embed.builder()
             .title("Player In Visual Range")
-            .color(event.isFriend() ? CONFIG.theme.success.discord() : CONFIG.theme.error.discord())
+            .color(event.isFriend() ? CONFIG.theme.success.color() : CONFIG.theme.error.color())
             .addField("Player Name", escape(event.playerEntry().getName()), true)
             .addField("Player UUID", ("[" + event.playerEntry().getProfileId() + "](https://namemc.com/profile/" + event.playerEntry().getProfileId() + ")"), true)
             .thumbnail(Proxy.getInstance().getAvatarURL(event.playerEntry().getProfileId()).toString());
@@ -300,23 +294,25 @@ public class NotificationEventListener {
         }
         final String buttonId = "addFriend" + ThreadLocalRandom.current().nextInt(1000000);
         final List<Button> buttons = asList(Button.primary(buttonId, "Add Friend"));
-        final Function<ButtonInteractionEvent, Publisher<Mono<?>>> mapper = e -> {
-            if (e.getCustomId().equals(buttonId)) {
-                DISCORD_LOG.info(e.getInteraction().getMember()
-                                     .map(User::getTag).orElse("Unknown")
-                                     + " added friend: " + event.playerEntry().getName() + " [" + event.playerEntry().getProfileId() + "]");
+        final Consumer<ButtonInteractionEvent> mapper = e -> {
+            if (e.getComponentId().equals(buttonId)) {
+                DISCORD_LOG.info("{} added friend: {} [{}]",
+                                 Optional.ofNullable(e.getInteraction().getMember())
+                                     .map(m -> m.getUser().getName())
+                                     .orElse("Unknown"),
+                                 event.playerEntry().getName(),
+                                 event.playerEntry().getProfileId());
                 PLAYER_LISTS.getFriendsList().add(event.playerEntry().getName());
-                e.reply().withEmbeds(Embed.builder()
+                e.replyEmbeds(Embed.builder()
                                          .title("Friend Added")
                                          .successColor()
                                          .addField("Player Name", escape(event.playerEntry().getName()), true)
                                          .addField("Player UUID", ("[" + event.playerEntry().getProfileId() + "](https://namemc.com/profile/" + event.playerEntry().getProfileId() + ")"), true)
                                          .thumbnail(Proxy.getInstance().getAvatarURL(event.playerEntry().getProfileId()).toString())
-                                         .toSpec())
-                    .block();
+                                         .toJDAEmbed())
+                    .complete();
                 saveConfigAsync();
             }
-            return Mono.empty();
         };
         if (CONFIG.client.extra.visualRange.enterAlertMention)
             if (!event.isFriend())
@@ -333,7 +329,7 @@ public class NotificationEventListener {
     public void handleVisualRangeLeaveEvent(final VisualRangeLeaveEvent event) {
         var embedCreateSpec = Embed.builder()
             .title("Player Left Visual Range")
-            .color(event.isFriend() ? CONFIG.theme.success.discord() : CONFIG.theme.error.discord())
+            .color(event.isFriend() ? CONFIG.theme.success.color() : CONFIG.theme.error.color())
             .addField("Player Name", escape(event.playerEntry().getName()), true)
             .addField("Player UUID", ("[" + event.playerEntity().getUuid() + "](https://namemc.com/profile/" + event.playerEntry().getProfileId() + ")"), true)
             .thumbnail(Proxy.getInstance().getAvatarURL(event.playerEntity().getUuid()).toString());
@@ -351,7 +347,7 @@ public class NotificationEventListener {
     public void handleVisualRangeLogoutEvent(final VisualRangeLogoutEvent event) {
         var embedCreateSpec = Embed.builder()
             .title("Player Logout In Visual Range")
-            .color(event.isFriend() ? CONFIG.theme.success.discord() : CONFIG.theme.error.discord())
+            .color(event.isFriend() ? CONFIG.theme.success.color() : CONFIG.theme.error.color())
             .addField("Player Name", escape(event.playerEntry().getName()), true)
             .addField("Player UUID", ("[" + event.playerEntity().getUuid() + "](https://namemc.com/profile/" + event.playerEntry().getProfileId() + ")"), true)
             .thumbnail(Proxy.getInstance().getAvatarURL(event.playerEntity().getUuid()).toString());
@@ -380,39 +376,36 @@ public class NotificationEventListener {
                 .thumbnail(Proxy.getInstance().getAvatarURL(event.gameProfile().getId()).toString());
             final String buttonId = "whitelist" + ThreadLocalRandom.current().nextInt(10000000);
             final List<Button> buttons = asList(Button.primary(buttonId, "Whitelist Player"));
-            final Function<ButtonInteractionEvent, Publisher<Mono<?>>> mapper = e -> {
-                if (e.getCustomId().equals(buttonId)) {
+            final Consumer<ButtonInteractionEvent> mapper = e -> {
+                if (e.getComponentId().equals(buttonId)) {
                     if (validateButtonInteractionEventFromAccountOwner(e)) {
                         DISCORD_LOG.info("{} whitelisted {} [{}]",
-                                         e.getInteraction().getMember()
-                                             .map(User::getTag).orElse("Unknown"),
+                                         Optional.ofNullable(e.getInteraction().getMember()).map(m -> m.getUser().getName()).orElse("Unknown"),
                                          event.gameProfile().getName(),
                                          event.gameProfile().getId().toString());
                         PLAYER_LISTS.getWhitelist().add(event.gameProfile().getName());
-                        e.reply().withEmbeds(Embed.builder()
+                        e.replyEmbeds(Embed.builder()
                                                  .title("Player Whitelisted")
                                                  .successColor()
                                                  .addField("Player Name", escape(event.gameProfile().getName()), true)
                                                  .addField("Player UUID", ("[" + event.gameProfile().getId().toString() + "](https://namemc.com/profile/" + event.gameProfile().getId().toString() + ")"), true)
                                                  .thumbnail(Proxy.getInstance().getAvatarURL(event.gameProfile().getId()).toString())
-                                                 .toSpec()).block();
+                                                 .toJDAEmbed()).complete();
                         saveConfigAsync();
                     } else {
                         DISCORD_LOG.error("{} attempted to whitelist {} [{}] but was not authorized to do so!",
-                                          e.getInteraction().getMember()
-                                              .map(User::getTag).orElse("Unknown"),
+                                          Optional.ofNullable(e.getInteraction().getMember()).map(m -> m.getUser().getName()).orElse("Unknown"),
                                           event.gameProfile().getName(),
                                           event.gameProfile().getId().toString());
-                        e.reply().withEmbeds(Embed.builder()
+                        e.replyEmbeds(Embed.builder()
                                                  .title("Not Authorized!")
                                                  .errorColor()
                                                  .addField("Error",
-                                                           "User: " + e.getInteraction().getMember().map(User::getTag).orElse("Unknown")
+                                                           "User: " + Optional.ofNullable(e.getInteraction().getMember()).map(m -> m.getUser().getName()).orElse("Unknown")
                                                                + " is not authorized to execute this command! Contact the account owner", true)
-                                                 .toSpec()).block();
+                                                 .toJDAEmbed()).complete();
                     }
                 }
-                return Mono.empty();
             };
             sendEmbedMessageWithButtons(embed, buttons, mapper, Duration.ofHours(1L));
         } else { // shouldn't be possible if verifyUsers is enabled
@@ -634,19 +627,19 @@ public class NotificationEventListener {
         if (!CONFIG.discord.chatRelay.sendMessages) return;
         if (!Proxy.getInstance().isConnected() || event.message().isEmpty()) return;
         // determine if this message is a reply
-        if (event.event().getMessage().getReferencedMessage().isPresent()) {
+        if (event.event().getMessage().getReferencedMessage() != null) {
             // we could do a bunch of if statements checking everything's in order and in expected format
             // ...or we could just throw an exception wherever it fails and catch it
             try {
-                final MessageData messageData = event.event().getMessage().getReferencedMessage().get().getData();
+                var messageData = event.event().getMessage().getReferencedMessage();
                 // abort if reply is not to a message sent by us
-                if (DISCORD.client.getSelfId().asLong() != messageData.author().id().asLong()) return;
-                final EmbedData embed = messageData.embeds().getFirst();
-                if (!embed.color().isAbsent() && embed.color().get().equals(PRIVATE_MESSAGE_EMBED_COLOR.getRGB())) {
+                if (DISCORD.jda.getSelfUser().getIdLong() != messageData.getAuthor().getIdLong()) return;
+                final MessageEmbed embed = messageData.getEmbeds().getFirst();
+                if (embed.getColor() != null && embed.getColor().getRGB() == PRIVATE_MESSAGE_EMBED_COLOR.getRGB()) {
                     // replying to private message
                     sendPrivateMessage(event.message(), event.event());
                 } else {
-                    final String sender = DISCORD.extractRelayEmbedSenderUsername(embed.color(), embed.description().get());
+                    final String sender = DISCORD.extractRelayEmbedSenderUsername(embed.getColor(), embed.getDescription());
                     boolean pm = false;
                     var connections = Proxy.getInstance().getActiveConnections().getArray();
                     for (int i = 0; i < connections.length; i++) {
@@ -670,12 +663,12 @@ public class NotificationEventListener {
                 Proxy.getInstance().getClient().sendAsync(new ServerboundChatPacket(event.message()));
             }
         }
-        DISCORD.lastRelaymessage = Optional.of(Instant.now());
+        DISCORD.lastRelayMessage = Optional.of(Instant.now());
     }
 
-    private void sendPrivateMessage(String message, MessageCreateEvent event) {
+    private void sendPrivateMessage(String message, MessageReceivedEvent event) {
         EVENT_BUS.postAsync(new PrivateMessageSendEvent(
-            event.getMessage().getAuthor().map(User::getTag).orElse("discord"),
+            event.getMessage().getAuthor().getName(),
             message));
     }
 
@@ -883,14 +876,17 @@ public class NotificationEventListener {
     public void sendRelayMessage(final String message) {
         DISCORD.sendRelayMessage(message);
     }
-    void sendEmbedMessageWithButtons(String message, Embed embed, List<Button> buttons, Function<ButtonInteractionEvent, Publisher<Mono<?>>> mapper, Duration timeout) {
+    void sendEmbedMessageWithButtons(String message, Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> mapper, Duration timeout) {
         DISCORD.sendEmbedMessageWithButtons(message, embed, buttons, mapper, timeout);
     }
-    void sendEmbedMessageWithButtons(Embed embed, List<Button> buttons, Function<ButtonInteractionEvent, Publisher<Mono<?>>> mapper, Duration timeout) {
+    void sendEmbedMessageWithButtons(Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> mapper, Duration timeout) {
         DISCORD.sendEmbedMessageWithButtons(embed, buttons, mapper, timeout);
     }
-    public void updatePresence(final ClientPresence presence) {
-        DISCORD.updatePresence(presence);
+    public void updatePresence(final OnlineStatus onlineStatus, final Activity activity) {
+        DISCORD.updatePresence(onlineStatus, activity);
+    }
+    public void updatePresence() {
+        DISCORD.updatePresence();
     }
     public void sendEmbedMessageWithFileAttachment(Embed embed) {
         DISCORD.sendEmbedMessageWithFileAttachment(embed);

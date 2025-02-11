@@ -12,14 +12,13 @@ import com.zenith.command.brigadier.DiscordCommandContext;
 import com.zenith.command.util.CommandErrorHandler;
 import com.zenith.discord.Embed;
 import com.zenith.network.server.ServerSession;
-import discord4j.common.util.Snowflake;
-import discord4j.core.event.domain.message.MessageCreateEvent;
-import discord4j.core.object.entity.User;
-import discord4j.core.util.MentionUtil;
+import com.zenith.util.MentionUtil;
+import net.dv8tion.jda.api.entities.ISnowflake;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Predicate;
 
@@ -83,23 +82,23 @@ public abstract class Command {
 
     private static boolean validateAccountOwnerDiscord(final CommandContext context) {
         final DiscordCommandContext discordCommandContext = (DiscordCommandContext) context;
-        final MessageCreateEvent event = discordCommandContext.getMessageCreateEvent();
-        final boolean hasAccountOwnerRole = event.getMember()
+        var event = discordCommandContext.getMessageReceivedEvent();
+        final boolean hasAccountOwnerRole = Optional.ofNullable(event.getMember())
             .orElseThrow(() -> new RuntimeException("Message does not have a valid member"))
-            .getRoleIds()
+            .getRoles()
             .stream()
-            .map(Snowflake::asString)
+            .map(ISnowflake::getId)
             .anyMatch(roleId -> roleId.equals(CONFIG.discord.accountOwnerRoleId));
         if (!hasAccountOwnerRole) {
             String accountOwnerRoleMention = "";
             try {
-                accountOwnerRoleMention = MentionUtil.forRole(Snowflake.of(CONFIG.discord.accountOwnerRoleId));
+                accountOwnerRoleMention = MentionUtil.forRole(CONFIG.discord.accountOwnerRoleId);
             } catch (final Exception e) {
                 // fall through
             }
             context.getEmbed()
                 .addField("Error",
-                          "User: " + event.getMember().map(User::getTag).orElse("Unknown")
+                          "User: " + Optional.ofNullable(event.getMember()).map(m -> m.getUser().getName()).orElse("Unknown")
                               + " is not authorized to execute this command! "
                               + "You must have the account owner role: " + accountOwnerRoleMention, false);
         }

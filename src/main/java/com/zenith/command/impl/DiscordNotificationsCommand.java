@@ -6,8 +6,7 @@ import com.zenith.command.CommandUsage;
 import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
 import com.zenith.discord.Embed;
-import discord4j.common.util.Snowflake;
-import discord4j.core.util.MentionUtil;
+import com.zenith.util.MentionUtil;
 
 import java.util.regex.Pattern;
 
@@ -60,7 +59,7 @@ public class DiscordNotificationsCommand extends Command {
                               roleStr = roleStr.substring(3, roleStr.length() - 1);
                           }
                           try {
-                              Snowflake.of(roleStr);
+                              Long.parseUnsignedLong(roleStr);
                               if (roleStr.length() < 5) throw new NumberFormatException();
                           } catch (final Exception e) {
                               c.getSource().getEmbed()
@@ -175,7 +174,7 @@ public class DiscordNotificationsCommand extends Command {
 
     private String getRoleMention(final String roleId) {
         try {
-            return MentionUtil.forRole(Snowflake.of(roleId));
+            return MentionUtil.forRole(roleId);
         } catch (final NumberFormatException e) {
             DISCORD_LOG.error("Unable to generate mention for role ID: {}", roleId, e);
             return "";

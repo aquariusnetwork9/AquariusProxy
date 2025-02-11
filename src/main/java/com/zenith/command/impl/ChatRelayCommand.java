@@ -7,8 +7,7 @@ import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
 import com.zenith.command.brigadier.CommandSource;
 import com.zenith.discord.Embed;
-import discord4j.common.util.Snowflake;
-import discord4j.core.util.MentionUtil;
+import com.zenith.util.MentionUtil;
 
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -79,7 +78,7 @@ public class ChatRelayCommand extends Command {
                 if (CHANNEL_ID_PATTERN.matcher(channelId).matches())
                     channelId = channelId.substring(2, channelId.length() - 1);
                 try {
-                    Snowflake.of(channelId);
+                    Long.parseUnsignedLong(channelId);
                 } catch (final Exception e) {
                     // invalid id
                     c.getSource().getEmbed()
@@ -196,7 +195,7 @@ public class ChatRelayCommand extends Command {
 
     private String getChannelMention(final String channelId) {
         try {
-            return MentionUtil.forChannel(Snowflake.of(channelId));
+            return MentionUtil.forChannel(channelId);
         } catch (final Exception e) {
             // these channels might be unset on purpose
             DEFAULT_LOG.debug("Invalid channel ID: {}", channelId, e);

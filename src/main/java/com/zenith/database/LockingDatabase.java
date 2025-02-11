@@ -127,9 +127,7 @@ public abstract class LockingDatabase extends Database {
         DATABASE_LOG.info("{} Database Lock Released", getLockKey());
         if (nonNull(queryExecutorFuture)) {
             queryExecutorFuture.cancel(true);
-            while (!queryExecutorFuture.isDone()) {
-                Wait.waitMs(50);
-            }
+            Wait.waitUntil(() -> queryExecutorFuture.isDone(), 5);
         }
     }
 
@@ -175,12 +173,15 @@ public abstract class LockingDatabase extends Database {
 
     public void tryLockProcess() {
         try {
+            if (redisClient.isShutDown()) {
+                redisClient.restart();
+            }
             if (redisRestarted.getAndSet(false)) {
                 releaseLock();
                 onLockReleased();
                 rLock = null;
             }
-            if (rLock == null || redisClient.isShutDown()) {
+            if (rLock == null) {
                 try {
                     rLock = redisClient.getLock(getLockKey());
                 } catch (final Exception e) {
@@ -226,6 +227,7 @@ public abstract class LockingDatabase extends Database {
                 redisClient.restart();
             }
             Wait.wait(30);
+            Wait.waitRandomMs(5000);
         }
     }
 

@@ -4,7 +4,7 @@ import java.nio.file.Files
 
 plugins {
     java
-    id("org.graalvm.buildtools.native") version "0.10.4"
+    id("org.graalvm.buildtools.native") version "0.10.5"
     id("com.gradleup.shadow") version "8.3.6"
     `maven-publish`
 }
@@ -50,13 +50,11 @@ val shade: Configuration by configurations.creating
 shade.extendsFrom(configurations.implementation.get())
 
 dependencies {
-    implementation("com.github.rfresh2.discord4j:discord4j-core:3.4.4.12") {
+    implementation("com.github.rfresh2:JDA:5.3.3")
+    implementation("com.github.rfresh2:MCProtocolLib:1.21.4.11") {
         exclude(group = "io.netty")
     }
-    implementation("com.github.rfresh2:MCProtocolLib:1.21.4.10") {
-        exclude(group = "io.netty")
-    }
-    val nettyVersion = "4.1.117.Final"
+    val nettyVersion = "4.1.118.Final"
     implementation("io.netty:netty-codec-haproxy:$nettyVersion")
     implementation("io.netty:netty-codec-dns:$nettyVersion")
     implementation("io.netty:netty-codec-http2:$nettyVersion")
@@ -205,7 +203,6 @@ tasks {
             exclude(dependency("org.slf4j:slf4j-api:.*"))
             exclude(dependency("ch.qos.logback:.*:.*"))
             exclude(dependency("org.jline:.*:.*"))
-            exclude(dependency("com.github.rfresh2.discord4j:discord4j-core:.*"))
             exclude(dependency("com.github.ben-manes.caffeine:caffeine:.*"))
             exclude(dependency("org.postgresql:postgresql:.*"))
             exclude(dependency("io.netty:netty-codec-http:.*"))

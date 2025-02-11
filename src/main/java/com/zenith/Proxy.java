@@ -318,10 +318,6 @@ public class Proxy {
                 stopServer();
                 tcpManager.close();
                 saveConfig();
-                int count = 0;
-                while (!DISCORD.isMessageQueueEmpty() && count++ < 10) {
-                    Wait.waitMs(100);
-                }
                 DISCORD.stop(true);
             }).get(10L, TimeUnit.SECONDS);
         } catch (final Exception e) {

@@ -7,13 +7,10 @@ import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
 import com.zenith.command.brigadier.CommandSource;
 import com.zenith.discord.Embed;
-import discord4j.common.util.Snowflake;
-import discord4j.core.DiscordClientBuilder;
-import discord4j.core.util.MentionUtil;
-import discord4j.gateway.intent.Intent;
-import discord4j.gateway.intent.IntentSet;
+import com.zenith.util.MentionUtil;
+import net.dv8tion.jda.api.JDABuilder;
+import net.dv8tion.jda.api.requests.GatewayIntent;
 
-import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -76,7 +73,7 @@ public class DiscordManageCommand extends Command {
                           if (CHANNEL_ID_PATTERN.matcher(channelId).matches())
                               channelId = channelId.substring(2, channelId.length() - 1);
                           try {
-                              Snowflake.of(channelId);
+                              Long.parseUnsignedLong(channelId);
                           } catch (final Exception e) {
                               // invalid id
                               c.getSource().getEmbed()
@@ -107,7 +104,7 @@ public class DiscordManageCommand extends Command {
                           if (CHANNEL_ID_PATTERN.matcher(channelId).matches())
                               channelId = channelId.substring(2, channelId.length() - 1);
                           try {
-                              Snowflake.of(channelId);
+                              Long.parseUnsignedLong(channelId);
                           } catch (final Exception e) {
                               // invalid id
                               c.getSource().getEmbed()
@@ -157,7 +154,7 @@ public class DiscordManageCommand extends Command {
                           c.getSource().setSensitiveInput(true);
                           var roleId = getString(c, "roleId");
                           try {
-                              Snowflake.of(roleId);
+                              Long.parseUnsignedLong(roleId);
                           } catch (final Exception e) {
                               // invalid id
                               c.getSource().getEmbed()
@@ -238,7 +235,7 @@ public class DiscordManageCommand extends Command {
             return "";
         }
         try {
-            return MentionUtil.forChannel(Snowflake.of(channelId));
+            return MentionUtil.forChannel(channelId);
         } catch (final Exception e) {
             // these channels might be unset on purpose
             DEFAULT_LOG.debug("Invalid channel ID: {}", channelId, e);
@@ -251,7 +248,7 @@ public class DiscordManageCommand extends Command {
             return "";
         }
         try {
-            return MentionUtil.forRole(Snowflake.of(roleId));
+            return MentionUtil.forRole(roleId);
         } catch (final NumberFormatException e) {
             DISCORD_LOG.error("Unable to generate mention for role ID: {}", roleId, e);
             return "";
@@ -277,15 +274,12 @@ public class DiscordManageCommand extends Command {
 
     private boolean validateToken(final String token) {
         try {
-            var builder = DiscordClientBuilder.create(token)
-                .build();
-            builder.gateway()
-                .setEnabledIntents((IntentSet.of(Intent.MESSAGE_CONTENT, Intent.GUILD_MESSAGES)));
-            builder
-                .login()
-                .block(Duration.ofSeconds(20))
-                .logout()
-                .block(Duration.ofSeconds(20));
+            JDABuilder
+                .createLight(token)
+                .setEnabledIntents(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MESSAGES)
+                .build()
+                .awaitReady()
+                .shutdownNow();
             return true;
         } catch (final Throwable e) {
             DISCORD_LOG.error("Failed validating discord token", e);

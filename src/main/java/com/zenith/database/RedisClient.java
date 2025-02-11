@@ -24,9 +24,6 @@ public class RedisClient {
 
     public RLock getLock(final String lockKey) {
         synchronized (this) {
-            if (isShutDown()) {
-                redissonClient = buildRedisClient();
-            }
             return redissonClient.getLock(lockKey);
         }
     }
@@ -36,7 +33,6 @@ public class RedisClient {
             try {
                 lock.unlock();
             } catch (final Throwable e) {
-                redissonClient.shutdown();
                 DATABASE_LOG.warn("Unlock threw exception", e);
             }
         }
@@ -56,7 +52,7 @@ public class RedisClient {
                 return;
             }
             lastRestart = Instant.now();
-            if (redissonClient != null) {
+            if (redissonClient != null && !isShutDown()) {
                 try {
                     redissonClient.shutdown();
                 } catch (final Throwable e) {

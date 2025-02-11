@@ -1,6 +1,5 @@
 package com.zenith.discord;
 
-import discord4j.core.spec.EmbedCreateFields;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -44,7 +43,7 @@ public class EmbedSerializer {
                             .clickEvent(ClickEvent.openUrl(embed.url()))
                             .hoverEvent(HoverEvent.showText(Component.text(embed.url()))));
         }
-        for (EmbedCreateFields.Field field : embed.fields()) {
+        for (var field : embed.fields()) {
             if (field.name().equals("\u200B")) continue; // ignore empty fields (used for spacing)
             c.appendNewline()
                 .append(Component.text(field.name())
@@ -55,9 +54,9 @@ public class EmbedSerializer {
         if (embed.isColorPresent()) {
             var color = embed.color();
             c.color(TextColor.color(
-                color.getRed(),
-                color.getGreen(),
-                color.getBlue()));
+                color.r(),
+                color.g(),
+                color.b()));
         }
         return c.build();
     }

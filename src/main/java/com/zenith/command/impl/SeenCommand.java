@@ -7,6 +7,7 @@ import com.zenith.command.CommandUsage;
 import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
 import com.zenith.feature.api.vcapi.VcApi;
+import net.dv8tion.jda.api.utils.TimeFormat;
 
 import javax.annotation.Nullable;
 import java.time.OffsetDateTime;
@@ -14,7 +15,6 @@ import java.time.OffsetDateTime;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.discord.DiscordBot.escape;
-import static discord4j.common.util.TimestampFormat.SHORT_DATE_TIME;
 import static java.util.Arrays.asList;
 
 public class SeenCommand extends Command {
@@ -61,6 +61,7 @@ public class SeenCommand extends Command {
     }
 
     private String getSeenString(@Nullable final OffsetDateTime time) {
-        return time != null ? SHORT_DATE_TIME.format(time.toInstant()) : "Never";
+        if (time == null) return "Never";
+        return TimeFormat.DATE_TIME_SHORT.format(time);
     }
 }

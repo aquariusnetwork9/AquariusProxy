@@ -8,6 +8,7 @@ import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
 import com.zenith.feature.api.vcapi.VcApi;
 import com.zenith.feature.api.vcapi.model.StatsResponse;
+import net.dv8tion.jda.api.utils.TimeFormat;
 
 import java.time.Duration;
 import java.time.format.DateTimeFormatter;
@@ -15,7 +16,6 @@ import java.util.Optional;
 
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.util.math.MathHelper.formatDurationLong;
-import static discord4j.common.util.TimestampFormat.SHORT_DATE_TIME;
 import static java.util.Arrays.asList;
 
 public class StatsCommand extends Command {
@@ -53,8 +53,8 @@ public class StatsCommand extends Command {
                     .addField("Joins", playerStats.joinCount(), true)
                     .addField("Leaves", playerStats.leaveCount(), true)
                     .addField("\u200B", "\u200B", true)
-                    .addField("First Seen", SHORT_DATE_TIME.format(playerStats.firstSeen().toInstant()), true)
-                    .addField("Last Seen", SHORT_DATE_TIME.format(playerStats.lastSeen().toInstant()), true)
+                    .addField("First Seen", TimeFormat.DATE_TIME_SHORT.format(playerStats.firstSeen().toInstant()), true)
+                    .addField("Last Seen", TimeFormat.DATE_TIME_SHORT.format(playerStats.lastSeen().toInstant()), true)
                     .addField("\u200B", "\u200B", true)
                     .addField("Playtime", formatDurationLong(Duration.ofSeconds(playerStats.playtimeSeconds())), true)
                     .addField("Playtime (Last 30 Days)", formatDurationLong(Duration.ofSeconds(playerStats.playtimeSecondsMonth())), true)

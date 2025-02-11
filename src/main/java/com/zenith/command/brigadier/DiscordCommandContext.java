@@ -1,26 +1,22 @@
 package com.zenith.command.brigadier;
 
 import com.zenith.discord.Embed;
-import discord4j.core.event.domain.message.MessageCreateEvent;
-import discord4j.rest.entity.RestChannel;
 import lombok.Getter;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
 public class DiscordCommandContext extends CommandContext {
-    private final MessageCreateEvent messageCreateEvent;
-    private final RestChannel restChannel;
+    @Getter
+    private final MessageReceivedEvent messageReceivedEvent;
 
-    public DiscordCommandContext(final String input, Embed embedBuilder, final List<String> multiLineOutput, MessageCreateEvent messageCreateEvent, RestChannel restChannel) {
+    public DiscordCommandContext(final String input, Embed embedBuilder, List<String> multiLineOutput, final MessageReceivedEvent messageReceivedEvent) {
         super(input, CommandSource.DISCORD, embedBuilder, multiLineOutput);
-        this.messageCreateEvent = messageCreateEvent;
-        this.restChannel = restChannel;
+        this.messageReceivedEvent = messageReceivedEvent;
     }
 
-    public static DiscordCommandContext create(final String input, final MessageCreateEvent messageCreateEvent, RestChannel restChannel) {
-        return new DiscordCommandContext(input, new Embed(), new ArrayList<>(), messageCreateEvent, restChannel);
+    public static DiscordCommandContext create(final String input, final MessageReceivedEvent messageReceivedEvent) {
+        return new DiscordCommandContext(input, new Embed(), new ArrayList<>(), messageReceivedEvent);
     }
-
 }
