@@ -50,9 +50,7 @@ val shade: Configuration by configurations.creating
 shade.extendsFrom(configurations.implementation.get())
 
 dependencies {
-    implementation("com.github.rfresh2.discord4j:discord4j-core:3.4.4.12") {
-        exclude(group = "io.netty")
-    }
+    implementation("com.github.rfresh2:JDA:5.3.3")
     implementation("com.github.rfresh2:MCProtocolLib:1.21.0.29") {
         exclude(group = "io.netty")
     }

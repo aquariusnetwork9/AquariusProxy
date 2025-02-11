@@ -19,6 +19,9 @@
       "type": "[J"
     },
     {
+      "type": "[Lcom.fasterxml.jackson.databind.AbstractTypeResolver;"
+    },
+    {
       "type": "[Lcom.fasterxml.jackson.databind.deser.BeanDeserializerModifier;"
     },
     {
@@ -154,6 +157,30 @@
       "type": "[Ljavax.management.openmbean.CompositeData;"
     },
     {
+      "type": "[Lnet.dv8tion.jda.api.entities.Guild;"
+    },
+    {
+      "type": "[Lnet.dv8tion.jda.api.entities.Member;"
+    },
+    {
+      "type": "[Lnet.dv8tion.jda.api.entities.Role;"
+    },
+    {
+      "type": "[Lnet.dv8tion.jda.api.entities.ScheduledEvent;"
+    },
+    {
+      "type": "[Lnet.dv8tion.jda.api.entities.User;"
+    },
+    {
+      "type": "[Lnet.dv8tion.jda.api.entities.emoji.RichCustomEmoji;"
+    },
+    {
+      "type": "[Lnet.dv8tion.jda.api.entities.sticker.GuildSticker;"
+    },
+    {
+      "type": "[Lnet.dv8tion.jda.api.managers.AudioManager;"
+    },
+    {
       "type": "[Lorg.geysermc.mcprotocollib.auth.GameProfile;"
     },
     {
@@ -170,6 +197,9 @@
     },
     {
       "type": "[[Lcom.viaversion.viaversion.api.minecraft.item.DataItem;"
+    },
+    {
+      "type": "android.os.Build$VERSION"
     },
     {
       "type": "ch.qos.logback.classic.Logger",
@@ -1203,7 +1233,157 @@
     },
     {
       "type": "com.zaxxer.hikari.HikariConfig",
-      "allDeclaredFields": true
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "getCatalog",
+          "parameterTypes": []
+        },
+        {
+          "name": "getConnectionInitSql",
+          "parameterTypes": []
+        },
+        {
+          "name": "getConnectionTestQuery",
+          "parameterTypes": []
+        },
+        {
+          "name": "getConnectionTimeout",
+          "parameterTypes": []
+        },
+        {
+          "name": "getCredentials",
+          "parameterTypes": []
+        },
+        {
+          "name": "getDataSource",
+          "parameterTypes": []
+        },
+        {
+          "name": "getDataSourceClassName",
+          "parameterTypes": []
+        },
+        {
+          "name": "getDataSourceJNDI",
+          "parameterTypes": []
+        },
+        {
+          "name": "getDataSourceProperties",
+          "parameterTypes": []
+        },
+        {
+          "name": "getDriverClassName",
+          "parameterTypes": []
+        },
+        {
+          "name": "getExceptionOverride",
+          "parameterTypes": []
+        },
+        {
+          "name": "getExceptionOverrideClassName",
+          "parameterTypes": []
+        },
+        {
+          "name": "getHealthCheckProperties",
+          "parameterTypes": []
+        },
+        {
+          "name": "getHealthCheckRegistry",
+          "parameterTypes": []
+        },
+        {
+          "name": "getIdleTimeout",
+          "parameterTypes": []
+        },
+        {
+          "name": "getInitializationFailTimeout",
+          "parameterTypes": []
+        },
+        {
+          "name": "getJdbcUrl",
+          "parameterTypes": []
+        },
+        {
+          "name": "getKeepaliveTime",
+          "parameterTypes": []
+        },
+        {
+          "name": "getLeakDetectionThreshold",
+          "parameterTypes": []
+        },
+        {
+          "name": "getMaxLifetime",
+          "parameterTypes": []
+        },
+        {
+          "name": "getMaximumPoolSize",
+          "parameterTypes": []
+        },
+        {
+          "name": "getMetricRegistry",
+          "parameterTypes": []
+        },
+        {
+          "name": "getMetricsTrackerFactory",
+          "parameterTypes": []
+        },
+        {
+          "name": "getMinimumIdle",
+          "parameterTypes": []
+        },
+        {
+          "name": "getPassword",
+          "parameterTypes": []
+        },
+        {
+          "name": "getPoolName",
+          "parameterTypes": []
+        },
+        {
+          "name": "getScheduledExecutor",
+          "parameterTypes": []
+        },
+        {
+          "name": "getSchema",
+          "parameterTypes": []
+        },
+        {
+          "name": "getThreadFactory",
+          "parameterTypes": []
+        },
+        {
+          "name": "getTransactionIsolation",
+          "parameterTypes": []
+        },
+        {
+          "name": "getUsername",
+          "parameterTypes": []
+        },
+        {
+          "name": "getValidationTimeout",
+          "parameterTypes": []
+        },
+        {
+          "name": "isAllowPoolSuspension",
+          "parameterTypes": []
+        },
+        {
+          "name": "isAutoCommit",
+          "parameterTypes": []
+        },
+        {
+          "name": "isIsolateInternalQueries",
+          "parameterTypes": []
+        },
+        {
+          "name": "isReadOnly",
+          "parameterTypes": []
+        },
+        {
+          "name": "isRegisterMbeans",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "com.zaxxer.hikari.pool.PoolBase",
@@ -4030,6 +4210,17 @@
       ]
     },
     {
+      "type": "javax.net.ssl.SNIHostName",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
       "type": "javax.net.ssl.SSLEngine",
       "methods": [
         {
@@ -4059,6 +4250,12 @@
           "name": "setApplicationProtocols",
           "parameterTypes": [
             "java.lang.String[]"
+          ]
+        },
+        {
+          "name": "setServerNames",
+          "parameterTypes": [
+            "java.util.List"
           ]
         }
       ]
@@ -4128,6 +4325,70 @@
     },
     {
       "type": "kotlin.jvm.JvmClassMappingKt"
+    },
+    {
+      "type": "net.dv8tion.jda.api.hooks.ListenerAdapter",
+      "allDeclaredMethods": true,
+      "allPublicMethods": true,
+      "methods": [
+        {
+          "name": "onGatewayPing",
+          "parameterTypes": [
+            "net.dv8tion.jda.api.events.GatewayPingEvent"
+          ]
+        },
+        {
+          "name": "onGenericGuild",
+          "parameterTypes": [
+            "net.dv8tion.jda.api.events.guild.GenericGuildEvent"
+          ]
+        },
+        {
+          "name": "onGenericMessage",
+          "parameterTypes": [
+            "net.dv8tion.jda.api.events.message.GenericMessageEvent"
+          ]
+        },
+        {
+          "name": "onGenericSession",
+          "parameterTypes": [
+            "net.dv8tion.jda.api.events.session.GenericSessionEvent"
+          ]
+        },
+        {
+          "name": "onGuildReady",
+          "parameterTypes": [
+            "net.dv8tion.jda.api.events.guild.GuildReadyEvent"
+          ]
+        },
+        {
+          "name": "onHttpRequest",
+          "parameterTypes": [
+            "net.dv8tion.jda.api.events.http.HttpRequestEvent"
+          ]
+        },
+        {
+          "name": "onMessageReceived",
+          "parameterTypes": [
+            "net.dv8tion.jda.api.events.message.MessageReceivedEvent"
+          ]
+        },
+        {
+          "name": "onReady",
+          "parameterTypes": [
+            "net.dv8tion.jda.api.events.session.ReadyEvent"
+          ]
+        },
+        {
+          "name": "onStatusChange",
+          "parameterTypes": [
+            "net.dv8tion.jda.api.events.StatusChangeEvent"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "net.dv8tion.jda.internal.utils.FallbackLogger"
     },
     {
       "type": "net.lenni0451.commons.httpclient.executor.HttpClientExecutor"
@@ -4789,6 +5050,9 @@
           ]
         }
       ]
+    },
+    {
+      "type": "org.slf4j.spi.SLF4JServiceProvider"
     },
     {
       "type": "org.yaml.snakeyaml.constructor.SafeConstructor",
@@ -6569,6 +6833,13 @@
       "type": {
         "proxy": [
           "java.sql.Connection"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.redisson.api.RLock"
         ]
       }
     }

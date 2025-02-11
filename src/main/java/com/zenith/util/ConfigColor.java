@@ -1,6 +1,6 @@
 package com.zenith.util;
 
-import discord4j.rest.util.Color;
+import net.dv8tion.jda.api.utils.Color;
 
 public enum ConfigColor {
     WHITE(Color.WHITE),
@@ -45,5 +45,13 @@ public enum ConfigColor {
 
     public Color discord() {
         return discordColor;
+    }
+
+    public int rgb() {
+        return discordColor.getRGB();
+    }
+
+    public com.zenith.util.Color color() {
+        return com.zenith.util.Color.fromInt(discordColor.getRGB());
     }
 }

@@ -50,8 +50,8 @@ public class AutoReply extends Module {
         try {
             if (!event.sender().getName().equalsIgnoreCase(CONFIG.authentication.username)
                 && Instant.now().minus(Duration.ofSeconds(1)).isAfter(lastReply)
-                && (DISCORD.lastRelaymessage.isEmpty()
-                || Instant.now().minus(Duration.ofSeconds(CONFIG.client.extra.autoReply.cooldownSeconds)).isAfter(DISCORD.lastRelaymessage.get()))) {
+                && (DISCORD.lastRelayMessage.isEmpty()
+                || Instant.now().minus(Duration.ofSeconds(CONFIG.client.extra.autoReply.cooldownSeconds)).isAfter(DISCORD.lastRelayMessage.get()))) {
                 if (isNull(repliedPlayersCache.getIfPresent(event.sender().getName()))) {
                     repliedPlayersCache.put(event.sender().getName(), event.sender().getName());
                     // 236 char max ( 256 - 4(command) - 16(max name length) )

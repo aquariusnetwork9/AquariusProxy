@@ -10,7 +10,7 @@ import com.zenith.command.brigadier.CommandContext;
 import com.zenith.feature.queue.Queue;
 import com.zenith.module.impl.*;
 import com.zenith.network.server.ServerSession;
-import discord4j.common.util.TimestampFormat;
+import net.dv8tion.jda.api.utils.TimeFormat;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -71,11 +71,11 @@ public class StatusCommand extends Command {
                 if (Proxy.getInstance().isPrio()) {
                     return "In Prio Queue [" + Proxy.getInstance().getQueuePosition() + " / " + Queue.getQueueStatus().prio() + "]\n"
                         + "ETA: " + Queue.getQueueEta(Proxy.getInstance().getQueuePosition()) + "\n"
-                        + "(" + TimestampFormat.LONG_TIME.format(Instant.now().plus(Duration.ofSeconds(Queue.getQueueWait(Proxy.getInstance().getQueuePosition())))) +")";
+                        + "(" + TimeFormat.TIME_LONG.format(Instant.now().plus(Duration.ofSeconds(Queue.getQueueWait(Proxy.getInstance().getQueuePosition())))) +")";
                 } else {
                     return "In Queue [" + Proxy.getInstance().getQueuePosition() + " / " + Queue.getQueueStatus().regular() + "]\n"
                         + "ETA: " + Queue.getQueueEta(Proxy.getInstance().getQueuePosition()) + "\n"
-                        + "(" + TimestampFormat.LONG_TIME.format(Instant.now().plus(Duration.ofSeconds(Queue.getQueueWait(Proxy.getInstance().getQueuePosition())))) +")";
+                        + "(" + TimeFormat.TIME_LONG.format(Instant.now().plus(Duration.ofSeconds(Queue.getQueueWait(Proxy.getInstance().getQueuePosition())))) +")";
                 }
             } else {
                 return "Online";

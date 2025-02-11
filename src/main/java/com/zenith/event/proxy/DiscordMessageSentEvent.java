@@ -1,5 +1,5 @@
 package com.zenith.event.proxy;
 
-import discord4j.core.event.domain.message.MessageCreateEvent;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
-public record DiscordMessageSentEvent(String message, MessageCreateEvent event) { }
+public record DiscordMessageSentEvent(String message, MessageReceivedEvent event) { }

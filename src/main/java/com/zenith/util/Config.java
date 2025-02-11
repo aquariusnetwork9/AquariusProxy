@@ -626,20 +626,6 @@ public final class Config {
         public boolean showNonWhitelistLoginIP = true;
         public boolean isUpdating = false; // internal use for update command state persistence
         public final ChatRelay chatRelay = new ChatRelay();
-        public final ConnectionProxy connectionProxy = new ConnectionProxy();
-
-        public static final class ConnectionProxy {
-                public boolean enabled = false;
-                public ConnectionProxyType type = ConnectionProxyType.HTTP;
-                public String host = "127.0.0.1";
-                public int port = 7890;
-                public String user = "";
-                public String password = "";
-
-                public enum ConnectionProxyType {
-                    HTTP, SOCKS4, SOCKS5
-                }
-        }
 
         public static class ChatRelay {
             public boolean enable = false;

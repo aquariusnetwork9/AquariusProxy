@@ -1,12 +1,11 @@
 package com.zenith.discord;
 
-import discord4j.core.spec.EmbedCreateFields;
-import discord4j.core.spec.EmbedCreateSpec;
-import discord4j.discordjson.possible.Possible;
-import discord4j.rest.util.Color;
+import com.zenith.util.Color;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.experimental.Accessors;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
@@ -30,10 +29,32 @@ public class Embed {
     @Nullable Color color;
     @Nullable String image;
     @Nullable String thumbnail;
-    @Nullable EmbedCreateFields.Footer footer;
-    @Nullable EmbedCreateFields.Author author;
-    @NonNull List<EmbedCreateFields.Field> fields = new ArrayList<>();
+    @Nullable Footer footer;
+    @Nullable Author author;
+    @NonNull List<Field> fields = new ArrayList<>();
     @Nullable FileAttachment fileAttachment;
+
+    public record Footer(
+        String text,
+        String iconUrl
+    ) { }
+
+    public record Author(
+        String name,
+        String url,
+        String iconUrl
+    ) { }
+
+    public record Field(
+        String name,
+        String value,
+        boolean inline
+    ) { }
+
+    public record FileAttachment(
+        String name,
+        byte[] data
+    ) { }
 
     public boolean isTitlePresent() {
         return title != null;
@@ -52,83 +73,75 @@ public class Embed {
     }
 
     public Embed addField(String name, String value, boolean inline) {
-        fields.add(EmbedCreateFields.Field.of(name, value, inline));
+        fields.add(new Field(name, value, inline));
         return this;
     }
 
     public Embed addField(String name, Object value, boolean inline) {
-        fields.add(EmbedCreateFields.Field.of(name, String.valueOf(value), inline));
+        fields.add(new Field(name, String.valueOf(value), inline));
         return this;
     }
 
     public Embed footer(String text, String iconUrl) {
-        footer = EmbedCreateFields.Footer.of(text, iconUrl);
+        footer = new Footer(text, iconUrl);
         return this;
     }
 
     public Embed primaryColor() {
-        color = CONFIG.theme.primary.discord();
+        color = CONFIG.theme.primary.color();
         return this;
     }
 
     public Embed errorColor() {
-        color = CONFIG.theme.error.discord();
+        color = CONFIG.theme.error.color();
         return this;
     }
 
     public Embed successColor() {
-        color = CONFIG.theme.success.discord();
+        color = CONFIG.theme.success.color();
         return this;
     }
 
     public Embed inQueueColor() {
-        color = CONFIG.theme.inQueue.discord();
+        color = CONFIG.theme.inQueue.color();
         return this;
     }
 
-    public EmbedCreateSpec toSpec() {
-        if (!validateEmbed(this)) {
-            return EmbedCreateSpec.builder()
-                .description("Error: Embed validation failed. Most likely it had too many characters in the description or fields.")
-                .color(CONFIG.theme.error.discord())
-                .build();
-        }
-        return EmbedCreateSpec.builder()
-            .title(title == null ? Possible.absent() : Possible.of(title))
-            .description(description == null ? Possible.absent() : Possible.of(description))
-            .url(url == null ? Possible.absent() : Possible.of(url))
-            .timestamp(timestamp == null ? Possible.absent() : Possible.of(timestamp))
-            .color(color == null ? Possible.absent() : Possible.of(color))
-            .image(image == null ? Possible.absent() : Possible.of(image))
-            .thumbnail(thumbnail == null ? Possible.absent() : Possible.of(thumbnail))
-            .footer(footer)
-            .author(author)
-            .fields(fields)
-            .build();
+    public Embed color(net.dv8tion.jda.api.utils.Color color) {
+        this.color = Color.fromInt(color.getRGB());
+        return this;
     }
 
-    public static Embed fromSpec(EmbedCreateSpec spec) {
-        return new Embed()
-            .title(spec.title().isAbsent() ? null : spec.title().get())
-            .description(spec.description().isAbsent() ? null : spec.description().get())
-            .url(spec.url().isAbsent() ? null : spec.url().get())
-            .timestamp(spec.timestamp().isAbsent() ? null : spec.timestamp().get())
-            .color(spec.color().isAbsent() ? null : spec.color().get())
-            .image(spec.image().isAbsent() ? null : spec.image().get())
-            .thumbnail(spec.thumbnail().isAbsent() ? null : spec.thumbnail().get())
-            .footer(spec.footer())
-            .author(spec.author())
-            .fields(spec.fields());
+    public Embed color(Color color) {
+        this.color = color;
+        return this;
+    }
+
+    public MessageEmbed toJDAEmbed() {
+        var builder = new EmbedBuilder();
+        if (!validateEmbed(this)) {
+            return builder.build();
+        }
+        builder
+            .setTitle(title)
+            .setDescription(description)
+            .setUrl(url)
+            .setTimestamp(timestamp)
+            .setColor(color != null ? color.getRGB() : 0)
+            .setImage(image)
+            .setThumbnail(thumbnail)
+            .setFooter(footer != null ? footer.text() : null, footer != null ? footer.iconUrl() : null)
+            .setAuthor(author != null ? author.name() : null, author != null ? author.url() : null, author != null ? author.iconUrl() : null);
+        for (var field : fields) {
+            builder.addField(field.name(), field.value(), field.inline());
+        }
+        return builder.build();
+
     }
 
     public static Embed builder() {
         return new Embed();
     }
-
-    public record FileAttachment(
-        String name,
-        byte[] data
-    ) { }
 
     private boolean validateEmbed(Embed embed) {
         int charCount = 0;
