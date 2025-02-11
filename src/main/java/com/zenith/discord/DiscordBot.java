@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
 import static com.zenith.Shared.*;
 import static java.util.Arrays.asList;
 
-public class DiscordBot {
+public class DiscordBot extends ListenerAdapter {
 
     private TextChannel mainChannel;
     private TextChannel relayChannel;
@@ -69,6 +69,46 @@ public class DiscordBot {
             15L, // discord rate limit
             TimeUnit.SECONDS);
         this.isRunning = true;
+    }
+
+    @Override
+    public void onMessageReceived(@Nonnull MessageReceivedEvent event) {
+        var member = event.getMember();
+        if (member == null) return;
+        if (member.getUser().isBot() && CONFIG.discord.ignoreOtherBots) return;
+        if (member.getId().equals(jda.getSelfUser().getId())) return;
+        if (CONFIG.discord.chatRelay.enable
+            && !CONFIG.discord.chatRelay.channelId.isEmpty()
+            && event.getMessage().getChannelId().equals(CONFIG.discord.chatRelay.channelId)
+            && !event.getMember().getId().equals(jda.getSelfUser().getId())) {
+            EVENT_BUS.postAsync(new DiscordMessageSentEvent(sanitizeRelayInputMessage(event.getMessage().getContentRaw()), event));
+            return;
+        }
+        if (!event.getMessage().getChannelId().equals(CONFIG.discord.channelId)) return;
+        final String message = event.getMessage().getContentRaw();
+        if (!message.startsWith(CONFIG.discord.prefix)) return;
+        try {
+            final String inputMessage = message.substring(1);
+            String memberName = member.getUser().getName();
+            String memberId = member.getId();
+            DISCORD_LOG.info("{} ({}) executed discord command: {}", memberName, memberId, inputMessage);
+            final CommandContext context = DiscordCommandContext.create(inputMessage, event);
+            COMMAND.execute(context);
+            final MessageCreateData request = commandEmbedOutputToMessage(context);
+            if (request != null) {
+                DISCORD_LOG.debug("Discord bot response: {}", request.toData().toJson());
+                mainChannel.sendMessage(request).queue();
+                CommandOutputHelper.logEmbedOutputToTerminal(context.getEmbed());
+            }
+            if (!context.getMultiLineOutput().isEmpty()) {
+                for (final String line : context.getMultiLineOutput()) {
+                    mainChannel.sendMessage(line).queue();
+                }
+                CommandOutputHelper.logMultiLineOutputToTerminal(context);
+            }
+        } catch (final Exception e) {
+            DISCORD_LOG.error("Failed processing discord command: {}", message, e);
+        }
     }
 
     public static String notificationMention() {
@@ -229,7 +269,7 @@ public class DiscordBot {
             asList(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MESSAGES))
             .setActivity(Activity.customStatus("Disconnected"))
             .setStatus(OnlineStatus.DO_NOT_DISTURB)
-            .addEventListeners(new JDAListener(this));
+            .addEventListeners(this);
         this.jda = builder.build();
         try {
             jda.awaitReady();
@@ -255,53 +295,6 @@ public class DiscordBot {
             throw new RuntimeException("Unhandled message being replied to, aborting relay");
         }
         return sender;
-    }
-
-    public static class JDAListener extends ListenerAdapter {
-        private final DiscordBot bot;
-
-        public JDAListener(DiscordBot bot) {
-            this.bot = bot;
-        }
-        @Override
-        public void onMessageReceived(@Nonnull MessageReceivedEvent event) {
-            var member = event.getMember();
-            if (member == null) return;
-            if (member.getUser().isBot() && CONFIG.discord.ignoreOtherBots) return;
-            if (member.getId().equals(bot.jda.getSelfUser().getId())) return;
-            if (CONFIG.discord.chatRelay.enable
-                && !CONFIG.discord.chatRelay.channelId.isEmpty()
-                && event.getMessage().getChannelId().equals(CONFIG.discord.chatRelay.channelId)
-                && !event.getMember().getId().equals(bot.jda.getSelfUser().getId())) {
-                EVENT_BUS.postAsync(new DiscordMessageSentEvent(sanitizeRelayInputMessage(event.getMessage().getContentRaw()), event));
-                return;
-            }
-            if (!event.getMessage().getChannelId().equals(CONFIG.discord.channelId)) return;
-            final String message = event.getMessage().getContentRaw();
-            if (!message.startsWith(CONFIG.discord.prefix)) return;
-            try {
-                final String inputMessage = message.substring(1);
-                String memberName = member.getUser().getName();
-                String memberId = member.getId();
-                DISCORD_LOG.info("{} ({}) executed discord command: {}", memberName, memberId, inputMessage);
-                final CommandContext context = DiscordCommandContext.create(inputMessage, event);
-                COMMAND.execute(context);
-                final MessageCreateData request = bot.commandEmbedOutputToMessage(context);
-                if (request != null) {
-                    DISCORD_LOG.debug("Discord bot response: {}", request.toData().toJson());
-                    bot.mainChannel.sendMessage(request).queue();
-                    CommandOutputHelper.logEmbedOutputToTerminal(context.getEmbed());
-                }
-                if (!context.getMultiLineOutput().isEmpty()) {
-                    for (final String line : context.getMultiLineOutput()) {
-                        bot.mainChannel.sendMessage(line).queue();
-                    }
-                    CommandOutputHelper.logMultiLineOutputToTerminal(context);
-                }
-            } catch (final Exception e) {
-                DISCORD_LOG.error("Failed processing discord command: {}", message, e);
-            }
-        }
     }
 
     private MessageCreateData commandEmbedOutputToMessage(final CommandContext context) {
@@ -419,7 +412,7 @@ public class DiscordBot {
         }
     }
 
-    void sendEmbedMessageWithButtons(String message, Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> mapper, Duration timeout) {
+    public void sendEmbedMessageWithButtons(String message, Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> mapper, Duration timeout) {
         if (isRunning) {
             mainChannel.sendMessage(
                 new MessageCreateBuilder()
@@ -438,7 +431,7 @@ public class DiscordBot {
         CommandOutputHelper.logEmbedOutputToTerminal(embed);
     }
 
-    void sendEmbedMessageWithButtons(Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> mapper, Duration timeout) {
+    public void sendEmbedMessageWithButtons(Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> mapper, Duration timeout) {
         if (isRunning) {
             mainChannel.sendMessage(
                 new MessageCreateBuilder()
@@ -454,5 +447,4 @@ public class DiscordBot {
         }
         CommandOutputHelper.logEmbedOutputToTerminal(embed);
     }
-
 }
