@@ -26,7 +26,7 @@ public class ServerConnectionCommand extends Command {
             CommandCategory.MANAGE,
             """
             Configures the MC server hosted by Zenith and players' connections to it
-                        
+            
             The `proxyIP` is the IP players should connect to. This is purely informational.
             
             The `bind` argument changes the port ZenithProxy listens on..

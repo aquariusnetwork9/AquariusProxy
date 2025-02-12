@@ -72,7 +72,7 @@ public class SpammerCommand extends Command {
                             return OK;
                       })))
             .then(literal("delayTicks")
-                      .then(argument("delayTicks", integer(1, 10000)).executes(c -> {
+                      .then(argument("delayTicks", integer(1)).executes(c -> {
                           CONFIG.client.extra.spammer.delayTicks = IntegerArgumentType.getInteger(c, "delayTicks");
                           c.getSource().getEmbed()
                               .title("Delay Updated!");

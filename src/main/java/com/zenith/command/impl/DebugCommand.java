@@ -9,7 +9,6 @@ import com.zenith.command.CommandUsage;
 import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
 import com.zenith.discord.Embed;
-import org.geysermc.mcprotocollib.protocol.codec.MinecraftTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundRemoveMobEffectPacket;
 
@@ -36,14 +35,11 @@ public class DebugCommand extends Command {
                 "packetLog client on/off", // todo: subcommands for configuring subsettings more explicitly
                 "packetLog server on/off",
                 "packetLog filter <string>",
-                "binaryNbtComponentSerializer on/off",
                 "kickDisconnect on/off",
                 "dc",
-                "teleportResync on/off",
                 "ncpStrictInventory on/off",
                 "debugLogs on/off",
-                "chunkCacheFullbright on/off",
-                "enforceSpawnSeq on/off"
+                "chunkCacheFullbright on/off"
             )
         );
     }
@@ -132,14 +128,6 @@ public class DebugCommand extends Command {
                     .title("Cleared Effects");
                 return OK;
             }))
-            .then(literal("binaryNbtComponentSerializer")
-                      .then(argument("toggle", toggle()).executes(c -> {
-                          CONFIG.debug.binaryNbtComponentSerializer = getToggle(c, "toggle");
-                          MinecraftTypes.useBinaryNbtComponentSerializer = CONFIG.debug.binaryNbtComponentSerializer;
-                          c.getSource().getEmbed()
-                              .title("Binary Nbt Component Serializer " + toggleStrCaps(CONFIG.debug.binaryNbtComponentSerializer));
-                          return OK;
-                      })))
             .then(literal("kickDisconnect").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.debug.kickDisconnect = getToggle(c, "toggle");
                 c.getSource().getEmbed()
@@ -151,12 +139,6 @@ public class DebugCommand extends Command {
                 c.getSource().setNoOutput(true);
                 Proxy.getInstance().kickDisconnect(MANUAL_DISCONNECT, null);
             }))
-            .then(literal("teleportResync").then(argument("toggle", toggle()).executes(c -> {
-                CONFIG.debug.resyncTeleports = getToggle(c, "toggle");
-                c.getSource().getEmbed()
-                    .title("Teleport Resync " + toggleStrCaps(CONFIG.debug.resyncTeleports));
-                return OK;
-            })))
             .then(literal("ncpStrictInventory").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.debug.ncpStrictInventory = getToggle(c, "toggle");
                 c.getSource().getEmbed()
@@ -174,12 +156,6 @@ public class DebugCommand extends Command {
                 c.getSource().getEmbed()
                     .title("Chunk Cache Fullbright " + toggleStrCaps(CONFIG.debug.server.cache.fullbrightChunkSkylight));
                 return OK;
-            })))
-            .then(literal("enforceSpawnSeq").then(argument("toggle", toggle()).executes(c -> {
-                CONFIG.debug.enforcePlayerSpawnSequence = getToggle(c, "toggle");
-                c.getSource().getEmbed()
-                    .title("Enforce Spawn Seq " + toggleStrCaps(CONFIG.debug.enforcePlayerSpawnSequence));
-                return OK;
             })));
     }
 
@@ -190,13 +166,10 @@ public class DebugCommand extends Command {
             .addField("Client Packet Log", toggleStr(CONFIG.debug.packetLog.clientPacketLog.received), false)
             .addField("Server Packet Log", toggleStr(CONFIG.debug.packetLog.serverPacketLog.received), false)
             .addField("Packet Log Filter", CONFIG.debug.packetLog.packetFilter, false)
-            .addField("Binary Nbt Component Serializer", toggleStr(CONFIG.debug.binaryNbtComponentSerializer), false)
             .addField("Kick Disconnect", toggleStr(CONFIG.debug.kickDisconnect), false)
-            .addField("Teleport Resync", toggleStr(CONFIG.debug.resyncTeleports), false)
             .addField("NCP Strict Inventory", toggleStr(CONFIG.debug.ncpStrictInventory), false)
             .addField("Debug Logs", toggleStr(CONFIG.debug.debugLogs), false)
             .addField("Chunk Cache Fullbright", toggleStr(CONFIG.debug.server.cache.fullbrightChunkSkylight), false)
-            .addField("Enforce Spawn Seq", toggleStr(CONFIG.debug.enforcePlayerSpawnSequence), false)
             .primaryColor();
     }
 }

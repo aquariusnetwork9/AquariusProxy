@@ -6,8 +6,8 @@ import com.zenith.event.proxy.PlayerLoginEvent;
 import com.zenith.event.proxy.ProxyClientConnectedEvent;
 import com.zenith.event.proxy.ProxySpectatorConnectedEvent;
 import com.zenith.feature.world.World;
-import com.zenith.network.server.CustomServerInfoBuilder;
 import com.zenith.network.server.ServerSession;
+import com.zenith.network.server.ZenithServerInfoBuilder;
 import com.zenith.util.Maps;
 import com.zenith.util.Wait;
 import net.kyori.adventure.key.Key;
@@ -108,9 +108,8 @@ public class ProxyServerLoginHandler {
             ));
             if (!Proxy.getInstance().isInQueue()) { PlayerCache.sync(); }
         }
-        CustomServerInfoBuilder serverInfoBuilder = (CustomServerInfoBuilder) Proxy.getInstance().getServer().getGlobalFlag(MinecraftConstants.SERVER_INFO_BUILDER_KEY);
         connection.send(new ClientboundServerDataPacket(
-            serverInfoBuilder.getMotd(),
+            ZenithServerInfoBuilder.INSTANCE.getMotd(),
             Proxy.getInstance().getServerIcon()
         ));
         connection.send(new ClientboundServerLinksPacket(asList(

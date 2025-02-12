@@ -1,5 +1,6 @@
 package com.zenith.util;
 
+import com.google.common.collect.Lists;
 import com.google.gson.annotations.SerializedName;
 import com.zenith.feature.whitelist.PlayerEntry;
 import com.zenith.module.impl.ActiveHours.ActiveTime;
@@ -9,8 +10,6 @@ import org.geysermc.mcprotocollib.network.ProxyInfo;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 
 import java.util.ArrayList;
-
-import static java.util.Arrays.asList;
 
 
 public final class Config {
@@ -164,7 +163,7 @@ public final class Config {
 
             public static final class QueueWarning {
                 public boolean enabled = true;
-                public IntArraySet warningPositions = new IntArraySet(asList(1, 2, 3, 10));
+                public IntArraySet warningPositions = IntArraySet.of(1, 2, 3, 10);
                 public IntArraySet mentionPositions = new IntArraySet();
             }
 
@@ -258,7 +257,6 @@ public final class Config {
 
             public static final class AutoFish {
                 public boolean enabled = false;
-                public long castDelay = 20;
                 public float yaw = 0.0f;
                 public float pitch = 0.0f;
             }
@@ -350,7 +348,7 @@ public final class Config {
 
             public static final class AutoReconnect {
                 public boolean enabled = true;
-                public int delaySeconds = 120;
+                public int delaySeconds = 5;
                 public int maxAttempts = 200;
             }
 
@@ -366,11 +364,11 @@ public final class Config {
                 public long delayTicks = 200;
                 public boolean randomOrder = false;
                 public boolean appendRandom = false;
-                public final ArrayList<String> messages = new ArrayList<>(asList(
-                        "ZenithProxy on top!",
-                        "I just skipped queue thanks to ZenithProxy!",
-                        "Download ZenithProxy on GitHub today! It's free!"
-                ));
+                public final ArrayList<String> messages = Lists.newArrayList(
+                    "ZenithProxy on top!",
+                    "I just skipped queue thanks to ZenithProxy!",
+                    "Download ZenithProxy on GitHub today! It's free!"
+                );
             }
 
             public static final class AutoReply {
@@ -419,12 +417,9 @@ public final class Config {
         public final PacketLog packetLog = new PacketLog();
         public final Server server = new Server();
         public boolean clearOldLogs = false;
-        public boolean binaryNbtComponentSerializer = true;
         public boolean kickDisconnect = false;
-        public boolean resyncTeleports = true;
         public boolean ncpStrictInventory = false;
         public boolean debugLogs = false;
-        public boolean enforcePlayerSpawnSequence = true;
 
         public static final class PacketLog {
             public boolean enabled = false;
@@ -536,7 +531,7 @@ public final class Config {
 
         public static final class Ping {
             public boolean enabled = true;
-            public boolean onlinePlayers = true;
+            public boolean onlinePlayers = false;
             public boolean onlinePlayerCount = true;
             public boolean favicon = true;
             public int maxPlayers = Integer.MAX_VALUE;
@@ -544,7 +539,7 @@ public final class Config {
             public boolean responseCaching = true;
             // could probably be increased 2-3x without issue
             public int responseCacheSeconds = 10;
-            public boolean logPings = false;
+            public boolean logPings = true;
         }
 
         public static final class ServerViaVersion {

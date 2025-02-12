@@ -1117,7 +1117,6 @@ public class PlayerSimulation extends Module {
     }
 
     private boolean resyncTeleport() {
-        if (!CONFIG.debug.resyncTeleports) return false;
         // can occur when a connected player disconnects in an unusual way like crashing
         if (CACHE.getPlayerCache().getTeleportQueue().isEmpty()) return false;
         int queuedTeleport = CACHE.getPlayerCache().getTeleportQueue().dequeueInt();
