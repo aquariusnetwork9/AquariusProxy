@@ -9,6 +9,7 @@ import com.zenith.event.module.EntityFishHookSpawnEvent;
 import com.zenith.event.module.SplashSoundEffectEvent;
 import com.zenith.feature.world.*;
 import com.zenith.mc.item.ItemRegistry;
+import com.zenith.util.math.MathHelper;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.object.ProjectileData;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
@@ -72,12 +73,22 @@ public class AutoFish extends AbstractInventoryModule {
     }
 
     public void handleSplashSoundEffectEvent(final SplashSoundEffectEvent event) {
-        if (isFishing()) {
-            // reel in
-            requestUseRod(false);
-            delay = 20;
-            fishHookEntityId = -1;
-        }
+        if (!isFishing()) return;
+        var fishHookEntity = CACHE.getEntityCache().get(fishHookEntityId);
+        if (fishHookEntity == null) return;
+        if (MathHelper.manhattanDistance3d(
+            fishHookEntity.getX(), fishHookEntity.getY(), fishHookEntity.getZ(),
+            event.packet().getX(), event.packet().getY(), event.packet().getZ())
+            >= 1) return;
+        // reel in
+        requestUseRod(false).addInputExecutedListener(future -> {
+            if (future.getClickResult() instanceof ClickResult.RightClickResult rightClickResult) {
+                if (rightClickResult.getType() == ClickResult.RightClickResult.RightClickType.USE_ITEM) {
+                    fishHookEntityId = -1;
+                    delay = 20;
+                }
+            }
+        });
     }
 
     public void handleClientTick(final ClientBotTick event) {
@@ -90,8 +101,8 @@ public class AutoFish extends AbstractInventoryModule {
             && switchToFishingRod()
             && isRodInHand()) {
             requestUseRod(true).addInputExecutedListener(future -> {
-                if (future.getClickResult() instanceof ClickResult.RightClickResult leftClickResult) {
-                    if (leftClickResult.getType() == ClickResult.RightClickResult.RightClickType.USE_ITEM) {
+                if (future.getClickResult() instanceof ClickResult.RightClickResult rightClickResult) {
+                    if (rightClickResult.getType() == ClickResult.RightClickResult.RightClickType.USE_ITEM) {
                         castTime = Instant.now();
                         delay = 5;
                     }
