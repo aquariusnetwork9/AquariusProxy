@@ -9,7 +9,6 @@ import com.zenith.event.module.EntityFishHookSpawnEvent;
 import com.zenith.event.module.SplashSoundEffectEvent;
 import com.zenith.feature.world.*;
 import com.zenith.mc.item.ItemRegistry;
-import com.zenith.util.Timer;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.object.ProjectileData;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
@@ -23,7 +22,6 @@ import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
 
 public class AutoFish extends AbstractInventoryModule {
-    private final Timer castTimer = Timer.createTickTimer();
     private int fishHookEntityId = -1;
     private Hand rodHand = Hand.MAIN_HAND;
     private int delay = 0;
@@ -60,7 +58,6 @@ public class AutoFish extends AbstractInventoryModule {
 
     private synchronized void reset() {
         fishHookEntityId = -1;
-        castTimer.reset();
         delay = 0;
         castTime = Instant.EPOCH;
     }
@@ -78,7 +75,7 @@ public class AutoFish extends AbstractInventoryModule {
         if (isFishing()) {
             // reel in
             requestUseRod(false);
-            castTimer.reset();
+            delay = 20;
             fishHookEntityId = -1;
         }
     }
@@ -106,7 +103,6 @@ public class AutoFish extends AbstractInventoryModule {
             warn("Probably don't have hook in water. reeling in");
             fishHookEntityId = -1;
             requestUseRod(false);
-            castTimer.reset();
         }
     }
 
