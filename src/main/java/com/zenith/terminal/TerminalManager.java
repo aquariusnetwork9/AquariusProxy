@@ -65,7 +65,7 @@ public class TerminalManager {
                 } catch (final EndOfFileException e) {
                     continue;
                 }
-                if (line == null) {
+                if (line == null || line.isBlank()) {
                     break;
                 }
                 handleTerminalCommand(line);
@@ -82,12 +82,11 @@ public class TerminalManager {
 
     private void handleTerminalCommand(final String command) {
         switch (command) {
-            case "exit":
+            case "exit" -> {
                 TERMINAL_LOG.info("Exiting...");
                 Proxy.getInstance().stop();
-                break;
-            default:
-                executeDiscordCommand(command);
+            }
+            default -> executeDiscordCommand(command);
         }
     }
 
