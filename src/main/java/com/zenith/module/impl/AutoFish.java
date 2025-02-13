@@ -9,7 +9,7 @@ import com.zenith.event.module.EntityFishHookSpawnEvent;
 import com.zenith.event.module.SplashSoundEffectEvent;
 import com.zenith.feature.world.*;
 import com.zenith.mc.item.ItemRegistry;
-import com.zenith.util.Timer;
+import com.zenith.util.math.MathHelper;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.object.ProjectileData;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
@@ -23,7 +23,6 @@ import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
 
 public class AutoFish extends AbstractInventoryModule {
-    private final Timer castTimer = Timer.createTickTimer();
     private int fishHookEntityId = -1;
     private Hand rodHand = Hand.MAIN_HAND;
     private int delay = 0;
@@ -60,7 +59,6 @@ public class AutoFish extends AbstractInventoryModule {
 
     private synchronized void reset() {
         fishHookEntityId = -1;
-        castTimer.reset();
         delay = 0;
         castTime = Instant.EPOCH;
     }
@@ -75,12 +73,22 @@ public class AutoFish extends AbstractInventoryModule {
     }
 
     public void handleSplashSoundEffectEvent(final SplashSoundEffectEvent event) {
-        if (isFishing()) {
-            // reel in
-            requestUseRod(false);
-            castTimer.reset();
-            fishHookEntityId = -1;
-        }
+        if (!isFishing()) return;
+        var fishHookEntity = CACHE.getEntityCache().get(fishHookEntityId);
+        if (fishHookEntity == null) return;
+        if (MathHelper.manhattanDistance3d(
+            fishHookEntity.getX(), fishHookEntity.getY(), fishHookEntity.getZ(),
+            event.packet().getX(), event.packet().getY(), event.packet().getZ())
+            >= 1) return;
+        // reel in
+        requestUseRod(false).addInputExecutedListener(future -> {
+            if (future.getClickResult() instanceof ClickResult.RightClickResult rightClickResult) {
+                if (rightClickResult.getType() == ClickResult.RightClickResult.RightClickType.USE_ITEM) {
+                    fishHookEntityId = -1;
+                    delay = 20;
+                }
+            }
+        });
     }
 
     public void handleClientTick(final ClientBotTick event) {
@@ -93,8 +101,8 @@ public class AutoFish extends AbstractInventoryModule {
             && switchToFishingRod()
             && isRodInHand()) {
             requestUseRod(true).addInputExecutedListener(future -> {
-                if (future.getClickResult() instanceof ClickResult.RightClickResult leftClickResult) {
-                    if (leftClickResult.getType() == ClickResult.RightClickResult.RightClickType.USE_ITEM) {
+                if (future.getClickResult() instanceof ClickResult.RightClickResult rightClickResult) {
+                    if (rightClickResult.getType() == ClickResult.RightClickResult.RightClickType.USE_ITEM) {
                         castTime = Instant.now();
                         delay = 5;
                     }
@@ -106,7 +114,6 @@ public class AutoFish extends AbstractInventoryModule {
             warn("Probably don't have hook in water. reeling in");
             fishHookEntityId = -1;
             requestUseRod(false);
-            castTimer.reset();
         }
     }
 
