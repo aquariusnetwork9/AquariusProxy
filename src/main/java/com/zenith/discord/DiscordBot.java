@@ -1,5 +1,6 @@
 package com.zenith.discord;
 
+import com.github.rfresh2.SimpleEventBus;
 import com.zenith.Proxy;
 import com.zenith.command.brigadier.CommandContext;
 import com.zenith.command.brigadier.DiscordCommandContext;
@@ -19,7 +20,7 @@ import net.dv8tion.jda.api.entities.Icon;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
-import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.hooks.SimpleEventBusListener;
 import net.dv8tion.jda.api.interactions.components.ActionComponent;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.requests.GatewayIntent;
@@ -29,7 +30,6 @@ import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 import org.jetbrains.annotations.Nullable;
 
-import javax.annotation.Nonnull;
 import java.io.ByteArrayInputStream;
 import java.time.Duration;
 import java.time.Instant;
@@ -41,10 +41,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
 import static java.util.Arrays.asList;
 
-public class DiscordBot extends ListenerAdapter {
+public class DiscordBot {
 
     private TextChannel mainChannel;
     private TextChannel relayChannel;
@@ -53,9 +54,14 @@ public class DiscordBot extends ListenerAdapter {
     private ScheduledFuture<?> presenceUpdateFuture;
     protected JDA jda;
     public Optional<Instant> lastRelayMessage = Optional.empty();
+    private final SimpleEventBus jdaEventBus = new SimpleEventBus();
 
     public DiscordBot() {
         this.isRunning = false;
+        jdaEventBus.subscribe(
+            this,
+            of(MessageReceivedEvent.class, this::onMessageReceived)
+        );
     }
 
     public synchronized void start() {
@@ -71,8 +77,7 @@ public class DiscordBot extends ListenerAdapter {
         this.isRunning = true;
     }
 
-    @Override
-    public void onMessageReceived(@Nonnull MessageReceivedEvent event) {
+    public void onMessageReceived(MessageReceivedEvent event) {
         var member = event.getMember();
         if (member == null) return;
         if (member.getUser().isBot() && CONFIG.discord.ignoreOtherBots) return;
@@ -269,7 +274,7 @@ public class DiscordBot extends ListenerAdapter {
             asList(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MESSAGES))
             .setActivity(Activity.customStatus("Disconnected"))
             .setStatus(OnlineStatus.DO_NOT_DISTURB)
-            .addEventListeners(this);
+            .addEventListeners(new SimpleEventBusListener(jdaEventBus));
         this.jda = builder.build();
         try {
             jda.awaitReady();

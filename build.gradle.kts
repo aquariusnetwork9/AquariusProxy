@@ -50,7 +50,7 @@ val shade: Configuration by configurations.creating
 shade.extendsFrom(configurations.implementation.get())
 
 dependencies {
-    implementation("com.github.rfresh2:JDA:5.3.3")
+    implementation("com.github.rfresh2:JDA:5.3.4")
     implementation("com.github.rfresh2:MCProtocolLib:1.21.0.30") {
         exclude(group = "io.netty")
     }
