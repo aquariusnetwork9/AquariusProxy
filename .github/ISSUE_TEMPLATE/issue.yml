@@ -1,5 +1,5 @@
 name: i can't use the support discord
-description: ":("
+description: sad
 body:
   - type: textarea
     id: description
