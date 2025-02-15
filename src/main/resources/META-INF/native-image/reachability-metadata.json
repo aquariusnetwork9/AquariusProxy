@@ -4675,6 +4675,14 @@
       ]
     },
     {
+      "type": "org.jline.reader.impl.LineReaderImpl",
+      "fields": [
+        {
+          "name": "post"
+        }
+      ]
+    },
+    {
       "type": "org.jline.terminal.impl.exec.ExecTerminalProvider",
       "methods": [
         {
@@ -6752,6 +6760,13 @@
       "type": {
         "proxy": [
           "org.redisson.api.RLock"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "sun.misc.SignalHandler"
         ]
       }
     }
