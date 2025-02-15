@@ -93,7 +93,7 @@ public class DiscordBot {
         final String message = event.getMessage().getContentRaw();
         if (!message.startsWith(CONFIG.discord.prefix)) return;
         try {
-            final String inputMessage = message.substring(1);
+            final String inputMessage = message.substring(CONFIG.discord.prefix.length());
             String memberName = member.getUser().getName();
             String memberId = member.getId();
             DISCORD_LOG.info("{} ({}) executed discord command: {}", memberName, memberId, inputMessage);

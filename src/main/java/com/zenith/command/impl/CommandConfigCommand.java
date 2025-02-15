@@ -45,18 +45,17 @@ public class CommandConfigCommand extends Command {
                     .then(argument("prefix", wordWithChars())
                         .executes(c -> {
                             final String newPrefix = c.getArgument("prefix", String.class);
-                            if (newPrefix.length() > 1) {
+                            if (newPrefix.isBlank()) {
                                 c.getSource().getEmbed()
                                     .title("Error")
-                                    .description("Prefix must be a single character");
-                                return ERROR;
-                            } else {
-                                CONFIG.discord.prefix = newPrefix;
-                                c.getSource().getEmbed()
-                                    .title("Command Config")
-                                    .description("Set discord prefix to " + CONFIG.discord.prefix);
+                                    .description("Prefix must be at least one character");
                                 return OK;
                             }
+                            CONFIG.discord.prefix = newPrefix;
+                            c.getSource().getEmbed()
+                                .title("Command Config")
+                                .description("Set discord prefix to " + CONFIG.discord.prefix);
+                            return OK;
                         }))))
             .then(literal("ingame")
                       .then(argument("toggle", toggle()).executes(c -> {
@@ -85,10 +84,10 @@ public class CommandConfigCommand extends Command {
                                 .then(argument("prefix", wordWithChars())
                                           .executes(c -> {
                                               final String newPrefix = c.getArgument("prefix", String.class);
-                                              if (newPrefix.length() > 1) {
+                                              if (newPrefix.isBlank()) {
                                                   c.getSource().getEmbed()
                                                       .title("Error")
-                                                      .description("Prefix must be a single character");
+                                                      .description("Prefix must be at least one character");
                                                   return ERROR;
                                               } else {
                                                   CONFIG.inGameCommands.prefix = newPrefix;
