@@ -11,7 +11,6 @@ import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.UserInterruptException;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.impl.DumbTerminal;
-import org.jline.widget.TailTipWidgets;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -42,11 +41,9 @@ public class TerminalManager {
                 .completer(new TerminalCommandCompleter())
                 .build();
             // always show completions below prompt
-            TailTipWidgets alwaysOnCompleter = new TailTipWidgets(lineReader, null, TailTipWidgets.TipType.COMPLETER);
+
             if (!(terminal instanceof DumbTerminal) && CONFIG.interactiveTerminal.alwaysOnCompletions) {
-                alwaysOnCompleter.enable();
-            } else {
-                alwaysOnCompleter.disable();
+                new TerminalAutoCompletionWidget(lineReader);
             }
             TerminalConsoleAppender.setReader(lineReader);
             var terminalThread = new Thread(interactiveRunnable, "ZenithProxy Terminal");
@@ -66,7 +63,7 @@ public class TerminalManager {
                     continue;
                 }
                 if (line == null || line.isBlank()) {
-                    break;
+                    continue;
                 }
                 handleTerminalCommand(line);
             } catch (final UserInterruptException e) {
