@@ -5,6 +5,7 @@ import com.zenith.Proxy;
 import com.zenith.event.module.ClientTickEvent;
 import com.zenith.module.Module;
 import com.zenith.util.Timer;
+import com.zenith.util.Timers;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 import org.jetbrains.annotations.Nullable;
@@ -19,7 +20,7 @@ import static com.zenith.Shared.CACHE;
 import static com.zenith.Shared.CONFIG;
 
 public class Spammer extends Module {
-    private final Timer tickTimer = Timer.createTickTimer();
+    private final Timer tickTimer = Timers.tickTimer();
     private int spamIndex = 0;
     private final HashSet<String> whisperedPlayers = new HashSet<>();
 

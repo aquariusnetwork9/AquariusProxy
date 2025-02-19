@@ -7,6 +7,7 @@ import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
 import com.zenith.discord.Embed;
 import com.zenith.module.impl.KillAura;
+import com.zenith.util.Config;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 
 import java.util.stream.Collectors;
@@ -43,7 +44,8 @@ public class KillAuraCommand extends Command {
                      "targetArmorStands on/off",
                      "targetCustom on/off",
                      "targetCustom add/del <entityType>",
-                     "weaponSwitch on/off"
+                     "weaponSwitch on/off",
+                     "priority <none/nearest>"
                  ),
                  asList("ka")
         );
@@ -153,7 +155,20 @@ public class KillAuraCommand extends Command {
                                             .errorColor();
                                     }
                                     return 1;
-                                }))));
+                                }))))
+            .then(literal("priority")
+                      .then(literal("none").executes(c -> {
+                          CONFIG.client.extra.killAura.priority = Config.Client.Extra.KillAura.Priority.NONE;
+                          c.getSource().getEmbed()
+                              .title("Priority Set");
+                          return OK;
+                      }))
+                      .then(literal("nearest").executes(c -> {
+                          CONFIG.client.extra.killAura.priority = Config.Client.Extra.KillAura.Priority.NEAREST;
+                          c.getSource().getEmbed()
+                              .title("Priority Set");
+                          return OK;
+                      })));
     }
 
     @Override
@@ -169,6 +184,7 @@ public class KillAuraCommand extends Command {
             .addField("Target Armor Stands", toggleStr(CONFIG.client.extra.killAura.targetArmorStands), false)
             .addField("Weapon Switching", toggleStr(CONFIG.client.extra.killAura.switchWeapon), false)
             .addField("Attack Delay Ticks", CONFIG.client.extra.killAura.attackDelayTicks, false)
+            .addField("Priority", CONFIG.client.extra.killAura.priority.name().toLowerCase(), false)
             .primaryColor();
         if (CONFIG.client.extra.killAura.targetCustom) {
             builder.description("**Custom Targets**\n" + CONFIG.client.extra.killAura.customTargets.stream().map(Enum::name).collect(

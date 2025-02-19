@@ -8,6 +8,7 @@ import com.zenith.event.module.EntityFishHookSpawnEvent;
 import com.zenith.event.proxy.ProxyClientConnectedEvent;
 import com.zenith.module.Module;
 import com.zenith.util.Timer;
+import com.zenith.util.Timers;
 import com.zenith.util.math.MathHelper;
 
 import java.time.Duration;
@@ -24,7 +25,7 @@ public class AntiKick extends Module {
     private Instant lastPosTime = Instant.now();
     private Instant lastFishingTime = Instant.now();
     private Instant lastSwingTime = Instant.now();
-    private final Timer timer = new Timer();
+    private final Timer timer = Timers.timer();
 
     @Override
     public List<EventConsumer<?>> registerEvents() {

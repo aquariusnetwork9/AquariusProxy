@@ -142,6 +142,7 @@ public final class Config {
                 public float rotationPitch = 0;
                 public HoldRightClickMode holdRightClickMode = HoldRightClickMode.MAIN_HAND;
                 public int holdRightClickInterval = 5;
+                public int holdLeftClickInterval = 0;
                 public float additionalBlockReach = 0;
                 public float additionalEntityReach = 0;
                 public enum HoldRightClickMode {
@@ -240,6 +241,12 @@ public final class Config {
                 public boolean targetArmorStands = false;
                 public int attackDelayTicks = 10;
                 public final ArrayList<EntityType> customTargets = new ArrayList<>();
+                public Priority priority = Priority.NONE;
+
+                public enum Priority {
+                    NONE,
+                    NEAREST
+                }
             }
 
             public static final class AutoEat {

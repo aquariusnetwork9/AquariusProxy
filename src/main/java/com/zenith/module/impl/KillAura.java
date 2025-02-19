@@ -1,7 +1,6 @@
 package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
-import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.cache.data.entity.EntityStandard;
@@ -17,6 +16,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 
 import javax.annotation.Nullable;
 import java.lang.ref.WeakReference;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -123,14 +123,23 @@ public class KillAura extends AbstractInventoryModule {
 
     @Nullable
     private EntityLiving findTarget() {
-        for (Entity e : CACHE.getEntityCache().getEntities().values()) {
-            if (!(e instanceof EntityLiving entity)) continue;
-            if (!entity.isAlive()) continue;
-            if (!validTarget(entity)) continue;
-            if (!canPossiblyReach(entity)) continue;
-            return entity;
-        }
-        return null;
+        // todo: check if its worth it to copy the entity cache to a list to avoid streams
+        var entityStream = CACHE.getEntityCache().getEntities().values().stream()
+            .filter(e -> e instanceof EntityLiving)
+            .map(e -> (EntityLiving) e)
+            .filter(e -> e != CACHE.getPlayerCache().getThePlayer())
+            .filter(EntityLiving::isAlive);
+        entityStream = switch (CONFIG.client.extra.killAura.priority) {
+            case NONE -> entityStream;
+            case NEAREST -> entityStream
+                .sorted(Comparator.comparingDouble(e -> CACHE.getPlayerCache().distanceSqToSelf(e)));
+        };
+
+        return entityStream
+            .filter(this::validTarget)
+            .filter(this::canPossiblyReach)
+            .findFirst()
+            .orElse(null);
     }
 
     private boolean validTarget(EntityLiving entity) {

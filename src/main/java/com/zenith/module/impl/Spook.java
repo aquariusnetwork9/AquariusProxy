@@ -11,6 +11,7 @@ import com.zenith.feature.world.InputRequest;
 import com.zenith.feature.world.RotationHelper;
 import com.zenith.module.Module;
 import com.zenith.util.Timer;
+import com.zenith.util.Timers;
 import com.zenith.util.math.MathHelper;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 
@@ -20,7 +21,7 @@ import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
 
 public class Spook extends Module {
-    private final Timer searchTimer = Timer.createTickTimer();
+    private final Timer searchTimer = Timers.tickTimer();
     // list (used as a stack) of most recently seen player entity ID's
     private final IntArrayList playerTargetStack = new IntArrayList();
     private int targetEntity = -1;

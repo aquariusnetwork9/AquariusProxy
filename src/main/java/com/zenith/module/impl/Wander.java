@@ -6,6 +6,7 @@ import com.zenith.feature.world.Input;
 import com.zenith.feature.world.InputRequest;
 import com.zenith.module.Module;
 import com.zenith.util.Timer;
+import com.zenith.util.Timers;
 
 import java.util.List;
 
@@ -13,8 +14,8 @@ import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
 
 public class Wander extends Module {
-    private final Timer jumpTimer = Timer.createTickTimer();
-    private final Timer turnTimer = Timer.createTickTimer();
+    private final Timer jumpTimer = Timers.tickTimer();
+    private final Timer turnTimer = Timers.tickTimer();
     public static final int MOVEMENT_PRIORITY = 1337;
 
     @Override

@@ -8,6 +8,7 @@ import com.zenith.feature.world.*;
 import com.zenith.mc.block.BlockPos;
 import com.zenith.module.Module;
 import com.zenith.util.Timer;
+import com.zenith.util.Timers;
 import com.zenith.util.math.MathHelper;
 
 import java.util.Iterator;
@@ -19,10 +20,10 @@ import static com.zenith.Shared.*;
 import static java.util.Arrays.asList;
 
 public class AntiAFK extends Module {
-    private final Timer swingTickTimer = Timer.createTickTimer();
-    private final Timer startWalkTickTimer = Timer.createTickTimer();
-    private final Timer rotateTimer = Timer.createTickTimer();
-    private final Timer jumpTimer = Timer.createTickTimer();
+    private final Timer swingTickTimer = Timers.tickTimer();
+    private final Timer startWalkTickTimer = Timers.tickTimer();
+    private final Timer rotateTimer = Timers.tickTimer();
+    private final Timer jumpTimer = Timers.tickTimer();
     private boolean shouldWalk = false;
     private final List<WalkDirection> walkDirections = asList(
             new WalkDirection(1, 0), new WalkDirection(-1, 0),
