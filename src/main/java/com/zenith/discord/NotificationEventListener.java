@@ -556,7 +556,8 @@ public class NotificationEventListener {
                                      .title("Kill Detected")
                                      .primaryColor()
                                      .addField("Victim", escape(event.deathMessage().victim()), false)
-                                     .addField("Message", escape(event.message()), false));
+                                     .addField("Message", escape(event.message()), false)
+                                     .thumbnail(Proxy.getInstance().getAvatarURL(event.deathMessage().victim()).toString()));
             });
         }
         if (!CONFIG.discord.chatRelay.deathMessages) return;
