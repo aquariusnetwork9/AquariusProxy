@@ -6,6 +6,7 @@ import com.zenith.feature.world.Input;
 import com.zenith.feature.world.InputRequest;
 import com.zenith.module.Module;
 import com.zenith.util.Timer;
+import com.zenith.util.Timers;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 
 import java.util.List;
@@ -18,8 +19,8 @@ public class Click extends Module {
 
     public static final int MOVEMENT_PRIORITY = 501;
 
-    private final Timer holdRightClickTimer = Timer.createTickTimer();
-    private final Timer holdLeftClickTimer = Timer.createTickTimer();
+    private final Timer holdRightClickTimer = Timers.tickTimer();
+    private final Timer holdLeftClickTimer = Timers.tickTimer();
     private Hand holdRightClickLastHand = Hand.MAIN_HAND;
 
     @Override

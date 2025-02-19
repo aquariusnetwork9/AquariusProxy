@@ -6,6 +6,7 @@ import com.zenith.event.module.ClientBotTick;
 import com.zenith.feature.world.InputRequest;
 import com.zenith.util.RequestFuture;
 import com.zenith.util.Timer;
+import com.zenith.util.Timers;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ClickItemAction;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerActionType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClickPacket;
@@ -20,7 +21,7 @@ import static com.zenith.Shared.*;
 public class PlayerInventoryManager {
     private static final InventoryActionRequest DEFAULT_ACTION_REQUEST = new InventoryActionRequest(null, Collections.emptyList(), Integer.MIN_VALUE);
     private static final RequestFuture DEFAULT_REQUEST_FUTURE = new RequestFuture();
-    private final Timer tickTimer = Timer.createTickTimer();
+    private final Timer tickTimer = Timers.tickTimer();
     private final int actionDelayTicks = 5;
     private InventoryActionRequest currentActionRequest = DEFAULT_ACTION_REQUEST;
     private RequestFuture currentRequestFuture = DEFAULT_REQUEST_FUTURE;
