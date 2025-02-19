@@ -1143,10 +1143,10 @@ public class PlayerSimulation extends Module {
     }
 
     public double getBlockReachDistance() {
-        return getAttributeValue(AttributeType.Builtin.PLAYER_BLOCK_INTERACTION_RANGE, 4.5f) + CONFIG.client.extra.click.additionalBlockReach;
+        return MathHelper.clamp(getAttributeValue(AttributeType.Builtin.PLAYER_BLOCK_INTERACTION_RANGE, 4.5f) + CONFIG.client.extra.click.additionalBlockReach, 0, Float.MAX_VALUE);
     }
 
     public double getEntityInteractDistance() {
-        return getAttributeValue(AttributeType.Builtin.PLAYER_ENTITY_INTERACTION_RANGE, 3.0f) + CONFIG.client.extra.click.additionalEntityReach;
+        return MathHelper.clamp(getAttributeValue(AttributeType.Builtin.PLAYER_ENTITY_INTERACTION_RANGE, 3.0f) + CONFIG.client.extra.click.additionalEntityReach, 0, Float.MAX_VALUE);
     }
 }

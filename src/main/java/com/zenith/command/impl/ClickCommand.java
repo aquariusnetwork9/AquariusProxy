@@ -134,7 +134,7 @@ public class ClickCommand extends Command {
                                         .primaryColor();
                                     return OK;
                                 })))))
-            .then(literal("addedBlockReach").then(argument("reach", floatArg(0, 10)).executes(c -> {
+            .then(literal("addedBlockReach").then(argument("reach", floatArg(-10, 10)).executes(c -> {
                 float f = getFloat(c, "reach");
                 CONFIG.client.extra.click.additionalBlockReach = f;
                 c.getSource().getEmbed()
@@ -142,7 +142,7 @@ public class ClickCommand extends Command {
                     .primaryColor();
                 return OK;
             })))
-            .then(literal("addedEntityReach").then(argument("reach", floatArg(0, 10)).executes(c -> {
+            .then(literal("addedEntityReach").then(argument("reach", floatArg(-10, 10)).executes(c -> {
                 float f = getFloat(c, "reach");
                 CONFIG.client.extra.click.additionalEntityReach = f;
                 c.getSource().getEmbed()
