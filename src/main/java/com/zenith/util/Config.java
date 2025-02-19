@@ -142,6 +142,7 @@ public final class Config {
                 public float rotationPitch = 0;
                 public HoldRightClickMode holdRightClickMode = HoldRightClickMode.MAIN_HAND;
                 public int holdRightClickInterval = 5;
+                public int holdLeftClickInterval = 0;
                 public float additionalBlockReach = 0;
                 public float additionalEntityReach = 0;
                 public enum HoldRightClickMode {

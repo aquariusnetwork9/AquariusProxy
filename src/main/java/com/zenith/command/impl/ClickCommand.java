@@ -33,6 +33,7 @@ public class ClickCommand extends Command {
             asList(
                 "left",
                 "left hold",
+                "left hold interval <ticks>",
                 "right",
                 "right hold",
                 "right hold <mainHand/offHand/alternate>",
@@ -77,7 +78,14 @@ public class ClickCommand extends Command {
                               .title("Left Click Hold")
                               .primaryColor();
                           return OK;
-                      })))
+                      })
+                                .then(literal("interval").then(argument("interval", integer(0, 100)).executes(c -> {
+                                    CONFIG.client.extra.click.holdLeftClickInterval = getInteger(c, "interval");
+                                    c.getSource().getEmbed()
+                                        .title("Left Click Hold Interval Set")
+                                        .primaryColor();
+                                    return OK;
+                                })))))
             .then(literal("right").requires((ctx) -> isClientConnected()).executes(c -> {
                 INPUTS.submit(InputRequest.builder()
                                   .input(Input.builder()
@@ -190,6 +198,7 @@ public class ClickCommand extends Command {
                     ? " [" + String.format("%.2f", CONFIG.client.extra.click.rotationYaw) + ", " + String.format("%.2f", CONFIG.client.extra.click.rotationPitch) + "]"
                     : ""), false)
             .addField("Click Hold Sneak", toggleStr(CONFIG.client.extra.click.holdSneak), false)
+            .addField("Left Click Hold Interval", CONFIG.client.extra.click.holdLeftClickInterval + " ticks", false)
             .addField("Right Click Hold Mode", rightClickHoldModeToString(CONFIG.client.extra.click.holdRightClickMode), false)
             .addField("Right Click Hold Interval", CONFIG.client.extra.click.holdRightClickInterval + " ticks", false)
             .addField("Added Block Reach", CONFIG.client.extra.click.additionalBlockReach, false)

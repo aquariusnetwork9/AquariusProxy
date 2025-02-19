@@ -19,6 +19,7 @@ public class Click extends Module {
     public static final int MOVEMENT_PRIORITY = 501;
 
     private final Timer holdRightClickTimer = Timer.createTickTimer();
+    private final Timer holdLeftClickTimer = Timer.createTickTimer();
     private Hand holdRightClickLastHand = Hand.MAIN_HAND;
 
     @Override
@@ -35,14 +36,23 @@ public class Click extends Module {
 
     private void onClientBotTick(ClientBotTick event) {
         if (CONFIG.client.extra.click.holdLeftClick) {
-            var req = InputRequest.builder().priority(MOVEMENT_PRIORITY);
-            var in = Input.builder().leftClick(true);
-            if (CONFIG.client.extra.click.hasRotation) {
-                req.yaw(CONFIG.client.extra.click.rotationYaw)
-                    .pitch(CONFIG.client.extra.click.rotationPitch);
+            if (holdLeftClickTimer.tick(CONFIG.client.extra.click.holdLeftClickInterval)) {
+                var req = InputRequest.builder().priority(MOVEMENT_PRIORITY);
+                var in = Input.builder().leftClick(true);
+                if (CONFIG.client.extra.click.hasRotation) {
+                    req.yaw(CONFIG.client.extra.click.rotationYaw)
+                        .pitch(CONFIG.client.extra.click.rotationPitch);
+                }
+                in.sneaking(CONFIG.client.extra.click.holdSneak);
+                INPUTS.submit(req.input(in.build()).build());
+            } else if (CONFIG.client.extra.click.holdSneak) {
+                INPUTS.submit(InputRequest.builder()
+                                  .input(Input.builder()
+                                             .sneaking(true)
+                                             .build())
+                                  .priority(0) // 0 priority allows other modules to override this if needed
+                                  .build());
             }
-            in.sneaking(CONFIG.client.extra.click.holdSneak);
-            INPUTS.submit(req.input(in.build()).build());
         } else if (CONFIG.client.extra.click.holdRightClick) {
             if (holdRightClickTimer.tick(CONFIG.client.extra.click.holdRightClickInterval)) {
                 var req = InputRequest.builder().priority(MOVEMENT_PRIORITY);
