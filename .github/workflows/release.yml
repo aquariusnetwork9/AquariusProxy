@@ -7,7 +7,9 @@ on:
 
 jobs:
   build-java-and-linux-amd64:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
+    container:
+      image: catthehacker/ubuntu:act-20.04
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
