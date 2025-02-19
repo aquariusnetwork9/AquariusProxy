@@ -2325,6 +2325,10 @@
       ]
     },
     {
+      "type": "com.zenith.util.Config$Client$Extra$KillAura$Priority",
+      "allDeclaredFields": true
+    },
+    {
       "type": "com.zenith.util.Config$Client$Extra$QueueWarning",
       "allDeclaredFields": true,
       "methods": [

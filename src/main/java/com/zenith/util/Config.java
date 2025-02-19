@@ -241,6 +241,12 @@ public final class Config {
                 public boolean targetArmorStands = false;
                 public int attackDelayTicks = 10;
                 public final ArrayList<EntityType> customTargets = new ArrayList<>();
+                public Priority priority = Priority.NONE;
+
+                public enum Priority {
+                    NONE,
+                    NEAREST
+                }
             }
 
             public static final class AutoEat {
