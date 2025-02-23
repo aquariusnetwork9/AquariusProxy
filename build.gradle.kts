@@ -93,10 +93,7 @@ dependencies {
     implementation("ar.com.hjg:pngj:2.1.0")
     implementation("com.zaxxer:HikariCP:6.2.1")
     implementation("org.postgresql:postgresql:42.7.5")
-    // todo: 3.46.0 introduces JFR support
-    //  but it causes a runtime exception in graalvm native image if we do not build with JFR support
-    //  which adds about 10mb to the binary size for zero benefit because we do not use jfr
-    implementation("org.jdbi:jdbi3-postgres:3.45.4")
+    implementation("org.jdbi:jdbi3-postgres:3.48.0")
     implementation("com.google.guava:guava:33.4.0-jre")
     implementation("ch.qos.logback:logback-classic:1.5.16")
     implementation("org.slf4j:slf4j-api:2.0.16")
