@@ -3,7 +3,7 @@ import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 
 plugins {
-    java
+    `java-library`
     id("org.graalvm.buildtools.native") version "0.10.5"
     id("com.gradleup.shadow") version "8.3.6"
     `maven-publish`
@@ -15,7 +15,10 @@ version = "1.21.4"
 val javaReleaseVersion = 21
 val javaVersion = JavaLanguageVersion.of(23)
 val javaLauncherProvider = javaToolchains.launcherFor { languageVersion = javaVersion }
-java { toolchain { languageVersion = javaVersion } }
+java {
+    toolchain { languageVersion = javaVersion }
+    withSourcesJar()
+}
 
 repositories {
     maven("https://maven.2b2t.vc/releases") {
@@ -46,63 +49,57 @@ repositories {
     mavenLocal()
 }
 
-val shade: Configuration by configurations.creating
-shade.extendsFrom(configurations.implementation.get())
-
 dependencies {
-    implementation("com.github.rfresh2:JDA:5.3.5") {
+    api("com.github.rfresh2:JDA:5.3.5") {
         exclude(group = "club.minnced")
         exclude(group = "net.java.dev.jna")
         exclude(group = "com.google.crypto.tink")
     }
-    implementation("com.github.rfresh2:MCProtocolLib:1.21.4.11") {
+    api("com.github.rfresh2:MCProtocolLib:1.21.4.11") {
         exclude(group = "io.netty")
     }
     val nettyVersion = "4.1.118.Final"
-    implementation("io.netty:netty-codec-haproxy:$nettyVersion")
-    implementation("io.netty:netty-codec-dns:$nettyVersion")
-    implementation("io.netty:netty-codec-http2:$nettyVersion")
-    implementation("io.netty:netty-codec-http:$nettyVersion")
-    implementation("io.netty:netty-codec-socks:$nettyVersion")
-    implementation("io.netty:netty-handler-proxy:$nettyVersion")
-    implementation("io.netty:netty-handler:$nettyVersion")
-    implementation("io.netty:netty-resolver-dns:$nettyVersion")
-    implementation("io.netty:netty-transport-classes-epoll:$nettyVersion")
-    implementation("io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64")
-    implementation("io.netty:netty-transport-native-unix-common:$nettyVersion:linux-x86_64")
-    implementation("io.netty:netty-resolver-dns-native-macos:$nettyVersion:osx-aarch_64")
-    implementation("org.cloudburstmc.math:api:2.0")
-    implementation("org.cloudburstmc.math:immutable:2.0")
-    implementation("org.redisson:redisson:3.44.0") {
+    api("io.netty:netty-codec-haproxy:$nettyVersion")
+    api("io.netty:netty-codec-dns:$nettyVersion")
+    api("io.netty:netty-codec-http2:$nettyVersion")
+    api("io.netty:netty-codec-http:$nettyVersion")
+    api("io.netty:netty-codec-socks:$nettyVersion")
+    api("io.netty:netty-handler-proxy:$nettyVersion")
+    api("io.netty:netty-handler:$nettyVersion")
+    api("io.netty:netty-resolver-dns:$nettyVersion")
+    api("io.netty:netty-transport-classes-epoll:$nettyVersion")
+    api("io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64")
+    api("io.netty:netty-transport-native-unix-common:$nettyVersion:linux-x86_64")
+    api("io.netty:netty-resolver-dns-native-macos:$nettyVersion:osx-aarch_64")
+    api("org.cloudburstmc.math:api:2.0")
+    api("org.cloudburstmc.math:immutable:2.0")
+    api("org.redisson:redisson:3.44.0") {
         exclude(group = "io.netty")
     }
-    implementation("com.github.rfresh2:SimpleEventBus:1.3")
+    api("com.github.rfresh2:SimpleEventBus:1.3")
     val fastutilVersion = "8.5.15"
-    implementation("com.github.rfresh2.fastutil.maps:object-object-maps:$fastutilVersion")
-    implementation("com.github.rfresh2.fastutil.maps:int-object-maps:$fastutilVersion")
-    implementation("com.github.rfresh2.fastutil.maps:object-int-maps:$fastutilVersion")
-    implementation("com.github.rfresh2.fastutil.maps:long-object-maps:$fastutilVersion")
-    implementation("com.github.rfresh2.fastutil.maps:int-int-maps:$fastutilVersion")
-    implementation("com.github.rfresh2.fastutil.maps:reference-object-maps:$fastutilVersion")
-    implementation("com.github.rfresh2.fastutil.queues:int-queues:$fastutilVersion")
-    implementation("net.raphimc:ViaLoader:3.0.4")
-    implementation("com.viaversion:viaversion:5.2.1")
-    implementation("com.viaversion:viabackwards:5.2.1")
-    implementation("org.jline:jline:3.29.0")
-    implementation("org.jline:jline-terminal-jni:3.29.0")
-    implementation("ar.com.hjg:pngj:2.1.0")
-    implementation("com.zaxxer:HikariCP:6.2.1")
-    implementation("org.postgresql:postgresql:42.7.5")
-    // todo: 3.46.0 introduces JFR support
-    //  but it causes a runtime exception in graalvm native image if we do not build with JFR support
-    //  which adds about 10mb to the binary size for zero benefit because we do not use jfr
-    implementation("org.jdbi:jdbi3-postgres:3.45.4")
-    implementation("com.google.guava:guava:33.4.0-jre")
-    implementation("ch.qos.logback:logback-classic:1.5.16")
-    implementation("org.slf4j:slf4j-api:2.0.16")
-    implementation("org.slf4j:jul-to-slf4j:2.0.16")
-    implementation("com.mojang:brigadier:1.3.10")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2")
+    api("com.github.rfresh2.fastutil.maps:object-object-maps:$fastutilVersion")
+    api("com.github.rfresh2.fastutil.maps:int-object-maps:$fastutilVersion")
+    api("com.github.rfresh2.fastutil.maps:object-int-maps:$fastutilVersion")
+    api("com.github.rfresh2.fastutil.maps:long-object-maps:$fastutilVersion")
+    api("com.github.rfresh2.fastutil.maps:int-int-maps:$fastutilVersion")
+    api("com.github.rfresh2.fastutil.maps:reference-object-maps:$fastutilVersion")
+    api("com.github.rfresh2.fastutil.queues:int-queues:$fastutilVersion")
+    api("net.raphimc:ViaLoader:3.0.4")
+    api("com.viaversion:viaversion:5.2.1")
+    api("com.viaversion:viabackwards:5.2.1")
+    api("org.jline:jline:3.29.0")
+    api("org.jline:jline-terminal-jni:3.29.0")
+    api("ar.com.hjg:pngj:2.1.0")
+    api("com.zaxxer:HikariCP:6.2.1")
+    api("org.postgresql:postgresql:42.7.5")
+    api("org.jdbi:jdbi3-postgres:3.48.0")
+    api("com.google.guava:guava:33.4.0-jre")
+    api("ch.qos.logback:logback-classic:1.5.16")
+    api("org.slf4j:slf4j-api:2.0.16")
+    api("org.slf4j:jul-to-slf4j:2.0.16")
+    api("com.mojang:brigadier:1.3.10")
+    api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2")
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
     val lombokVersion = "1.18.36"
     compileOnly("org.projectlombok:lombok:$lombokVersion")
@@ -189,13 +186,21 @@ tasks {
         }
     }
     processResources{ finalizedBy(commitHashTask, releaseTagTask) }
-    jar { enabled = false }
+    val devOutputDir = layout.buildDirectory.get().dir("dev").asFile
+    jar {
+        enabled = true
+        archiveClassifier = ""
+        destinationDirectory = devOutputDir
+    }
+    getByName("sourcesJar", Jar::class) {
+        archiveClassifier = "sources"
+        destinationDirectory = devOutputDir
+    }
     shadowJar {
         from(collectReachabilityMetadata)
         archiveBaseName = project.name
         archiveClassifier = ""
         archiveVersion = ""
-        configurations = listOf(shade)
 
         exclude(listOf(
             "module-info.class", "META-INF/licenses/**", "META-INF/maven/**", "META-INF/proguard/**",
@@ -283,18 +288,28 @@ graalvmNative {
     metadataRepository { enabled = true }
 }
 
-/** Publishing stuff for dataGenerator subproject **/
-// avoiding publishing the shaded jar which would otherwise cause dependency duplication issues
-// jar task needs to be enabled above (temporarily) for this publishing to work
 publishing {
+    repositories {
+        maven {
+            name = "vc"
+            url = uri("https://maven.2b2t.vc/releases")
+            credentials {
+                username = System.getenv("MAVEN_USERNAME")
+                password = System.getenv("MAVEN_PASSWORD")
+            }
+            authentication {
+                create<BasicAuthentication>("basic")
+            }
+        }
+    }
     publications {
         create<MavenPublication>("maven") {
             groupId = "com.zenith"
             artifactId = "ZenithProxy"
-            version = project.version.toString()
-            val publishArtifact = components["java"] as AdhocComponentWithVariants
-            publishArtifact.withVariantsFromConfiguration(configurations["shadowRuntimeElements"]) { skip() }
-            from(publishArtifact)
+            version = project.version.toString() + "-SNAPSHOT"
+            val javaComponent = components["java"] as AdhocComponentWithVariants
+            javaComponent.withVariantsFromConfiguration(configurations["shadowRuntimeElements"]) { skip() }
+            from(javaComponent)
         }
     }
 }
