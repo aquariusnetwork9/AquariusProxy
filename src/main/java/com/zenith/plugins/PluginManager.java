@@ -1,6 +1,5 @@
 package com.zenith.plugins;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.zenith.api.ZenithProxyPlugin;
@@ -24,10 +23,10 @@ import static com.zenith.Shared.PLUGIN_LOG;
 
 public class PluginManager {
     static final Path pluginsPath = Path.of("plugins");
-    final Map<String, ZenithProxyPlugin> plugins = new ConcurrentHashMap<>();
+    private final Map<String, ZenithProxyPlugin> plugins = new ConcurrentHashMap<>();
     @Getter final Map<String, ConfigInstance> pluginConfigurations = new ConcurrentHashMap<>();
-    final ZenithPluginAPI api = new ZenithPluginAPI();
-    final AtomicBoolean initialized = new AtomicBoolean(false);
+    private final ZenithPluginAPI api = new ZenithPluginAPI();
+    private final AtomicBoolean initialized = new AtomicBoolean(false);
 
     public record ConfigInstance(String fileName, Object instance, Class<?> clazz) { }
 
@@ -85,13 +84,12 @@ public class PluginManager {
             throw new RuntimeException("Plugin missing plugin.json: " + jarPath);
         }
         try (var stream = classloader.getResourceAsStream("plugin.json")) {
-            JsonNode jsonNode = OBJECT_MAPPER.readTree(stream);
-            JsonNode entryPointNode = jsonNode.get("entrypoint");
-            if (entryPointNode == null || !entryPointNode.isTextual()) {
+            PluginJson pluginJson = OBJECT_MAPPER.readValue(stream, PluginJson.class);
+            if (pluginJson.entrypoint == null) {
                 PLUGIN_LOG.error("Plugin missing entrypoint: {}", jarPath);
                 throw new RuntimeException("Plugin missing entrypoint: " + jarPath);
             }
-            return entryPointNode.asText();
+            return pluginJson.entrypoint;
         }
     }
 
