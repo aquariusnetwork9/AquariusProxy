@@ -13,22 +13,21 @@ import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 import static com.zenith.util.math.MathHelper.formatDuration;
-import static java.util.Arrays.asList;
 
 public class SessionTimeLimitCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "sessionTimeLimit",
-            CommandCategory.MODULE,
-            """
+        return CommandUsage.builder()
+            .name("sessionTimeLimit")
+            .category(CommandCategory.MODULE)
+            .description("""
             Sends an in-game warning before you are kicked for reaching the 2b2t session time limit.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "on/off",
                 "refresh"
             )
-        );
+            .build();
     }
 
     @Override

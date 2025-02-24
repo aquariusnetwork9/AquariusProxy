@@ -14,15 +14,14 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class AntiAFKCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.full(
-            "antiAFK",
-            CommandCategory.MODULE,
-            """
+        return CommandUsage.builder()
+            .name("antiAFK")
+            .category(CommandCategory.MODULE)
+            .description("""
             Configures the AntiAFK module.
             
             To avoid being kicked on 2b2t the only required action is swing OR walk.
@@ -30,8 +29,8 @@ public class AntiAFKCommand extends Command {
             The walk action will move the player roughly in a square shape. To avoid falling down any ledges, enable safeWalk
             
             For delay settings, 1 tick = 50ms
-            """,
-            asList(
+            """)
+            .usageLines(
                 "on/off",
                 "rotate on/off",
                 "rotate delay <ticks>",
@@ -45,9 +44,11 @@ public class AntiAFKCommand extends Command {
                 "jump onlyInWater on/off",
                 "jump delay <int>",
                 "sneak on/off"
-            ),
-            asList("afk")
-        );
+            )
+            .aliases(
+                "afk"
+            )
+            .build();
     }
 
     @Override

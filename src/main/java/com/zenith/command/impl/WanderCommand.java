@@ -14,18 +14,17 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class WanderCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "wander",
-            CommandCategory.MODULE,
-            """
+        return CommandUsage.builder()
+            .name("wander")
+            .category(CommandCategory.MODULE)
+            .description("""
             Randomly moves the player around in the world
-            """,
-            asList(
+            """)
+            .usageLines(
                 "on/off",
                 "turn on/off",
                 "turn delay <seconds>",
@@ -34,7 +33,7 @@ public class WanderCommand extends Command {
                 "jump inWater on/off",
                 "sneak on/off"
             )
-        );
+            .build();
     }
 
     @Override

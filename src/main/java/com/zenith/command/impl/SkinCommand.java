@@ -32,15 +32,18 @@ import static java.util.Arrays.asList;
 public class SkinCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.simple(
-            "skin",
-            CommandCategory.MODULE,
-            """
+        return CommandUsage.builder()
+            .name("skin")
+            .category(CommandCategory.MODULE)
+            .description("""
             Temporarily change your skin to another player's skin.
             
             This is only client-side and only affects how you see yourself.
-            """
-        );
+            """)
+            .usageLines(
+                "<playerName>"
+            )
+            .build();
     }
 
     @Override

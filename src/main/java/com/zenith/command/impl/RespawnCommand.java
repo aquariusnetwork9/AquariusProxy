@@ -17,11 +17,11 @@ import static java.util.Objects.nonNull;
 public class RespawnCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.simple(
-            "respawn",
-            CommandCategory.MODULE,
-            "Performs a respawn"
-        );
+        return CommandUsage.builder()
+            .name("respawn")
+            .category(CommandCategory.MODULE)
+            .description("Performs a respawn")
+            .build();
     }
 
     @Override

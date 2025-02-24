@@ -13,25 +13,24 @@ import static com.zenith.Shared.LAUNCH_CONFIG;
 import static com.zenith.Shared.saveLaunchConfig;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class AutoUpdateCommand extends Command {
 
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "autoUpdate",
-            CommandCategory.MANAGE,
-            """
+        return CommandUsage.builder()
+            .name("autoUpdate")
+            .category(CommandCategory.MANAGE)
+            .description("""
             Configures the AutoUpdater.
             
             Updates are not immediately applied while the client is connected.
             When an update is found, it will be applied 30 seconds after the next disconnect, or immediately if already disconnected.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "on/off"
             )
-        );
+            .build();
     }
 
     @Override

@@ -20,14 +20,12 @@ import static java.util.Arrays.asList;
 public class ESPCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "esp",
-            CommandCategory.MODULE,
-            "Renders the spectral effect around all entities",
-            asList(
-                "on/off"
-            )
-        );
+        return CommandUsage.builder()
+            .name("esp")
+            .category(CommandCategory.MODULE)
+            .description("Renders the spectral effect around all entities")
+            .usageLines("on/off")
+            .build();
     }
 
     @Override

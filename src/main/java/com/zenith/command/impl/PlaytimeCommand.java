@@ -13,19 +13,19 @@ import java.time.Duration;
 
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
-import static java.util.Arrays.asList;
 
 public class PlaytimeCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.full("playtime",
-                                 CommandCategory.INFO,
-                                 "Gets the playtime of a player on 2b2t using https://api.2b2t.vc/",
-                                 asList(
-                                     "<playerName>"
-                                 ),
-                                 asList("pt")
-        );
+        return CommandUsage.builder()
+            .name("playtime")
+            .category(CommandCategory.INFO)
+            .description("Gets the playtime of a player on 2b2t using https://api.2b2t.vc/")
+            .usageLines(
+                "<playerName>"
+            )
+            .aliases("pt")
+            .build();
     }
 
     @Override

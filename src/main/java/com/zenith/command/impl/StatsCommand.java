@@ -16,20 +16,20 @@ import java.util.Optional;
 
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.util.math.MathHelper.formatDurationLong;
-import static java.util.Arrays.asList;
 
 public class StatsCommand extends Command {
     final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "stats",
-            CommandCategory.INFO,
-            "Gets the 2b2t stats of a player using https://api.2b2t.vc",
-            asList(
+        return CommandUsage.builder()
+            .name("stats")
+            .category(CommandCategory.INFO)
+            .description("Gets the 2b2t stats of a player using https://api.2b2t.vc")
+            .usageLines(
                 "<playerName>"
-            ));
+            )
+            .build();
     }
 
     @Override

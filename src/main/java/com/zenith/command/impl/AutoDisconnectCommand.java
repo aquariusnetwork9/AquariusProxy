@@ -14,14 +14,14 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class AutoDisconnectCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.full(
-            "autoDisconnect",
-            CommandCategory.MODULE, """
+        return CommandUsage.builder()
+            .name("autoDisconnect")
+            .category(CommandCategory.MODULE)
+            .description("""
             Configures the AutoDisconnect module.
             
             Every mode and setting requires the module to be enabled to be active.
@@ -38,8 +38,8 @@ public class AutoDisconnectCommand extends Command {
               * WhilePlayerConnected: If AutoDisconnect should disconnect while a player is controlling the proxy account
               * AutoClientDisconnect: Disconnects when the controlling player disconnects
               * CancelAutoReconnect: Cancels AutoReconnect when AutoDisconnect is triggered. If the proxy account has prio this is ignored and AutoReconnect is always cancelled
-            """,
-            asList(
+            """)
+            .usageLines(
                 "on/off",
                 "health on/off",
                 "health <integer>",
@@ -49,9 +49,11 @@ public class AutoDisconnectCommand extends Command {
                 "whilePlayerConnected on/off",
                 "autoClientDisconnect on/off",
                 "cancelAutoReconnect on/off"
-            ),
-            asList("autoLog")
-        );
+            )
+            .aliases(
+                "autoLog"
+            )
+            .build();
     }
 
     @Override

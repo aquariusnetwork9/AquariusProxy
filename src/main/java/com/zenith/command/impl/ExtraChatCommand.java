@@ -7,8 +7,6 @@ import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
 import com.zenith.discord.Embed;
 
-import java.util.Arrays;
-
 import static com.zenith.Shared.CONFIG;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
@@ -16,21 +14,21 @@ import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 public class ExtraChatCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args("extraChat",
-                                 CommandCategory.MODULE,
-                                 """
-                                 Configures the ExtraChat module.
-                                 
-                                 Allows hiding types of messages in-game or in the terminal chat log.
-                                 """,
-                                 Arrays.asList(
-                                     "on/off",
-                                     "hideChat on/off",
-                                     "hideWhispers on/off",
-                                     "hideDeathMessages on/off",
-                                     "showConnectionMessages on/off",
-                                     "logChatMessages on/off"
-                                 ));
+        return CommandUsage.builder()
+            .name("extraChat")
+            .category(CommandCategory.MODULE)
+            .description("""
+             Hide certain types of messages in-game or in the terminal chat log.
+             """)
+            .usageLines(
+                "on/off",
+                "hideChat on/off",
+                "hideWhispers on/off",
+                "hideDeathMessages on/off",
+                "showConnectionMessages on/off",
+                "logChatMessages on/off"
+            )
+            .build();
     }
 
     @Override

@@ -16,15 +16,14 @@ import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class ConnectionTestCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "connectionTest",
-            CommandCategory.INFO,
-            """
+        return CommandUsage.builder()
+            .name("connectionTest")
+            .category(CommandCategory.INFO)
+            .description("""
             Tests whether this proxy or another MC server is accessible from the public internet.
             
             If the test succeeds, that means other people can connect.
@@ -37,13 +36,13 @@ public class ConnectionTestCommand extends Command {
             On a VPS this is usually due to a firewall needing to be disabled.
             
             On a home PC you would need both disable any firewall and configure port forwarding in your router.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "",
                 "<address>",
                 "testOnStart on/off"
             )
-        );
+            .build();
     }
 
     @Override

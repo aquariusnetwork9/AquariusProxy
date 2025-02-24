@@ -20,15 +20,14 @@ import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 import static com.zenith.command.util.CommandOutputHelper.playerListToString;
 import static com.zenith.discord.DiscordBot.escape;
-import static java.util.Arrays.asList;
 
 public class SpectatorCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "spectator",
-            CommandCategory.CORE,
-            """
+        return CommandUsage.builder()
+            .name("spectator")
+            .category(CommandCategory.CORE)
+            .description("""
             Configures the Spectator feature.
             
             The spectator whitelist only allows players to join as spectators.
@@ -38,8 +37,8 @@ public class SpectatorCommand extends Command {
             
             Full commands allow spectators access to all standard ZenithProxy commands like `connect`, `disconnect`, etc.
             If this is disabled, spectators only have access to a limited set of core commands.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "on/off",
                 "whitelist add/del <player>",
                 "whitelist list",
@@ -52,7 +51,7 @@ public class SpectatorCommand extends Command {
                 "fullCommands slashCommands on/off",
                 "fullCommands requireRegularWhitelist on/off"
             )
-        );
+            .build();
     }
 
     @Override

@@ -18,37 +18,36 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class KillAuraCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.full(
-            "killAura",
-                 CommandCategory.MODULE,
-                 """
-                 Attacks entities near the player.
-                 
-                 Custom targets list: https://link.2b2t.vc/1
-                 
-                 Aggressive mobs are mobs that are actively targeting and attacking the player.
-                 """,
-                 asList(
-                     "on/off",
-                     "attackDelay <ticks>",
-                     "targetPlayers on/off",
-                     "targetHostileMobs on/off",
-                     "targetHostileMobs onlyAggressive on/off",
-                     "targetNeutralMobs on/off",
-                     "targetNeutralMobs onlyAggressive on/off",
-                     "targetArmorStands on/off",
-                     "targetCustom on/off",
-                     "targetCustom add/del <entityType>",
-                     "weaponSwitch on/off",
-                     "priority <none/nearest>"
-                 ),
-                 asList("ka")
-        );
+        return CommandUsage.builder()
+            .name("killAura")
+            .category(CommandCategory.MODULE)
+            .description("""
+             Attacks entities near the player.
+             
+             Custom targets list: https://link.2b2t.vc/1
+             
+             Aggressive mobs are mobs that are actively targeting and attacking the player.
+             """)
+            .usageLines(
+                "on/off",
+                "attackDelay <ticks>",
+                "targetPlayers on/off",
+                "targetHostileMobs on/off",
+                "targetHostileMobs onlyAggressive on/off",
+                "targetNeutralMobs on/off",
+                "targetNeutralMobs onlyAggressive on/off",
+                "targetArmorStands on/off",
+                "targetCustom on/off",
+                "targetCustom add/del <entityType>",
+                "weaponSwitch on/off",
+                "priority <none/nearest>"
+            )
+            .aliases("ka")
+            .build();
     }
 
     @Override

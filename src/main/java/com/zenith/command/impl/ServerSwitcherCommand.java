@@ -19,27 +19,26 @@ import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.zenith.Shared.CONFIG;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
-import static java.util.Arrays.asList;
 
 public class ServerSwitcherCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "switch",
-            CommandCategory.MODULE,
-            """
+        return CommandUsage.builder()
+            .name("switch")
+            .category(CommandCategory.MODULE)
+            .description("""
             Switch the connected player to an alternate MC server.
             
             Can be used to switch between multiple ZenithProxy instances quickly.
             
             Servers being switched to must have transfers enabled and be on an MC version >=1.20.6
-            """,
-            asList(
+            """)
+            .usageLines(
                 "register <name> <address> <port>",
                 "list",
                 "<name>"
             )
-        );
+            .build();
     }
 
     @Override

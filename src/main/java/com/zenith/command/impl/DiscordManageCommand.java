@@ -26,15 +26,15 @@ public class DiscordManageCommand extends Command {
 
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "discord",
-            CommandCategory.MANAGE,
-            """
+        return CommandUsage.builder()
+            .name("discord")
+            .category(CommandCategory.MANAGE)
+            .description("""
             Manages the Discord bot's configuration.
             
             The relay is configured using the `chatRelay` command
-            """,
-            asList(
+            """)
+            .usageLines(
                 "on/off",
                 "channel <channel ID>",
                 "token <token>",
@@ -46,7 +46,7 @@ public class DiscordManageCommand extends Command {
                 "showNonWhitelistIP on/off",
                 "ignoreOtherBots on/off"
             )
-        );
+            .build();
     }
 
     @Override

@@ -10,17 +10,16 @@ import com.zenith.module.impl.AutoReconnect;
 
 import static com.zenith.Shared.DISCORD_LOG;
 import static com.zenith.Shared.MODULE;
-import static java.util.Arrays.asList;
 
 public class DisconnectCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.simpleAliases(
-            "disconnect",
-            CommandCategory.CORE,
-            "Disconnects ZenithProxy from the destination MC server",
-            asList("dc")
-        );
+        return CommandUsage.builder()
+            .name("disconnect")
+            .category(CommandCategory.CORE)
+            .description("Disconnects ZenithProxy from the destination MC server")
+            .aliases("dc")
+            .build();
     }
 
     @Override

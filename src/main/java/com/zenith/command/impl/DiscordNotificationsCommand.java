@@ -16,20 +16,19 @@ import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class DiscordNotificationsCommand extends Command {
     private static final Pattern ROLE_ID_PATTERN = Pattern.compile("<@&\\d+>");
 
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.full(
-            "discordNotifications",
-            CommandCategory.INFO,
-            """
+        return CommandUsage.builder()
+            .name("discordNotifications")
+            .category(CommandCategory.INFO)
+            .description("""
             Configures various discord notifications regarding player and proxy connections, deaths, and more.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "role set <roleId>",
                 "role reset",
                 "connect mention on/off",
@@ -44,9 +43,12 @@ public class DiscordNotificationsCommand extends Command {
                 "spectatorConnect mention on/off",
                 "spectatorDisconnect mention on/off",
                 "nonWhitelistedConnect mention on/off"
-            ),
-            asList("alerts", "notifications")
-        );
+            )
+            .aliases(
+                "alerts",
+                "notifications"
+            )
+            .build();
     }
 
     @Override

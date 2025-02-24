@@ -13,16 +13,17 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class AutoTotemCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "autoTotem",
-            CommandCategory.MODULE,
-            "Automatically equips totems in the offhand",
-            asList(
+        return CommandUsage.builder()
+            .name("autoTotem")
+            .category(CommandCategory.MODULE)
+            .description("""
+            Automatically equips a totem from the inventory to the offhand when the bot's health is below a set threshold.
+            """)
+            .usageLines(
                 "on/off",
                 "inGame on/off",
                 "health <int>",
@@ -30,7 +31,8 @@ public class AutoTotemCommand extends Command {
                 "popAlert mention on/off",
                 "noTotemsAlert on/off",
                 "noTotemsAlert mention on/off"
-            ));
+            )
+            .build();
     }
 
     @Override

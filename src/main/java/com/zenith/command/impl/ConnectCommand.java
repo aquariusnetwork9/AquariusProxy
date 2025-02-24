@@ -8,17 +8,18 @@ import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
 
 import static com.zenith.Shared.EXECUTOR;
-import static java.util.Arrays.asList;
 
 public class ConnectCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.simpleAliases(
-            "connect",
-            CommandCategory.CORE,
-            "Connects ZenithProxy to the destination MC server",
-            asList("c")
-        );
+        return CommandUsage.builder()
+            .name("connect")
+            .category(CommandCategory.CORE)
+            .description("""
+             Connects ZenithProxy to the destination MC server
+             """)
+            .aliases("c")
+            .build();
     }
 
     @Override

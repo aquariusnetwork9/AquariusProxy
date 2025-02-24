@@ -14,28 +14,29 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class AntiLeakCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args("antiLeak",
-                                 CommandCategory.MODULE,
-                                 """
-                                 Configures the AntiLeak module. Cancels chat packets that could leak your coordinates.
-                                 i.e. due to inputting incorrect baritone commands, sharing waypoints, etc.
-                                 
-                                 rangeCheck -> only cancels if the numbers in the chat message are within a range of your current coordinates.
-                                 rangeFactor -> How near the coordinates in your chat have to be to actual coords to be cancelled.
-                                 
-                                 Equation: `actualCoord / rangeFactor < chatCoord < actualCoord * rangeFactor`
-                                 Example: If your coordinates are [500, 800], rangeFactor=10 will cancel if the chat contains a number between 50-5000 or 80-8000.
-                                 """,
-                                 asList(
-                                     "on/off",
-                                     "rangeCheck on/off",
-                                     "rangeFactor <number>"
-                                 ));
+        return CommandUsage.builder()
+            .name("antiLeak")
+            .category(CommandCategory.MODULE)
+            .description("""
+             Configures the AntiLeak module. Cancels chat packets that could leak your coordinates.
+             i.e. due to inputting incorrect baritone commands, sharing waypoints, etc.
+             
+             rangeCheck -> only cancels if the numbers in the chat message are within a range of your current coordinates.
+             rangeFactor -> How near the coordinates in your chat have to be to actual coords to be cancelled.
+             
+             Equation: `actualCoord / rangeFactor < chatCoord < actualCoord * rangeFactor`
+             Example: If your coordinates are [500, 800], rangeFactor=10 will cancel if the chat contains a number between 50-5000 or 80-8000.
+             """)
+            .usageLines(
+                "on/off",
+                "rangeCheck on/off",
+                "rangeFactor <number>"
+            )
+            .build();
     }
 
     @Override

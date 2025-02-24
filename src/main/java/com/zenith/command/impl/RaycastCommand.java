@@ -15,11 +15,11 @@ import static com.zenith.Shared.MODULE;
 public class RaycastCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.simple(
-            "raycast",
-            CommandCategory.INFO,
-            "Debug testing command. Gets the block or entity the player is currently looking at."
-        );
+        return CommandUsage.builder()
+            .name("raycast")
+            .category(CommandCategory.INFO)
+            .description("Debug testing command. Gets the block or entity the player is currently looking at.")
+            .build();
     }
 
     @Override

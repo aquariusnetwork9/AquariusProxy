@@ -29,18 +29,82 @@ public class CommandUsage {
         this.aliases = aliases;
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static final class Builder {
+        private String name;
+        private CommandCategory category;
+        private String description;
+        private List<String> usageLines = Collections.singletonList("");
+        private List<String> aliases = Collections.emptyList();
+
+        public Builder name(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public Builder category(CommandCategory category) {
+            this.category = category;
+            return this;
+        }
+
+        public Builder description(String description) {
+            this.description = description;
+            return this;
+        }
+
+        public Builder usageLines(List<String> usageLines) {
+            this.usageLines = usageLines;
+            return this;
+        }
+
+        public Builder usageLines(String... usageLines) {
+            this.usageLines = List.of(usageLines);
+            return this;
+        }
+
+        public Builder aliases(List<String> aliases) {
+            this.aliases = aliases;
+            return this;
+        }
+
+        public Builder aliases(String... aliases) {
+            this.aliases = List.of(aliases);
+            return this;
+        }
+
+        public CommandUsage build() {
+            if (name == null) {
+                throw new IllegalStateException("name cannot be null");
+            }
+            if (category == null) {
+                throw new IllegalStateException("category cannot be null");
+            }
+            if (description == null) {
+                throw new IllegalStateException("description cannot be null");
+            }
+            return new CommandUsage(name, category, description, usageLines, aliases);
+        }
+    }
+
+    @Deprecated
     public static CommandUsage simple(final String name, final CommandCategory category, final String description) {
         return new CommandUsage(name, category, description, Collections.singletonList(""), Collections.emptyList());
     }
 
+    @Deprecated
     public static CommandUsage simpleAliases(final String name, final CommandCategory category, final String description, final List<String> aliases) {
         return new CommandUsage(name, category, description, Collections.singletonList(""), aliases);
     }
 
+    @Deprecated
     public static CommandUsage args(final String name, final CommandCategory category, final String description, final List<String> usageLines) {
         return new CommandUsage(name, category, description, usageLines, Collections.emptyList());
     }
 
+    @Deprecated
     public static CommandUsage full(final String name, final CommandCategory category, final String description, final List<String> usageLines, final List<String> aliases) {
         return new CommandUsage(name, category, description, usageLines, aliases);
     }

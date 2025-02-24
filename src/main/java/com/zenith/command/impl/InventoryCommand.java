@@ -25,27 +25,26 @@ import java.util.List;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.zenith.Shared.CACHE;
 import static com.zenith.Shared.INVENTORY;
-import static java.util.Arrays.asList;
 
 public class InventoryCommand extends Command {
     private static final int INV_ACTION_PRIORITY = 1000000;
 
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.full(
-            "inventory",
-            CommandCategory.INFO,
-            "Show and interact with the player's inventory",
-            asList(
+        return CommandUsage.builder()
+            .name("inventory")
+            .category(CommandCategory.INFO)
+            .description("Show and interact with the player's inventory")
+            .usageLines(
                 "",
                 "show",
                 "hold <slot>",
                 "swap <from> <to>",
                 "drop <slot>",
                 "drop stack <slot>"
-            ),
-            asList("inv")
-        );
+            )
+            .aliases("inv")
+            .build();
     }
 
     @Override

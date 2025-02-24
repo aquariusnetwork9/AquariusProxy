@@ -20,19 +20,18 @@ import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class ClientConnectionCommand extends Command {
     private static final Pattern bindAddressPattern = Pattern.compile("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$");
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "clientConnection",
-            CommandCategory.MANAGE,
-            """
+        return CommandUsage.builder()
+            .name("clientConnection")
+            .category(CommandCategory.MANAGE)
+            .description("""
             Manages the connection configuration from ZenithProxy to the destination MC server.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "autoConnect on/off",
                 "proxy on/off",
                 "proxy type <type>",
@@ -47,7 +46,7 @@ public class ClientConnectionCommand extends Command {
                 "ping mode <tablist/packet>",
                 "ping packetInterval <seconds>"
             )
-        );
+            .build();
     }
 
     @Override

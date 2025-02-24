@@ -14,21 +14,22 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class AutoReconnectCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "autoReconnect",
-            CommandCategory.MODULE,
-            "Configures the AutoReconnect module",
-            asList(
+        return CommandUsage.builder()
+            .name("autoReconnect")
+            .category(CommandCategory.MODULE)
+            .description("""
+             Automatically reconnects the bot when it is disconnected.
+             """)
+            .usageLines(
                 "on/off",
                 "delay <seconds>",
                 "maxAttempts <number>"
             )
-        );
+            .build();
     }
 
     @Override

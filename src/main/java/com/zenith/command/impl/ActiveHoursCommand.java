@@ -22,18 +22,17 @@ import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class ActiveHoursCommand extends Command {
     private static final Pattern TIME_PATTERN = Pattern.compile("[0-9]{1,2}:[0-9]{2}");
 
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.full(
-            "activeHours",
-            CommandCategory.MODULE,
-            """
-            Set active hours for the proxy to automatically be logged in at.
+        return CommandUsage.builder()
+            .name("activeHours")
+            .category(CommandCategory.MODULE)
+            .description("""
+            Set times for ZenithProxy to automatically connect at.
             
             By default, 2b2t's queue wait ETA is used to determine when to log in.
             The connect will occur when the current time plus the ETA is equal to a time set.
@@ -42,19 +41,19 @@ public class ActiveHoursCommand extends Command {
             
              Time zone Ids ("TZ Identifier" column): https://w.wiki/A2fd
              Time format: hh:mm, Examples: 1:42, 14:42, 14:01
-            """,
-            asList(
+            """)
+            .usageLines(
                 "on/off",
                 "timezone <timezone ID>",
                 "add/del <time>",
                 "status",
                 "whilePlayerConnected on/off",
                 "queueEtaCalc on/off"
-            ),
-            asList(
+            )
+            .aliases(
                 "schedule"
             )
-        );
+            .build();
     }
 
     @Override

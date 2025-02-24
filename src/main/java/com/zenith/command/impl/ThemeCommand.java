@@ -13,15 +13,14 @@ import java.util.Arrays;
 import static com.zenith.Shared.CONFIG;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
-import static java.util.Arrays.asList;
 
 public class ThemeCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.full(
-            "theme",
-            CommandCategory.MANAGE,
-            """
+        return CommandUsage.builder()
+            .name("theme")
+            .category(CommandCategory.MANAGE)
+            .description("""
             Changes the color theme of alerts and messages.
             
             Use `theme list` to see available colors.
@@ -31,16 +30,16 @@ public class ThemeCommand extends Command {
               * Success: General "this worked" responses, server join, and friends
               * Error: Error responses, server leave, and enemies
               * In Queue: The proxy is in queue, reconnecting, or is in a transitional state
-            """,
-            asList(
-               "list",
-               "primary <color>",
-               "success <color>",
-               "error <color>",
-               "inQueue <color>"
-            ),
-            asList("color")
-        );
+            """)
+            .usageLines(
+                "list",
+                "primary <color>",
+                "success <color>",
+                "error <color>",
+                "inQueue <color>"
+            )
+            .aliases("color")
+            .build();
     }
 
     @Override

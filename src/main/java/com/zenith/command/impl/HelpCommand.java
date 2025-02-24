@@ -14,22 +14,21 @@ import java.util.stream.Collectors;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.string;
 import static com.zenith.Shared.COMMAND;
-import static java.util.Arrays.asList;
 
 public class HelpCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.full(
-            "help",
-            CommandCategory.CORE,
-            "ZenithProxy command list",
-            asList(
+        return CommandUsage.builder()
+            .name("help")
+            .category(CommandCategory.CORE)
+            .description("ZenithProxy command list")
+            .usageLines(
                 "",
                 "<category>",
                 "<command>"
-            ),
-            asList("h")
-        );
+            )
+            .aliases("h")
+            .build();
     }
 
     @Override

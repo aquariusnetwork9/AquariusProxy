@@ -14,24 +14,23 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class ActionLimiterCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.full(
-            "actionLimiter",
-            CommandCategory.MODULE,
-            """
-            Limits player actions and movements.
-            
-            Players who login with the same account as the one used by ZenithProxy will be immune to these restrictions.
-            
-            If the movement limits are reached by a player, they will be disconnected while the proxy account will stay logged in.
-            
-            Other limits do not disconnect players and instead cancel the actions.
-            """,
-            asList(
+        return CommandUsage.builder()
+            .name("actionLimiter")
+            .category(CommandCategory.MODULE)
+            .description("""
+                Limits player actions and movements.
+                
+                Players who login with the same account as the one used by ZenithProxy will be immune to these restrictions.
+                
+                If the movement limits are reached by a player, they will be disconnected while the proxy account will stay logged in.
+                
+                Other limits do not disconnect players and instead cancel the actions.
+                """)
+            .usageLines(
                 "on/off",
                 "allowMovement on/off",
                 "movementDistance <distance>",
@@ -44,9 +43,11 @@ public class ActionLimiterCommand extends Command {
                 "allowUseItem on/off",
                 "allowBookSigning on/off",
                 "allowChat on/off"
-            ),
-            asList("al")
-        );
+            )
+            .aliases(
+                "al"
+            )
+            .build();
     }
 
     @Override

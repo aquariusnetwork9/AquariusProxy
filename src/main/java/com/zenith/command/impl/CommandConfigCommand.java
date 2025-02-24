@@ -13,18 +13,17 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class CommandConfigCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "commandConfig",
-            CommandCategory.MANAGE,
-            """
+        return CommandUsage.builder()
+            .name("commandConfig")
+            .category(CommandCategory.MANAGE)
+            .description("""
             Configures ZenithProxy command prefixes and settings.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "discord prefix <string>",
                 "ingame on/off",
                 "ingame slashCommands on/off",
@@ -34,7 +33,8 @@ public class CommandConfigCommand extends Command {
                 // todo: might add command to config these at some point. But I think these should always be on
 //                "ingame logToDiscord on/off",
 //                "terminal logToDiscord on/off"
-            ));
+            )
+            .build();
     }
 
     @Override
