@@ -18,6 +18,7 @@ public final class Config {
     public final Client client = new Client();
     public final Debug debug = new Debug();
     public final Server server = new Server();
+    public final Plugins plugins = new Plugins();
     public final InteractiveTerminal interactiveTerminal = new InteractiveTerminal();
     public final InGameCommands inGameCommands = new InGameCommands();
     public final Theme theme = new Theme();
@@ -700,6 +701,10 @@ public final class Config {
                 return this.bind.port;
             }
         }
+    }
+
+    public static class Plugins {
+        public boolean enabled = true;
     }
 
     public static final class InteractiveTerminal {

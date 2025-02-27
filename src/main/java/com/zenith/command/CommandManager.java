@@ -73,6 +73,7 @@ public class CommandManager {
         new PathfinderCommand(),
         new PearlLoader(),
         new PlaytimeCommand(),
+        new PluginsCommand(),
         new PlaytimeLimiterCommand(),
         new PrioCommand(),
         new QueueStatusCommand(),

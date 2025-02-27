@@ -132,7 +132,7 @@ public class Proxy {
         }
         initEventHandlers();
         try {
-            PLUGIN_MANAGER.initialize();
+            if (CONFIG.plugins.enabled) PLUGIN_MANAGER.initialize();
             if (CONFIG.debug.clearOldLogs) EXECUTOR.schedule(Proxy::clearOldLogs, 10L, TimeUnit.SECONDS);
             if (CONFIG.interactiveTerminal.enable) TERMINAL.start();
             MODULE.init();
