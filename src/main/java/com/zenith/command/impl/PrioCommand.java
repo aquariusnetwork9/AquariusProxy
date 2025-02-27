@@ -13,22 +13,21 @@ import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class PrioCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "prio",
-            CommandCategory.INFO,
-            "Configure alerts for 2b2t priority queue status and bans",
-            asList(
+        return CommandUsage.builder()
+            .name("prio")
+            .category(CommandCategory.INFO)
+            .description("Configure alerts for 2b2t priority queue status and bans")
+            .usageLines(
                 "mentions on/off",
                 "banMentions on/off",
                 "banCheck",
                 "banCheck <playerName>"
             )
-        );
+            .build();
     }
 
     @Override

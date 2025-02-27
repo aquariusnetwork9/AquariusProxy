@@ -14,23 +14,24 @@ import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.zenith.Shared.*;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class AutoFishCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args("autoFish",
-                                 CommandCategory.MODULE,
-                                 """
-                                 Configures the AutoFish module.
-                                 
-                                 AutoFishing will prevent you from being AFK kicked. It's recommended to disable AntiAFK.
-                                 """,
-                                 asList(
-                                     "on/off",
-                                     "rotation <yaw> <pitch>",
-                                     "rotation sync"
-                                 ));
+        return CommandUsage.builder()
+            .name("autoFish")
+            .category(CommandCategory.MODULE)
+            .description("""
+             Automatically fishes, both casting and reeling.
+             
+             AutoFishing will prevent you from being AFK kicked. It's recommended to disable AntiAFK.
+             """)
+            .usageLines(
+                "on/off",
+                "rotation <yaw> <pitch>",
+                "rotation sync"
+            )
+            .build();
     }
 
     @Override

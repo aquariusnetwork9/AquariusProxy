@@ -15,23 +15,22 @@ import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 import static com.zenith.command.util.CommandOutputHelper.playerListToString;
 import static com.zenith.discord.DiscordBot.escape;
-import static java.util.Arrays.asList;
 
 public class StalkCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "stalk",
-            CommandCategory.MODULE,
-            """
+        return CommandUsage.builder()
+            .name("stalk")
+            .category(CommandCategory.MODULE)
+            .description("""
             Sends alerts when players join or leave
-            """,
-            asList(
+            """)
+            .usageLines(
                 "on/off",
                 "list",
                 "add/del <player>"
             )
-        );
+            .build();
     }
 
     @Override

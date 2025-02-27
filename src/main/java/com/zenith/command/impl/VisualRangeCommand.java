@@ -22,15 +22,14 @@ import static com.zenith.Shared.*;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 import static com.zenith.discord.DiscordBot.escape;
-import static java.util.Arrays.asList;
 
 public class VisualRangeCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.full(
-            "visualRange",
-            CommandCategory.MODULE,
-            """
+        return CommandUsage.builder()
+            .name("visualRange")
+            .category(CommandCategory.MODULE)
+            .description("""
             Configure the VisualRange notification feature.
             
             Alerts are sent both in the terminal and in discord, with optional discord mentions.
@@ -42,8 +41,8 @@ public class VisualRangeCommand extends Command {
             `all` mode will record all players, regardless of being on the friends list.
             
             To add players to the friends list see the `friends` command.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "on/off",
                 "list",
                 "enter on/off",
@@ -57,9 +56,9 @@ public class VisualRangeCommand extends Command {
                 "replayRecording on/off",
                 "replayRecording mode <enemy/all>",
                 "replayRecording cooldown <minutes>"
-            ),
-            asList("vr")
-        );
+            )
+            .aliases("vr")
+            .build();
     }
 
     @Override

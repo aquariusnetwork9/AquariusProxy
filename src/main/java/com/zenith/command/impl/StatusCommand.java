@@ -18,24 +18,23 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static com.zenith.Shared.*;
-import static java.util.Arrays.asList;
 import static java.util.Objects.nonNull;
 
 public class StatusCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.full(
-            "status",
-            CommandCategory.CORE,
-            """
+        return CommandUsage.builder()
+            .name("status")
+            .category(CommandCategory.CORE)
+            .description("""
             Prints the current status of ZenithProxy, the in-game player, and modules.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "",
                 "modules"
-                ),
-            asList("s")
-        );
+            )
+            .aliases("s")
+            .build();
     }
 
     public static String getCoordinates(final Entity entity) {

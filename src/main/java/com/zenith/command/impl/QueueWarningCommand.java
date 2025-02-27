@@ -16,27 +16,26 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class QueueWarningCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "queueWarning",
-            CommandCategory.INFO,
-            """
+        return CommandUsage.builder()
+            .name("queueWarning")
+            .category(CommandCategory.INFO)
+            .description("""
             Configure warnings sent when 2b2t queue positions are reached.
             
             The list of queue positions to send the warnings can be configured, each with an optional mention.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "on/off",
                 "list",
                 "clear",
                 "add <position> mention",
                 "del <position>"
             )
-        );
+            .build();
     }
 
     @Override

@@ -15,21 +15,20 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.Clie
 
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.word;
-import static java.util.Arrays.asList;
 
 public class SpectatorEntityCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.full(
-            "spectatorEntity",
-            CommandCategory.MANAGE,
-            "Changes the current spectator entity. Only usable by spectators",
-            asList(
+        return CommandUsage.builder()
+            .name("spectatorEntity")
+            .category(CommandCategory.MANAGE)
+            .description("Changes the current spectator entity. Only usable by spectators")
+            .usageLines(
                 "",
                 "<entity>"
-            ),
-            asList("e")
-        );
+            )
+            .aliases("e")
+            .build();
     }
 
     @Override

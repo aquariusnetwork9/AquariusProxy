@@ -21,13 +21,13 @@ import static java.util.Arrays.asList;
 public class DebugCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "debug",
-            CommandCategory.MANAGE,
-            """
+        return CommandUsage.builder()
+            .name("debug")
+            .category(CommandCategory.MANAGE)
+            .description("""
             Debug settings for features in testing or for use in development.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "sync inventory",
                 "sync chunks",
                 "clearEffects",
@@ -41,7 +41,7 @@ public class DebugCommand extends Command {
                 "debugLogs on/off",
                 "chunkCacheFullbright on/off"
             )
-        );
+            .build();
     }
 
     @Override

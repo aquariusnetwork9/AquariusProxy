@@ -11,21 +11,22 @@ import static com.mojang.brigadier.arguments.StringArgumentType.string;
 import static com.zenith.Shared.PLAYER_LISTS;
 import static com.zenith.command.util.CommandOutputHelper.playerListToString;
 import static com.zenith.discord.DiscordBot.escape;
-import static java.util.Arrays.asList;
 
 public class IgnoreCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args("ignore",
-                                 CommandCategory.MODULE,
-                                 """
-                                 Hides chat and death messages and notifications for a configured list of players.
-                                 """,
-                                 asList(
-                                     "add/del <player>",
-                                     "list",
-                                     "clear"
-                                 ));
+        return CommandUsage.builder()
+            .name("ignore")
+            .category(CommandCategory.MODULE)
+            .description("""
+             Hides chat and death messages and notifications from a configured list of players.
+             """)
+            .usageLines(
+                "add/del <player>",
+                "list",
+                "clear"
+            )
+            .build();
     }
 
     @Override

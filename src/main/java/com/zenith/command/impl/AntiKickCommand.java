@@ -14,25 +14,24 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class AntiKickCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "antiKick",
-            CommandCategory.MODULE,
-            """
+        return CommandUsage.builder()
+            .name("antiKick")
+            .category(CommandCategory.MODULE)
+            .description("""
             AntiKick kicks players controlling the proxy client if they are inactive for a set amount of time.
             
             Inactivity is defined as not moving, fishing, or swinging - which are what prevents 2b2t from kicking players.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "on/off",
                 "playerInactivityKickMins <minutes>",
                 "minWalkDistance <blocks>"
             )
-        );
+            .build();
     }
 
     @Override

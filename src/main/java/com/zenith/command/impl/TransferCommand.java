@@ -15,11 +15,14 @@ import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChar
 public class TransferCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.simple(
-            "transfer",
-            CommandCategory.MANAGE,
-            "Transfers connected players to a destination MC server"
-        );
+        return CommandUsage.builder()
+            .name("transfer")
+            .category(CommandCategory.MANAGE)
+            .description("Transfers connected players to a destination MC server")
+            .usageLines(
+                "<address>"
+            )
+            .build();
     }
 
     @Override

@@ -11,27 +11,26 @@ import com.zenith.feature.world.InputRequest;
 import static com.mojang.brigadier.arguments.FloatArgumentType.floatArg;
 import static com.mojang.brigadier.arguments.FloatArgumentType.getFloat;
 import static com.zenith.Shared.INPUTS;
-import static java.util.Arrays.asList;
 
 public class RotateCommand extends Command {
     private static final int MOVE_PRIORITY = 1000000;
 
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "rotate",
-            CommandCategory.MODULE,
-            """
+        return CommandUsage.builder()
+            .name("rotate")
+            .category(CommandCategory.MODULE)
+            .description("""
             Rotates the bot in-game.
             
             Note that many other modules can change the player's rotation after this command is executed.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "<yaw> <pitch>",
                 "yaw <yaw>",
                 "pitch <pitch>"
             )
-        );
+            .build();
     }
 
     @Override

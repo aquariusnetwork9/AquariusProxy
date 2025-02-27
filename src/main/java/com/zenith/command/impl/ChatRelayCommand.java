@@ -24,10 +24,10 @@ public class ChatRelayCommand extends Command {
 
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "chatRelay",
-            CommandCategory.MANAGE,
-            """
+        return CommandUsage.builder()
+            .name("chatRelay")
+            .category(CommandCategory.MANAGE)
+            .description("""
             Configures the Discord ChatRelay feature.
             
             The ChatRelay is a live feed of chat messages and/or connection messages from the server to a Discord channel.
@@ -36,8 +36,8 @@ public class ChatRelayCommand extends Command {
             
             Messages typed in the ChatRelay discord channel will be sent as chat messages in-game
             Discord message replies will be sent as whispers in-game
-            """,
-            asList(
+            """)
+            .usageLines(
                 "on/off",
                 "channel <channelId>",
                 "connectionMessages on/off",
@@ -51,7 +51,7 @@ public class ChatRelayCommand extends Command {
                 "ignoreQueue on/off",
                 "sendMessages on/off"
             )
-        );
+            .build();
     }
 
     @Override

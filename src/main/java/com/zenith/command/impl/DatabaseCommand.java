@@ -11,20 +11,19 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.DATABASE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class DatabaseCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.full(
-            "database",
-            CommandCategory.MANAGE,
-            """
+        return CommandUsage.builder()
+            .name("database")
+            .category(CommandCategory.MANAGE)
+            .description("""
             Configures the database module used for https://api.2b2t.vc
             
             This is disabled by default. No ZenithProxy users contribute or collect data, this is purely for use with my own accounts.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "on/off",
                 "queueWait on/off",
                 "queueLength on/off",
@@ -36,9 +35,9 @@ public class DatabaseCommand extends Command {
                 "tablist on/off",
                 "playtime on/off",
                 "time on/off"
-            ),
-            asList("db")
-        );
+            )
+            .aliases("db")
+            .build();
     }
 
     @Override

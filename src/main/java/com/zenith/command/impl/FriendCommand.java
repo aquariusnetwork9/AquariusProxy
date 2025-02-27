@@ -12,24 +12,23 @@ import static com.mojang.brigadier.arguments.StringArgumentType.string;
 import static com.zenith.Shared.PLAYER_LISTS;
 import static com.zenith.command.util.CommandOutputHelper.playerListToString;
 import static com.zenith.discord.DiscordBot.escape;
-import static java.util.Arrays.asList;
 
 public class FriendCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "friend",
-            CommandCategory.MANAGE,
-            """
+        return CommandUsage.builder()
+            .name("friend")
+            .category(CommandCategory.MANAGE)
+            .description("""
             Manage the friend list.
             Friends change behavior for various modules like VisualRange, KillAura, and AutoDisconnect
-            """,
-            asList(
+            """)
+            .usageLines(
                 "add/del <player>",
                 "list",
                 "clear"
             )
-        );
+            .build();
     }
 
     @Override

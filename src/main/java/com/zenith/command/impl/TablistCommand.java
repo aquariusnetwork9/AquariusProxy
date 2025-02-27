@@ -20,21 +20,20 @@ import java.util.stream.IntStream;
 
 import static com.zenith.Shared.CACHE;
 import static com.zenith.Shared.DEFAULT_LOG;
-import static java.util.Arrays.asList;
 
 public class TablistCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.full(
-            "tablist",
-            CommandCategory.INFO,
-            "Prints the current MC server's player list",
-            asList(
+        return CommandUsage.builder()
+            .name("tablist")
+            .category(CommandCategory.INFO)
+            .description("Prints the current MC server's player list")
+            .usageLines(
                 "",
                 "header"
-            ),
-            asList("tab")
-        );
+            )
+            .aliases("tab")
+            .build();
     }
 
     @Override

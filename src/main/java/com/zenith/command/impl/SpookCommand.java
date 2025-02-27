@@ -13,24 +13,23 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class SpookCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "spook",
-            CommandCategory.MODULE,
-            """
+        return CommandUsage.builder()
+            .name("spook")
+            .category(CommandCategory.MODULE)
+            .description("""
             Rotates and stares at players in visual range.
             
             Can often confuse other players in-game into thinking you are a real player.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "on/off",
                 "mode <visualRange/nearest>"
             )
-        );
+            .build();
     }
 
     @Override

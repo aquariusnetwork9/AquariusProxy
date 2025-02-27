@@ -14,22 +14,23 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class AutoEatCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "autoEat",
-            CommandCategory.MODULE,
-            "Configures the AutoEat module",
-            asList(
+        return CommandUsage.builder()
+            .name("autoEat")
+            .category(CommandCategory.MODULE)
+            .description("""
+             Automatically eats food when health or hunger is below a set threshold.
+             """)
+            .usageLines(
                 "on/off",
                 "health <int>",
                 "hunger <int>",
                 "warning on/off"
             )
-        );
+            .build();
     }
 
     @Override

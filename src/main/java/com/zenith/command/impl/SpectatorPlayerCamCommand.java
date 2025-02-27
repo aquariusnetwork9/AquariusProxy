@@ -19,11 +19,11 @@ import static com.zenith.Shared.CACHE;
 public class SpectatorPlayerCamCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.simple(
-            "playerCam",
-            CommandCategory.MANAGE,
-            "Toggles spectators between player and entity cameras. Only usable by spectators"
-        );
+        return CommandUsage.builder()
+            .name("playerCam")
+            .category(CommandCategory.MANAGE)
+            .description("Toggles spectators between player and entity cameras. Only usable by spectators")
+            .build();
     }
 
     @Override

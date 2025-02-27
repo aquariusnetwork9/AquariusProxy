@@ -16,15 +16,14 @@ import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class ServerConnectionCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "serverConnection",
-            CommandCategory.MANAGE,
-            """
+        return CommandUsage.builder()
+            .name("serverConnection")
+            .category(CommandCategory.MANAGE)
+            .description("""
             Configures the MC server hosted by Zenith and players' connections to it
             
             The `proxyIP` is the IP players should connect to. This is purely informational.
@@ -39,8 +38,8 @@ public class ServerConnectionCommand extends Command {
             `log` = logs pings
             
             The `timeout` arguments configures how long until players are kicked due no packets being received.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "proxyIP <ip>",
                 "port <port>",
                 "ping on/off",
@@ -54,7 +53,7 @@ public class ServerConnectionCommand extends Command {
                 "timeout <seconds>",
                 "autoConnectOnLogin on/off"
             )
-        );
+            .build();
     }
 
     @Override

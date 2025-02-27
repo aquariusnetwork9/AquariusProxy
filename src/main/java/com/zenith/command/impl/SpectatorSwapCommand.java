@@ -19,17 +19,17 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public class SpectatorSwapCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "swap",
-            CommandCategory.MODULE,
-            """
+        return CommandUsage.builder()
+            .name("swap")
+            .category(CommandCategory.MODULE)
+            .description("""
             Swaps the current controlling player to spectator mode.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "",
                 "force"
             )
-        );
+            .build();
     }
 
     @Override

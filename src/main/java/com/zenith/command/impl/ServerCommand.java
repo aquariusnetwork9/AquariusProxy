@@ -15,7 +15,6 @@ import java.util.regex.Pattern;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.zenith.Shared.CONFIG;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
-import static java.util.Arrays.asList;
 
 public class ServerCommand extends Command {
     private final Pattern ipWithPortPattern = Pattern.compile("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}:[0-9]{1,5}$");
@@ -25,15 +24,15 @@ public class ServerCommand extends Command {
 
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "server",
-            CommandCategory.MANAGE,
-            "Change the MC server ZenithProxy connects to.",
-            asList(
+        return CommandUsage.builder()
+            .name("server")
+            .category(CommandCategory.MANAGE)
+            .description("Change the MC server ZenithProxy connects to.")
+            .usageLines(
                 "<IP>",
                 "<IP> <port>"
             )
-        );
+            .build();
     }
 
     @Override

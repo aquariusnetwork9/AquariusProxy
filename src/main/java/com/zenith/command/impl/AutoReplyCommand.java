@@ -17,25 +17,22 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class AutoReplyCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "autoReply",
-            CommandCategory.MODULE,
-            """
-            Configures the AutoReply module.
-            
+        return CommandUsage.builder()
+            .name("autoReply")
+            .category(CommandCategory.MODULE)
+            .description("""
             Automatically replies to whispers with a custom message.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "on/off",
                 "cooldown <seconds>",
                 "message <message>"
             )
-        );
+            .build();
     }
 
     @Override

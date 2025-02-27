@@ -13,15 +13,15 @@ import static com.zenith.Shared.*;
 public class ReconnectCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.simple(
-            "reconnect",
-            CommandCategory.MANAGE,
-            """
+        return CommandUsage.builder()
+            .name("reconnect")
+            .category(CommandCategory.MANAGE)
+            .description("""
             Disconnect and reconnects from the destination MC server.
             
             Can be used to perform a reconnect "queue skip" on 2b2t
-            """
-        );
+            """)
+            .build();
     }
 
     @Override

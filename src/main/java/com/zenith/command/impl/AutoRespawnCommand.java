@@ -14,20 +14,21 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class AutoRespawnCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "autoRespawn",
-            CommandCategory.MODULE,
-            "Automatically respawns the player after dying.",
-            asList(
+        return CommandUsage.builder()
+            .name("autoRespawn")
+            .category(CommandCategory.MODULE)
+            .description("""
+            Automatically respawns the player after dying.
+            """)
+            .usageLines(
                 "on/off",
                 "delay <milliseconds>"
             )
-        );
+            .build();
     }
 
     @Override

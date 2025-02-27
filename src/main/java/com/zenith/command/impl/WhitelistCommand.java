@@ -16,29 +16,28 @@ import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 import static com.zenith.command.util.CommandOutputHelper.playerListToString;
 import static com.zenith.discord.DiscordBot.escape;
-import static java.util.Arrays.asList;
 
 public class WhitelistCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.full(
-            "whitelist",
-            CommandCategory.CORE,
-            """
+        return CommandUsage.builder()
+            .name("whitelist")
+            .category(CommandCategory.CORE)
+            .description("""
             Manages the list of players allowed to login.
             
             Whitelisted players are allowed to both control the account in-game and spectate.
             
             `autoAddZenithAccount` will add the MC account you have logged in Zenith with to the whitelist.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "add/del <player>",
                 "list",
                 "clear",
                 "autoAddZenithAccount on/off"
-            ),
-            asList("wl")
-        );
+            )
+            .aliases("wl")
+            .build();
     }
 
     @Override

@@ -19,18 +19,17 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class SpammerCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.full(
-            "spammer",
-            CommandCategory.MODULE,
-            """
+        return CommandUsage.builder()
+            .name("spammer")
+            .category(CommandCategory.MODULE)
+            .description("""
             Spams messages or whispers in-game. Use with caution, this can and will get you muted.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "on/off",
                 "whisper on/off",
                 "whilePlayerConnected on/off",
@@ -42,9 +41,9 @@ public class SpammerCommand extends Command {
                 "add <message>",
                 "addAt <index> <message>",
                 "del <index>"
-            ),
-            asList("spam")
-        );
+            )
+            .aliases("spam")
+            .build();
     }
 
     @Override

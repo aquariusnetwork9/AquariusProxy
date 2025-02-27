@@ -15,22 +15,24 @@ import java.time.OffsetDateTime;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.discord.DiscordBot.escape;
-import static java.util.Arrays.asList;
 
 public class SeenCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.full(
-            "seen",
-            CommandCategory.INFO,
-            """
+        return CommandUsage.builder()
+            .name("seen")
+            .category(CommandCategory.INFO)
+            .description("""
             Gets the first and last times a player was seen on 2b2t using https://api.2b2t.vc
-            """,
-            asList(
+            """)
+            .usageLines(
                 "<playerName>"
-            ),
-            asList("firstseen", "lastseen")
-        );
+            )
+            .aliases(
+                "firstseen",
+                "lastseen"
+            )
+            .build();
     }
 
     @Override

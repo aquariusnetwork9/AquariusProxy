@@ -13,28 +13,27 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class ViaVersionCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "via",
-            CommandCategory.MODULE,
-            """
+        return CommandUsage.builder()
+            .name("via")
+            .category(CommandCategory.MODULE)
+            .description("""
              Configure the integrated ViaVersion module.
              
              `zenithToServer` -> ZenithProxy connecting to the MC server
              `playerToZenith` -> players connecting to ZenithProxy
-             """,
-            asList(
+             """)
+            .usageLines(
                 "zenithToServer on/off",
                 "zenithToServer disableOn2b2t on/off",
                 "zenithToServer version auto",
                 "zenithToServer version <MC version>",
                 "playerToZenith on/off"
             )
-        );
+            .build();
     }
 
     @Override

@@ -14,28 +14,27 @@ import java.util.stream.Collectors;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.zenith.Shared.CACHE;
-import static java.util.Arrays.asList;
 
 public class MapCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "map",
-            CommandCategory.INFO,
-    """
+        return CommandUsage.builder()
+            .name("map")
+            .category(CommandCategory.INFO)
+            .description("""
             Generate and render map images.
             Map ID's to render must be cached during the current session
             Generated maps can optionally be aligned to the vanilla map grid, or generated with a custom view distance.
             Generated maps cannot be larger than what chunks are currently cached in the proxy
-            """,
-            asList(
+            """)
+            .usageLines(
                 "render <mapId>",
                 "render all",
                 "generate",
                 "generate align",
                 "generate <viewDistance>"
             )
-        );
+            .build();
     }
 
     @Override

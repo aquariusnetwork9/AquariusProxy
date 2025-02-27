@@ -9,17 +9,20 @@ import com.zenith.command.brigadier.CommandContext;
 import com.zenith.event.proxy.UpdateStartEvent;
 
 import static com.zenith.Shared.*;
-import static java.util.Arrays.asList;
 
 public class UpdateCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.simpleAliases(
-            "update",
-            CommandCategory.CORE,
-            "Restarts and updates the proxy software",
-            asList("restart", "shutdown", "reboot")
-        );
+        return CommandUsage.builder()
+            .name("update")
+            .category(CommandCategory.CORE)
+            .description("Restarts and updates ZenithProxy if `autoUpdate` is enabled")
+            .aliases(
+                "restart",
+                "shutdown",
+                "reboot"
+            )
+            .build();
     }
 
     @Override

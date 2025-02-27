@@ -12,23 +12,22 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class AutoMendCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "autoMend",
-            CommandCategory.MODULE,
-            """
+        return CommandUsage.builder()
+            .name("autoMend")
+            .category(CommandCategory.MODULE)
+            .description("""
             Equips items that are both damaged and have the mending enchantment to the offhand.
             
             Can be enabled while at an XP farm to repair items in your inventory.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "on/off"
             )
-        );
+            .build();
     }
 
     @Override

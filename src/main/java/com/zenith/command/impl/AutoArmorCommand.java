@@ -11,19 +11,20 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class AutoArmorCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "autoArmor",
-            CommandCategory.MODULE,
-            "Automatically equips the best armor in your inventory.",
-            asList(
+        return CommandUsage.builder()
+            .name("autoArmor")
+            .category(CommandCategory.MODULE)
+            .description("""
+            Automatically equips the best armor in your inventory
+            """)
+            .usageLines(
                 "on/off"
             )
-        );
+            .build();
     }
 
     @Override

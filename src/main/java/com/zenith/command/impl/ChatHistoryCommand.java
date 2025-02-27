@@ -14,25 +14,24 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class ChatHistoryCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "chatHistory",
-            CommandCategory.MODULE,
-            """
+        return CommandUsage.builder()
+            .name("chatHistory")
+            .category(CommandCategory.MODULE)
+            .description("""
             Caches and sends recent chat history to players and spectators who connect to the proxy.
             Includes whispers, chat, and system messages.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "on/off",
                 "seconds <seconds>",
                 "maxCount <maxCount>",
                 "spectators on/off"
             )
-        );
+            .build();
     }
 
     @Override

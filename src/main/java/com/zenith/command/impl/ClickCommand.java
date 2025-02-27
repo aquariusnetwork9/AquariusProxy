@@ -19,18 +19,17 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.INPUTS;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class ClickCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "click",
-            CommandCategory.MODULE,
-            """
-            Simulates a click to the block or entity in front of you
-            """,
-            asList(
+        return CommandUsage.builder()
+            .name("click")
+            .category(CommandCategory.MODULE)
+            .description("""
+             Simulates a click to the block or entity in front of you
+             """)
+            .usageLines(
                 "left",
                 "left hold",
                 "left hold interval <ticks>",
@@ -45,7 +44,7 @@ public class ClickCommand extends Command {
                 "hold sneak on/off",
                 "stop"
             )
-        );
+            .build();
     }
 
     @Override

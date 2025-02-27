@@ -9,20 +9,19 @@ import com.zenith.command.brigadier.CommandContext;
 import static com.zenith.Shared.CONFIG;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class DisplayCoordsCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.full(
-            "displayCoords",
-            CommandCategory.MANAGE,
-            """
+        return CommandUsage.builder()
+            .name("displayCoords")
+            .category(CommandCategory.MANAGE)
+            .description("""
             Configures whether the discord bot's messages should display coordinates. Only usable by account owner(s).
-            """,
-            asList("on/off"),
-            asList("coords")
-        );
+            """)
+            .usageLines("on/off")
+            .aliases("coords")
+            .build();
     }
 
     @Override

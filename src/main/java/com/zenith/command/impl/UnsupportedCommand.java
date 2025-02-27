@@ -16,15 +16,14 @@ import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 import static com.zenith.discord.DiscordBot.escape;
 import static com.zenith.util.Config.Authentication.AccountType.OFFLINE;
-import static java.util.Arrays.asList;
 
 public class UnsupportedCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "unsupported",
-            CommandCategory.MANAGE,
-            """
+        return CommandUsage.builder()
+            .name("unsupported")
+            .category(CommandCategory.MANAGE)
+            .description("""
             Unsupported settings that cause critical security issues.
             
             Do not use edit these unless you absolutely understand what you are doing.
@@ -32,14 +31,14 @@ public class UnsupportedCommand extends Command {
             No user support will be provided if you modify any of these settings.
             
             All subcommands are only usable from the terminal.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "whitelist on/off",
-                "verifyUsers on/off",
+                "allowOfflinePlayers on/off",
                 "auth type offline",
                 "auth offlineUsername <username>"
             )
-        );
+            .build();
     }
 
     @Override
@@ -52,10 +51,10 @@ public class UnsupportedCommand extends Command {
                     .title("Whitelist " + toggleStrCaps(CONFIG.server.extra.whitelist.enable));
                 return OK;
             })))
-            .then(literal("verifyUsers").then(argument("toggle", toggle()).executes(c -> {
+            .then(literal("allowOfflinePlayers").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.server.verifyUsers = getToggle(c, "toggle");
                 c.getSource().getEmbed()
-                    .title("Verify Users " + toggleStrCaps(CONFIG.server.verifyUsers));
+                    .title("Allow Offline Players " + toggleStrCaps(CONFIG.server.verifyUsers));
                 return OK;
             })))
             .then(literal("auth")
@@ -80,7 +79,7 @@ public class UnsupportedCommand extends Command {
     public void postPopulate(Embed builder) {
         builder
             .addField("Whitelist", toggleStr(CONFIG.server.extra.whitelist.enable), false)
-            .addField("Verify Users", toggleStr(CONFIG.server.verifyUsers), false)
+            .addField("Allow Offline Players", toggleStr(CONFIG.server.verifyUsers), false)
             .addField("Offline Authentication", toggleStr(CONFIG.authentication.accountType == OFFLINE), false)
             .addField("Offline Username", escape(CONFIG.authentication.username), false)
             .primaryColor();

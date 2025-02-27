@@ -19,15 +19,14 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class ReplayCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "replay",
-            CommandCategory.MODULE,
-            """
+        return CommandUsage.builder()
+            .name("replay")
+            .category(CommandCategory.MODULE)
+            .description("""
             Captures a ReplayMod recording.
             
             Replays can optionally be uploaded to discord if they are under the discord message size limit.
@@ -39,8 +38,8 @@ public class ReplayCommand extends Command {
             `autoStart` will automatically start a new recording when the proxy connects.
             
             Additional recording modes can be configured in the `visualRange` command.
-            """,
-            asList(
+            """)
+            .usageLines(
                 "start",
                 "stop",
                 "discordUpload on/off",
@@ -49,7 +48,7 @@ public class ReplayCommand extends Command {
                 "autoRecord mode <off/proxyConnected/playerConnected/health>",
                 "autoRecord health <integer>"
             )
-        );
+            .build();
     }
 
     @Override

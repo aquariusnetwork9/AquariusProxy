@@ -10,17 +10,15 @@ import com.zenith.util.ComponentSerializer;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundRemoveEntitiesPacket;
 
-import static java.util.Arrays.asList;
-
 public class SpectatorEntityToggleCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.simpleAliases(
-            "entityToggle",
-            CommandCategory.MANAGE,
-            "Toggles the visibility of spectator entities. Only usable by spectators.",
-            asList("etoggle")
-        );
+        return CommandUsage.builder()
+            .name("entityToggle")
+            .category(CommandCategory.MANAGE)
+            .description("Toggles the visibility of spectator entities. Only usable by spectators.")
+            .aliases("etoggle")
+            .build();
     }
 
     @Override

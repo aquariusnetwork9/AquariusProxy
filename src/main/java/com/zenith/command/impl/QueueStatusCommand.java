@@ -12,25 +12,23 @@ import com.zenith.util.math.MathHelper;
 
 import java.time.Duration;
 
-import static java.util.Arrays.asList;
-
 public class QueueStatusCommand extends Command {
 
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.full(
-            "queueStatus",
-            CommandCategory.INFO,
-            "Gets the current 2b2t queue length and wait ETA",
-            asList(
+        return CommandUsage.builder()
+            .name("queueStatus")
+            .category(CommandCategory.INFO)
+            .description("Gets the current 2b2t queue length and wait ETA")
+            .usageLines(
                 "",
                 "refresh"
-            ),
-            asList(
+            )
+            .aliases(
                 "queue",
                 "q"
             )
-        );
+            .build();
     }
 
     @Override

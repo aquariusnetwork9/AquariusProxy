@@ -21,10 +21,10 @@ import static java.util.Arrays.asList;
 public class AuthCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "auth",
-            CommandCategory.MANAGE,
-            """
+        return CommandUsage.builder()
+            .name("auth")
+            .category(CommandCategory.MANAGE)
+            .description("""
             Configures the proxy's authentication settings.
             
             To switch accounts, use the `clear` command.
@@ -38,8 +38,8 @@ public class AuthCommand extends Command {
             If authentication fails, try logging into the account on the vanilla MC launcher and joining a server. Then try again in Zenith.
             If this still fails, try one of the alternate auth types.
             
-            """,
-            asList(
+            """)
+            .usageLines(
                 "clear",
                 "attempts <int>",
                 "alwaysRefreshOnLogin on/off",
@@ -52,7 +52,7 @@ public class AuthCommand extends Command {
                 "useClientConnectionProxy on/off",
                 "chatSigning on/off"
             )
-        );
+            .build();
     }
 
     @Override

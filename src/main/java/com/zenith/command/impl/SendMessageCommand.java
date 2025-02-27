@@ -15,16 +15,23 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.Serverbound
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.EVENT_BUS;
-import static java.util.Arrays.asList;
 
 public class SendMessageCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.simpleAliases(
-            "sendMessage",
-            CommandCategory.MODULE,
-            "Sends a message in-game.",
-            asList("say", "msg", "m"));
+        return CommandUsage.builder()
+            .name("sendMessage")
+            .category(CommandCategory.MODULE)
+            .description("Sends a message in-game.")
+            .usageLines(
+                "<message>"
+            )
+            .aliases(
+                "say",
+                "msg",
+                "m"
+            )
+            .build();
     }
 
     @Override
