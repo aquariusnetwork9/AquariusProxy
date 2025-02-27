@@ -253,6 +253,7 @@ graalvmNative {
             mainClass = "com.zenith.Proxy"
             quickBuild = false
             verbose = true
+            sharedLibrary = false
             buildArgs.addAll(
                 "-Duser.country=US",
                 "-Duser.language=en",
