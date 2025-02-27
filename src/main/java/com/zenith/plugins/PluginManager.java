@@ -1,7 +1,11 @@
 package com.zenith.plugins;
 
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
+import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.zenith.api.PluginInfo;
 import com.zenith.api.ZenithProxyPlugin;
 import com.zenith.util.ImageInfo;
 import lombok.Getter;
@@ -15,6 +19,7 @@ import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -23,10 +28,20 @@ import static com.zenith.Shared.PLUGIN_LOG;
 
 public class PluginManager {
     static final Path pluginsPath = Path.of("plugins");
-    private final Map<String, ZenithProxyPlugin> plugins = new ConcurrentHashMap<>();
+    private final BiMap<String, ZenithProxyPlugin> idToInstance = Maps.synchronizedBiMap(HashBiMap.create());
+    private final Map<String, PluginInfo> idToInfo = new ConcurrentHashMap<>();
     @Getter final Map<String, ConfigInstance> pluginConfigurations = new ConcurrentHashMap<>();
     private final ZenithPluginAPI api = new ZenithPluginAPI();
     private final AtomicBoolean initialized = new AtomicBoolean(false);
+
+
+    public String getId(final ZenithProxyPlugin pluginInstance) {
+        return idToInstance.inverse().get(pluginInstance);
+    }
+
+    public PluginInfo getPluginInfo(final ZenithProxyPlugin pluginInstance) {
+        return idToInfo.get(getId(pluginInstance));
+    }
 
     public record ConfigInstance(String fileName, Object instance, Class<?> clazz) { }
 
@@ -53,24 +68,32 @@ public class PluginManager {
 
     private void loadPotentialPluginJar(final Path jarPath) {
         try (var classloader = new URLClassLoader(new java.net.URL[]{jarPath.toUri().toURL()}, getClass().getClassLoader())) {
-            String entrypoint = extractPluginEntryPoint(classloader, jarPath);
+            PluginInfo pluginJson = extractPluginJson(classloader, jarPath);
+            var id = Objects.requireNonNull(pluginJson.id(), "Plugin id is null");
+            if (idToInfo.containsKey(id)) {
+                PLUGIN_LOG.error("Plugin id already exists: {} from: {} (json)", id, jarPath);
+                return;
+            }
+            String entrypoint = Objects.requireNonNull(pluginJson.entrypoint(), "Plugin entrypoint is null");
             Class<?> pluginClass = classloader.loadClass(entrypoint);
             if (!ZenithProxyPlugin.class.isAssignableFrom(pluginClass)) {
                 PLUGIN_LOG.error("Plugin does not implement ZenithProxyPlugin interface: {}", jarPath);
                 return;
             }
             ZenithProxyPlugin plugin = (ZenithProxyPlugin) pluginClass.getDeclaredConstructor().newInstance();
-            var pluginName = plugin.id();
-            if (plugins.get(pluginName) != null) {
-                PLUGIN_LOG.error("Plugin id already exists: {} from: {}", pluginName, jarPath);
+
+            if (idToInstance.get(id) != null) {
+                PLUGIN_LOG.error("Plugin id already exists: {} from: {} (instance)", id, jarPath);
                 return;
             }
-            plugins.put(pluginName, plugin);
+            idToInstance.put(id, plugin);
+            idToInfo.put(id, pluginJson);
             try {
                 plugin.onLoad(api);
             } catch (final Throwable e) {
                 PLUGIN_LOG.error("Exception in plugin onLoad: {}", jarPath, e);
-                plugins.remove(pluginName);
+                idToInstance.remove(id);
+                idToInfo.remove(id);
             }
         } catch (Throwable e) {
             PLUGIN_LOG.error("Error loading plugin: {}", jarPath, e);
@@ -78,18 +101,12 @@ public class PluginManager {
     }
 
     @SneakyThrows
-    private String extractPluginEntryPoint(URLClassLoader classloader, Path jarPath) {
-        if (classloader.findResource("plugin.json") == null) {
-            PLUGIN_LOG.error("Plugin missing plugin.json: {}", jarPath);
-            throw new RuntimeException("Plugin missing plugin.json: " + jarPath);
-        }
-        try (var stream = classloader.getResourceAsStream("plugin.json")) {
-            PluginJson pluginJson = OBJECT_MAPPER.readValue(stream, PluginJson.class);
-            if (pluginJson.entrypoint == null) {
-                PLUGIN_LOG.error("Plugin missing entrypoint: {}", jarPath);
-                throw new RuntimeException("Plugin missing entrypoint: " + jarPath);
-            }
-            return pluginJson.entrypoint;
+    private PluginInfo extractPluginJson(URLClassLoader classLoader, Path path) {
+        try (var stream = classLoader.getResourceAsStream("plugin.json")) {
+            return OBJECT_MAPPER.readValue(stream, PluginInfo.class);
+        } catch (IOException e) {
+            PLUGIN_LOG.error("Error reading plugin.json: {}", path, e);
+            throw e;
         }
     }
 

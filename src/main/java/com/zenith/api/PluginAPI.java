@@ -2,6 +2,7 @@ package com.zenith.api;
 
 import com.zenith.command.Command;
 import com.zenith.module.Module;
+import org.slf4j.Logger;
 
 public interface PluginAPI {
     /**
@@ -24,4 +25,16 @@ public interface PluginAPI {
      * Commands can be executed in the terminal, by players in-game, and in discord.
      */
     void registerCommand(Command command);
+
+    /**
+     * Gets a logger configured for the plugin instance.
+     */
+    Logger getLogger(ZenithProxyPlugin plugin);
+
+    /**
+     * Gets the {@link PluginInfo} for the plugin instance.
+     *
+     * This is the data encoded in the @Plugin annotation.
+     */
+    PluginInfo getPluginInfo(ZenithProxyPlugin plugin);
 }

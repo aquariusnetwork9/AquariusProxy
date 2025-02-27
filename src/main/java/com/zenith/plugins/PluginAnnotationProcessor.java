@@ -1,8 +1,9 @@
 package com.zenith.plugins;
 
 import com.google.auto.service.AutoService;
-import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.zenith.api.Plugin;
+import com.zenith.api.PluginInfo;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
@@ -16,6 +17,7 @@ import javax.tools.StandardLocation;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
 
@@ -69,13 +71,24 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
             Plugin plugin = element.getAnnotation(Plugin.class);
 
             // All good, generate the plugin.json
-            PluginJson description = new PluginJson();
-            description.entrypoint = qualifiedName.toString();
+            PluginInfo pluginJson = new PluginInfo(
+                qualifiedName.toString(),
+                plugin.id(),
+                plugin.version(),
+                plugin.description(),
+                plugin.url(),
+                Arrays.stream(plugin.authors()).filter(a -> !a.isBlank()).toList(),
+                Arrays.stream(plugin.mcVersions()).filter(a -> !a.isBlank()).toList()
+            );
             try {
                 FileObject object = environment.getFiler()
                     .createResource(StandardLocation.CLASS_OUTPUT, "", "plugin.json");
                 try (Writer writer = new BufferedWriter(object.openWriter())) {
-                    new Gson().toJson(description, writer);
+                    new GsonBuilder()
+                        .setPrettyPrinting()
+                        .disableHtmlEscaping()
+                        .create()
+                        .toJson(pluginJson, writer);
                 }
                 pluginClassFound = qualifiedName.toString();
             } catch (IOException e) {
