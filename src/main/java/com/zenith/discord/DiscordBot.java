@@ -34,6 +34,7 @@ import java.io.ByteArrayInputStream;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
@@ -281,9 +282,13 @@ public class DiscordBot {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        this.mainChannel = jda.getChannelById(TextChannel.class, CONFIG.discord.channelId);
+        this.mainChannel = Objects.requireNonNull(
+            jda.getChannelById(TextChannel.class, CONFIG.discord.channelId),
+            "Discord channel not found with ID: " + CONFIG.discord.channelId);
         if (CONFIG.discord.chatRelay.enable) {
-            this.relayChannel = jda.getChannelById(TextChannel.class, CONFIG.discord.chatRelay.channelId);
+            this.relayChannel = Objects.requireNonNull(
+                jda.getChannelById(TextChannel.class, CONFIG.discord.chatRelay.channelId),
+                "Discord relay channel not found with ID: " + CONFIG.discord.chatRelay.channelId);
         }
     }
 
