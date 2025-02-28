@@ -98,6 +98,8 @@ public class NotificationEventListener {
             of(PlayerTotemPopAlertEvent.class, this::handleTotemPopEvent),
             of(NoTotemsEvent.class, this::handleNoTotemsEvent),
             of(PrivateMessageSendEvent.class, this::handlePrivateMessageSendEvent),
+            of(PluginLoadFailureEvent.class, this::handlePluginLoadFailure),
+            of(PrivateMessageSendEvent.class, this::handlePrivateMessageSendEvent),
             of(ChatControlExecuteEvent.class, this::handleChatControlExecuteEvent),
             of(SpawnPatrolTargetAcquiredEvent.class, this::handleSpawnPatrolTargetAcquiredEvent),
             of(SpawnPatrolTargetKilledEvent.class, this::handleSpawnPatrolTargetKilledEvent)
@@ -951,6 +953,17 @@ public class NotificationEventListener {
             embed.footer("Private Message", null);
         }
         sendRelayEmbedMessage(embed);
+    }
+
+    private void handlePluginLoadFailure(PluginLoadFailureEvent event) {
+        String id = event.id() != null ? event.id() : "?";
+        var embed = Embed.builder()
+            .title("Plugin Load Failure")
+            .errorColor()
+            .description("Error: " + escape(event.message()))
+            .addField("Plugin ID", escape(id), false)
+            .addField("Plugin Jar", escape(event.jarPath().getFileName().toString()), false);
+        sendEmbedMessage(embed);
     }
 
     private void handleChatControlExecuteEvent(ChatControlExecuteEvent event) {
