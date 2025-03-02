@@ -32,7 +32,6 @@ public class ModuleManager {
             new ChatHistory(),
             new Click(),
             new CoordObfuscator(),
-            new ESP(),
             new ExtraChat(),
             new KillAura(),
             new PlayerSimulation(),

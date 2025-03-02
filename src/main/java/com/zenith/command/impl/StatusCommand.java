@@ -129,7 +129,6 @@ public class StatusCommand extends Command {
                     .addField("ActionLimiter", toggleStr(MODULE.get(ActionLimiter.class).isEnabled()), true)
                     .addField("Spammer", toggleStr(MODULE.get(Spammer.class).isEnabled()), true)
                     .addField("Replay Recording", toggleStr(MODULE.get(ReplayMod.class).isEnabled()), true)
-                    .addField("ESP", toggleStr(MODULE.get(ESP.class).isEnabled()), true)
                     .addField("AutoArmor", toggleStr(MODULE.get(AutoArmor.class).isEnabled()), true)
                     .addField("ChatHistory", toggleStr(MODULE.get(ChatHistory.class).isEnabled()), true);
             }))

@@ -620,7 +620,6 @@ public final class Config {
         public static final class Extra {
             public final ServerTimeout timeout = new ServerTimeout();
             public final Whitelist whitelist = new Whitelist();
-            public final ESP esp = new ESP();
             public final ChatHistory chatHistory = new ChatHistory();
             public final ServerSwitcher serverSwitcher = new ServerSwitcher();
 
@@ -650,10 +649,6 @@ public final class Config {
             public static final class ServerTimeout {
                 public boolean enable = true;
                 public int seconds = 30;
-            }
-
-            public static final class ESP {
-                public boolean enable = false;
             }
         }
 
