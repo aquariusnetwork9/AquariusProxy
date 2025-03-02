@@ -20,6 +20,8 @@ import static com.zenith.Shared.MODULE_LOG;
 @Getter
 public abstract class Module {
     boolean enabled = false;
+    PacketHandlerCodec clientPacketHandlerCodec = null;
+    PacketHandlerCodec serverPacketHandlerCodec = null;
 
     public Module() {}
 
@@ -27,13 +29,13 @@ public abstract class Module {
         if (!enabled) {
             subscribeEvents();
             enabled = true;
-            var clientCodec = registerClientPacketHandlerCodec();
-            if (clientCodec != null) {
-                ZenithHandlerCodec.CLIENT_REGISTRY.register(clientCodec);
+            clientPacketHandlerCodec = registerClientPacketHandlerCodec();
+            if (clientPacketHandlerCodec != null) {
+                ZenithHandlerCodec.CLIENT_REGISTRY.register(clientPacketHandlerCodec);
             }
-            var serverCodec = registerServerPacketHandlerCodec();
-            if (serverCodec != null) {
-                ZenithHandlerCodec.SERVER_REGISTRY.register(serverCodec);
+            serverPacketHandlerCodec = registerServerPacketHandlerCodec();
+            if (serverPacketHandlerCodec != null) {
+                ZenithHandlerCodec.SERVER_REGISTRY.register(serverPacketHandlerCodec);
             }
             onEnable();
         }
@@ -43,6 +45,12 @@ public abstract class Module {
         if (enabled) {
             enabled = false;
             unsubscribeEvents();
+            if (clientPacketHandlerCodec != null) {
+                ZenithHandlerCodec.CLIENT_REGISTRY.unregister(clientPacketHandlerCodec);
+            }
+            if (serverPacketHandlerCodec != null) {
+                ZenithHandlerCodec.SERVER_REGISTRY.unregister(serverPacketHandlerCodec);
+            }
             onDisable();
         }
     }
