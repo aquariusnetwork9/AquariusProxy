@@ -30,22 +30,22 @@ import static com.zenith.Shared.*;
 
 public class PluginManager {
     static final Path pluginsPath = Path.of("plugins");
-    private final BiMap<String, ZenithProxyPlugin> idToInstance = Maps.synchronizedBiMap(HashBiMap.create());
-    private final Map<String, PluginInfo> idToInfo = new ConcurrentHashMap<>();
+    private final BiMap<String, ZenithProxyPlugin> pluginInstances = Maps.synchronizedBiMap(HashBiMap.create());
+    private final Map<String, PluginInfo> pluginInfos = new ConcurrentHashMap<>();
     @Getter final Map<String, ConfigInstance> pluginConfigurations = new ConcurrentHashMap<>();
     private final ZenithPluginAPI api = new ZenithPluginAPI();
     private final AtomicBoolean initialized = new AtomicBoolean(false);
 
     public List<PluginInfo> getPluginInfos() {
-        return List.copyOf(idToInfo.values());
+        return List.copyOf(pluginInfos.values());
     }
 
     public String getId(final ZenithProxyPlugin pluginInstance) {
-        return idToInstance.inverse().get(pluginInstance);
+        return pluginInstances.inverse().get(pluginInstance);
     }
 
     public PluginInfo getPluginInfo(final ZenithProxyPlugin pluginInstance) {
-        return idToInfo.get(getId(pluginInstance));
+        return pluginInfos.get(getId(pluginInstance));
     }
 
     public record ConfigInstance(String fileName, Object instance, Class<?> clazz) { }
@@ -76,7 +76,7 @@ public class PluginManager {
         try (var classloader = new URLClassLoader(new URL[]{jarPath.toUri().toURL()}, getClass().getClassLoader())) {
             PluginInfo pluginJson = extractPluginJson(classloader, jarPath);
             id = Objects.requireNonNull(pluginJson.id(), "Plugin id is null");
-            if (idToInfo.containsKey(id)) {
+            if (pluginInfos.containsKey(id)) {
                 throw new RuntimeException("Plugin id already exists (json)");
             }
             String entrypoint = Objects.requireNonNull(pluginJson.entrypoint(), "Plugin entrypoint is null");
@@ -86,18 +86,18 @@ public class PluginManager {
             }
             ZenithProxyPlugin plugin = (ZenithProxyPlugin) pluginClass.getDeclaredConstructor().newInstance();
 
-            if (idToInstance.get(id) != null) {
+            if (pluginInstances.get(id) != null) {
                 PLUGIN_LOG.error("Plugin id already exists: {} from: {} (instance)", id, jarPath);
                 throw new RuntimeException("Plugin id already exists (instance)");
             }
-            idToInstance.put(id, plugin);
-            idToInfo.put(id, pluginJson);
+            pluginInstances.put(id, plugin);
+            pluginInfos.put(id, pluginJson);
             try {
                 plugin.onLoad(api);
             } catch (final Throwable e) {
                 PLUGIN_LOG.error("Exception in plugin onLoad: {}", jarPath, e);
-                idToInstance.remove(id);
-                idToInfo.remove(id);
+                pluginInstances.remove(id);
+                pluginInfos.remove(id);
                 throw new RuntimeException("Exception in plugin onLoad: + " + e.getMessage(), e);
             }
         } catch (Throwable e) {
