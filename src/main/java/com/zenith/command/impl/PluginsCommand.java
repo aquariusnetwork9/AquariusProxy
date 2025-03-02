@@ -1,13 +1,18 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.zenith.api.PluginInfo;
 import com.zenith.command.Command;
 import com.zenith.command.CommandUsage;
 import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
-import com.zenith.discord.Embed;
+import com.zenith.discord.DiscordBot;
+
+import java.util.Comparator;
+import java.util.stream.Collectors;
 
 import static com.zenith.Shared.CONFIG;
+import static com.zenith.Shared.PLUGIN_MANAGER;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 
@@ -24,6 +29,10 @@ public class PluginsCommand extends Command {
              
              Plugins are only supported on the `java` release channel.
              """)
+            .usageLines(
+                "on/off",
+                "list"
+            )
             .build();
     }
 
@@ -34,15 +43,36 @@ public class PluginsCommand extends Command {
                 CONFIG.plugins.enabled = getToggle(c, "toggle");
                 c.getSource().getEmbed()
                     .title("Plugins " + toggleStrCaps(CONFIG.plugins.enabled))
-                    .description("Restart ZenithProxy for changes to take effect: `restart`");
+                    .addField("Plugins", toggleStr(CONFIG.plugins.enabled), false)
+                    .description("Restart ZenithProxy for changes to take effect: `restart`")
+                    .primaryColor();
                 return OK;
+            }))
+            .then(literal("list").executes(c -> {
+                var plugins = PLUGIN_MANAGER.getPluginInfos();
+                String info = plugins.stream()
+                    .sorted(Comparator.comparing(PluginInfo::id))
+                    .map(p -> """
+                         **%s**
+                         * Version: %s
+                         * Description: %s
+                         * URL: %s
+                         * Author(s): %s
+                         * MC: %s
+                         """.formatted(
+                             p.id(),
+                             p.version(),
+                             p.description(),
+                             p.url(),
+                             String.join(", ", p.authors()),
+                             String.join(", ", p.mcVersions())
+                    ))
+                    .map(DiscordBot::escape)
+                    .collect(Collectors.joining("\n"));
+                c.getSource().getEmbed()
+                    .title("Loaded Plugins (" + plugins.size() + ")")
+                    .description(plugins.isEmpty() ? "None" : info)
+                    .primaryColor();
             }));
-    }
-
-    @Override
-    public void postPopulate(Embed embed) {
-        embed
-            .addField("Plugins", toggleStr(CONFIG.plugins.enabled), false)
-            .primaryColor();
     }
 }

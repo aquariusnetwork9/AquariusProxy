@@ -20,6 +20,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -35,6 +36,9 @@ public class PluginManager {
     private final ZenithPluginAPI api = new ZenithPluginAPI();
     private final AtomicBoolean initialized = new AtomicBoolean(false);
 
+    public List<PluginInfo> getPluginInfos() {
+        return List.copyOf(idToInfo.values());
+    }
 
     public String getId(final ZenithProxyPlugin pluginInstance) {
         return idToInstance.inverse().get(pluginInstance);

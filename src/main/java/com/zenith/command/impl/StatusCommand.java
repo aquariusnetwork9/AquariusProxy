@@ -10,6 +10,7 @@ import com.zenith.command.brigadier.CommandContext;
 import com.zenith.feature.queue.Queue;
 import com.zenith.module.impl.*;
 import com.zenith.network.server.ServerSession;
+import com.zenith.util.ImageInfo;
 import com.zenith.util.math.MathHelper;
 import net.dv8tion.jda.api.utils.TimeFormat;
 
@@ -108,6 +109,7 @@ public class StatusCommand extends Command {
                                     : CONFIG.theme.success.discord())
                                : CONFIG.theme.error.discord())
                     .thumbnail(getThumbnailImage())
+                    .addField("Plugins", ImageInfo.inImageCode() ? "N/A (`java` required)" : toggleStr(CONFIG.plugins.enabled), true)
                     .addField("AutoDisconnect", toggleStr(MODULE.get(AutoDisconnect.class).isEnabled()), true)
                     .addField("AutoReconnect", toggleStr(MODULE.get(AutoReconnect.class).isEnabled()), true)
                     .addField("KillAura", toggleStr(MODULE.get(KillAura.class).isEnabled()), true)
