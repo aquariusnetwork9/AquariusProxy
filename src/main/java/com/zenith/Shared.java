@@ -81,6 +81,7 @@ public class Shared {
     public static final PlayerInventoryManager INVENTORY;
     public static final ZenithViaInitializer VIA_INITIALIZER;
     public static final PluginManager PLUGIN_MANAGER;
+    public static final String MC_VERSION;
     public static synchronized Config loadConfig() {
         try {
             DEFAULT_LOG.info("Loading config...");
@@ -143,6 +144,10 @@ public class Shared {
         return readResourceTxt("zenith_release.txt");
     }
 
+    public static @Nullable String getMCVersionFile() {
+        return readResourceTxt("zenith_mc_version.txt");
+    }
+
     private static @Nullable String readResourceTxt(final String name) {
         try (InputStream in = Shared.class.getClassLoader().getResourceAsStream(name)) {
             if (in == null) return null;
@@ -203,6 +208,7 @@ public class Shared {
                 .setDaemon(true)
                 .setUncaughtExceptionHandler((thread, e) -> DEFAULT_LOG.error("Uncaught exception in event bus thread {}", thread, e))
                 .build()), DEFAULT_LOG);
+            MC_VERSION = getMCVersionFile();
             DISCORD = new DiscordBot();
             DIMENSION_DATA = new DimensionDataManager();
             CACHE = new DataCache();

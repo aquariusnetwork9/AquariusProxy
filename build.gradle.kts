@@ -164,6 +164,18 @@ tasks {
         }
         outputs.upToDateWhen { false }
     }
+    val mcVersionTask = register("mcVersion") {
+        group = "build"
+        description = "Write release tag to file"
+        doLast {
+            file(layout.buildDirectory.asFile.get().absolutePath + "/resources/main/zenith_mc_version.txt").apply {
+                parentFile.mkdirs()
+                println("Writing MC Version: $version")
+                writeText(version.toString())
+            }
+        }
+        outputs.upToDateWhen { false }
+    }
     val runGroup = "run"
     register("run", JavaExec::class.java) {
         group = runGroup
@@ -197,7 +209,7 @@ tasks {
             }
         }
     }
-    processResources{ finalizedBy(commitHashTask, releaseTagTask) }
+    processResources{ finalizedBy(commitHashTask, releaseTagTask, mcVersionTask) }
     val devOutputDir = layout.buildDirectory.get().dir("dev").asFile
     jar {
         enabled = true

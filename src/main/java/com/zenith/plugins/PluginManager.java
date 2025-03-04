@@ -79,6 +79,14 @@ public class PluginManager {
             if (pluginInfos.containsKey(id)) {
                 throw new RuntimeException("Plugin id already exists (json)");
             }
+            if (pluginJson.mcVersions().isEmpty()) {
+                PLUGIN_LOG.error("Plugin: {} has no MC versions specified", jarPath);
+                throw new RuntimeException("Plugin has no MC versions specified");
+            }
+            if (!pluginJson.mcVersions().contains("*") && !pluginJson.mcVersions().contains(MC_VERSION)) {
+                PLUGIN_LOG.warn("Plugin: {} not compatible with current MC version. Actual: {}, Plugin Required: {}", jarPath, MC_VERSION, pluginJson.mcVersions());
+                return;
+            }
             String entrypoint = Objects.requireNonNull(pluginJson.entrypoint(), "Plugin entrypoint is null");
             Class<?> pluginClass = classloader.loadClass(entrypoint);
             if (!ZenithProxyPlugin.class.isAssignableFrom(pluginClass)) {
