@@ -88,6 +88,17 @@ public class PluginManager {
                 return;
             }
             String entrypoint = Objects.requireNonNull(pluginJson.entrypoint(), "Plugin entrypoint is null");
+
+            PLUGIN_LOG.info(
+                "Loading Plugin:\n  id: {}\n  version: {}\n  description: {}\n  url: {}\n  authors: {}\n  jar: {}",
+                pluginJson.id(),
+                pluginJson.version(),
+                pluginJson.description(),
+                pluginJson.url(),
+                pluginJson.authors(),
+                jarPath.getFileName()
+            );
+
             Class<?> pluginClass = classloader.loadClass(entrypoint);
             if (!ZenithProxyPlugin.class.isAssignableFrom(pluginClass)) {
                 throw new RuntimeException("Plugin does not implement ZenithProxyPlugin interface");
