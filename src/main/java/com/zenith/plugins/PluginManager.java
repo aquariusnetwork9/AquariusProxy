@@ -9,7 +9,6 @@ import com.zenith.api.PluginInfo;
 import com.zenith.api.ZenithProxyPlugin;
 import com.zenith.event.proxy.PluginLoadFailureEvent;
 import com.zenith.util.ImageInfo;
-import lombok.Getter;
 import lombok.SneakyThrows;
 
 import java.io.File;
@@ -25,6 +24,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 
 import static com.zenith.Shared.*;
 
@@ -32,8 +32,7 @@ public class PluginManager {
     static final Path pluginsPath = Path.of("plugins");
     private final BiMap<String, ZenithProxyPlugin> pluginInstances = Maps.synchronizedBiMap(HashBiMap.create());
     private final Map<String, PluginInfo> pluginInfos = new ConcurrentHashMap<>();
-    @Getter final Map<String, ConfigInstance> pluginConfigurations = new ConcurrentHashMap<>();
-    private final ZenithPluginAPI api = new ZenithPluginAPI();
+    private final Map<String, ConfigInstance> pluginConfigurations = new ConcurrentHashMap<>();
     private final AtomicBoolean initialized = new AtomicBoolean(false);
 
     public List<PluginInfo> getPluginInfos() {
@@ -48,15 +47,41 @@ public class PluginManager {
         return pluginInfos.get(getId(pluginInstance));
     }
 
-    public record ConfigInstance(String fileName, Object instance, Class<?> clazz) { }
+    public void saveConfigs(BiConsumer<File, Object> saveFunction) {
+        pluginConfigurations.values()
+            .forEach(config -> saveFunction.accept(config.file(), config.instance()));
+    }
+
+    public record ConfigInstance(Object instance, Class<?> clazz, File file) { }
 
     public synchronized void initialize() {
-        if (ImageInfo.inImageCode()) {
-            // todo: warn about linux channel incompatibility if there are plugin jars present
-            return;
-        }
         if (initialized.compareAndSet(false, true)) {
-            loadPlugins();
+            if (!ImageInfo.inImageCode()) {
+                loadPlugins();
+            } else {
+                if (ImageInfo.inImageRuntimeCode())
+                    linuxChannelIncompatibilityWarning();
+            }
+        }
+    }
+
+    private void linuxChannelIncompatibilityWarning() {
+        int potentialPluginCount = 0;
+        try (var stream = Files.walk(pluginsPath)) {
+            potentialPluginCount = (int) stream
+                .filter(Files::isRegularFile)
+                .filter(path -> path.toString().endsWith(".jar"))
+                .count();
+        } catch (Throwable e) {
+            PLUGIN_LOG.error("Error walking plugins directory", e);
+        }
+        if (potentialPluginCount > 0) {
+            PLUGIN_LOG.warn("""
+                Plugins are not supported on the `linux` release channel.
+                Detected {} potential plugin jars in the plugins directory.
+                
+                To use plugins, switch to the `java` channel: `channel set java <mcVersion>`
+                """, potentialPluginCount);
         }
     }
 
@@ -74,28 +99,28 @@ public class PluginManager {
     private void loadPotentialPluginJar(final Path jarPath) {
         String id = null;
         try (var classloader = new URLClassLoader(new URL[]{jarPath.toUri().toURL()}, getClass().getClassLoader())) {
-            PluginInfo pluginJson = extractPluginJson(classloader, jarPath);
-            id = Objects.requireNonNull(pluginJson.id(), "Plugin id is null");
+            PluginInfo pluginInfo = readPluginInfo(classloader, jarPath);
+            id = Objects.requireNonNull(pluginInfo.id(), "Plugin id is null");
             if (pluginInfos.containsKey(id)) {
                 throw new RuntimeException("Plugin id already exists (json)");
             }
-            if (pluginJson.mcVersions().isEmpty()) {
+            if (pluginInfo.mcVersions().isEmpty()) {
                 PLUGIN_LOG.error("Plugin: {} has no MC versions specified", jarPath);
                 throw new RuntimeException("Plugin has no MC versions specified");
             }
-            if (!pluginJson.mcVersions().contains("*") && !pluginJson.mcVersions().contains(MC_VERSION)) {
-                PLUGIN_LOG.warn("Plugin: {} not compatible with current MC version. Actual: {}, Plugin Required: {}", jarPath, MC_VERSION, pluginJson.mcVersions());
+            if (!pluginInfo.mcVersions().contains("*") && !pluginInfo.mcVersions().contains(MC_VERSION)) {
+                PLUGIN_LOG.warn("Plugin: {} not compatible with current MC version. Actual: {}, Plugin Required: {}", jarPath, MC_VERSION, pluginInfo.mcVersions());
                 return;
             }
-            String entrypoint = Objects.requireNonNull(pluginJson.entrypoint(), "Plugin entrypoint is null");
+            String entrypoint = Objects.requireNonNull(pluginInfo.entrypoint(), "Plugin entrypoint is null");
 
             PLUGIN_LOG.info(
                 "Loading Plugin:\n  id: {}\n  version: {}\n  description: {}\n  url: {}\n  authors: {}\n  jar: {}",
-                pluginJson.id(),
-                pluginJson.version(),
-                pluginJson.description(),
-                pluginJson.url(),
-                pluginJson.authors(),
+                pluginInfo.id(),
+                pluginInfo.version(),
+                pluginInfo.description(),
+                pluginInfo.url(),
+                pluginInfo.authors(),
                 jarPath.getFileName()
             );
 
@@ -110,9 +135,9 @@ public class PluginManager {
                 throw new RuntimeException("Plugin id already exists (instance)");
             }
             pluginInstances.put(id, plugin);
-            pluginInfos.put(id, pluginJson);
+            pluginInfos.put(id, pluginInfo);
             try {
-                plugin.onLoad(api);
+                plugin.onLoad(new InstancedPluginAPI(plugin, pluginInfo));
             } catch (final Throwable e) {
                 PLUGIN_LOG.error("Exception in plugin onLoad: {}", jarPath, e);
                 pluginInstances.remove(id);
@@ -126,7 +151,7 @@ public class PluginManager {
     }
 
     @SneakyThrows
-    private PluginInfo extractPluginJson(URLClassLoader classLoader, Path path) {
+    private PluginInfo readPluginInfo(URLClassLoader classLoader, Path path) {
         try (var stream = classLoader.getResourceAsStream("plugin.json")) {
             return OBJECT_MAPPER.readValue(stream, PluginInfo.class);
         } catch (IOException e) {
@@ -140,7 +165,17 @@ public class PluginManager {
             throw new RuntimeException("Config already registered: " + fileName);
         }
         var config = loadPluginConfig(fileName, clazz);
-        ConfigInstance configInstance = new ConfigInstance(fileName, config, clazz);
+        File configFile = pluginsPath.resolve("config").resolve(fileName + ".json").toFile();
+        if (!configFile.exists()) {
+            if (!configFile.getParentFile().mkdirs()) {
+                throw new RuntimeException("Unable to create plugin config directory: " + configFile.getParentFile());
+            }
+        }
+        var configInstance = new ConfigInstance(
+            config,
+            clazz,
+            configFile
+        );
         pluginConfigurations.put(fileName, configInstance);
         return config;
     }

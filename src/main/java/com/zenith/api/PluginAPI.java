@@ -29,12 +29,12 @@ public interface PluginAPI {
     /**
      * Gets a logger configured for the plugin instance.
      */
-    Logger getLogger(ZenithProxyPlugin plugin);
+    Logger getLogger();
 
     /**
      * Gets the {@link PluginInfo} for the plugin instance.
      *
      * This is the data encoded in the @Plugin annotation.
      */
-    PluginInfo getPluginInfo(ZenithProxyPlugin plugin);
+    PluginInfo getPluginInfo();
 }

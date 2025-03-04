@@ -164,10 +164,7 @@ public class Shared {
 
     public static synchronized void saveConfig() {
         saveConfig(CONFIG_FILE, CONFIG);
-        PLUGIN_MANAGER.getPluginConfigurations().forEach((name, config) -> {
-            File configFile = new File("plugins/" + name + ".json");
-            saveConfig(configFile, config.instance());
-        });
+        PLUGIN_MANAGER.saveConfigs(Shared::saveConfig);
     }
     public static synchronized void saveLaunchConfig() {
         saveConfig(LAUNCH_CONFIG_FILE, LAUNCH_CONFIG);
