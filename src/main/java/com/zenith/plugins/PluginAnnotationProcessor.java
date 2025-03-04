@@ -3,7 +3,7 @@ package com.zenith.plugins;
 import com.google.auto.service.AutoService;
 import com.google.gson.GsonBuilder;
 import com.zenith.api.Plugin;
-import com.zenith.api.PluginInfo;
+import com.zenith.api.PluginEntrypoint;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
@@ -71,13 +71,9 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
             Plugin plugin = element.getAnnotation(Plugin.class);
 
             // All good, generate the plugin.json
-            PluginInfo pluginJson = new PluginInfo(
+            PluginEntrypoint pluginJson = new PluginEntrypoint(
                 qualifiedName.toString(),
                 plugin.id(),
-                plugin.version(),
-                plugin.description(),
-                plugin.url(),
-                Arrays.stream(plugin.authors()).filter(a -> !a.isBlank()).toList(),
                 Arrays.stream(plugin.mcVersions()).filter(a -> !a.isBlank()).toList()
             );
             try {
