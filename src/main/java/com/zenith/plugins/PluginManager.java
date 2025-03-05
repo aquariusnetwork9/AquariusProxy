@@ -5,8 +5,6 @@ import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.zenith.api.Plugin;
-import com.zenith.api.PluginEntrypoint;
 import com.zenith.api.PluginInfo;
 import com.zenith.api.ZenithProxyPlugin;
 import com.zenith.event.proxy.PluginLoadFailureEvent;
@@ -21,7 +19,6 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -102,52 +99,20 @@ public class PluginManager {
     private void loadPotentialPluginJar(final Path jarPath) {
         String id = null;
         try (var classloader = new URLClassLoader(new URL[]{jarPath.toUri().toURL()}, getClass().getClassLoader())) {
-            PluginEntrypoint pluginEntrypoint = readPluginEntrypoint(classloader, jarPath);
-            id = Objects.requireNonNull(pluginEntrypoint.id(), "Plugin id is null");
+            PluginInfo pluginInfo = readPluginInfo(classloader, jarPath);
+            id = Objects.requireNonNull(pluginInfo.id(), "Plugin id is null");
             if (pluginInfos.containsKey(id)) {
                 throw new RuntimeException("Plugin id already exists (json)");
             }
-            if (pluginEntrypoint.mcVersions().isEmpty()) {
+            if (pluginInfo.mcVersions().isEmpty()) {
                 PLUGIN_LOG.error("Plugin: {} has no MC versions specified", jarPath);
                 throw new RuntimeException("Plugin has no MC versions specified");
             }
-            if (!pluginEntrypoint.mcVersions().contains("*") && !pluginEntrypoint.mcVersions().contains(MC_VERSION)) {
-                PLUGIN_LOG.warn("Plugin: {} not compatible with current MC version. Actual: {}, Plugin Required: {}", jarPath, MC_VERSION, pluginEntrypoint.mcVersions());
+            if (!pluginInfo.mcVersions().contains("*") && !pluginInfo.mcVersions().contains(MC_VERSION)) {
+                PLUGIN_LOG.warn("Plugin: {} not compatible with current MC version. Actual: {}, Plugin Required: {}", jarPath, MC_VERSION, pluginInfo.mcVersions());
                 return;
             }
-            String entrypoint = Objects.requireNonNull(pluginEntrypoint.entrypoint(), "Plugin entrypoint is null");
-
-            Class<?> pluginClass = classloader.loadClass(entrypoint);
-            if (!ZenithProxyPlugin.class.isAssignableFrom(pluginClass)) {
-                throw new RuntimeException("Plugin does not implement ZenithProxyPlugin interface");
-            }
-            ZenithProxyPlugin plugin = (ZenithProxyPlugin) pluginClass.getDeclaredConstructor().newInstance();
-            Plugin[] pluginAnnotations = pluginClass.getDeclaredAnnotationsByType(Plugin.class);
-            if (pluginAnnotations.length < 1) {
-                throw new RuntimeException("Plugin annotation not found");
-            }
-            if (pluginAnnotations.length > 1) {
-                throw new RuntimeException("Multiple plugin annotations found");
-            }
-            Plugin pluginAnnotation = pluginAnnotations[0];
-            var pluginInfo = new PluginInfo(
-                pluginAnnotation.id(),
-                pluginAnnotation.version(),
-                pluginAnnotation.description(),
-                pluginAnnotation.url(),
-                Arrays.asList(pluginAnnotation.authors()),
-                Arrays.asList(pluginAnnotation.mcVersions())
-            );
-
-            if (!Objects.equals(pluginInfo.id(), pluginEntrypoint.id())) {
-                PLUGIN_LOG.error("Plugin id mismatch: {} != {} from: {}", pluginInfo.id(), pluginEntrypoint.id(), jarPath);
-                throw new RuntimeException("Plugin id mismatch");
-            }
-
-            if (pluginInstances.get(id) != null) {
-                PLUGIN_LOG.error("Plugin id already exists: {} from: {} (instance)", id, jarPath);
-                throw new RuntimeException("Plugin id already exists (instance)");
-            }
+            String entrypoint = Objects.requireNonNull(pluginInfo.entrypoint(), "Plugin entrypoint is null");
 
             PLUGIN_LOG.info(
                 "Loading Plugin:\n  id: {}\n  version: {}\n  description: {}\n  url: {}\n  authors: {}\n  jar: {}",
@@ -159,6 +124,16 @@ public class PluginManager {
                 jarPath.getFileName()
             );
 
+            Class<?> pluginClass = classloader.loadClass(entrypoint);
+            if (!ZenithProxyPlugin.class.isAssignableFrom(pluginClass)) {
+                throw new RuntimeException("Plugin does not implement ZenithProxyPlugin interface");
+            }
+            ZenithProxyPlugin plugin = (ZenithProxyPlugin) pluginClass.getDeclaredConstructor().newInstance();
+
+            if (pluginInstances.get(id) != null) {
+                PLUGIN_LOG.error("Plugin id already exists: {} from: {} (instance)", id, jarPath);
+                throw new RuntimeException("Plugin id already exists (instance)");
+            }
             pluginInstances.put(id, plugin);
             pluginInfos.put(id, pluginInfo);
             try {
@@ -176,9 +151,9 @@ public class PluginManager {
     }
 
     @SneakyThrows
-    private PluginEntrypoint readPluginEntrypoint(URLClassLoader classLoader, Path path) {
+    private PluginInfo readPluginInfo(URLClassLoader classLoader, Path path) {
         try (var stream = classLoader.getResourceAsStream("plugin.json")) {
-            return OBJECT_MAPPER.readValue(stream, PluginEntrypoint.class);
+            return OBJECT_MAPPER.readValue(stream, PluginInfo.class);
         } catch (IOException e) {
             PLUGIN_LOG.error("Error reading plugin.json: {}", path, e);
             throw e;
