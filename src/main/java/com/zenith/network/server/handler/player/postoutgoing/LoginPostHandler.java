@@ -59,13 +59,21 @@ public class LoginPostHandler implements PostOutgoingPacketHandler<ClientboundLo
 
     private void checkDisableServerVia(ServerSession session) {
         if (CONFIG.server.viaversion.enabled && CONFIG.server.viaversion.autoRemoveFromPipeline) {
-            if (session.getProtocolVersion().getVersion() == MinecraftCodec.CODEC.getProtocolVersion() && session.getChannel().hasAttr(ZenithViaInitializer.VIA_USER)) {
+            var channel = session.getChannel();
+            if (session.getProtocolVersion().getVersion() == MinecraftCodec.CODEC.getProtocolVersion()
+                && channel.hasAttr(ZenithViaInitializer.VIA_USER)
+                && channel.pipeline().get(VLPipeline.VIA_CODEC_NAME) != null
+            ) {
                 SERVER_LOG.debug("Disabling ViaVersion for player: {}", session.getProfileCache().getProfile().getName());
-                var viaUser = session.getChannel().attr(ZenithViaInitializer.VIA_USER).get();
-                // remove via codec from channel pipeline
-                viaUser.getChannel().pipeline().remove(VLPipeline.VIA_CODEC_NAME);
-                // dispose via connection state
-                Via.getManager().getConnectionManager().onDisconnect(viaUser);
+                try {
+                    var viaUser = channel.attr(ZenithViaInitializer.VIA_USER).get();
+                    // remove via codec from channel pipeline
+                    channel.pipeline().remove(VLPipeline.VIA_CODEC_NAME);
+                    // dispose via connection state
+                    Via.getManager().getConnectionManager().onDisconnect(viaUser);
+                } catch (final Throwable e) {
+                    SERVER_LOG.error("Error disabling ViaVersion for player: {}", session.getProfileCache().getProfile().getName(), e);
+                }
             }
         }
     }
