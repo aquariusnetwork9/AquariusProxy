@@ -24,6 +24,8 @@ public class LoginPostHandler implements PostOutgoingPacketHandler<ClientboundLo
             session.disconnect("Login without whitelist check?");
             return;
         }
+        if (session.isLoggedIn())
+            return; // servers can send multiple login packets during world or skin switches
         checkDisableServerVia(session);
         session.setLoggedIn(); // allows server packets to start being sent to player
         EVENT_BUS.postAsync(new ProxyClientLoggedInEvent(session));
