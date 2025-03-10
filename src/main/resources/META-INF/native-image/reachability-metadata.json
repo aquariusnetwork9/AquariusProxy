@@ -2398,6 +2398,20 @@
       "allDeclaredFields": true
     },
     {
+      "type": "com.zenith.util.Config$Client$Extra$CoordObfuscation",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.zenith.util.Config$Client$Extra$CoordObfuscation$ObfuscationMode",
+      "allDeclaredFields": true
+    },
+    {
       "type": "com.zenith.util.Config$Client$Extra$KillAura",
       "allDeclaredFields": true,
       "methods": [
