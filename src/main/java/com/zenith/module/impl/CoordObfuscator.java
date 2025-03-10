@@ -11,7 +11,6 @@ import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.module.Module;
 import com.zenith.network.registry.PacketHandlerCodec;
 import com.zenith.network.registry.PacketHandlerStateCodec;
-import com.zenith.network.registry.ZenithHandlerCodec;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.Config.Client.Extra.CoordObfuscation.ObfuscationMode;
 import com.zenith.util.math.MathHelper;
@@ -47,8 +46,6 @@ import static com.zenith.Shared.*;
 
 public class CoordObfuscator extends Module {
     private final Random random = new SecureRandom();
-    @Getter
-    private PacketHandlerCodec codec;
     // todo: don't think these maps are needed actually
     // non-offset pos. the cache's player pos is updated before our handlers are called (and its called async)
     private final Map<ServerSession, MutableVec3d> lastPlayerPosMap = new ConcurrentHashMap<>();
@@ -61,12 +58,22 @@ public class CoordObfuscator extends Module {
 
     // todo: test case where player is world/server switched back to queue
 
-    public CoordObfuscator() {
-        initializeHandlers();
+    @Override
+    public void subscribeEvents() {
+        EVENT_BUS.subscribe(
+            this,
+            of(ServerConnectionRemovedEvent.class, this::onServerConnectionRemoved),
+            of(PlayerLoginEvent.class, this::onPlayerLoginEvent));
     }
 
-    private void initializeHandlers() {
-        codec = PacketHandlerCodec.builder()
+    @Override
+    public boolean enabledSetting() {
+        return CONFIG.client.extra.coordObfuscation.enabled;
+    }
+
+    @Override
+    public PacketHandlerCodec registerServerPacketHandlerCodec() {
+        return PacketHandlerCodec.builder()
             .setId("coord-obf")
             .setPriority(Integer.MAX_VALUE-1) // 1 less than packet logger
             .setActivePredicate((session) -> shouldObfuscate((ServerSession) session))
@@ -120,30 +127,16 @@ public class CoordObfuscator extends Module {
             .build();
     }
 
-    @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
-            of(ServerConnectionRemovedEvent.class, this::onServerConnectionRemoved),
-            of(PlayerLoginEvent.class, this::onPlayerLoginEvent));
-    }
-
-    @Override
-    public boolean enabledSetting() {
-        return CONFIG.client.extra.coordObfuscation.enabled;
-    }
 
     @Override
     public void onEnable() {
         lastPlayerDimensionMap.clear();
         lastPlayerPosMap.clear();
         kickAllActiveConnections();
-        ZenithHandlerCodec.SERVER_REGISTRY.register(codec);
     }
 
     @Override
     public void onDisable() {
-        ZenithHandlerCodec.SERVER_REGISTRY.unregister(codec);
         lastPlayerDimensionMap.clear();
         lastPlayerPosMap.clear();
         kickAllActiveConnections();

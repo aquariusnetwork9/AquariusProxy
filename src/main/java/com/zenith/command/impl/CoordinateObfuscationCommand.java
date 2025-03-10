@@ -8,7 +8,6 @@ import com.zenith.command.brigadier.CommandContext;
 import com.zenith.discord.Embed;
 import com.zenith.module.impl.CoordObfuscator;
 import com.zenith.util.Config.Client.Extra.CoordObfuscation.ObfuscationMode;
-import discord4j.rest.util.Color;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
@@ -17,16 +16,15 @@ import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static java.util.Arrays.asList;
 
 public class CoordinateObfuscationCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.args(
-            "coordObf",
-            CommandCategory.MODULE,
-            "Obfuscates actual coordinates to players and spectators",
-            asList(
+        return CommandUsage.builder()
+            .name("coordObf")
+            .category(CommandCategory.MODULE)
+            .description("Obfuscates actual coordinates to players and spectators")
+            .usageLines(
                 "on/off",
                 "mode <mode>",
                 "regenOnTp on/off",
@@ -39,12 +37,12 @@ public class CoordinateObfuscationCommand extends Command {
                 "constantOffsetMinSpawnDistance <blocks>",
                 "atLocation <x> <z>"
             )
-        );
+            .build();
     }
 
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
-        return command("coordobf")//.requires(Command::validateAccountOwner)
+        return command("coordobf").requires(Command::validateAccountOwner)
             .then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.enabled = getToggle(c, "toggle");
                 MODULE.get(CoordObfuscator.class).syncEnabledFromConfig();
@@ -118,7 +116,7 @@ public class CoordinateObfuscationCommand extends Command {
             .addField("Constant Offset Nether Translate", toggleStr(CONFIG.client.extra.coordObfuscation.constantOffsetNetherTranslate), true)
             .addField("Constant Offset Minimum Spawn Distance", CONFIG.client.extra.coordObfuscation.constantOffsetMinSpawnDistance, true)
             .addField("At Location", CONFIG.client.extra.coordObfuscation.atLocationX + ", " + CONFIG.client.extra.coordObfuscation.atLocationZ, true)
-            .color(Color.CYAN);
+            .primaryColor();
         MODULE.get(CoordObfuscator.class).onConfigChange();
     }
 }
