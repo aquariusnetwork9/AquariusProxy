@@ -122,17 +122,22 @@ tasks {
         description = "Write commit hash / version to file"
         workingDir = projectDir
         commandLine = "git rev-parse --short=8 HEAD".split(" ")
+        isIgnoreExitValue = true
         standardOutput = ByteArrayOutputStream()
         doLast {
-            val commitHash = standardOutput.toString().trim()
-            if (commitHash.length > 5) {
-                file(layout.buildDirectory.asFile.get().absolutePath + "/resources/main/zenith_commit.txt").apply {
-                    parentFile.mkdirs()
-                    println("Writing commit hash: $commitHash")
-                    writeText(commitHash)
+            kotlin.runCatching {
+                val commitHash = standardOutput.toString().trim()
+                if (commitHash.length > 5) {
+                    file(layout.buildDirectory.asFile.get().absolutePath + "/resources/main/zenith_commit.txt").apply {
+                        parentFile.mkdirs()
+                        println("Writing commit hash: $commitHash")
+                        writeText(commitHash)
+                    }
+                } else {
+                    throw IllegalStateException("Invalid commit hash: $commitHash")
                 }
-            } else {
-                println("Unable to determine commit hash")
+            }.exceptionOrNull()?.let {
+                println("Unable to determine commit hash: ${it.message}")
             }
         }
         outputs.upToDateWhen { false }
