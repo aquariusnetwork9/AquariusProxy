@@ -1,5 +1,7 @@
 package com.zenith.util;
 
+import javax.annotation.Nullable;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 
 import static com.zenith.Shared.*;
@@ -46,7 +48,7 @@ public final class ConfigVerifier {
                     continue;
                 }
                 Object value = field.get(obj);
-                if (value == null) {
+                if (value == null && !isNullableField(field)) {
                     DEFAULT_LOG.error("Field: '{}' in '{}' is null", field.getName(), clazz.getName());
                     return false;
                 }
@@ -61,5 +63,15 @@ public final class ConfigVerifier {
             }
         }
         return true;
+    }
+
+    private static boolean isNullableField(Field field) {
+        Annotation[] annotations = field.getAnnotations();
+        for (int i = 0; i < annotations.length; i++) {
+            if (annotations[i].annotationType() == Nullable.class) {
+                return true;
+            }
+        }
+        return false;
     }
 }
