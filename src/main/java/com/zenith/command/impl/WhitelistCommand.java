@@ -34,7 +34,10 @@ public class WhitelistCommand extends Command {
                 "add/del <player>",
                 "list",
                 "clear",
-                "autoAddZenithAccount on/off"
+                "autoAddZenithAccount on/off",
+                "blacklist add/del <player>",
+                "blacklist list",
+                "blacklist clear"
             )
             .aliases("wl")
             .build();
@@ -77,13 +80,42 @@ public class WhitelistCommand extends Command {
                           c.getSource().getEmbed()
                               .title("Auto Add Zenith Account " + toggleStrCaps(CONFIG.server.extra.whitelist.autoAddClient));
                           return OK;
+                      })))
+            .then(literal("blacklist").requires(Command::validateAccountOwner)
+                      .then(literal("add").then(argument("player", string()).executes(c -> {
+                          final String player = StringArgumentType.getString(c, "player");
+                          PLAYER_LISTS.getBlacklist().add(player).ifPresentOrElse(e ->
+                              c.getSource().getEmbed()
+                                  .title("Added user: " + escape(e.getUsername()) + " To Blacklist"),
+                              () -> c.getSource().getEmbed()
+                                  .title("Failed to add user: " + escape(player) + " to blacklist. Unable to lookup profile."));
+                          return OK;
+                      })))
+                      .then(literal("del").then(argument("player", string()).executes(c -> {
+                          final String player = StringArgumentType.getString(c, "player");
+                          PLAYER_LISTS.getBlacklist().remove(player);
+                          c.getSource().getEmbed()
+                              .title("Removed user: " + escape(player) + " From Blacklist");
+                          Proxy.getInstance().kickNonWhitelistedPlayers();
+                          return 1;
+                      })))
+                      .then(literal("list").executes(c -> {
+                          c.getSource().getEmbed()
+                              .title("Blacklist List");
+                      }))
+                      .then(literal("clear").executes(c -> {
+                          PLAYER_LISTS.getBlacklist().clear();
+                          c.getSource().getEmbed()
+                              .title("Blacklist Cleared");
+                          Proxy.getInstance().kickNonWhitelistedPlayers();
+                          return OK;
                       })));
     }
 
     @Override
     public void postPopulate(final Embed builder) {
         builder
-            .description(playerListToString(PLAYER_LISTS.getWhitelist()))
+            .description(playerListToString(PLAYER_LISTS.getWhitelist()) + "\n**BlackList:**\n" + playerListToString(PLAYER_LISTS.getBlacklist()))
             .addField("Auto Add Zenith Account", toggleStr(CONFIG.server.extra.whitelist.autoAddClient), false)
             .primaryColor();
     }

@@ -641,6 +641,8 @@ public final class Config {
                 // Automatically adds the proxy client account to the whitelist if not present
                 // does not remove any entries
                 public boolean autoAddClient = true;
+                // only checked when whitelist is disabled
+                public final ArrayList<PlayerEntry> blacklist = new ArrayList<>();
             }
 
             public static final class ServerTimeout {

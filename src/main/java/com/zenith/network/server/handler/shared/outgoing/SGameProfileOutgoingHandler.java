@@ -56,6 +56,10 @@ public class SGameProfileOutgoingHandler implements PacketHandler<ClientboundGam
                     EVENT_BUS.post(new NonWhitelistedPlayerConnectedEvent(clientGameProfile, session.getRemoteAddress()));
                     return null;
                 }
+            } else if (!CONFIG.server.extra.whitelist.enable && PLAYER_LISTS.getBlacklist().contains(clientGameProfile)) {
+                session.disconnect(CONFIG.server.extra.whitelist.kickmsg);
+                SERVER_LOG.warn("Blacklisted! Username: {} UUID: {} [{}] MC: {} tried to connect!", clientGameProfile.getName(), clientGameProfile.getIdAsString(), session.getMCVersion(), session.getRemoteAddress());
+                return null;
             }
             SERVER_LOG.info("Username: {} UUID: {} MC: {} [{}] has passed the whitelist check!", clientGameProfile.getName(), clientGameProfile.getIdAsString(), session.getMCVersion(), session.getRemoteAddress());
             session.setWhitelistChecked(true);
