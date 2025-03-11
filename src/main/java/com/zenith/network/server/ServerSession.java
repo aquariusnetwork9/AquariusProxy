@@ -45,6 +45,7 @@ import java.io.IOException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -124,6 +125,7 @@ public class ServerSession extends TcpServerSession {
     @Setter @Getter
     private CoordOffset coordOffset = new CoordOffset(0, 0);
     protected boolean respawning = false;
+    private final long connectionTimeEpochMs = Instant.now().toEpochMilli();
     @Getter(lazy = true) private final PacketRateLimiter packetRateLimiter = new PacketRateLimiter();
     public static final LoginRateLimiter LOGIN_RATE_LIMITER = new LoginRateLimiter();
 

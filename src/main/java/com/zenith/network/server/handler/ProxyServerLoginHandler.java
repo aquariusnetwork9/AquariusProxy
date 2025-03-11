@@ -61,6 +61,7 @@ public class ProxyServerLoginHandler {
         if (!connection.isConnected()) return;
         connection.setPlayer(true);
         EVENT_BUS.post(new PlayerLoginEvent(connection));
+        if (!connection.isConnected()) return;
         if (connection.isSpectator()) {
             EVENT_BUS.post(new ProxySpectatorConnectedEvent(connection, clientGameProfile));
             connection.send(new ClientboundLoginPacket(
