@@ -178,6 +178,15 @@
       "type": "android.os.Build$VERSION"
     },
     {
+      "type": "ch.qos.logback.classic.AsyncAppender",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "ch.qos.logback.classic.Logger",
       "methods": [
         {
@@ -265,6 +274,26 @@
     },
     {
       "type": "ch.qos.logback.classic.spi.LogbackServiceProvider"
+    },
+    {
+      "type": "ch.qos.logback.classic.util.DefaultJoranConfigurator",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "ch.qos.logback.core.AsyncAppenderBase",
+      "methods": [
+        {
+          "name": "setDiscardingThreshold",
+          "parameterTypes": [
+            "int"
+          ]
+        }
+      ]
     },
     {
       "type": "ch.qos.logback.core.FileAppender",
