@@ -29,10 +29,11 @@ import java.util.function.BiConsumer;
 import static com.zenith.Shared.*;
 
 public class PluginManager {
-    static final Path pluginsPath = Path.of("plugins");
+    public static final Path PLUGINS_PATH = Path.of("plugins");
     private final BiMap<String, ZenithProxyPlugin> pluginInstances = Maps.synchronizedBiMap(HashBiMap.create());
     private final Map<String, PluginInfo> pluginInfos = new ConcurrentHashMap<>();
     private final Map<String, ConfigInstance> pluginConfigurations = new ConcurrentHashMap<>();
+    private final Map<String, URLClassLoader> pluginClassLoaders = new ConcurrentHashMap<>();
     private final AtomicBoolean initialized = new AtomicBoolean(false);
 
     public List<PluginInfo> getPluginInfos() {
@@ -67,7 +68,7 @@ public class PluginManager {
 
     private void linuxChannelIncompatibilityWarning() {
         int potentialPluginCount = 0;
-        try (var stream = Files.walk(pluginsPath)) {
+        try (var stream = Files.walk(PLUGINS_PATH)) {
             potentialPluginCount = (int) stream
                 .filter(Files::isRegularFile)
                 .filter(path -> path.toString().endsWith(".jar"))
@@ -86,8 +87,8 @@ public class PluginManager {
     }
 
     private void loadPlugins() {
-        if (!pluginsPath.toFile().exists()) return;
-        try (var jarStream = Files.newDirectoryStream(pluginsPath, p -> p.toFile().isFile() && p.toString().endsWith(".jar"))) {
+        if (!PLUGINS_PATH.toFile().exists()) return;
+        try (var jarStream = Files.newDirectoryStream(PLUGINS_PATH, p -> p.toFile().isFile() && p.toString().endsWith(".jar"))) {
             for (var jarPath : jarStream) {
                 loadPotentialPluginJar(jarPath);
             }
@@ -98,8 +99,10 @@ public class PluginManager {
 
     private void loadPotentialPluginJar(final Path jarPath) {
         String id = null;
-        try (var classloader = new URLClassLoader(new URL[]{jarPath.toUri().toURL()}, getClass().getClassLoader())) {
-            PluginInfo pluginInfo = readPluginInfo(classloader, jarPath);
+        URLClassLoader classLoader = null;
+        try {
+            classLoader = new URLClassLoader(new URL[]{jarPath.toUri().toURL()}, getClass().getClassLoader());;
+            PluginInfo pluginInfo = readPluginInfo(classLoader, jarPath);
             id = Objects.requireNonNull(pluginInfo.id(), "Plugin id is null");
             if (pluginInfos.containsKey(id)) {
                 throw new RuntimeException("Plugin id already exists (json)");
@@ -124,7 +127,7 @@ public class PluginManager {
                 jarPath.getFileName()
             );
 
-            Class<?> pluginClass = classloader.loadClass(entrypoint);
+            Class<?> pluginClass = classLoader.loadClass(entrypoint);
             if (!ZenithProxyPlugin.class.isAssignableFrom(pluginClass)) {
                 throw new RuntimeException("Plugin does not implement ZenithProxyPlugin interface");
             }
@@ -136,15 +139,22 @@ public class PluginManager {
             }
             pluginInstances.put(id, plugin);
             pluginInfos.put(id, pluginInfo);
+            pluginClassLoaders.put(id, classLoader);
             try {
                 plugin.onLoad(new InstancedPluginAPI(plugin, pluginInfo));
             } catch (final Throwable e) {
                 PLUGIN_LOG.error("Exception in plugin onLoad: {}", jarPath, e);
                 pluginInstances.remove(id);
                 pluginInfos.remove(id);
+                pluginClassLoaders.remove(id);
                 throw new RuntimeException("Exception in plugin onLoad: + " + e.getMessage(), e);
             }
         } catch (Throwable e) {
+            if (classLoader != null) {
+                try {
+                    classLoader.close();
+                } catch (IOException ignored) { }
+            }
             PLUGIN_LOG.error("Error loading plugin: {}", jarPath, e);
             EVENT_BUS.postAsync(new PluginLoadFailureEvent(id, jarPath, e.getMessage()));
         }
@@ -165,9 +175,9 @@ public class PluginManager {
             throw new RuntimeException("Config already registered: " + fileName);
         }
         var config = loadPluginConfig(fileName, clazz);
-        File configFile = pluginsPath.resolve("config").resolve(fileName + ".json").toFile();
+        File configFile = PLUGINS_PATH.resolve("config").resolve(fileName + ".json").toFile();
         if (!configFile.exists()) {
-            if (!configFile.getParentFile().mkdirs()) {
+            if (!configFile.getParentFile().mkdirs() && !configFile.getParentFile().exists()) {
                 throw new RuntimeException("Unable to create plugin config directory: " + configFile.getParentFile());
             }
         }
