@@ -62,6 +62,7 @@ public class CommandManager {
         new HelpCommand(),
         new IgnoreCommand(),
         new InventoryCommand(),
+        new JvmArgsCommand(),
         new KickCommand(),
         new KillAuraCommand(),
         new MapCommand(),

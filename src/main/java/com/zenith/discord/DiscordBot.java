@@ -26,8 +26,10 @@ import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.Color;
 import net.dv8tion.jda.api.utils.FileUpload;
+import net.dv8tion.jda.api.utils.ShutdownException;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import net.dv8tion.jda.api.utils.messages.MessageCreateData;
+import net.dv8tion.jda.internal.utils.ShutdownReason;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.ByteArrayInputStream;
@@ -279,6 +281,11 @@ public class DiscordBot {
         this.jda = builder.build();
         try {
             jda.awaitReady();
+        } catch (ShutdownException e) {
+            if (e.getShutdownReason() == ShutdownReason.DISALLOWED_INTENTS) {
+                throw new RuntimeException("You must enable MESSAGE CONTENT INTENT on the Discord developer website: https://i.imgur.com/iznLeDV.png");
+            }
+            throw e;
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }

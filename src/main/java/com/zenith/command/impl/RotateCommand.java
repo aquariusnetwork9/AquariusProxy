@@ -36,35 +36,8 @@ public class RotateCommand extends Command {
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
         return command("rotate")
-            .then(argument("yaw", floatArg(-180, 180)).then(argument("pitch", floatArg(-90, 90)).executes(c -> {
-                float yaw = getFloat(c, "yaw");
-                float pitch = getFloat(c, "pitch");
-                if (!Proxy.getInstance().isConnected()) {
-                    c.getSource().getEmbed()
-                        .title("Error")
-                        .errorColor()
-                        .description("Not connected to a server");
-                    return OK;
-                }
-                if (Proxy.getInstance().hasActivePlayer()) {
-                    c.getSource().getEmbed()
-                        .title("Error")
-                        .errorColor()
-                        .description("Cannot rotate while player is controlling");
-                    return OK;
-                }
-                INPUTS.submit(InputRequest.builder()
-                                  .yaw(yaw)
-                                  .pitch(pitch)
-                                  .priority(MOVE_PRIORITY)
-                                  .build());
-                c.getSource().getEmbed()
-                    .title("Rotated")
-                    .successColor();
-                return OK;
-            })))
             .then(literal("yaw").then(argument("yaw", floatArg(-180, 180)).executes(c -> {
-                float yaw = getFloat(c, "yaw");
+                float yaw = 0f;// getFloat(c, "yaw");
                 if (!Proxy.getInstance().isConnected()) {
                     c.getSource().getEmbed()
                         .title("Error")
@@ -105,6 +78,33 @@ public class RotateCommand extends Command {
                     return OK;
                 }
                 INPUTS.submit(InputRequest.builder()
+                                  .pitch(pitch)
+                                  .priority(MOVE_PRIORITY)
+                                  .build());
+                c.getSource().getEmbed()
+                    .title("Rotated")
+                    .successColor();
+                return OK;
+            })))
+            .then(argument("yawArg", floatArg(-180, 180)).then(argument("pitchArg", floatArg(-90, 90)).executes(c -> {
+                float yaw = getFloat(c, "yawArg");
+                float pitch = getFloat(c, "pitchArg");
+                if (!Proxy.getInstance().isConnected()) {
+                    c.getSource().getEmbed()
+                        .title("Error")
+                        .errorColor()
+                        .description("Not connected to a server");
+                    return OK;
+                }
+                if (Proxy.getInstance().hasActivePlayer()) {
+                    c.getSource().getEmbed()
+                        .title("Error")
+                        .errorColor()
+                        .description("Cannot rotate while player is controlling");
+                    return OK;
+                }
+                INPUTS.submit(InputRequest.builder()
+                                  .yaw(yaw)
                                   .pitch(pitch)
                                   .priority(MOVE_PRIORITY)
                                   .build());

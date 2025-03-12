@@ -10,6 +10,8 @@ import com.zenith.discord.Embed;
 import com.zenith.util.MentionUtil;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.requests.GatewayIntent;
+import net.dv8tion.jda.api.utils.ShutdownException;
+import net.dv8tion.jda.internal.utils.ShutdownReason;
 
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -19,6 +21,7 @@ import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
+import static com.zenith.discord.DiscordBot.escape;
 import static java.util.Arrays.asList;
 
 public class DiscordManageCommand extends Command {
@@ -133,10 +136,11 @@ public class DiscordManageCommand extends Command {
                       .then(argument("token", wordWithChars()).executes(c -> {
                           c.getSource().setSensitiveInput(true);
                           var token = getString(c, "token");
-                          if (!validateToken(token)) {
+                          var result = validateToken(token);
+                          if (!result.success()) {
                               c.getSource().getEmbed()
                                   .title("Invalid Token")
-                                  .description("Discord API returned an error during test login")
+                                  .description("Discord API returned an error during test login\n\n" + escape(result.error()))
                                   .errorColor();
                               return ERROR;
                           }
@@ -272,7 +276,7 @@ public class DiscordManageCommand extends Command {
         }
     }
 
-    private boolean validateToken(final String token) {
+    private LoginResult validateToken(final String token) {
         try {
             JDABuilder
                 .createLight(token)
@@ -280,10 +284,20 @@ public class DiscordManageCommand extends Command {
                 .build()
                 .awaitReady()
                 .shutdownNow();
-            return true;
+            return new LoginResult(true, null);
+        } catch (ShutdownException e) {
+            DISCORD_LOG.error("Failed to validate token", e);
+            String errorMsg = e.getMessage();
+            var reason = e.getShutdownReason();
+            if (reason == ShutdownReason.DISALLOWED_INTENTS) {
+                errorMsg = "You must enable MESSAGE CONTENT INTENT on the Discord developer website: https://i.imgur.com/iznLeDV.png";
+            }
+            return new LoginResult(false, errorMsg);
         } catch (final Throwable e) {
             DISCORD_LOG.error("Failed validating discord token", e);
-            return false;
+            return new LoginResult(false, e.getMessage());
         }
     }
+
+    record LoginResult(boolean success, String error) {}
 }

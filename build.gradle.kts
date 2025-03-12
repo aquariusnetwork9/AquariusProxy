@@ -50,7 +50,7 @@ repositories {
 }
 
 dependencies {
-    api("com.github.rfresh2:JDA:5.3.5") {
+    api("com.github.rfresh2:JDA:5.3.6") {
         exclude(group = "club.minnced")
         exclude(group = "net.java.dev.jna")
         exclude(group = "com.google.crypto.tink")
@@ -58,7 +58,7 @@ dependencies {
     api("com.github.rfresh2:MCProtocolLib:1.21.4.13") {
         exclude(group = "io.netty")
     }
-    val nettyVersion = "4.1.118.Final"
+    val nettyVersion = "4.1.119.Final"
     api("io.netty:netty-codec-haproxy:$nettyVersion")
     api("io.netty:netty-codec-dns:$nettyVersion")
     api("io.netty:netty-codec-http2:$nettyVersion")
@@ -95,11 +95,11 @@ dependencies {
     api("org.postgresql:postgresql:42.7.5")
     api("org.jdbi:jdbi3-postgres:3.48.0")
     api("com.google.guava:guava:33.4.0-jre")
-    api("ch.qos.logback:logback-classic:1.5.16")
-    api("org.slf4j:slf4j-api:2.0.16")
-    api("org.slf4j:jul-to-slf4j:2.0.16")
+    api("ch.qos.logback:logback-classic:1.5.17")
+    api("org.slf4j:slf4j-api:2.0.17")
+    api("org.slf4j:jul-to-slf4j:2.0.17")
     api("com.mojang:brigadier:1.3.10")
-    api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2")
+    api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.3")
     testImplementation("org.junit.jupiter:junit-jupiter:5.12.0")
     val lombokVersion = "1.18.36"
     compileOnly("org.projectlombok:lombok:$lombokVersion")
@@ -122,17 +122,22 @@ tasks {
         description = "Write commit hash / version to file"
         workingDir = projectDir
         commandLine = "git rev-parse --short=8 HEAD".split(" ")
+        isIgnoreExitValue = true
         standardOutput = ByteArrayOutputStream()
         doLast {
-            val commitHash = standardOutput.toString().trim()
-            if (commitHash.length > 5) {
-                file(layout.buildDirectory.asFile.get().absolutePath + "/resources/main/zenith_commit.txt").apply {
-                    parentFile.mkdirs()
-                    println("Writing commit hash: $commitHash")
-                    writeText(commitHash)
+            kotlin.runCatching {
+                val commitHash = standardOutput.toString().trim()
+                if (commitHash.length > 5) {
+                    file(layout.buildDirectory.asFile.get().absolutePath + "/resources/main/zenith_commit.txt").apply {
+                        parentFile.mkdirs()
+                        println("Writing commit hash: $commitHash")
+                        writeText(commitHash)
+                    }
+                } else {
+                    throw IllegalStateException("Invalid commit hash: $commitHash")
                 }
-            } else {
-                println("Unable to determine commit hash")
+            }.exceptionOrNull()?.let {
+                println("Unable to determine commit hash: ${it.message}")
             }
         }
         outputs.upToDateWhen { false }
@@ -157,6 +162,7 @@ tasks {
     register("run", JavaExec::class.java) {
         group = runGroup
         description = "Execute proxy"
+        workingDir = layout.projectDirectory.dir("run").asFile
         classpath = sourceSets.main.get().runtimeClasspath
         mainClass.set("com.zenith.Proxy")
         jvmArgs = listOf("-Xmx300m", "-XX:+UseG1GC")
