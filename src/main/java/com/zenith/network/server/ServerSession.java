@@ -270,6 +270,14 @@ public class ServerSession extends TcpServerSession {
             ComponentSerializer.minimessage("<gray>[<aqua>ZenithProxy<gray>] <reset>" + minimessage), false));
     }
 
+    public void sendAsyncMessage(final Component message) {
+        sendAsync(new ClientboundSystemChatPacket(message, false));
+    }
+
+    public void sendAsyncMessage(final String message) {
+        sendAsyncMessage(Component.text(message));
+    }
+
     public boolean isActivePlayer() {
         // note: this could be false for the player connection during some points of disconnect
         return Objects.equals(Proxy.getInstance().getCurrentPlayer().get(), this);
