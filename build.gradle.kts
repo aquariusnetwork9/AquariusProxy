@@ -162,6 +162,7 @@ tasks {
     register("run", JavaExec::class.java) {
         group = runGroup
         description = "Execute proxy"
+        workingDir = layout.projectDirectory.dir("run").asFile
         classpath = sourceSets.main.get().runtimeClasspath
         mainClass.set("com.zenith.Proxy")
         jvmArgs = listOf("-Xmx300m", "-XX:+UseG1GC")
