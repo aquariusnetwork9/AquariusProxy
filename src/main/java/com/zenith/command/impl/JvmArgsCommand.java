@@ -47,7 +47,7 @@ public class JvmArgsCommand extends Command {
 
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
-        return command("jvmArgs")
+        return command("jvmArgs").requires(Command::validateAccountOwner)
             .then(literal("reset").executes(c -> {
                 LAUNCH_CONFIG.custom_jvm_args = null;
                 saveLaunchConfig();
