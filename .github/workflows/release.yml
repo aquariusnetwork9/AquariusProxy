@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-java-and-linux-amd64:
-    runs-on: ubuntu-latest
+    runs-on: ubicloud-standard-8
     container:
       image: catthehacker/ubuntu:act-20.04
     steps:
