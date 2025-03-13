@@ -9,8 +9,6 @@ jobs:
   build-java-and-linux-amd64:
     # 32gb memory needed for instrumenting
     runs-on: ubicloud-standard-8
-    container:
-      image: catthehacker/ubuntu:act-20.04
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
