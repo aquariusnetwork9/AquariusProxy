@@ -17,6 +17,7 @@ import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.ISnowflake;
 import net.dv8tion.jda.api.entities.Icon;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
@@ -88,13 +89,17 @@ public class DiscordBot {
         if (CONFIG.discord.chatRelay.enable
             && !CONFIG.discord.chatRelay.channelId.isEmpty()
             && event.getMessage().getChannelId().equals(CONFIG.discord.chatRelay.channelId)
-            && !event.getMember().getId().equals(jda.getSelfUser().getId())) {
+            && !member.getId().equals(jda.getSelfUser().getId())) {
             EVENT_BUS.postAsync(new DiscordMessageSentEvent(sanitizeRelayInputMessage(event.getMessage().getContentRaw()), event));
             return;
         }
         if (!event.getMessage().getChannelId().equals(CONFIG.discord.channelId)) return;
         final String message = event.getMessage().getContentRaw();
         if (!message.startsWith(CONFIG.discord.prefix)) return;
+        EXECUTOR.execute(() -> executeDiscordCommand(event, message, member));
+    }
+
+    private void executeDiscordCommand(final MessageReceivedEvent event, final String message, final Member member) {
         try {
             final String inputMessage = message.substring(CONFIG.discord.prefix.length());
             String memberName = member.getUser().getName();
