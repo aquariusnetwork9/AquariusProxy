@@ -19,8 +19,10 @@ import net.dv8tion.jda.api.entities.ISnowflake;
 import net.dv8tion.jda.api.entities.Icon;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.events.StatusChangeEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.session.*;
 import net.dv8tion.jda.api.hooks.SimpleEventBusListener;
 import net.dv8tion.jda.api.interactions.components.ActionComponent;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
@@ -30,6 +32,7 @@ import net.dv8tion.jda.api.utils.FileUpload;
 import net.dv8tion.jda.api.utils.ShutdownException;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import net.dv8tion.jda.api.utils.messages.MessageCreateData;
+import net.dv8tion.jda.internal.JDAImpl;
 import net.dv8tion.jda.internal.utils.ShutdownReason;
 import org.jetbrains.annotations.Nullable;
 
@@ -56,6 +59,7 @@ public class DiscordBot {
     @Getter
     private boolean isRunning;
     private ScheduledFuture<?> presenceUpdateFuture;
+    private ScheduledFuture<?> healthCheckFuture;
     protected JDA jda;
     public Optional<Instant> lastRelayMessage = Optional.empty();
     private final SimpleEventBus jdaEventBus = new SimpleEventBus();
@@ -64,7 +68,13 @@ public class DiscordBot {
         this.isRunning = false;
         jdaEventBus.subscribe(
             this,
-            of(MessageReceivedEvent.class, this::onMessageReceived)
+            of(MessageReceivedEvent.class, this::onMessageReceived),
+            of(SessionRecreateEvent.class, e -> DISCORD_LOG.info("Session recreated")),
+            of(SessionResumeEvent.class, e -> DISCORD_LOG.info("Session resumed")),
+            of(ReadyEvent.class, e -> DISCORD_LOG.info("JDA ready")),
+            of(SessionDisconnectEvent.class, e -> DISCORD_LOG.info("Session disconnected")),
+            of(SessionInvalidateEvent.class, e -> DISCORD_LOG.info("Session invalidated")),
+            of(StatusChangeEvent.class, e -> DISCORD_LOG.debug("JDA Status: {}", e.getNewStatus()))
         );
     }
 
@@ -74,11 +84,36 @@ public class DiscordBot {
         if (CONFIG.discord.isUpdating) {
             handleProxyUpdateComplete();
         }
-        this.presenceUpdateFuture = EXECUTOR.scheduleAtFixedRate(
+        this.presenceUpdateFuture = EXECUTOR.scheduleWithFixedDelay(
             this::updatePresence, 0L,
             15L, // discord rate limit
             TimeUnit.SECONDS);
+        this.healthCheckFuture = EXECUTOR.scheduleWithFixedDelay(
+            this::healthCheck, 5L,
+            5L,
+            TimeUnit.MINUTES);
         this.isRunning = true;
+    }
+
+    public JDA.Status getJdaStatus() {
+        var jda = this.jda;
+        if (jda == null) return JDA.Status.SHUTDOWN;
+        return jda.getStatus();
+    }
+
+    public void healthCheck() {
+        if (!isRunning) return;
+        var jda = this.jda;
+        if (jda == null) return;
+        if (!(jda instanceof JDAImpl jdaImpl)) return;
+        var wsConnected = jdaImpl.getClient().isConnected();
+        if (wsConnected) return;
+        DISCORD_LOG.info("Attempting discord gateway reconnect from status: {}", jda.getStatus());
+        try {
+            jdaImpl.getClient().reconnect(false);
+        } catch (Exception e) {
+            DISCORD_LOG.error("Failed reconnecting to discord", e);
+        }
     }
 
     public void onMessageReceived(MessageReceivedEvent event) {
@@ -150,7 +185,7 @@ public class DiscordBot {
         try {
             mainChannel.getGuild().getSelfMember().modifyNickname(nick).complete();
         } catch (final Exception e) {
-            DISCORD_LOG.warn("Failed updating bot's nickname. Check that the bot has correct permissions");
+            DISCORD_LOG.warn("Failed updating bot's nickname. Check that the bot has correct permissions: {}", e.getMessage());
             DISCORD_LOG.debug("Failed updating bot's nickname. Check that the bot has correct permissions", e);
         }
     }
@@ -160,7 +195,7 @@ public class DiscordBot {
         try {
             jda.updateApplicationDescription(description).complete();
         } catch (final Exception e) {
-            DISCORD_LOG.warn("Failed updating bot's description. Check that the bot has correct permissions");
+            DISCORD_LOG.warn("Failed updating bot's description. Check that the bot has correct permissions: {}", e.getMessage());
             DISCORD_LOG.debug("Failed updating bot's description", e);
         }
     }
@@ -181,6 +216,7 @@ public class DiscordBot {
     public synchronized void stop(boolean clearQueue) {
         if (!isRunning) return;
         if (presenceUpdateFuture != null) presenceUpdateFuture.cancel(true);
+        if (healthCheckFuture != null) healthCheckFuture.cancel(true);
         try {
             if (clearQueue) {
                 jda.shutdownNow();
@@ -223,7 +259,7 @@ public class DiscordBot {
             else
                 jda.getPresence().setPresence(OnlineStatus.DO_NOT_DISTURB, Activity.customStatus("Disconnected"));
         } catch (final Throwable e) {
-            DISCORD_LOG.error("Failed updating discord presence. Check that the bot has correct permissions.");
+            DISCORD_LOG.error("Failed updating discord presence. Check that the bot has correct permissions: {}", e.getMessage());
             DISCORD_LOG.debug("Failed updating discord presence. Check that the bot has correct permissions.", e);
         }
     }
@@ -244,7 +280,7 @@ public class DiscordBot {
             mainChannel.sendMessage(msgBuilder.build()).queue();
             CommandOutputHelper.logEmbedOutputToTerminal(embed);
         } catch (final Exception e) {
-            DISCORD_LOG.error("Failed sending discord embed message. Check that the bot has correct permissions");
+            DISCORD_LOG.error("Failed sending discord embed message. Check that the bot has correct permissions: {}", e.getMessage());
             DISCORD_LOG.debug("Failed sending discord embed message. Check that the bot has correct permissions", e);
         }
     }
@@ -346,7 +382,7 @@ public class DiscordBot {
         try {
             jda.getSelfUser().getManager().setAvatar(Icon.from(imageBytes)).complete();
         } catch (final Exception e) {
-            DISCORD_LOG.warn("Failed updating discord profile image. Check that the bot has correct permissions");
+            DISCORD_LOG.warn("Failed updating discord profile image. Check that the bot has correct permissions: {}", e.getMessage());
             DISCORD_LOG.debug("Failed updating discord profile image. Check that the bot has correct permissions", e);
         }
     }
