@@ -222,7 +222,7 @@ public class DiscordManageCommand extends Command {
     @Override
     public void postPopulate(final Embed builder) {
         builder
-            .addField("Discord Bot", toggleStr(CONFIG.discord.enable) + ((CONFIG.discord.enable && !DISCORD.isRunning()) ? " (Not Running)" : ""), false)
+            .addField("Discord Bot", toggleStr(CONFIG.discord.enable) + ((CONFIG.discord.enable && !DISCORD.isRunning()) ? " (Not Running)" : " (" + DISCORD.getJdaStatus() + ")"), false)
             .addField("Relay", toggleStr(CONFIG.discord.chatRelay.enable), false)
             .addField("Channel ID", getChannelMention(CONFIG.discord.channelId), false)
             .addField("Relay Channel ID", getChannelMention(CONFIG.discord.chatRelay.channelId), false)
