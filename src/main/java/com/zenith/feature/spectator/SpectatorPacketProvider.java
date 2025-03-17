@@ -3,7 +3,7 @@ package com.zenith.feature.spectator;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.Equipment;
-import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.MetadataType;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.MetadataTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.Pose;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.ObjectEntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Animation;
@@ -75,7 +75,7 @@ public class SpectatorPacketProvider {
         return asList(
             new ClientboundSetEntityDataPacket(
                 CACHE.getPlayerCache().getEntityId(),
-                asList(new ObjectEntityMetadata<>(6, MetadataType.POSE, CACHE.getPlayerCache().isSneaking() ? Pose.SNEAKING : Pose.STANDING)))
+                asList(new ObjectEntityMetadata<>(6, MetadataTypes.POSE, CACHE.getPlayerCache().isSneaking() ? Pose.SNEAKING : Pose.STANDING)))
         );
     }
 

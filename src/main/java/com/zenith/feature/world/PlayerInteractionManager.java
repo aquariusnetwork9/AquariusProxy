@@ -21,7 +21,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.InteractAction;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerAction;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
-import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentType;
+import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponents;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.ItemEnchantments;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundInteractPacket;
@@ -224,7 +224,7 @@ public class PlayerInteractionManager {
         if (item == Container.EMPTY_STACK) return 0;
         DataComponents dataComponents = item.getDataComponents();
         if (dataComponents == null) return 0;
-        ItemEnchantments itemEnchantments = dataComponents.get(DataComponentType.ENCHANTMENTS);
+        ItemEnchantments itemEnchantments = dataComponents.get(DataComponentTypes.ENCHANTMENTS);
         if (itemEnchantments == null) return 0;
         if (!itemEnchantments.getEnchantments().containsKey(enchantmentData.id())) return 0;
         return itemEnchantments.getEnchantments().get(enchantmentData.id());
