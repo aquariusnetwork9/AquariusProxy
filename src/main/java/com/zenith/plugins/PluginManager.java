@@ -68,6 +68,7 @@ public class PluginManager {
 
     private void linuxChannelIncompatibilityWarning() {
         int potentialPluginCount = 0;
+        if (!PLUGINS_PATH.toFile().exists()) return;
         try (var stream = Files.walk(PLUGINS_PATH)) {
             potentialPluginCount = (int) stream
                 .filter(Files::isRegularFile)
