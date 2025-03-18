@@ -272,6 +272,7 @@ public class ChunkCache implements CachedData {
     }
 
     public boolean handleLightUpdate(final ClientboundLightUpdatePacket packet) {
+        if (CONFIG.debug.server.cache.fullbrightChunkSkylight) return true;
         final var chunk = get(packet.getX(), packet.getZ());
         if (chunk != null) chunk.lightUpdateData = packet.getLightData();
         // todo: silently ignoring updates for uncached chunks. should we enqueue them to be processed later?
@@ -373,9 +374,8 @@ public class ChunkCache implements CachedData {
                     chunk.sections,
                     chunk.heightMaps,
                     chunk.blockEntities.toArray(new BlockEntityInfo[0]),
-                    CONFIG.debug.server.cache.fullbrightChunkSkylight
-                        ? createFullBrightLightData(chunk.lightUpdateData, chunk.sections.length)
-                        : chunk.lightUpdateData));
+                    chunk.lightUpdateData
+                ));
             }
             consumer.accept(new ClientboundChunkBatchFinishedPacket(this.cache.size()));
         } catch (Exception e) {
@@ -441,8 +441,10 @@ public class ChunkCache implements CachedData {
                 getMaxSection(),
                 getMinSection(),
                 blockEntities,
-                p.getLightData(),
-                p.getHeightMaps());
+                CONFIG.debug.server.cache.fullbrightChunkSkylight
+                    ? createFullBrightLightData(p.getLightData(), p.getSections().length)
+                    : p.getLightData()
+            );
         }
         this.cache.put(pos, chunk);
     }
