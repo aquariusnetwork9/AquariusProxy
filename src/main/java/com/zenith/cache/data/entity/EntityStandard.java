@@ -28,8 +28,8 @@ public class EntityStandard extends EntityLiving {
             this.y,
             this.z,
             this.yaw,
-            this.pitch,
             this.headYaw,
+            this.pitch,
             this.velX,
             this.velY,
             this.velZ));
