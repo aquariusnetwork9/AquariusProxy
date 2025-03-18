@@ -63,8 +63,8 @@ public class SpectatorPacketProvider {
                 CACHE.getPlayerCache().getY(),
                 CACHE.getPlayerCache().getZ(),
                 CACHE.getPlayerCache().getYaw(),
-                CACHE.getPlayerCache().getPitch(),
-                CACHE.getPlayerCache().getThePlayer().getHeadYaw()),
+                CACHE.getPlayerCache().getThePlayer().getHeadYaw(),
+                CACHE.getPlayerCache().getPitch()),
             new ClientboundSetEntityDataPacket(
                 CACHE.getPlayerCache().getEntityId(),
                 new ArrayList<>(CACHE.getPlayerCache().getThePlayer().getMetadata().values()))
