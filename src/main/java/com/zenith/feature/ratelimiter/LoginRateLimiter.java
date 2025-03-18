@@ -36,4 +36,9 @@ public class LoginRateLimiter {
             return false;
         }
     }
+
+    public void reset(final ServerSession session) {
+        var address = ((InetSocketAddress) session.getRemoteAddress()).getAddress();
+        cache.invalidate(address);
+    }
 }

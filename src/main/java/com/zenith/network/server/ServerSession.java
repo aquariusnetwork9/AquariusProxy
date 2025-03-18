@@ -396,17 +396,29 @@ public class ServerSession extends TcpServerSession {
     }
 
     public void transfer(final String address, final int port) {
-        cookieCache.getStoreSrcPacket(this::sendAsync);
-        sendAsync(new ClientboundTransferPacket(address, port));
+        LOGIN_RATE_LIMITER.reset(this);
+        cookieCache.getStoreSrcPacket(this::send);
+        send(new ClientboundTransferPacket(address, port));
+        disconnect(Component.text("Transferring to " + address + ":" + port));
     }
 
     public void transferToSpectator(final String address, final int port) {
-        cookieCache.getStoreSpectatorDestPacket(this::sendAsync, true);
+        cookieCache.getStoreSpectatorDestPacket(this::send, true);
         transfer(address, port);
     }
 
+    public void transferToSpectator() {
+        cookieCache.getStoreSpectatorDestPacket(this::send, true);
+        transfer(CONFIG.server.getProxyAddressForTransfer(), CONFIG.server.getProxyPortForTransfer());
+    }
+
     public void transferToControllingPlayer(final String address, final int port) {
-        cookieCache.getStoreSpectatorDestPacket(this::sendAsync, false);
+        cookieCache.getStoreSpectatorDestPacket(this::send, false);
         transfer(address, port);
+    }
+
+    public void transferToControllingPlayer() {
+        cookieCache.getStoreSpectatorDestPacket(this::send, false);
+        transfer(CONFIG.server.getProxyAddressForTransfer(), CONFIG.server.getProxyPortForTransfer());
     }
 }
