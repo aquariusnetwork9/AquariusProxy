@@ -144,7 +144,7 @@ public class ChunkCache implements CachedData {
                 chunk.x,
                 chunk.z,
                 chunk.sections,
-                chunk.heightMaps,
+                chunk.getHeightMap(),
                 chunk.blockEntities.toArray(new BlockEntityInfo[0]),
                 chunk.lightUpdateData)
             )
@@ -372,7 +372,7 @@ public class ChunkCache implements CachedData {
                     chunk.x,
                     chunk.z,
                     chunk.sections,
-                    chunk.heightMaps,
+                    chunk.getHeightMap(),
                     chunk.blockEntities.toArray(new BlockEntityInfo[0]),
                     chunk.lightUpdateData
                 ));
