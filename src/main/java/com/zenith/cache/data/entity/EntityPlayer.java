@@ -83,8 +83,8 @@ public class EntityPlayer extends EntityLiving {
                 this.y,
                 this.z,
                 this.yaw,
-                this.pitch,
-                this.headYaw
+                this.headYaw,
+                this.pitch
             ));
             consumer.accept(new ClientboundRotateHeadPacket(
                 this.entityId,
