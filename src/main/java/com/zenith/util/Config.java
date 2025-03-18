@@ -580,6 +580,7 @@ public final class Config {
 
         public static final class PlaytimeLimiter {
             public boolean enabled = false;
+            public boolean allowSpectatorFallback = false;
             public boolean limitSessionLength = true;
             public int maxSessionLengthSeconds = 300;
             public boolean limitConnectionInterval = true;

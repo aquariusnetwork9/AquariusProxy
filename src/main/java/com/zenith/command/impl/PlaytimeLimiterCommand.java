@@ -28,6 +28,7 @@ public class PlaytimeLimiterCommand extends Command {
               """)
             .usageLines(
                 "on/off",
+                "allowSpectatorFallback on/off",
                 "sessionLength on/off",
                 "sessionLength seconds <seconds>",
                 "connectionInterval on/off",
@@ -38,7 +39,7 @@ public class PlaytimeLimiterCommand extends Command {
 
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
-        return command("playtimeLimiter")
+        return command("playtimeLimiter").requires(Command::validateAccountOwner)
             .then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.server.playtimeLimiter.enabled = getToggle(c, "toggle");
                 MODULE.get(PlaytimeLimiter.class).syncEnabledFromConfig();
@@ -46,6 +47,12 @@ public class PlaytimeLimiterCommand extends Command {
                     .title("Playtime Limiter " + toggleStrCaps(CONFIG.server.playtimeLimiter.enabled));
                 return OK;
             }))
+            .then(literal("allowSpectatorFallback").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.server.playtimeLimiter.allowSpectatorFallback = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("Allow Spectator Fallback " + toggleStrCaps(CONFIG.server.playtimeLimiter.enabled));
+                return OK;
+            })))
             .then(literal("sessionLength")
                       .then(argument("toggle", toggle()).executes(c -> {
                           CONFIG.server.playtimeLimiter.limitSessionLength = getToggle(c, "toggle");
@@ -78,6 +85,7 @@ public class PlaytimeLimiterCommand extends Command {
     public void postPopulate(Embed embed) {
         embed
             .addField("Playtime Limiter", toggleStr(CONFIG.server.playtimeLimiter.enabled), false)
+            .addField("Allow Spectator Fallback", toggleStr(CONFIG.server.playtimeLimiter.allowSpectatorFallback), false)
             .addField("Limit Session Length", toggleStr(CONFIG.server.playtimeLimiter.limitSessionLength), false)
             .addField("Max Session Length", CONFIG.server.playtimeLimiter.maxSessionLengthSeconds + " seconds", false)
             .addField("Limit Connection Interval", toggleStr(CONFIG.server.playtimeLimiter.limitConnectionInterval), false)

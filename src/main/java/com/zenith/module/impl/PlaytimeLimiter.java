@@ -6,7 +6,6 @@ import com.google.common.cache.CacheBuilder;
 import com.zenith.Proxy;
 import com.zenith.event.module.ClientTickEvent;
 import com.zenith.event.proxy.PlayerLoginEvent;
-import com.zenith.event.proxy.ServerConnectionAddedEvent;
 import com.zenith.event.proxy.ServerConnectionRemovedEvent;
 import com.zenith.module.Module;
 import net.kyori.adventure.text.Component;
@@ -52,7 +51,6 @@ public class PlaytimeLimiter extends Module {
     @Override
     public List<EventConsumer<?>> registerEvents() {
         return List.of(
-            of(ServerConnectionAddedEvent.class, this::handleServerConnectionAdded),
             of(PlayerLoginEvent.class, this::handlePlayerLogin),
             of(ServerConnectionRemovedEvent.class, this::handleServerConnectionRemoved),
             of(ClientTickEvent.class, this::handleClientTick)
@@ -62,20 +60,32 @@ public class PlaytimeLimiter extends Module {
     private void handleClientTick(ClientTickEvent event) {
         if (!CONFIG.server.playtimeLimiter.limitSessionLength) return;
         var connections = Proxy.getInstance().getActiveConnections().getArray();
+        if (CONFIG.server.playtimeLimiter.allowSpectatorFallback) {
+            var activePlayer = Proxy.getInstance().getActivePlayer();
+            if (activePlayer == null) return;
+        }
         for (int i = 0; i < connections.length; i++) {
             var connection = connections[i];
+            if (CONFIG.server.playtimeLimiter.allowSpectatorFallback) {
+                if (connection.isSpectator()) continue;
+            }
             if (System.currentTimeMillis() - connection.getConnectionTimeEpochMs() > CONFIG.server.playtimeLimiter.maxSessionLengthSeconds * 1000L) {
-                connection.disconnect(Component.text("[ZenithProxy] Playtime limit reached. Come back later!"));
+                if (CONFIG.server.playtimeLimiter.allowSpectatorFallback) {
+                    connection.transferToSpectator();
+                } else {
+                    connection.disconnect(Component.text("[ZenithProxy] Playtime limit reached. Come back later!"));
+                }
             }
         }
     }
 
-    private void handleServerConnectionAdded(ServerConnectionAddedEvent event) {
-
-    }
-
     private void handlePlayerLogin(PlayerLoginEvent event) {
         if (!CONFIG.server.playtimeLimiter.limitConnectionInterval) return;
+        boolean shouldTransferToSpectator = false;
+        if (CONFIG.server.playtimeLimiter.allowSpectatorFallback) {
+            if (event.serverConnection().isSpectator()) return;
+            else shouldTransferToSpectator = true;
+        }
         var uuid = event.serverConnection().getLoginProfileUUID();
         if (uuid != null) {
             Long dcTime = uuidConnectedCache.getIfPresent(uuid);
@@ -83,8 +93,12 @@ public class PlaytimeLimiter extends Module {
                 var duration = System.currentTimeMillis() - dcTime;
                 var msUntilCooldown = CONFIG.server.playtimeLimiter.connectionIntervalCooldownSeconds * 1000L - duration;
                 if (msUntilCooldown > 0) {
-                    event.serverConnection().disconnect(Component.text("[ZenithProxy] You are on cooldown. Come back in " + (msUntilCooldown / 1000L) + " seconds!"));
-                    return;
+                    if (shouldTransferToSpectator) {
+                        event.serverConnection().transferToSpectator();
+                    } else {
+                        event.serverConnection().disconnect(Component.text("[ZenithProxy] You are on cooldown. Come back in " + (msUntilCooldown / 1000L) + " seconds!"));
+                        return;
+                    }
                 }
             }
         }
@@ -96,13 +110,20 @@ public class PlaytimeLimiter extends Module {
                 var duration = System.currentTimeMillis() - dcTime;
                 var msUntilCooldown = CONFIG.server.playtimeLimiter.connectionIntervalCooldownSeconds * 1000L - duration;
                 if (msUntilCooldown > 0) {
-                    event.serverConnection().disconnect(Component.text("[ZenithProxy] You are on cooldown. Come back in " + (msUntilCooldown / 1000L) + " seconds!"));
+                    if (shouldTransferToSpectator) {
+                        event.serverConnection().transferToSpectator();
+                    } else {
+                        event.serverConnection().disconnect(Component.text("[ZenithProxy] You are on cooldown. Come back in " + (msUntilCooldown / 1000L) + " seconds!"));
+                    }
                 }
             }
         }
     }
 
     private void handleServerConnectionRemoved(ServerConnectionRemovedEvent event) {
+        if (CONFIG.server.playtimeLimiter.allowSpectatorFallback) {
+            if (event.serverConnection().isSpectator()) return;
+        }
         var socketAddress = (InetSocketAddress) event.serverConnection().getRemoteAddress();
         if (socketAddress != null) {
             ipConnectedCache.put(socketAddress.getAddress(), System.currentTimeMillis());
