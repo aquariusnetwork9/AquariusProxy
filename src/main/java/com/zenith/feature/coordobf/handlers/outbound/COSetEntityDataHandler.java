@@ -10,7 +10,7 @@ import lombok.NonNull;
 import org.cloudburstmc.math.vector.Vector3i;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.EntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.GlobalPos;
-import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.MetadataType;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.MetadataTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.ObjectEntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
@@ -33,7 +33,7 @@ public class COSetEntityDataHandler implements PacketHandler<ClientboundSetEntit
             }
             if (e.getEntityType() == EntityType.ITEM) {
                 metadata.removeIf(m -> {
-                    if (m.getType() == MetadataType.ITEM) {
+                    if (m.getType() == MetadataTypes.ITEM) {
                         return ((ItemStack) m.getValue()).getId() == ItemRegistry.ENDER_EYE.id();
                     }
                     return false;
@@ -45,23 +45,23 @@ public class COSetEntityDataHandler implements PacketHandler<ClientboundSetEntit
         }
         List<EntityMetadata<?, ?>> modifiedMetadata = metadata.stream()
             .map(m -> {
-                if (m.getType() == MetadataType.POSITION) {
+                if (m.getType() == MetadataTypes.POSITION) {
                     return new ObjectEntityMetadata<>(m.getId(),
-                                                      MetadataType.POSITION,
+                                                      MetadataTypes.POSITION,
                                                       session.getCoordOffset().offsetVector((Vector3i) m.getValue()));
-                } else if (m.getType() == MetadataType.OPTIONAL_POSITION) {
+                } else if (m.getType() == MetadataTypes.OPTIONAL_POSITION) {
                     return new ObjectEntityMetadata<>(m.getId(),
-                                                      MetadataType.OPTIONAL_POSITION,
+                                                      MetadataTypes.OPTIONAL_POSITION,
                                                       ((Optional<Vector3i>) m.getValue()).map(p -> session.getCoordOffset()
                                                           .offsetVector(p)));
-                } else if (m.getType() == MetadataType.NBT_TAG) {
+                } else if (m.getType() == MetadataTypes.NBT_TAG) {
                     return new ObjectEntityMetadata<>(m.getId(),
-                                                      MetadataType.NBT_TAG,
+                                                      MetadataTypes.NBT_TAG,
                                                       session.getCoordOffset()
                                                           .offsetNbt((MNBT) m.getValue()));
-                } else if (m.getType() == MetadataType.OPTIONAL_GLOBAL_POS) {
+                } else if (m.getType() == MetadataTypes.OPTIONAL_GLOBAL_POS) {
                     return new ObjectEntityMetadata<>(m.getId(),
-                                                      MetadataType.OPTIONAL_GLOBAL_POS,
+                                                      MetadataTypes.OPTIONAL_GLOBAL_POS,
                                                       ((Optional<GlobalPos>) m.getValue())
                                                           .map(globalPos ->
                                                                    new GlobalPos(
