@@ -43,7 +43,7 @@ public class KillAura extends AbstractInventoryModule {
     private int delay = 0;
     private final WeakReference<EntityLiving> nullRef = new WeakReference<>(null);
     private WeakReference<EntityLiving> attackTarget = nullRef;
-    private static final int MOVEMENT_PRIORITY = 500;
+    public static final int MOVEMENT_PRIORITY = 500;
     private final IntSet swords = IntSet.of(
         ItemRegistry.DIAMOND_SWORD.id(),
         ItemRegistry.NETHERITE_SWORD.id(),

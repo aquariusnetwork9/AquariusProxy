@@ -126,6 +126,7 @@ public final class Config {
             public final Wander wander = new Wander();
             public final Click click = new Click();
             public final SessionTimeLimit sessionTimeLimit = new SessionTimeLimit();
+            public final AutoOmen autoOmen = new AutoOmen();
 
             public static class SessionTimeLimit {
                 public boolean enabled = true;
@@ -255,6 +256,10 @@ public final class Config {
                 public int hungerThreshold = 10;
                 public boolean warning = true;
                 public boolean warningMention = false;
+            }
+
+            public static final class AutoOmen {
+                public boolean enabled = false;
             }
 
             public static final class Stalk {
