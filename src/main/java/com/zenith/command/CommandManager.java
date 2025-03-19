@@ -74,6 +74,7 @@ public class CommandManager {
         new ReconnectCommand(),
         new ReleaseChannelCommand(),
         new ReplayCommand(),
+        new RequeueCommand(),
         new RespawnCommand(),
         new RotateCommand(),
         new SeenCommand(),
