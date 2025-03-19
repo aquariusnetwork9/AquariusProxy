@@ -5,7 +5,6 @@ import com.zenith.Proxy;
 import com.zenith.event.proxy.DisconnectEvent;
 import com.zenith.event.proxy.StartQueueEvent;
 import com.zenith.module.Module;
-import com.zenith.network.client.ClientSession;
 import com.zenith.network.registry.PacketHandlerCodec;
 import com.zenith.network.registry.PacketHandlerStateCodec;
 import com.zenith.util.Timer;
@@ -45,10 +44,10 @@ public class Requeue extends Module {
 
     @Override
     public PacketHandlerCodec registerClientPacketHandlerCodec() {
-        return PacketHandlerCodec.builder()
+        return PacketHandlerCodec.clientBuilder()
             .setId("requeue")
             .setPriority(10)
-            .state(ProtocolState.GAME, PacketHandlerStateCodec.<ClientSession>builder()
+            .state(ProtocolState.GAME, PacketHandlerStateCodec.clientBuilder()
                 .allowUnhandledInbound(true)
                 .registerOutbound(ServerboundKeepAlivePacket.class, (packet, session) -> null)
                 .build())
