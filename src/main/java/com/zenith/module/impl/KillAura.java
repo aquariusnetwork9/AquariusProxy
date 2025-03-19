@@ -90,16 +90,17 @@ public class KillAura extends AbstractInventoryModule {
                 if (!hasRotation(target)) {
                     rotateTo(target);
                 }
+                INVENTORY.invActionReq(this, MOVEMENT_PRIORITY - 1);
             }
             return;
         }
-        if (CACHE.getPlayerCache().getThePlayer().isAlive()
-                && !MODULE.get(AutoEat.class).isEating()) {
+        if (CACHE.getPlayerCache().getThePlayer().isAlive()) {
             final EntityLiving target = findTarget();
             if (target != null) {
                 if (!attackTarget.refersTo(target))
                     attackTarget = new WeakReference<>(target);
                 if (switchToWeapon()) {
+                    INVENTORY.invActionReq(this, MOVEMENT_PRIORITY - 1);
                     attack(target).addInputExecutedListener(this::onAttackInputExecuted);
                 } else {
                     // stop while doing inventory actions

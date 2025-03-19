@@ -1,6 +1,7 @@
 package com.zenith.network.registry;
 
 import com.zenith.network.client.ClientSession;
+import com.zenith.network.server.ServerSession;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import lombok.AccessLevel;
@@ -20,6 +21,14 @@ public class PacketHandlerStateCodec<S extends Session> {
     protected final boolean allowUnhandledInbound;
 
     public static <S extends Session> Builder<S> builder() {
+        return new Builder<>();
+    }
+
+    public static Builder<ClientSession> clientBuilder() {
+        return new Builder<>();
+    }
+
+    public static Builder<ServerSession> serverBuilder() {
         return new Builder<>();
     }
 

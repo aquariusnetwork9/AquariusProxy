@@ -40,7 +40,6 @@ public class AutoArmor extends Module {
     }
 
     private void handleClientBotTick(ClientBotTick clientBotTick) {
-        if (MODULE.get(AutoEat.class).isEating()) return;
         if (delay > 0) {
             delay--;
             return;
