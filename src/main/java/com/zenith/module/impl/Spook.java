@@ -125,6 +125,7 @@ public class Spook extends Module {
             INPUTS.submit(InputRequest.builder()
                               .yaw(rotation.getX())
                               .pitch(rotation.getY())
+                              .priority(MOVEMENT_PRIORITY)
                               .build());
         }
     }

@@ -13,7 +13,6 @@ import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
@@ -56,7 +55,7 @@ public class AutoEat extends AbstractInventoryModule {
                     INPUTS.submit(InputRequest.builder()
                                       .priority(MOVEMENT_PRIORITY)
                                       .build());
-                    INVENTORY.invActionReq(this, Collections.emptyList(), MOVEMENT_PRIORITY);
+                    INVENTORY.invActionReq(this, MOVEMENT_PRIORITY);
                 }
                 return;
             }
