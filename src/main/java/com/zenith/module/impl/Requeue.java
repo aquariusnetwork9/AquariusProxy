@@ -49,7 +49,6 @@ public class Requeue extends Module {
             .setId("requeue")
             .setPriority(10)
             .state(ProtocolState.GAME, PacketHandlerStateCodec.clientBuilder()
-                .allowUnhandledInbound(true)
                 .registerOutbound(ServerboundKeepAlivePacket.class, (packet, session) -> null)
                 .build())
             .build();
@@ -76,5 +75,7 @@ public class Requeue extends Module {
         if (requeueTickFuture != null) {
             requeueTickFuture.cancel(true);
         }
+        info("Requeue Completed");
+        inGameAlert("Requeue Completed");
     }
 }
