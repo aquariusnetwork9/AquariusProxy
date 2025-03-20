@@ -2280,6 +2280,16 @@
       ]
     },
     {
+      "type": "com.zenith.util.Config$Client$Extra$AutoOmen",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "com.zenith.util.Config$Client$Extra$AutoReconnect",
       "allDeclaredFields": true,
       "methods": [

@@ -11,6 +11,7 @@ import com.zenith.util.Timer;
 import com.zenith.util.Timers;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.packet.common.serverbound.ServerboundKeepAlivePacket;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
@@ -26,7 +27,7 @@ import static com.zenith.Shared.EXECUTOR;
  */
 public class Requeue extends Module {
 
-    ScheduledFuture<?> requeueTickFuture;
+    @Nullable ScheduledFuture<?> requeueTickFuture = null;
     Timer requeueTimer = Timers.timer();
 
     @Override

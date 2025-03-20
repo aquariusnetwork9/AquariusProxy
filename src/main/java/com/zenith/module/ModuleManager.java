@@ -23,6 +23,7 @@ public class ModuleManager {
             new AutoEat(),
             new AutoFish(),
             new AutoMend(),
+            new AutoOmen(),
             new AutoReconnect(),
             new AutoReply(),
             new AutoRespawn(),
