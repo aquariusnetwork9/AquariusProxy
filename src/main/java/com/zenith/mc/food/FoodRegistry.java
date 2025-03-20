@@ -24,7 +24,7 @@ public final class FoodRegistry {
 
     public static final FoodData SALMON = REGISTRY.register(new FoodData(936, "salmon", 64, 2.0f, 1.6f, false, true));
 
-    public static final FoodData TROPICAL_FISH = REGISTRY.register(new FoodData(937, "tropical_fish", 64, 1.0f, 0.4f, false, true));
+    public static final FoodData TROPICAL_FISH = REGISTRY.register(new FoodData(937, "tropical_fish", 64, 1.0f, 0.4f, false, false));
 
     public static final FoodData PUFFERFISH = REGISTRY.register(new FoodData(938, "pufferfish", 64, 1.0f, 0.4f, false, false));
 
@@ -84,7 +84,7 @@ public final class FoodRegistry {
 
     public static final FoodData GLOW_BERRIES = REGISTRY.register(new FoodData(1217, "glow_berries", 64, 2.0f, 1.6f, false, true));
 
-    public static final FoodData HONEY_BOTTLE = REGISTRY.register(new FoodData(1224, "honey_bottle", 16, 6.0f, 14.400001f, false, true));
+    public static final FoodData HONEY_BOTTLE = REGISTRY.register(new FoodData(1224, "honey_bottle", 16, 6.0f, 14.400001f, false, false));
 
-    public static final FoodData OMINOUS_BOTTLE = REGISTRY.register(new FoodData(1331, "ominous_bottle", 64, 1.0f, 0.4f, false, true));
+    public static final FoodData OMINOUS_BOTTLE = REGISTRY.register(new FoodData(1331, "ominous_bottle", 64, 1.0f, 0.4f, false, false));
 }
