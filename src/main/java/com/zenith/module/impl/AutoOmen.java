@@ -6,8 +6,8 @@ import com.zenith.event.module.ClientBotTick;
 import com.zenith.feature.world.ClickTarget;
 import com.zenith.feature.world.Input;
 import com.zenith.feature.world.InputRequest;
-import com.zenith.mc.food.FoodData;
-import com.zenith.mc.food.FoodRegistry;
+import com.zenith.mc.item.ItemData;
+import com.zenith.mc.item.ItemRegistry;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
@@ -93,7 +93,7 @@ public class AutoOmen extends AbstractInventoryModule {
 
     @Override
     public boolean itemPredicate(final ItemStack itemStack) {
-        FoodData foodData = FoodRegistry.REGISTRY.get(itemStack.getId());
-        return foodData != null && foodData == FoodRegistry.OMINOUS_BOTTLE;
+        ItemData itemData = ItemRegistry.REGISTRY.get(itemStack.getId());
+        return itemData != null && itemData == ItemRegistry.OMINOUS_BOTTLE;
     }
 }
