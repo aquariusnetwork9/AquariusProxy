@@ -37,7 +37,7 @@ public class RotateCommand extends Command {
     public LiteralArgumentBuilder<CommandContext> register() {
         return command("rotate")
             .then(literal("yaw").then(argument("yaw", floatArg(-180, 180)).executes(c -> {
-                float yaw = 0f;// getFloat(c, "yaw");
+                float yaw = getFloat(c, "yaw");
                 if (!Proxy.getInstance().isConnected()) {
                     c.getSource().getEmbed()
                         .title("Error")
