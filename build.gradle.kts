@@ -100,8 +100,9 @@ dependencies {
     api("org.slf4j:jul-to-slf4j:2.0.17")
     api("com.mojang:brigadier:1.3.10")
     api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.3")
-    api("com.google.code.findbugs:jsr305:3.0.2")
+    api("org.jspecify:jspecify:1.0.0")
     testImplementation("org.junit.jupiter:junit-jupiter:5.12.1")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     val lombokVersion = "1.18.36"
     compileOnly("org.projectlombok:lombok:$lombokVersion")
     testCompileOnly("org.projectlombok:lombok:$lombokVersion")

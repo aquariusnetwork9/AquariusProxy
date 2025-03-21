@@ -2,8 +2,8 @@ package com.zenith.network.server.handler.player.incoming;
 
 import com.zenith.network.registry.PacketHandler;
 import com.zenith.network.server.ServerSession;
-import lombok.NonNull;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
+import org.jspecify.annotations.NonNull;
 
 import static com.zenith.Shared.*;
 

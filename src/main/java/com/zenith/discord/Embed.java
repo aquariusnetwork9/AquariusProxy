@@ -2,11 +2,11 @@ package com.zenith.discord;
 
 import com.zenith.util.Color;
 import lombok.Data;
-import lombok.NonNull;
 import lombok.experimental.Accessors;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Instant;
 import java.util.ArrayList;

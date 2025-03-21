@@ -3,7 +3,7 @@ package com.zenith.command.brigadier;
 import com.zenith.discord.Embed;
 import com.zenith.network.server.ServerSession;
 import lombok.Data;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;

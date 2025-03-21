@@ -8,7 +8,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import lombok.SneakyThrows;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.BitStorage;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 
 import static com.zenith.Shared.*;
 import static com.zenith.cache.data.chunk.Chunk.chunkPosToLong;
@@ -138,7 +138,7 @@ public class MapGenerator {
         return data;
     }
 
-    @NotNull
+    @NonNull
     private static Long2ObjectMap<BitStorage> generateHeightMapFromChunkData(final int minChunkX, final int minChunkZ, final int maxChunkX, final int maxChunkZ) {
         final Long2ObjectMap<BitStorage> chunkToHeightMap = new Long2ObjectOpenHashMap<>((maxChunkX - minChunkX) * (maxChunkZ - minChunkZ));
         for (int chunkX = minChunkX; chunkX < maxChunkX; chunkX++) {

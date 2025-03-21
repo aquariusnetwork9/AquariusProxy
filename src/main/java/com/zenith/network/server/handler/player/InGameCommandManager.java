@@ -5,8 +5,8 @@ import com.zenith.command.brigadier.CommandSource;
 import com.zenith.command.util.CommandOutputHelper;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
-import lombok.NonNull;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
+import org.jspecify.annotations.NonNull;
 
 import static com.zenith.Shared.*;
 

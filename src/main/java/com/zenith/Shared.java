@@ -29,7 +29,7 @@ import com.zenith.util.ConfigVerifier;
 import com.zenith.util.LaunchConfig;
 import com.zenith.util.Wait;
 import com.zenith.via.ZenithViaInitializer;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

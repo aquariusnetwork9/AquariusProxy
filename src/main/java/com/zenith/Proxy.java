@@ -25,7 +25,6 @@ import com.zenith.via.ZenithClientChannelInitializer;
 import com.zenith.via.ZenithServerChannelInitializer;
 import io.netty.util.ResourceLeakDetector;
 import lombok.Getter;
-import lombok.NonNull;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import net.raphimc.minecraftauth.responsehandler.exception.MinecraftRequestException;
@@ -39,8 +38,8 @@ import org.geysermc.mcprotocollib.protocol.MinecraftProtocol;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundTabListPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundSetCarriedItemPacket;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
@@ -87,7 +86,7 @@ public class Proxy {
     private OptionalLong prevOnlineSeconds = OptionalLong.empty();
     private Optional<Boolean> isPrio = Optional.empty();
     @Getter private final AtomicBoolean loggingIn = new AtomicBoolean(false);
-    @Setter @NotNull private AutoUpdater autoUpdater = NoOpAutoUpdater.INSTANCE;
+    @Setter @NonNull private AutoUpdater autoUpdater = NoOpAutoUpdater.INSTANCE;
     private LanBroadcaster lanBroadcaster;
     private TcpConnectionManager tcpManager;
 
