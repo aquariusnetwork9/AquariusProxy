@@ -6,11 +6,11 @@ import com.zenith.feature.api.sessionserver.SessionServerApi;
 import com.zenith.network.registry.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.Wait;
-import lombok.NonNull;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 import org.geysermc.mcprotocollib.protocol.MinecraftConstants;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.ClientboundGameProfilePacket;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
 import java.util.UUID;

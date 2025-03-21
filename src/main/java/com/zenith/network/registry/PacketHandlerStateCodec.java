@@ -5,10 +5,10 @@ import com.zenith.network.server.ServerSession;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import lombok.AccessLevel;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.geysermc.mcprotocollib.network.Session;
 import org.geysermc.mcprotocollib.network.packet.Packet;
+import org.jspecify.annotations.NonNull;
 
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class PacketHandlerStateCodec<S extends Session> {

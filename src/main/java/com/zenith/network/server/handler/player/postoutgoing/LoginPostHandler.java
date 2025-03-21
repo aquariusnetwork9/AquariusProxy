@@ -8,11 +8,11 @@ import com.zenith.network.registry.PostOutgoingPacketHandler;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import com.zenith.via.ZenithViaInitializer;
-import lombok.NonNull;
 import net.raphimc.vialoader.netty.VLPipeline;
 import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
+import org.jspecify.annotations.NonNull;
 
 import static com.zenith.Shared.*;
 
