@@ -55,7 +55,7 @@ dependencies {
         exclude(group = "net.java.dev.jna")
         exclude(group = "com.google.crypto.tink")
     }
-    api("com.github.rfresh2:MCProtocolLib:1.21.4.16") {
+    api("com.github.rfresh2:MCProtocolLib:1.21.4.17") {
         exclude(group = "io.netty")
     }
     val nettyVersion = "4.1.119.Final"
@@ -100,6 +100,7 @@ dependencies {
     api("org.slf4j:jul-to-slf4j:2.0.17")
     api("com.mojang:brigadier:1.3.10")
     api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.3")
+    api("com.google.code.findbugs:jsr305:3.0.2")
     testImplementation("org.junit.jupiter:junit-jupiter:5.12.1")
     val lombokVersion = "1.18.36"
     compileOnly("org.projectlombok:lombok:$lombokVersion")
