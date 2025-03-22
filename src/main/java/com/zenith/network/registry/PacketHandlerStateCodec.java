@@ -18,6 +18,7 @@ public class PacketHandlerStateCodec<S extends Session> {
     protected final Reference2ObjectMap<Class<? extends Packet>, PacketHandler<? extends Packet, S>> outboundHandlers;
     @NonNull
     protected final Reference2ObjectMap<Class<? extends Packet>, PacketHandler<? extends Packet, S>> postOutboundHandlers;
+    // If set to false, cancels any inbound packet type with no handler registered
     protected final boolean allowUnhandledInbound;
 
     public static <S extends Session> Builder<S> builder() {
@@ -68,6 +69,7 @@ public class PacketHandlerStateCodec<S extends Session> {
         protected final Reference2ObjectMap<Class<? extends Packet>, PacketHandler<? extends Packet, S>> outboundHandlers = new Reference2ObjectOpenHashMap<>();
 
         protected final Reference2ObjectMap<Class<? extends Packet>, PacketHandler<? extends Packet, S>> postOutboundHandlers = new Reference2ObjectOpenHashMap<>();
+        // If set to false, cancels any inbound packet type with no handler registered
         protected boolean allowUnhandledInbound = true;
 
         public <P extends Packet> PacketHandlerStateCodec.Builder<S> registerInbound(@NonNull Class<P> packetClass, @NonNull PacketHandler<P, S> handler) {
@@ -95,6 +97,7 @@ public class PacketHandlerStateCodec<S extends Session> {
             return this;
         }
 
+        // If set to false, cancels any inbound packet type with no handler registered
         public PacketHandlerStateCodec.Builder<S> allowUnhandledInbound(final boolean allowUnhandled) {
             this.allowUnhandledInbound = allowUnhandled;
             return this;

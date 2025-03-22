@@ -42,7 +42,6 @@ public class ActionLimiter extends Module {
             .setPriority(1000)
             .setActivePredicate(this::shouldLimit)
             .state(ProtocolState.GAME, PacketHandlerStateCodec.serverBuilder()
-                .allowUnhandledInbound(true)
                 .registerInbound(ServerboundChatCommandPacket.class, new ALChatCommandHandler())
                 .registerInbound(ServerboundChatCommandSignedPacket.class, new ALSignedChatCommandHandler())
                 .registerInbound(ServerboundChatPacket.class, new ALChatHandler())
