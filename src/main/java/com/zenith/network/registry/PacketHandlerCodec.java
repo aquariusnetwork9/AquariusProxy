@@ -74,6 +74,13 @@ public class PacketHandlerCodec {
             return this;
         }
 
+        public Builder<S> allStates(PacketHandlerStateCodec<S> codec) {
+            for (ProtocolState state : ProtocolState.values()) {
+                this.aStateCodecs.put(state, codec);
+            }
+            return this;
+        }
+
         public PacketHandlerCodec build() {
             Objects.requireNonNull(this.id, "id");
             return new PacketHandlerCodec(priority, id, aStateCodecs, (Predicate<Session>) activePredicate);
