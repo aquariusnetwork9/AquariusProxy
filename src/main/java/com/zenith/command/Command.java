@@ -133,6 +133,18 @@ public abstract class Command {
         return literal(literal).requires(requirement);
     }
 
+    public static EnumStringArgumentType enumStrings(String... strings) {
+        return new EnumStringArgumentType(strings);
+    }
+
+    public static EnumStringArgumentType enumStrings(Enum<?>[] enumValues) {
+        String[] names = new String[enumValues.length];
+        for (int i = 0; i < enumValues.length; i++) {
+            names[i] = enumValues[i].name().toLowerCase();
+        }
+        return enumStrings(names);
+    }
+
     public static String toggleStr(boolean state) {
         return state ? "on" : "off";
     }

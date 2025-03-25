@@ -12,7 +12,6 @@ import java.util.Arrays;
 
 import static com.zenith.Shared.CONFIG;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
-import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 
 public class ThemeCommand extends Command {
     @Override
@@ -53,7 +52,7 @@ public class ThemeCommand extends Command {
                     .title("Available Colors")
                     .description(String.join("\n", allColors));
             }))
-            .then(literal("primary").then(argument("color", wordWithChars()).executes(c -> {
+            .then(literal("primary").then(argument("color", enumStrings(ConfigColor.values())).executes(c -> {
                 var colorStr = getString(c, "color").toUpperCase();
                 try {
                     CONFIG.theme.primary = ConfigColor.valueOf(colorStr);
@@ -67,7 +66,7 @@ public class ThemeCommand extends Command {
                     return ERROR;
                 }
             })))
-            .then(literal("success").then(argument("color", wordWithChars()).executes(c -> {
+            .then(literal("success").then(argument("color", enumStrings(ConfigColor.values())).executes(c -> {
                 var colorStr = getString(c, "color").toUpperCase();
                 try {
                     CONFIG.theme.success = ConfigColor.valueOf(colorStr);
@@ -81,7 +80,7 @@ public class ThemeCommand extends Command {
                     return ERROR;
                 }
             })))
-            .then(literal("error").then(argument("color", wordWithChars()).executes(c -> {
+            .then(literal("error").then(argument("color", enumStrings(ConfigColor.values())).executes(c -> {
                 var colorStr = getString(c, "color").toUpperCase();
                 try {
                     CONFIG.theme.error = ConfigColor.valueOf(colorStr);
@@ -95,7 +94,7 @@ public class ThemeCommand extends Command {
                     return ERROR;
                 }
             })))
-            .then(literal("inQueue").then(argument("color", wordWithChars()).executes(c -> {
+            .then(literal("inQueue").then(argument("color", enumStrings(ConfigColor.values())).executes(c -> {
                 var colorStr = getString(c, "color").toUpperCase();
                 try {
                     CONFIG.theme.inQueue = ConfigColor.valueOf(colorStr);

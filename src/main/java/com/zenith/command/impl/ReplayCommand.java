@@ -14,7 +14,6 @@ import java.util.Arrays;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
-import static com.mojang.brigadier.arguments.StringArgumentType.string;
 import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
@@ -99,7 +98,7 @@ public class ReplayCommand extends Command {
                 return OK;
             })))
             .then(literal("autoRecord")
-                      .then(literal("mode").then(argument("mode", string()).executes(c -> {
+                      .then(literal("mode").then(argument("mode", enumStrings(AutoRecordMode.values())).executes(c -> {
                           var modeStr = getString(c, "mode").toLowerCase();
                           var foundMode = Arrays.stream(AutoRecordMode.values())
                               .filter(mode -> mode.getName().toLowerCase().equals(modeStr))

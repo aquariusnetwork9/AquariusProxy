@@ -67,7 +67,7 @@ public class ClientConnectionCommand extends Command {
                           return OK;
                       }))
                       .then(literal("type")
-                                .then(argument("type", wordWithChars()).executes(c -> {
+                                .then(argument("type", enumStrings(ProxyInfo.Type.values())).executes(c -> {
                                     try {
                                         CONFIG.client.connectionProxy.type = ProxyInfo.Type.valueOf(getString(c, "type").toUpperCase());
                                         c.getSource().getEmbed()
