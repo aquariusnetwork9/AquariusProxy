@@ -97,8 +97,34 @@ public class NotificationEventListener {
             of(ReplayStoppedEvent.class, this::handleReplayStoppedEvent),
             of(PlayerTotemPopAlertEvent.class, this::handleTotemPopEvent),
             of(NoTotemsEvent.class, this::handleNoTotemsEvent),
-            of(PrivateMessageSendEvent.class, this::handlePrivateMessageSendEvent)
+            of(PrivateMessageSendEvent.class, this::handlePrivateMessageSendEvent),
+            of(ChatControlExecuteEvent.class, this::handleChatControlExecuteEvent),
+            of(SpawnPatrolTargetAcquiredEvent.class, this::handleSpawnPatrolTargetAcquiredEvent),
+            of(SpawnPatrolTargetKilledEvent.class, this::handleSpawnPatrolTargetKilledEvent)
         );
+    }
+
+    private void handleSpawnPatrolTargetKilledEvent(SpawnPatrolTargetKilledEvent event) {
+        var embed = Embed.builder()
+            .title("Target Killed")
+            .addField("Target", "[" + event.profile().getName() + "](https://namemc.com/profile/" + event.profile().getId() + ")", false)
+            .addField("Death Message", escape(event.message())  , false)
+            .thumbnail(Proxy.getInstance().getAvatarURL(event.profile().getId()).toString())
+            .successColor();
+        sendEmbedMessage(embed);
+    }
+
+    private void handleSpawnPatrolTargetAcquiredEvent(SpawnPatrolTargetAcquiredEvent event) {
+        var profile = event.targetProfile();
+        var embed = Embed.builder()
+            .title("Target Acquired")
+            .addField("Target", "[" + profile.getName() + "](https://namemc.com/profile/" + profile.getProfileId() + ")", false)
+            .addField("Position",getCoordinates(event.target()), false)
+            .addField("Our Position", getCoordinates(CACHE.getPlayerCache().getThePlayer()), false)
+            .addField("Distance", String.format("%.2f", Math.sqrt(CACHE.getPlayerCache().distanceSqToSelf(event.target()))), false)
+            .thumbnail(Proxy.getInstance().getAvatarURL(profile.getProfileId()).toString())
+            .primaryColor();
+        sendEmbedMessage(embed);
     }
 
     public void handleConnectEvent(ConnectEvent event) {
@@ -925,6 +951,18 @@ public class NotificationEventListener {
             embed.footer("Private Message", null);
         }
         sendRelayEmbedMessage(embed);
+    }
+
+    private void handleChatControlExecuteEvent(ChatControlExecuteEvent event) {
+        var embed = Embed.builder()
+            .title("Chat Control")
+            .addField("Sender", ("[" + event.sender().getName() + "](https://namemc.com/profile/" + event.sender().getProfileId() + ")"), false)
+            .addField("Command Type", event.command().isBlank() ? "None" : event.command(), false)
+            .addField("Input", String.join(" ", event.input()), false)
+            .addField("Executed", event.success() ? "Yes" : "No", false)
+            .thumbnail(Proxy.getInstance().getAvatarURL(event.sender().getProfileId()).toString());
+        embed = event.success() ? embed.successColor() : embed.errorColor();
+        sendEmbedMessage(embed);
     }
 
     /**

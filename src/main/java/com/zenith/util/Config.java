@@ -129,6 +129,12 @@ public final class Config {
             public final SessionTimeLimit sessionTimeLimit = new SessionTimeLimit();
             public final AutoOmen autoOmen = new AutoOmen();
             public final Pathfinder pathfinder = new Pathfinder();
+            public final ChatControl chatControl = new ChatControl();
+            public final SpawnPatrol spawnPatrol = new SpawnPatrol();
+            public static final class ChatControl {
+                public boolean enabled = false;
+                public final ArrayList<PlayerEntry> blacklist = new ArrayList<>();
+            }
 
             public static final class Pathfinder {
                 public boolean allowBreak = true;
@@ -190,12 +196,28 @@ public final class Config {
 
             public static final class Wander {
                 public boolean enabled = false;
-                public boolean turn = true;
-                public int turnDelaySeconds = 5;
-                public boolean jump = true;
-                public int jumpDelaySeconds = 5;
-                public boolean sneak = false;
-                public boolean alwaysJumpInWater = true;
+                public int radius = 2000;
+                public int minRadius = 100;
+            }
+
+            public static class SpawnPatrol {
+                public boolean enabled = false;
+                public boolean random = false;
+                public boolean spook = true;
+                public boolean spookIgnoreFriends = true;
+                public boolean spookOnlyNakeds = false;
+                public boolean spookAttackers = false;
+                public boolean spookStickyTarget = false;
+                public boolean nether = true;
+                public boolean kill = true;
+                public int killSeconds = 60;
+                public int killMinDist = 10;
+                public boolean killAntiStuck = true;
+                public int goalX = 0;
+                public int goalZ = 0;
+                public boolean goalXZ = true;
+                public int goalY = 120;
+                public final ArrayList<PlayerEntry> ignoreList = new ArrayList<>();
             }
 
             public static final class QueueWarning {

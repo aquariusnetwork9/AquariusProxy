@@ -117,6 +117,7 @@ public final class ZenithHandlerCodec {
             .state(ProtocolState.GAME, PacketHandlerStateCodec.clientBuilder()
                 .registerInbound(ClientboundDisconnectPacket.class, CDisconnectHandler.INSTANCE)
                 .registerInbound(ClientboundStartConfigurationPacket.class, new CStartConfigurationHandler())
+                .registerInbound(ClientboundDamageEventPacket.class, new DamageEventHandler())
                 .registerInbound(ClientboundUpdateAdvancementsPacket.class, new UpdateAdvancementsHandler())
                 .registerInbound(ClientboundBlockUpdatePacket.class, new BlockUpdateHandler())
                 .registerInbound(ClientboundChunkBatchFinishedPacket.class, new ChunkBatchFinishedHandler())

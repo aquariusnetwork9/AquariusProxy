@@ -28,6 +28,7 @@ public class ModuleManager {
             new AutoReply(),
             new AutoRespawn(),
             new AutoTotem(),
+            new ChatControl(),
             new ChatHistory(),
             new Click(),
             new ESP(),
@@ -40,6 +41,7 @@ public class ModuleManager {
             new SessionTimeLimit(),
             new Spammer(),
             new Spook(),
+            new SpawnPatrol(),
             new VisualRange(),
             new Wander()
         ).forEach(m -> {

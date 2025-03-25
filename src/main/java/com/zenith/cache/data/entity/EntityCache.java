@@ -20,6 +20,7 @@ import static com.zenith.Shared.CACHE;
 @Data
 public class EntityCache implements CachedData {
     protected final Map<Integer, Entity> entities = new ConcurrentHashMap<>();
+    protected final Map<UUID, EntityPlayer> players = new ConcurrentHashMap<>();
     protected final Cache<UUID, EntityPlayer> recentlyRemovedPlayers = CacheBuilder.newBuilder()
         // really we're looking for players in the last tick (with generous headroom for async scheduling)
         .expireAfterWrite(Duration.ofSeconds(2))
@@ -53,10 +54,12 @@ public class EntityCache implements CachedData {
     public void reset(CacheResetType type) {
         if (type == CacheResetType.FULL || type == CacheResetType.PROTOCOL_SWITCH) {
             this.entities.clear();
+            this.players.clear();
         } else {
             // unload all entities
             // defer self-player reset logic to PlayerCache
             this.entities.keySet().removeIf(i -> i != CACHE.getPlayerCache().getEntityId());
+            this.players.keySet().removeIf(uuid -> !uuid.equals(CACHE.getPlayerCache().getThePlayer().getUuid()));
         }
         this.recentlyRemovedPlayers.invalidateAll();
     }
@@ -68,13 +71,18 @@ public class EntityCache implements CachedData {
 
     public void add(@NonNull Entity entity) {
         this.entities.put(entity.getEntityId(), entity);
+        if (entity instanceof EntityPlayer player && player.getUuid() != null) {
+            this.players.put(player.getUuid(), player);
+        }
     }
 
     public Entity remove(int id)  {
         var entity = this.entities.remove(id);
         if (entity != null) entity.setRemoved(true);
-        if (entity instanceof EntityPlayer player)
+        if (entity instanceof EntityPlayer player) {
+            this.players.remove(player.getUuid());
             this.recentlyRemovedPlayers.put(player.getUuid(), player);
+        }
         return entity;
     }
 
@@ -93,9 +101,6 @@ public class EntityCache implements CachedData {
     // todo: this is not particularly efficient but is currently used infrequently.
     //  if there are higher frequency use cases, consider building a secondary cached map of uuids to entity
     public Entity get(UUID uuid) {
-        return this.entities.values().stream()
-            .filter(entity -> uuid.equals(entity.getUuid()))
-            .findFirst()
-            .orElse(null);
+        return this.players.get(uuid);
     }
 }

@@ -2,21 +2,28 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.event.module.ClientBotTick;
-import com.zenith.feature.world.Input;
-import com.zenith.feature.world.InputRequest;
+import com.zenith.feature.pathfinder.Baritone;
+import com.zenith.feature.pathfinder.goals.GoalXZ;
 import com.zenith.module.Module;
 import com.zenith.util.Timer;
 import com.zenith.util.Timers;
+import com.zenith.util.math.MathHelper;
+import lombok.Getter;
 
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Shared.CACHE;
+import static com.zenith.Shared.CONFIG;
 
 public class Wander extends Module {
-    private final Timer jumpTimer = Timers.tickTimer();
-    private final Timer turnTimer = Timers.tickTimer();
-    public static final int MOVEMENT_PRIORITY = 1337;
+    private final Timer pathTimer = Timers.tickTimer();
+    private long lastPathTime = 0L;
+    private long lastStuckWarning = 0L;
+    @Getter private GoalXZ goal = new GoalXZ(0, 0);
+    public static final int MOVEMENT_PRIORITY = 150;
 
     @Override
     public List<EventConsumer<?>> registerEvents() {
@@ -31,46 +38,43 @@ public class Wander extends Module {
         return CONFIG.client.extra.wander.enabled;
     }
 
+    @Override
+    public void onDisable() {
+        if (Baritone.INSTANCE.isGoalActive(goal)) {
+            debug("Stopping active pathing goal");
+            Baritone.INSTANCE.stop();
+        }
+    }
+
     private void handleBotTickStarting(ClientBotTick.Starting starting) {
-        jumpTimer.reset();
-        turnTimer.reset();
+        lastPathTime = 0L;
+        lastStuckWarning = 0L;
     }
 
     private void handleBotTick(ClientBotTick clientBotTick) {
-        Input defaultInput = CONFIG.client.extra.wander.sneak ? Input.builder()
-            .pressingForward(true)
-            .sneaking(true)
-            .build() : Input.builder()
-            .pressingForward(true)
-            .build();
-        if (CONFIG.client.extra.wander.turn && turnTimer.tick(20L * CONFIG.client.extra.wander.turnDelaySeconds)) {
-            INPUTS.submit(InputRequest.builder()
-                              .input(defaultInput)
-                              .yaw((float) (Math.random() * 360))
-                              .pitch(0)
-                              .priority(MOVEMENT_PRIORITY)
-                              .build());
-        } else if (CONFIG.client.extra.wander.jump && jumpTimer.tick(20L * CONFIG.client.extra.wander.jumpDelaySeconds)) {
-            INPUTS.submit(InputRequest.builder()
-                              .input(Input.builder()
-                                         .pressingForward(true)
-                                         .jumping(true)
-                                         .build())
-                              .priority(MOVEMENT_PRIORITY)
-                              .build());
-        } else if (CONFIG.client.extra.wander.jump && CONFIG.client.extra.wander.alwaysJumpInWater && MODULE.get(PlayerSimulation.class).isTouchingWater()) {
-            INPUTS.submit(InputRequest.builder()
-                              .input(Input.builder()
-                                         .pressingForward(true)
-                                         .jumping(true)
-                                         .build())
-                              .priority(MOVEMENT_PRIORITY)
-                              .build());
-        } else {
-            INPUTS.submit(InputRequest.builder()
-                              .input(defaultInput)
-                              .priority(MOVEMENT_PRIORITY)
-                              .build());
+        if (!Baritone.INSTANCE.isActive() && pathTimer.tick(20L)) {
+            if (System.currentTimeMillis() - lastPathTime < TimeUnit.MINUTES.toMillis(1)) {
+                if (System.currentTimeMillis() - lastStuckWarning > TimeUnit.MINUTES.toMillis(5)) {
+                    warn("we are likely stuck :(");
+                    lastStuckWarning = System.currentTimeMillis();
+                }
+                return;
+            }
+
+            int currentX = MathHelper.floorI(CACHE.getPlayerCache().getX());
+            int currentZ = MathHelper.floorI(CACHE.getPlayerCache().getZ());
+            int radius = CONFIG.client.extra.wander.radius;
+            int minRadius = CONFIG.client.extra.wander.minRadius;
+            int bound = radius - minRadius;
+            int goalX = ThreadLocalRandom.current().nextInt(currentX - bound, currentX + bound);
+            // shift goalX to be ensure within the bounds of the active radius (area between radius and minRadius)
+            goalX += goalX < currentX ? -minRadius : minRadius;
+            int goalZ = ThreadLocalRandom.current().nextInt(currentZ - bound, currentZ + bound);
+            goalZ += goalZ < currentZ ? -minRadius : minRadius;
+            goal = new GoalXZ(goalX, goalZ);
+            info("Pathing to goal: [{}, {}]", goalX, goalZ);
+            Baritone.INSTANCE.pathTo(goal);
+            lastPathTime = System.currentTimeMillis();
         }
     }
 }
