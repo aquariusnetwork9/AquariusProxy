@@ -2374,6 +2374,16 @@
       ]
     },
     {
+      "type": "com.zenith.util.Config$Client$Extra$ChatControl",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "com.zenith.util.Config$Client$Extra$Click",
       "allDeclaredFields": true,
       "methods": [
@@ -2400,6 +2410,57 @@
     {
       "type": "com.zenith.util.Config$Client$Extra$KillAura$Priority",
       "allDeclaredFields": true
+    },
+    {
+      "type": "com.zenith.util.Config$Client$Extra$Pathfinder",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.zenith.util.Config$Client$Extra$PearlLoader",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.zenith.util.Config$Client$Extra$PearlLoader$Pearl",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String",
+            "int",
+            "int",
+            "int"
+          ]
+        },
+        {
+          "name": "id",
+          "parameterTypes": []
+        },
+        {
+          "name": "x",
+          "parameterTypes": []
+        },
+        {
+          "name": "y",
+          "parameterTypes": []
+        },
+        {
+          "name": "z",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "com.zenith.util.Config$Client$Extra$QueueWarning",
@@ -2461,6 +2522,16 @@
     },
     {
       "type": "com.zenith.util.Config$Client$Extra$Stalk",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.zenith.util.Config$Client$Extra$SpawnPatrol",
       "allDeclaredFields": true,
       "methods": [
         {
