@@ -59,7 +59,7 @@ public class ThemeCommand extends Command {
                     CONFIG.theme.primary = ConfigColor.valueOf(colorStr);
                     c.getSource().getEmbed()
                         .title("Primary Color Set!");
-                    return 1;
+                    return OK;
                 } catch (final Throwable e) {
                     c.getSource().getEmbed()
                         .title("Invalid Color!")
@@ -73,7 +73,7 @@ public class ThemeCommand extends Command {
                     CONFIG.theme.success = ConfigColor.valueOf(colorStr);
                     c.getSource().getEmbed()
                         .title("Success Color Set!");
-                    return 1;
+                    return OK;
                 } catch (final Throwable e) {
                     c.getSource().getEmbed()
                         .title("Invalid Color!")
@@ -87,7 +87,7 @@ public class ThemeCommand extends Command {
                     CONFIG.theme.error = ConfigColor.valueOf(colorStr);
                     c.getSource().getEmbed()
                         .title("Error Color Set!");
-                    return 1;
+                    return OK;
                 } catch (final Throwable e) {
                     c.getSource().getEmbed()
                         .title("Invalid Color!")
@@ -101,7 +101,7 @@ public class ThemeCommand extends Command {
                     CONFIG.theme.inQueue = ConfigColor.valueOf(colorStr);
                     c.getSource().getEmbed()
                         .title("In Queue Color Set!");
-                    return 1;
+                    return OK;
                 } catch (final Throwable e) {
                     c.getSource().getEmbed()
                         .title("Invalid Color!")

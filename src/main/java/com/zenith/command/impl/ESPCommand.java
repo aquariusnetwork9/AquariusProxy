@@ -48,7 +48,7 @@ public class ESPCommand extends Command {
                 c.getSource().getEmbed()
                     .title("ESP " + toggleStrCaps(CONFIG.server.extra.esp.enable))
                     .primaryColor();
-                return 1;
+                return OK;
             }));
     }
 }

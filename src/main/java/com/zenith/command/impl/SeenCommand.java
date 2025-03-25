@@ -56,7 +56,7 @@ public class SeenCommand extends Command {
                     .addField("First Seen", getSeenString(response.firstSeen()), false)
                     .addField("Last Seen", getSeenString(response.lastSeen()), false)
                     .thumbnail(Proxy.getInstance().getAvatarURL(playerName).toString()));
-                return 1;
+                return OK;
             }));
     }
 

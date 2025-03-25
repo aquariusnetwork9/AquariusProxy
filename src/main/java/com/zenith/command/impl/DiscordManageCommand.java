@@ -67,7 +67,7 @@ public class DiscordManageCommand extends Command {
                 }
                 // will stop/start depending on if the bot is enabled
                 EXECUTOR.schedule(this::restartDiscordBot, 3, TimeUnit.SECONDS);
-                return 1;
+                return OK;
             }))
             .then(literal("channel")
                       .then(argument("channel ID", wordWithChars()).executes(c -> {
@@ -81,13 +81,13 @@ public class DiscordManageCommand extends Command {
                               c.getSource().getEmbed()
                                   .title("Invalid Channel ID")
                                   .description("The channel ID provided is invalid");
-                              return 1;
+                              return OK;
                           }
                           if (channelId.equals(CONFIG.discord.chatRelay.channelId)) {
                               c.getSource().getEmbed()
                                   .title("Invalid Channel ID")
                                   .description("Cannot use the same channel ID for both the relay and main channel");
-                              return 1;
+                              return OK;
                           }
                           CONFIG.discord.channelId = channelId;
                           c.getSource().getEmbed()
@@ -95,7 +95,7 @@ public class DiscordManageCommand extends Command {
                                        .description("Discord bot will now restart if enabled");
                           if (DISCORD.isRunning())
                               EXECUTOR.schedule(this::restartDiscordBot, 3, TimeUnit.SECONDS);
-                          return 1;
+                          return OK;
                       })))
             .then(literal("relayChannel")
                       .then(argument("channelId", wordWithChars()).executes(c -> {
@@ -109,13 +109,13 @@ public class DiscordManageCommand extends Command {
                               c.getSource().getEmbed()
                                   .title("Invalid Channel ID")
                                   .description("The channel ID provided is invalid");
-                              return 1;
+                              return OK;
                           }
                           if (channelId.equals(CONFIG.discord.channelId)) {
                               c.getSource().getEmbed()
                                   .title("Invalid Channel ID")
                                   .description("Cannot use the same channel ID for both the relay and main channel");
-                              return 1;
+                              return OK;
                           }
                           CONFIG.discord.chatRelay.channelId = channelId;
                           c.getSource().getEmbed()
@@ -123,7 +123,7 @@ public class DiscordManageCommand extends Command {
                                        .description("Discord bot will now restart if enabled");
                           if (DISCORD.isRunning())
                               EXECUTOR.schedule(this::restartDiscordBot, 3, TimeUnit.SECONDS);
-                          return 1;
+                          return OK;
                       })))
             .then(literal("token").requires(DiscordManageCommand::validateTerminalSource)
                       .then(argument("token", wordWithChars()).executes(c -> {
@@ -142,7 +142,7 @@ public class DiscordManageCommand extends Command {
                               .description("Discord bot will now restart if enabled");
                           if (DISCORD.isRunning())
                               EXECUTOR.schedule(this::restartDiscordBot, 3, TimeUnit.SECONDS);
-                          return 1;
+                          return OK;
                       })))
             .then(literal("role").requires(DiscordManageCommand::validateTerminalSource)
                       .then(argument("roleId", wordWithChars()).executes(c -> {
@@ -155,40 +155,40 @@ public class DiscordManageCommand extends Command {
                               c.getSource().getEmbed()
                                   .title("Invalid Role ID")
                                   .description("The role ID provided is invalid");
-                              return 1;
+                              return OK;
                           }
                           CONFIG.discord.accountOwnerRoleId = roleId;
                           c.getSource().getEmbed()
                               .title("Role set!");
-                          return 1;
+                          return OK;
                       })))
             .then(literal("manageProfileImage")
                       .then(argument("toggle", toggle()).executes(c -> {
                             CONFIG.discord.manageProfileImage = getToggle(c, "toggle");
                             c.getSource().getEmbed()
                                          .title("Manage Profile Image " + toggleStrCaps(CONFIG.discord.manageProfileImage));
-                            return 1;
+                            return OK;
                       })))
             .then(literal("manageNickname")
                       .then(argument("toggle", toggle()).executes(c -> {
                             CONFIG.discord.manageNickname = getToggle(c, "toggle");
                             c.getSource().getEmbed()
                                          .title("Manage Nickname " + toggleStrCaps(CONFIG.discord.manageNickname));
-                            return 1;
+                            return OK;
                       })))
             .then(literal("manageDescription")
                       .then(argument("toggle", toggle()).executes(c -> {
                             CONFIG.discord.manageDescription = getToggle(c, "toggle");
                             c.getSource().getEmbed()
                                          .title("Manage Description " + toggleStrCaps(CONFIG.discord.manageDescription));
-                            return 1;
+                            return OK;
                       })))
             .then(literal("showNonWhitelistIP")
                       .then(argument("toggle", toggle()).executes(c -> {
                             CONFIG.discord.showNonWhitelistLoginIP = getToggle(c, "toggle");
                             c.getSource().getEmbed()
                                          .title("Show Non-Whitelist IP " + toggleStrCaps(CONFIG.discord.showNonWhitelistLoginIP));
-                            return 1;
+                            return OK;
                       })))
             .then(literal("ignoreOtherBots")
                       .then(argument("toggle", toggle()).executes(c -> {

@@ -113,14 +113,14 @@ public class KillAuraCommand extends Command {
                             CONFIG.client.extra.killAura.switchWeapon = getToggle(c, "toggle");
                             c.getSource().getEmbed()
                                          .title("Weapon Switching " + toggleStrCaps(CONFIG.client.extra.killAura.switchWeapon));
-                            return 1;
+                            return OK;
                       })))
             .then(literal("targetCustom")
                       .then(argument("toggle", toggle()).executes(c -> {
                             CONFIG.client.extra.killAura.targetCustom = getToggle(c, "toggle");
                             c.getSource().getEmbed()
                                          .title("Target Custom " + toggleStrCaps(CONFIG.client.extra.killAura.targetCustom));
-                            return 1;
+                            return OK;
                       }))
                       .then(literal("add")
                                 .then(argument("entityType", string()).executes(c -> {
@@ -137,7 +137,7 @@ public class KillAuraCommand extends Command {
                                                      .title("Invalid Entity Type")
                                                      .errorColor();
                                     }
-                                    return 1;
+                                    return OK;
                                 })))
                       .then(literal("del")
                                 .then(argument("entityType", string()).executes(c -> {
@@ -153,7 +153,7 @@ public class KillAuraCommand extends Command {
                                             .title("Invalid Entity Type")
                                             .errorColor();
                                     }
-                                    return 1;
+                                    return OK;
                                 }))))
             .then(literal("priority")
                       .then(literal("none").executes(c -> {

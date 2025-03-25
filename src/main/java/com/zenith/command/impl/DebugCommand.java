@@ -115,7 +115,7 @@ public class DebugCommand extends Command {
                             ChunkCache.sync();
                             c.getSource().getEmbed()
                                 .title("Synced Chunks");
-                            return 1;
+                            return OK;
                         })))
             .then(literal("clearEffects").executes(c -> {
                 CACHE.getPlayerCache().getThePlayer().getPotionEffectMap().clear();
