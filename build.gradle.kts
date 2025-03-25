@@ -94,7 +94,7 @@ dependencies {
     api("com.zaxxer:HikariCP:6.3.0")
     api("org.postgresql:postgresql:42.7.5")
     api("org.jdbi:jdbi3-postgres:3.48.0")
-    api("com.google.guava:guava:33.4.0-jre")
+    api("com.google.guava:guava:33.4.6-jre")
     api("ch.qos.logback:logback-classic:1.5.18")
     api("org.slf4j:slf4j-api:2.0.17")
     api("org.slf4j:jul-to-slf4j:2.0.17")
