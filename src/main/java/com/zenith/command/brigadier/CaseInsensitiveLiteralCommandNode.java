@@ -12,6 +12,7 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.zenith.command.util.CommandErrorHandler;
+import com.zenith.command.util.CommandExecutionErrorHandler;
 import com.zenith.command.util.CommandSuccessHandler;
 import lombok.Getter;
 
@@ -26,20 +27,25 @@ public class CaseInsensitiveLiteralCommandNode<S> extends LiteralCommandNode<S> 
     private final String literalLowercase;
     private final CommandErrorHandler errorHandler;
     private final CommandSuccessHandler successHandler;
+    private final CommandExecutionErrorHandler executionErrorHandler;
 
-    public CaseInsensitiveLiteralCommandNode(String literal,
-                                             Command<S> command,
-                                             Predicate<S> requirement,
-                                             CommandNode<S> redirect,
-                                             RedirectModifier<S> modifier,
-                                             boolean forks,
-                                             CommandErrorHandler errorHandler,
-                                             CommandSuccessHandler successHandler) {
+    public CaseInsensitiveLiteralCommandNode(
+        String literal,
+        Command<S> command,
+        Predicate<S> requirement,
+        CommandNode<S> redirect,
+        RedirectModifier<S> modifier,
+        boolean forks,
+        CommandErrorHandler errorHandler,
+        CommandSuccessHandler successHandler,
+        CommandExecutionErrorHandler executionErrorHandler
+    ) {
         super(literal.toLowerCase(), command, requirement, redirect, modifier, forks);
         this.literalOriginalCase = literal;
         this.literalLowercase = literal.toLowerCase();
         this.errorHandler = errorHandler;
         this.successHandler = successHandler;
+        this.executionErrorHandler = executionErrorHandler;
     }
 
     public Optional<CommandErrorHandler> getErrorHandler() {
@@ -48,6 +54,10 @@ public class CaseInsensitiveLiteralCommandNode<S> extends LiteralCommandNode<S> 
 
     public Optional<CommandSuccessHandler> getSuccessHandler() {
         return Optional.ofNullable(successHandler);
+    }
+
+    public Optional<CommandExecutionErrorHandler> getExecutionErrorHandler() {
+        return Optional.ofNullable(executionErrorHandler);
     }
 
     @Override

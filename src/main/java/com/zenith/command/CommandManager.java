@@ -179,13 +179,19 @@ public class CommandManager {
             .map(node -> ((CaseInsensitiveLiteralCommandNode<CommandContext>) node));
         var errorHandler = commandNodeOptional.flatMap(CaseInsensitiveLiteralCommandNode::getErrorHandler);
         var successHandler = commandNodeOptional.flatMap(CaseInsensitiveLiteralCommandNode::getSuccessHandler);
+        var executionErrorHandler = commandNodeOptional.flatMap(CaseInsensitiveLiteralCommandNode::getExecutionErrorHandler);
 
         if (!parse.getExceptions().isEmpty() || parse.getReader().canRead()) {
             errorHandler.ifPresent(handler -> handler.handle(parse.getExceptions(), context));
             return -1;
         }
         dispatcher.setConsumer((commandContext, success, result) -> {
-            if (success) successHandler.ifPresent(handler -> handler.handle(context));
+            if (success) {
+                if (result == Command.OK)
+                    successHandler.ifPresent(handler -> handler.handle(context));
+                else
+                    executionErrorHandler.ifPresent(handler -> handler.handle(context));
+            }
             else errorHandler.ifPresent(handler -> handler.handle(parse.getExceptions(), context));
         });
 

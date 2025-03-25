@@ -156,17 +156,16 @@ public abstract class Command {
     public abstract LiteralArgumentBuilder<CommandContext> register();
 
     /**
-     * Override to populate the embed builder after every successful execution
-     *
-     * Also is populated onto command usage error messages.
-     * Don't include sensitive info in this embed population, there is no account owner check
+     * Override to populate the embed builder after every execution, including both success and error cases.
+     * Don't include sensitive info, there is no permission validation.
      */
     public void postPopulate(final Embed builder) {}
 
     public CaseInsensitiveLiteralArgumentBuilder<CommandContext> command(String literal) {
         return literal(literal)
-            .withErrorHandler(this::commandErrorHandler)
-            .withSuccesshandler(this::commandSuccessHandler);
+            .withErrorHandler(this::defaultErrorHandler)
+            .withSuccessHandler(this::defaultSuccessHandler)
+            .withExecutionErrorHandler(this::defaultExecutionErrorHandler);
     }
 
     /**
@@ -185,11 +184,11 @@ public abstract class Command {
         return builder;
     }
 
-    public void commandSuccessHandler(CommandContext context) {
+    public void defaultSuccessHandler(CommandContext context) {
         postPopulate(context.getEmbed());
     }
 
-    public void commandErrorHandler(Map<CommandNode<CommandContext>, CommandSyntaxException> exceptions, CommandContext context) {
+    public void defaultErrorHandler(Map<CommandNode<CommandContext>, CommandSyntaxException> exceptions, CommandContext context) {
         exceptions.values().stream()
             .findFirst()
             .ifPresent(exception -> context.getEmbed()
@@ -202,5 +201,11 @@ public abstract class Command {
         context.getEmbed()
                 .addField("Usage", commandUsage().serialize(context.getSource()), false)
                 .errorColor();
+    }
+
+    public void defaultExecutionErrorHandler(CommandContext commandContext) {
+        postPopulate(commandContext.getEmbed());
+        commandContext.getEmbed()
+            .errorColor();
     }
 }
