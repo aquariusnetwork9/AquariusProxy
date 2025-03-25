@@ -70,6 +70,7 @@ public class CommandManager {
         new LicenseCommand(),
         new MapCommand(),
         new PathfinderCommand(),
+        new PearlLoader(),
         new PlaytimeCommand(),
         new PrioCommand(),
         new QueueStatusCommand(),

@@ -131,6 +131,18 @@ public final class Config {
             public final Pathfinder pathfinder = new Pathfinder();
             public final ChatControl chatControl = new ChatControl();
             public final SpawnPatrol spawnPatrol = new SpawnPatrol();
+            public final PearlLoader pearlLoader = new PearlLoader();
+
+            public static final class PearlLoader {
+                public ArrayList<Pearl> pearls = new ArrayList<>();
+
+                /**
+                 * @param id player name or some other unique identifier
+                 * @param x  the position of the block we need to interact with to load the pearl
+                 */
+                public record Pearl(String id, int x, int y, int z) { }
+            }
+
             public static final class ChatControl {
                 public boolean enabled = false;
                 public final ArrayList<PlayerEntry> blacklist = new ArrayList<>();
