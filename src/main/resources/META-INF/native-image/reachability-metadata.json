@@ -2507,6 +2507,16 @@
       ]
     },
     {
+      "type": "com.zenith.util.Config$Client$Extra$SpawnPatrol",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "com.zenith.util.Config$Client$Extra$Spook",
       "allDeclaredFields": true,
       "methods": [
@@ -2522,16 +2532,6 @@
     },
     {
       "type": "com.zenith.util.Config$Client$Extra$Stalk",
-      "allDeclaredFields": true,
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.zenith.util.Config$Client$Extra$SpawnPatrol",
       "allDeclaredFields": true,
       "methods": [
         {
