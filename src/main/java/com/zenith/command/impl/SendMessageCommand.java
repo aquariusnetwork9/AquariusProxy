@@ -69,7 +69,7 @@ public class SendMessageCommand extends Command {
                                       .title("Failed to send message");
                               }
                           }
-                          return 1;
+                          return OK;
                       }));
     }
 }

@@ -43,8 +43,7 @@ public class SeenCommand extends Command {
                 var seenResponse = VcApi.INSTANCE.getSeen(playerName);
                 if (seenResponse.isEmpty()) {
                     c.getSource().getEmbed()
-                        .title(escape(playerName) + " not found")
-                        .errorColor();
+                        .title(escape(playerName) + " not found");
                     return ERROR;
                 }
                 c.getSource().getEmbed()
@@ -57,8 +56,7 @@ public class SeenCommand extends Command {
                     .addField("First Seen", getSeenString(response.firstSeen()), false)
                     .addField("Last Seen", getSeenString(response.lastSeen()), false)
                     .thumbnail(Proxy.getInstance().getAvatarURL(playerName).toString()));
-
-                return 1;
+                return OK;
             }));
     }
 
