@@ -37,6 +37,8 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.Serve
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.*;
 
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
@@ -73,14 +75,14 @@ public class CoordObfuscator extends Module {
 
     @Override
     public PacketHandlerCodec registerServerPacketHandlerCodec() {
-        return PacketHandlerCodec.builder()
+        return PacketHandlerCodec.serverBuilder()
             .setId("coord-obf")
             .setPriority(Integer.MAX_VALUE-1) // 1 less than packet logger
-            .setActivePredicate((session) -> shouldObfuscate((ServerSession) session))
-            .state(ProtocolState.CONFIGURATION, PacketHandlerStateCodec.<ServerSession>builder()
+            .setActivePredicate(this::shouldObfuscate)
+            .state(ProtocolState.CONFIGURATION, PacketHandlerStateCodec.serverBuilder()
                 .registerOutbound(ClientboundRegistryDataPacket.class, new CORegistryDataPacketHandler())
                 .build())
-            .state(ProtocolState.GAME, PacketHandlerStateCodec.<ServerSession>builder()
+            .state(ProtocolState.GAME, PacketHandlerStateCodec.serverBuilder()
                 .registerInbound(ServerboundAcceptTeleportationPacket.class, new COAcceptTeleportationHandler())
                 .registerInbound(ServerboundMoveVehiclePacket.class, new COSMoveVehicleHandler())
                 .registerInbound(ServerboundPlayerActionPacket.class, new COPlayerActionHandler())
@@ -298,5 +300,38 @@ public class CoordObfuscator extends Module {
 
     public boolean shouldObfuscate(ServerSession session) {
         return activeSessions.contains(session);
+    }
+
+    public record ValidationResult(boolean valid, List<String> invalidReasons) {}
+
+    public ValidationResult validateSetup() {
+        // check all modules and settings that could lead to leaking coordinates or the offset
+
+        boolean valid = true;
+        List<String> invalidReasons = new ArrayList<>();
+
+        // ingame commands, both sending/receiving
+        if (CONFIG.inGameCommands.enable) {
+            invalidReasons.add("In-game commands should be disabled, many commands leak coordinates in outputs and behavior");
+            valid = false;
+        }
+        if (CONFIG.client.extra.chatControl.enabled) {
+            invalidReasons.add("Chat Control should be disabled, many commands leak coordinates in outputs and behavior");
+            valid = false;
+        }
+        if (!CONFIG.client.extra.actionLimiter.enabled) {
+            invalidReasons.add("Action Limiter should be enabled to prevent long distance movement and respawning");
+            valid = false;
+        }
+        if (CONFIG.client.extra.actionLimiter.allowMovement) {
+            invalidReasons.add("Action Limiter `allowMovement` should be disabled to prevent long distance movement");
+            valid = false;
+        }
+        if (CONFIG.client.extra.actionLimiter.allowRespawn) {
+            invalidReasons.add("Action Limiter `allowRespawn` should be disabled to prevent respawning");
+            valid = false;
+        }
+
+        return new ValidationResult(valid, invalidReasons);
     }
 }
