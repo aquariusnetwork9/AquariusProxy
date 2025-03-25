@@ -55,6 +55,7 @@ public class Shared {
     public static final Logger DISCORD_LOG = LoggerFactory.getLogger("Discord");
     public static final Logger DATABASE_LOG = LoggerFactory.getLogger("Database");
     public static final Logger TERMINAL_LOG = LoggerFactory.getLogger("Terminal");
+    public static final Logger PATH_LOG = LoggerFactory.getLogger("Pathfinder");
     public static final File CONFIG_FILE = new File("config.json");
     public static final File LAUNCH_CONFIG_FILE = new File("launch_config.json");
     public static final Config CONFIG;

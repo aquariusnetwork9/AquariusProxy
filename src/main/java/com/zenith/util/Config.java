@@ -128,6 +128,40 @@ public final class Config {
             public final Click click = new Click();
             public final SessionTimeLimit sessionTimeLimit = new SessionTimeLimit();
             public final AutoOmen autoOmen = new AutoOmen();
+            public final Pathfinder pathfinder = new Pathfinder();
+
+            public static final class Pathfinder {
+                public boolean allowBreak = true;
+                public boolean allowSprint = false;
+                public boolean allowPlace = true;
+                public boolean allowInventory = true;
+                public boolean allowDownward = true;
+                public boolean allowParkour = false;
+                public boolean allowParkourPlace = false;
+                public boolean allowParkourAscend = false;
+                public boolean allowDiagonalDescend = false;
+                public boolean allowDiagonalAscend = false;
+                public boolean diagonalCentering = false;
+                public boolean traverseCentering = false;
+                public double blockBreakAdditionalCost = 2;
+                public int maxFallHeightNoWater = 3;
+                public boolean allowLongFall = true;
+                public double longFallCostLogMultiplier = 50;
+                public double longFallCostAddCost = 100;
+                public int followRadius = 2;
+                public int teleportDelayMs = 500;
+                public boolean renderPath = true;
+                public int pathRenderIntervalTicks = 10;
+                public boolean renderPathDetailed = false;
+                public int primaryTimeoutMs = 500;
+                public int failureTimeoutMs = 2000;
+                public int planAheadPrimaryTimeoutMs = 4000;
+                public int planAheadFailureTimeoutMs = 5000;
+                public int failedPathSearchCooldownMs = 1000;
+                public boolean getToBlockExploreForBlocks = true;
+                public boolean getToBlockBlacklistClosestOnFailure = false;
+                public boolean simplifyUnloadedYGoal = false;
+            }
 
             public static class SessionTimeLimit {
                 public boolean enabled = true;

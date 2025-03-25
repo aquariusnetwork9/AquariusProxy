@@ -68,6 +68,7 @@ public class CommandManager {
         new KillAuraCommand(),
         new LicenseCommand(),
         new MapCommand(),
+        new PathfinderCommand(),
         new PlaytimeCommand(),
         new PrioCommand(),
         new QueueStatusCommand(),

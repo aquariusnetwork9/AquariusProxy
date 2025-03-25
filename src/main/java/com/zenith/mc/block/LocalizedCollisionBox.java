@@ -149,4 +149,15 @@ public record LocalizedCollisionBox(
         return new RayIntersection(x1 + tmin * xLen, y1 + tmin * yLen, z1 + tmin * zLen, intersectingFace);
     }
 
+    public double centerX() {
+        return (minX + maxX) / 2.0;
+    }
+
+    public double centerY() {
+        return (minY + maxY) / 2.0;
+    }
+
+    public double centerZ() {
+        return (minZ + maxZ) / 2.0;
+    }
 }

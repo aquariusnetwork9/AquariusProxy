@@ -90,6 +90,13 @@ public class World {
         return blockData;
     }
 
+    public Block getBlock(final int blockStateId) {
+        Block blockData = BLOCK_DATA.getBlockDataFromBlockStateId(blockStateId);
+        if (blockData == null)
+            return BlockRegistry.AIR;
+        return blockData;
+    }
+
     public List<LocalizedCollisionBox> getIntersectingCollisionBoxes(final LocalizedCollisionBox cb) {
         final List<LocalizedCollisionBox> boundingBoxList = new ArrayList<>();
         getSolidBlockCollisionBoxes(cb, boundingBoxList);
@@ -319,7 +326,7 @@ public class World {
     }
 
     public static FluidState getFluidState(final int x, final int y, final int z) {
-        return getFluidState(getBlockState(x, y, z).id());
+        return getFluidState(getBlockStateId(x, y, z));
     }
 
     public static boolean onClimbable(EntityLiving entity) {
@@ -333,6 +340,26 @@ public class World {
             }
         }
         return false;
+    }
+
+    public static Position blockInteractionCenter(int x, int y, int z) {
+        var blockState = getBlockState(x, y, z);
+        var cbs = blockState.getLocalizedInteractionBoxes();
+        if (cbs.isEmpty()) {
+            return new Position(x + 0.5, y + 0.5, z + 0.5);
+        }
+        double avgX = 0;
+        double avgY = 0;
+        double avgZ = 0;
+        for (var cb : cbs) {
+            avgX += cb.centerX();
+            avgY += cb.centerY();
+            avgZ += cb.centerZ();
+        }
+        avgX /= cbs.size();
+        avgY /= cbs.size();
+        avgZ /= cbs.size();
+        return new Position(avgX, avgY, avgZ);
     }
 
     public static double getCurrentPlayerX() {

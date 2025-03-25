@@ -139,4 +139,8 @@
         <appender-ref ref="ASYNC_FILE"/>
         <appender-ref ref="ASYNC_DEBUG_FILE"/>
     </logger>
+    <logger name="Pathfinder" level="TRACE">
+        <appender-ref ref="FILE"/>
+        <appender-ref ref="DEBUG_FILE"/>
+    </logger>
 </configuration>

@@ -4,7 +4,10 @@ import com.zenith.Proxy;
 import com.zenith.cache.data.inventory.Container;
 import com.zenith.feature.world.raycast.BlockRaycastResult;
 import com.zenith.feature.world.raycast.EntityRaycastResult;
-import com.zenith.mc.block.*;
+import com.zenith.mc.block.Block;
+import com.zenith.mc.block.BlockRegistry;
+import com.zenith.mc.block.BlockTags;
+import com.zenith.mc.block.Direction;
 import com.zenith.mc.enchantment.EnchantmentData;
 import com.zenith.mc.item.ItemData;
 import com.zenith.mc.item.ItemRegistry;
@@ -58,6 +61,10 @@ public class PlayerInteractionManager {
             && Objects.equals(this.destroyingItem, itemStack);
     }
 
+    public boolean isDestroying(final int x, final int y, final int z) {
+        return this.isDestroying && this.sameDestroyTarget(x, y, z);
+    }
+
     public boolean startDestroyBlock(final int x, final int y, final int z, Direction face) {
         if (CACHE.getPlayerCache().getGameMode() == GameMode.CREATIVE) {
             player.debug("[{}] [{}, {}, {}] StartDestroyBlock START: Creative break", System.currentTimeMillis(), x, y, z);
@@ -84,8 +91,8 @@ public class PlayerInteractionManager {
                 );
             }
 
-            BlockState blockState = World.getBlockState(x, y, z);
-            if (BLOCK_DATA.isAir(blockState.block()) || blockBreakSpeed(blockState) < 1.0) {
+            Block block = World.getBlock(x, y, z);
+            if (BLOCK_DATA.isAir(block) || blockBreakSpeed(block) < 1.0) {
                 this.isDestroying = true;
                 this.destroyBlockPosX = x;
                 this.destroyBlockPosY = y;
@@ -142,12 +149,12 @@ public class PlayerInteractionManager {
             player.debug("[{}] [{}, {}, {}] ContinueDestroyBlock START: Creative Break", System.currentTimeMillis(), x, y, z);
             return true;
         } else if (this.sameDestroyTarget(x, y, z)) {
-            BlockState blockState = World.getBlockState(x, y, z);
-            if (BLOCK_DATA.isAir(blockState.block())) {
+            Block block = World.getBlock(x, y, z);
+            if (BLOCK_DATA.isAir(block)) {
                 this.isDestroying = false;
                 return false;
             } else {
-                this.destroyProgress += blockBreakSpeed(blockState);
+                this.destroyProgress += blockBreakSpeed(block);
                 ++this.destroyTicks;
                 if (this.destroyProgress >= 1.0F) {
                     this.isDestroying = false;
@@ -175,30 +182,30 @@ public class PlayerInteractionManager {
         return this.destroyProgress > 0.0 ? (int)(this.destroyProgress * 10.0) : -1;
     }
 
-    public double blockBreakSpeed(BlockState state) {
-        double destroySpeed = state.block().destroySpeed();
-        double toolFactor = hasCorrectToolForDrops(state, CACHE.getPlayerCache().getEquipment(EquipmentSlot.MAIN_HAND))
+    public double blockBreakSpeed(Block block) {
+        double destroySpeed = block.destroySpeed();
+        double toolFactor = hasCorrectToolForDrops(block, CACHE.getPlayerCache().getEquipment(EquipmentSlot.MAIN_HAND))
             ? 30.0
             : 100.0;
-        double playerDestroySpeed = getPlayerDestroySpeed(state);
+        double playerDestroySpeed = getPlayerDestroySpeed(block);
         return playerDestroySpeed / destroySpeed / toolFactor;
     }
 
-    public double blockBreakSpeed(BlockState state, ItemStack item) {
-        double destroySpeed = state.block().destroySpeed();
-        double toolFactor = hasCorrectToolForDrops(state, item) ? 30.0 : 100.0;
-        double playerDestroySpeed = getPlayerDestroySpeed(state);
+    public double blockBreakSpeed(Block block, ItemStack item) {
+        double destroySpeed = block.destroySpeed();
+        double toolFactor = hasCorrectToolForDrops(block, item) ? 30.0 : 100.0;
+        double playerDestroySpeed = getPlayerDestroySpeed(block);
         return playerDestroySpeed / destroySpeed / toolFactor;
     }
 
-    public boolean hasCorrectToolForDrops(BlockState state, ItemStack item) {
-        if (!state.block().requiresCorrectToolForDrops()) return true;
+    public boolean hasCorrectToolForDrops(Block block, ItemStack item) {
+        if (!block.requiresCorrectToolForDrops()) return true;
         if (item == Container.EMPTY_STACK) return false;
         ItemData itemData = ItemRegistry.REGISTRY.get(item.getId());
         if (itemData == null) return false;
         ToolTag toolTag = itemData.toolTag();
         if (toolTag == null) return false;
-        var blockTags = state.block().blockTags();
+        var blockTags = block.blockTags();
         if (!blockTags.contains(toolTag.type().getBlockTag())) return false;
         if (blockTags.contains(BlockTags.NEEDS_STONE_TOOL)) {
             return toolTag.tier() == ToolTier.STONE || toolTag.tier() == ToolTier.IRON || toolTag.tier() == ToolTier.DIAMOND || toolTag.tier() == ToolTier.GOLD || toolTag.tier() == ToolTier.NETHERITE;
@@ -230,11 +237,11 @@ public class PlayerInteractionManager {
         return itemEnchantments.getEnchantments().get(enchantmentData.id());
     }
 
-    public double getPlayerDestroySpeed(BlockState state) {
+    public double getPlayerDestroySpeed(Block block) {
         double speed = 1.0;
         var mainHandStack = CACHE.getPlayerCache().getEquipment(EquipmentSlot.MAIN_HAND);
         if (mainHandStack != Container.EMPTY_STACK) {
-            if (matchingTool(mainHandStack, state.block())) {
+            if (matchingTool(mainHandStack, block)) {
                 ItemData itemData = ItemRegistry.REGISTRY.get(mainHandStack.getId());
                 ToolTag toolTag = itemData.toolTag();
                 speed = toolTag.tier().getSpeed();

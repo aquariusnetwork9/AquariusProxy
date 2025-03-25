@@ -11,6 +11,7 @@ import com.zenith.util.math.MathHelper;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import lombok.SneakyThrows;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.DataPalette;
 import org.jspecify.annotations.Nullable;
@@ -24,6 +25,10 @@ public class BlockDataManager {
     private final Int2ObjectOpenHashMap<List<CollisionBox>> blockStateIdToCollisionBoxes;
     private final Int2ObjectOpenHashMap<List<CollisionBox>> blockStateIdToInteractionBoxes;
     private final Int2ObjectOpenHashMap<FluidState> blockStateIdToFluidState = new Int2ObjectOpenHashMap<>(100, Maps.FAST_LOAD_FACTOR);
+    private final IntOpenHashSet pathfindableStateIds = new IntOpenHashSet();
+    private final IntOpenHashSet replaceableStateIds = new IntOpenHashSet();
+    private final IntOpenHashSet bottomSlabStateIds = new IntOpenHashSet();
+    private final IntOpenHashSet doubleSlabStateIds = new IntOpenHashSet();
 
     public BlockDataManager() {
         int blockStateIdCount = BlockRegistry.REGISTRY.getIdMap().int2ObjectEntrySet().stream()
@@ -65,6 +70,38 @@ public class BlockDataManager {
                 boolean falling = fluidStateNode.get("falling").asBoolean();
                 blockStateIdToFluidState.put(stateId, new FluidState(water, source, amount, falling));
             }
+        }
+        try (JsonParser pathfindableParse = OBJECT_MAPPER.createParser(getClass().getResourceAsStream(
+            "/mcdata/pathfindable.json"))) {
+            TreeNode pathfindableNode = pathfindableParse.getCodec().readTree(pathfindableParse);
+            ArrayNode pathfindableArray = (ArrayNode) pathfindableNode;
+            pathfindableArray.elements().forEachRemaining((stateId) -> {
+                pathfindableStateIds.add(stateId.asInt());
+            });
+        }
+        try (JsonParser replaceableParse = OBJECT_MAPPER.createParser(getClass().getResourceAsStream(
+            "/mcdata/replaceable.json"))) {
+            TreeNode replaceableNode = replaceableParse.getCodec().readTree(replaceableParse);
+            ArrayNode replaceableArray = (ArrayNode) replaceableNode;
+            replaceableArray.elements().forEachRemaining((stateId) -> {
+                replaceableStateIds.add(stateId.asInt());
+            });
+        }
+        try (JsonParser slabsParse = OBJECT_MAPPER.createParser(getClass().getResourceAsStream(
+            "/mcdata/slabBlockStateIds.json"))) {
+            TreeNode treeNode = slabsParse.getCodec().readTree(slabsParse);
+//            ArrayNode topSlabArray = (ArrayNode) treeNode.get("topSlabs");
+//            topSlabArray.elements().forEachRemaining((stateId) -> {
+//                topSlabStateIds.add(stateId.asInt());
+//            });
+            ArrayNode bottomSlabArray = (ArrayNode) treeNode.get("bottomSlabs");
+            bottomSlabArray.elements().forEachRemaining((stateId) -> {
+                bottomSlabStateIds.add(stateId.asInt());
+            });
+            ArrayNode doubleSlabArray = (ArrayNode) treeNode.get("doubleSlabs");
+            doubleSlabArray.elements().forEachRemaining((stateId) -> {
+                doubleSlabStateIds.add(stateId.asInt());
+            });
         }
         DataPalette.GLOBAL_PALETTE_BITS_PER_ENTRY = MathHelper.log2Ceil(blockStateIdToBlock.size());
     }
@@ -164,6 +201,14 @@ public class BlockDataManager {
         return blockStateIdToFluidState.get(blockStateId);
     }
 
+    public boolean isPathfindable(int blockStateId) {
+        return pathfindableStateIds.contains(blockStateId);
+    }
+
+    public boolean isReplaceable(int blockStateId) {
+        return replaceableStateIds.contains(blockStateId);
+    }
+
     public boolean isAir(Block block) {
         return block == BlockRegistry.AIR || block == BlockRegistry.CAVE_AIR || block == BlockRegistry.VOID_AIR;
     }
@@ -176,5 +221,22 @@ public class BlockDataManager {
         if (block == BlockRegistry.FROSTED_ICE) slippy = 0.98f;
         if (block == BlockRegistry.BLUE_ICE) slippy = 0.989f;
         return slippy;
+    }
+
+    public boolean isShapeFullBlock(int blockStateId) {
+        List<CollisionBox> collisionBoxes = getCollisionBoxesFromBlockStateId(blockStateId);
+        if (collisionBoxes.size() != 1) {
+            return false;
+        }
+        var cb = collisionBoxes.getFirst();
+        return cb.isFullBlock();
+    }
+
+    public boolean isBottomSlab(int blockStateId) {
+        return bottomSlabStateIds.contains(blockStateId);
+    }
+
+    public boolean isDoubleSlab(int blockStateId) {
+        return doubleSlabStateIds.contains(blockStateId);
     }
 }
