@@ -2957,6 +2957,10 @@
       ]
     },
     {
+      "type": "com.zenith.util.Config$Server$PlaytimeLimiter",
+      "allDeclaredFields": true
+    },
+    {
       "type": "com.zenith.util.Config$Server$RateLimiter",
       "allDeclaredFields": true,
       "methods": [
