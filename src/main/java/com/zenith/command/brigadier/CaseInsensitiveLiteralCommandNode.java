@@ -17,12 +17,11 @@ import com.zenith.command.util.CommandSuccessHandler;
 import lombok.Getter;
 
 import java.util.Collection;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 
+@Getter
 public class CaseInsensitiveLiteralCommandNode<S> extends LiteralCommandNode<S> {
-    @Getter
     private final String literalOriginalCase;
     private final String literalLowercase;
     private final CommandErrorHandler errorHandler;
@@ -46,18 +45,6 @@ public class CaseInsensitiveLiteralCommandNode<S> extends LiteralCommandNode<S> 
         this.errorHandler = errorHandler;
         this.successHandler = successHandler;
         this.executionErrorHandler = executionErrorHandler;
-    }
-
-    public Optional<CommandErrorHandler> getErrorHandler() {
-        return Optional.ofNullable(errorHandler);
-    }
-
-    public Optional<CommandSuccessHandler> getSuccessHandler() {
-        return Optional.ofNullable(successHandler);
-    }
-
-    public Optional<CommandExecutionErrorHandler> getExecutionErrorHandler() {
-        return Optional.ofNullable(executionErrorHandler);
     }
 
     @Override

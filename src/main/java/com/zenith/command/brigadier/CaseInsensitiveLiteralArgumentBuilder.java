@@ -8,13 +8,18 @@ import com.zenith.command.util.CommandErrorHandler;
 import com.zenith.command.util.CommandExecutionErrorHandler;
 import com.zenith.command.util.CommandSuccessHandler;
 import com.zenith.command.util.IExecutes;
+import org.jspecify.annotations.NonNull;
 
 import java.util.function.Predicate;
 
 public class CaseInsensitiveLiteralArgumentBuilder<S> extends LiteralArgumentBuilder<S> {
-    private CommandErrorHandler errorHandler;
-    private CommandSuccessHandler successHandler;
-    private CommandExecutionErrorHandler executionErrorHandler;
+    private static final CommandErrorHandler DEFAULT_ERROR_HANDLER = (m, c) -> {};
+    private static final CommandSuccessHandler DEFAULT_SUCCESS_HANDLER = (c) -> {};
+    private static final CommandExecutionErrorHandler DEFAULT_EXECUTION_ERROR_HANDLER = (c) -> {};
+
+    private @NonNull CommandErrorHandler errorHandler = DEFAULT_ERROR_HANDLER;
+    private @NonNull CommandSuccessHandler successHandler = DEFAULT_SUCCESS_HANDLER;
+    private @NonNull CommandExecutionErrorHandler executionErrorHandler = DEFAULT_EXECUTION_ERROR_HANDLER;
 
     protected CaseInsensitiveLiteralArgumentBuilder(String literal) {
         super(literal);
