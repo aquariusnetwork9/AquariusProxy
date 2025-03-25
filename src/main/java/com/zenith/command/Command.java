@@ -2,13 +2,9 @@ package com.zenith.command;
 
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.tree.CommandNode;
-import com.zenith.command.brigadier.CaseInsensitiveLiteralArgumentBuilder;
-import com.zenith.command.brigadier.CommandContext;
-import com.zenith.command.brigadier.CommandSource;
-import com.zenith.command.brigadier.DiscordCommandContext;
+import com.zenith.command.brigadier.*;
 import com.zenith.command.util.CommandErrorHandler;
 import com.zenith.discord.Embed;
 import com.zenith.network.server.ServerSession;
@@ -25,8 +21,8 @@ import java.util.function.Predicate;
 import static com.zenith.Shared.*;
 
 public abstract class Command {
-    public static <T> RequiredArgumentBuilder<CommandContext, T> argument(String name, ArgumentType<T> type) {
-        return RequiredArgumentBuilder.argument(name, type);
+    public static <T> ZRequiredArgumentBuilder<CommandContext, T> argument(String name, ArgumentType<T> type) {
+        return ZRequiredArgumentBuilder.argument(name, type);
     }
 
     // command return codes
