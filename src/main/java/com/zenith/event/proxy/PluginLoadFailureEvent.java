@@ -1,6 +1,6 @@
 package com.zenith.event.proxy;
 
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.nio.file.Path;
 

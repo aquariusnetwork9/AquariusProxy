@@ -15,7 +15,7 @@ import com.zenith.command.impl.*;
 import com.zenith.command.util.BrigadierToMCProtocolLibConverter;
 import lombok.Getter;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandNode;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -114,7 +114,7 @@ public class CommandManager {
         new WhitelistCommand()
     );
     private final CommandDispatcher<CommandContext> dispatcher;
-    @Getter private @NotNull CommandNode[] MCProtocolLibCommandNodes;
+    @Getter private @NonNull CommandNode[] MCProtocolLibCommandNodes;
 
     public CommandManager() {
         this.dispatcher = new CommandDispatcher<>();
