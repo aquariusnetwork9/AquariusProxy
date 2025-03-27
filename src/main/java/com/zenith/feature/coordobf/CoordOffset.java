@@ -140,9 +140,9 @@ public record CoordOffset(
     }
     public BlockEntityInfo offsetBlockEntityInfo(final BlockEntityInfo blockEntityInfo) {
         return new BlockEntityInfo(
-            offsetX(blockEntityInfo.getX()),
+            blockEntityInfo.getX(), // these should be in chunk relative coords (0-15) so don't offset them
             blockEntityInfo.getY(),
-            offsetZ(blockEntityInfo.getZ()),
+            blockEntityInfo.getZ(),
             blockEntityInfo.getType(),
             blockEntityInfo.getNbt() == null ? null : offsetNbt(blockEntityInfo.getNbt())
         );
