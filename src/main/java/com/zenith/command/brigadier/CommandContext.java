@@ -27,7 +27,7 @@ public class CommandContext {
     }
 
     public static CommandContext create(final String input, final CommandSource source) {
-        return new CommandContext(input, source, new Embed(), new ArrayList<>(0));
+        return new CommandContext(input.trim(), source, new Embed(), new ArrayList<>(0));
     }
 
     public static CommandContext createInGamePlayerContext(String input, ServerSession session) {
