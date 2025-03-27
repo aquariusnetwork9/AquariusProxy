@@ -10,12 +10,19 @@ import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.mc.item.ItemRegistry;
+import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
+import it.unimi.dsi.fastutil.objects.ReferenceSet;
 import org.cloudburstmc.math.vector.Vector3i;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.ChunkSection;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
+import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponent;
+import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentType;
+import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
+import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponents;
 import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockEntityInfo;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundLevelChunkWithLightPacket;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import static com.zenith.Shared.*;
@@ -70,6 +77,22 @@ public record CoordOffset(
     }
     public Vector3i reverseOffsetVector(final Vector3i vec) {
         return vec.sub(x() * 16, 0, z() * 16);
+    }
+    public int safeOffsetX(final int x) {
+        // todo: verify X is not near or at 0, 0
+        //  need a better way to check this
+        if (Math.abs(x) < 16) {
+            return x;
+        }
+        return offsetX(x);
+    }
+    public int safeOffsetZ(final int z) {
+        // todo: verify Z is not near or at 0, 0
+        //  need a better way to check this
+        if (Math.abs(z) < 16) {
+            return z;
+        }
+        return offsetZ(z);
     }
     public MNBT offsetNbt(final MNBT nbt) {
         try {
@@ -132,6 +155,19 @@ public record CoordOffset(
         return out;
     }
 
+    private static final ReferenceSet<DataComponentType<?>> componentsToStrip = ReferenceOpenHashSet.of(
+        // not all of these necessarily are dangerous, but i haven't actually checked all component types for safety yet
+        DataComponentTypes.CUSTOM_DATA,
+        DataComponentTypes.MAP_DECORATIONS,
+        DataComponentTypes.ENTITY_DATA,
+        DataComponentTypes.BUCKET_ENTITY_DATA,
+        DataComponentTypes.BLOCK_ENTITY_DATA,
+        DataComponentTypes.LODESTONE_TRACKER,
+        DataComponentTypes.CHARGED_PROJECTILES,
+        DataComponentTypes.BUNDLE_CONTENTS,
+        DataComponentTypes.CONTAINER // we could retain this but we'd need to recursively strip components from its itemstacks
+    );
+
     // 2b2t seems to remove most tags already but just to be safe
     public ItemStack sanitizeItemStack(final ItemStack itemStack) {
         if (itemStack == null) return null;
@@ -143,6 +179,16 @@ public record CoordOffset(
             // if the tag has a real coord known, offsetting it would reveal the offset
             // better to be safe here and just remove the tag
             return new ItemStack(itemStack.getId(), itemStack.getAmount(), null);
+        }
+        if (itemStack.getDataComponents() != null) {
+            Map<DataComponentType<?>, DataComponent<?, ?>> components = new HashMap<>(itemStack.getDataComponents().getDataComponents());
+            for (var entry : components.entrySet()) {
+                if (componentsToStrip.contains(entry.getKey())) {
+                    components.remove(entry.getKey());
+                }
+            }
+
+            return new ItemStack(itemStack.getId(), itemStack.getAmount(), new DataComponents(components));
         }
         return itemStack;
     }
