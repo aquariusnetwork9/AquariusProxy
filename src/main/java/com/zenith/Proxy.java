@@ -120,7 +120,7 @@ public class Proxy {
 
     public void start() {
         DEFAULT_LOG.info("Starting ZenithProxy-{}", LAUNCH_CONFIG.version);
-        @Nullable String exeReleaseVersion = getExecutableReleaseVersion();
+        var exeReleaseVersion = getExecutableReleaseVersion();
         if (exeReleaseVersion == null) {
             DEFAULT_LOG.warn("Detected unofficial ZenithProxy development build!");
         } else if (!LAUNCH_CONFIG.version.split("\\+")[0].equals(exeReleaseVersion.split("\\+")[0])) {
@@ -140,15 +140,13 @@ public class Proxy {
                 DEFAULT_LOG.info("Started Databases");
             }
             if (CONFIG.discord.enable) {
-                boolean err = false;
                 try {
                     DISCORD.start();
+                    DISCORD_LOG.info("Started Discord Bot");
                 } catch (final Throwable e) {
-                    err = true;
                     DISCORD_LOG.error("Failed starting discord bot: {}", e.getMessage());
                     DISCORD_LOG.debug("Failed starting discord bot", e);
                 }
-                if (!err) DISCORD_LOG.info("Started Discord Bot");
             }
             NotificationEventListener.INSTANCE.subscribeEvents();
             Queue.start();
@@ -194,7 +192,7 @@ public class Proxy {
                             """
                             You are currently using a ZenithProxy prerelease
                             
-                            Prereleases include experiments that may contain bugs and are not always updated with fixes             
+                            Prereleases include experiments that may contain bugs and are not always updated with fixes
                             
                             Switch to a stable release with the `channel` command
                             """));
