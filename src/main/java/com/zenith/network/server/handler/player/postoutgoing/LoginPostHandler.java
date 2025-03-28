@@ -1,5 +1,6 @@
 package com.zenith.network.server.handler.player.postoutgoing;
 
+import com.viaversion.vialoader.netty.VLPipeline;
 import com.viaversion.viaversion.api.Via;
 import com.zenith.Proxy;
 import com.zenith.cache.DataCache;
@@ -8,7 +9,6 @@ import com.zenith.network.registry.PostOutgoingPacketHandler;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import com.zenith.via.ZenithViaInitializer;
-import net.raphimc.vialoader.netty.VLPipeline;
 import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;

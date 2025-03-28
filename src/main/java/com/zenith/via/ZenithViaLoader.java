@@ -1,11 +1,11 @@
 package com.zenith.via;
 
 import com.viaversion.viabackwards.protocol.v1_20_5to1_20_3.provider.TransferProvider;
+import com.viaversion.vialoader.impl.viaversion.VLLoader;
 import com.viaversion.viaversion.api.Via;
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.viaversion.viaversion.api.protocol.version.VersionProvider;
 import com.zenith.Proxy;
-import net.raphimc.vialoader.impl.viaversion.VLLoader;
 import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
 
 import static com.zenith.Shared.*;
