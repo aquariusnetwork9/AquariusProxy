@@ -58,7 +58,6 @@ public final class Config {
     }
 
     public static final class Client {
-        public final Extra extra = new Extra();
         public final Server server = new Server();
         public final ConnectionProxy connectionProxy = new ConnectionProxy();
         public int compressionLevel = -1;
@@ -71,6 +70,7 @@ public final class Config {
         public final ClientTimeout timeout = new ClientTimeout();
         public final Ping ping = new Ping();
         public final ChatSigning chatSigning = new ChatSigning();
+        public final Extra extra = new Extra();
 
         public static final class ChatSigning {
             public boolean enabled = true;
@@ -232,13 +232,13 @@ public final class Config {
             }
 
             public static final class KillAura {
-                public boolean enabled = true;
+                public boolean enabled = false;
                 public boolean targetPlayers = false;
                 public boolean targetHostileMobs = true;
                 public boolean targetNeutralMobs = false;
                 public boolean targetCustom = false;
-                public boolean onlyNeutralAggressive = true;
-                public boolean onlyHostileAggressive = true;
+                public boolean onlyNeutralAggressive = false;
+                public boolean onlyHostileAggressive = false;
                 public boolean switchWeapon = true;
                 public boolean targetArmorStands = false;
                 public int attackDelayTicks = 10;

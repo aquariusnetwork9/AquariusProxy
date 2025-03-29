@@ -146,6 +146,9 @@ public class SpammerCommand extends Command {
     @Override
     public void postPopulate(final Embed builder) {
         addListDescription(builder)
+            .description("""
+                 **WARNING:** This module can and will get you muted on 2b2t or other servers. Use at your own risk.
+                 """)
             .addField("Spammer", toggleStr(CONFIG.client.extra.spammer.enabled), false)
             .addField("Whisper", toggleStr(CONFIG.client.extra.spammer.whisper), false)
             .addField("While Player Connected", toggleStr(CONFIG.client.extra.spammer.whilePlayerConnected), false)

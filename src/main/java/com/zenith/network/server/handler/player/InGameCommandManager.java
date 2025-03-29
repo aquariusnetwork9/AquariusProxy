@@ -41,7 +41,7 @@ public class InGameCommandManager {
             COMMAND.execute(commandContext, parse);
             var embed = commandContext.getEmbed();
             CommandOutputHelper.logEmbedOutputToInGame(embed, session);
-            CommandOutputHelper.logMultiLineOutputToInGame(commandContext, session);
+            CommandOutputHelper.logMultiLineOutputToInGame(commandContext.getMultiLineOutput(), session);
             if (!commandContext.isNoOutput() && !embed.isTitlePresent() && commandContext.getMultiLineOutput().isEmpty()) {
                 if (printUnhandled) {
                     session.sendAsyncAlert("<red>Unknown command!");
@@ -52,10 +52,10 @@ public class InGameCommandManager {
                 // will also log to terminal
                 CommandOutputHelper.logInputToDiscord(command, CommandSource.IN_GAME_PLAYER);
                 CommandOutputHelper.logEmbedOutputToDiscord(embed);
-                CommandOutputHelper.logMultiLineOutputToDiscord(commandContext);
+                CommandOutputHelper.logMultiLineOutputToDiscord(commandContext.getMultiLineOutput());
             } else {
                 CommandOutputHelper.logEmbedOutputToTerminal(embed);
-                CommandOutputHelper.logMultiLineOutputToTerminal(commandContext);
+                CommandOutputHelper.logMultiLineOutputToTerminal(commandContext.getMultiLineOutput());
             }
         });
         return true;
@@ -70,7 +70,7 @@ public class InGameCommandManager {
         }
         var embed = commandContext.getEmbed();
         CommandOutputHelper.logEmbedOutputToInGame(embed, session);
-        CommandOutputHelper.logMultiLineOutputToInGame(commandContext, session);
+        CommandOutputHelper.logMultiLineOutputToInGame(commandContext.getMultiLineOutput(), session);
         if (!commandContext.isNoOutput() && !embed.isTitlePresent() && commandContext.getMultiLineOutput().isEmpty()) {
             if (printUnhandled) {
                 session.sendAsyncAlert("<red>Unknown command!");
@@ -81,10 +81,10 @@ public class InGameCommandManager {
             // will also log to terminal
             CommandOutputHelper.logInputToDiscord(message, CommandSource.SPECTATOR);
             CommandOutputHelper.logEmbedOutputToDiscord(embed);
-            CommandOutputHelper.logMultiLineOutputToDiscord(commandContext);
+            CommandOutputHelper.logMultiLineOutputToDiscord(commandContext.getMultiLineOutput());
         } else {
             CommandOutputHelper.logEmbedOutputToTerminal(embed);
-            CommandOutputHelper.logMultiLineOutputToTerminal(commandContext);
+            CommandOutputHelper.logMultiLineOutputToTerminal(commandContext.getMultiLineOutput());
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.zenith.discord;
 
+import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.zenith.Proxy;
 import com.zenith.event.module.*;
 import com.zenith.event.proxy.*;
@@ -12,7 +13,10 @@ import com.zenith.feature.deathmessages.DeathMessageParseResult;
 import com.zenith.feature.deathmessages.KillerType;
 import com.zenith.feature.queue.Queue;
 import com.zenith.feature.world.World;
+import com.zenith.module.impl.AntiAFK;
+import com.zenith.module.impl.SessionTimeLimit;
 import com.zenith.util.DisconnectReasonInfo;
+import com.zenith.util.math.MathHelper;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.MessageEmbed;
@@ -20,6 +24,7 @@ import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.utils.Color;
+import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 
@@ -30,6 +35,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static com.github.rfresh2.EventConsumer.of;
@@ -59,6 +65,7 @@ public class NotificationEventListener {
             of(SelfDeathMessageEvent.class, this::handleSelfDeathMessageEvent),
             of(HealthAutoDisconnectEvent.class, this::handleHealthAutoDisconnectEvent),
             of(ProxyClientConnectedEvent.class, this::handleProxyClientConnectedEvent),
+            of(ProxyClientConnectedEvent.class, this::handleProxyClientConnectedEventCheck2b2tMCVersionMatch),
             of(ProxySpectatorConnectedEvent.class, this::handleProxySpectatorConnectedEvent),
             of(ProxyClientDisconnectedEvent.class, this::handleProxyClientDisconnectedEvent),
             of(VisualRangeEnterEvent.class, this::handleVisualRangeEnterEvent),
@@ -136,16 +143,36 @@ public class NotificationEventListener {
             if (event.onlineDuration().toSeconds() >= 0L
                 && event.onlineDuration().toSeconds() <= 1L) {
                 embed.description("""
-                              You have likely been kicked for reaching the 2b2t non-prio account IP limit.
-                              Consider configuring a connection proxy with the `clientConnection` command.
-                              Or migrate ZenithProxy instances to multiple hosts/IP's.
-                              """);
+                      You have likely been kicked for reaching the 2b2t non-prio account IP limit.
+                      Consider configuring a connection proxy with the `clientConnection` command.
+                      Or migrate ZenithProxy instances to multiple hosts/IP's.
+                      """);
             } else if (event.wasInQueue() && event.queuePosition() <= 1) {
                 embed.description("""
-                              You have likely been kicked due to being IP banned by 2b2t.
-                              
-                              To check, try connecting and waiting through queue with the same account from a different IP.
-                              """);
+                      You have likely been kicked due to being IP banned by 2b2t.
+                      
+                      To check, try connecting and waiting through queue with the same account from a different IP.
+                      """);
+            } else if (!event.wasInQueue()
+                && MathHelper.isInRange( // whether we were kicked at session time limit +- 30s
+                    event.onlineDuration().toSeconds(),
+                    MODULE.get(SessionTimeLimit.class).getSessionTimeLimit().toSeconds(),
+                    30L)) {
+                embed.description("""
+                        You have likely been kicked for reaching the non-prio session time limit.
+                        
+                        2b2t kicks non-prio players after %s hours online.
+                        """.formatted(MODULE.get(SessionTimeLimit.class).getSessionTimeLimit().toHours()));
+            } else if (!event.wasInQueue()
+                && MathHelper.isInRange( // whether we were kicked at 20 minutes +- 30s
+                     event.onlineDuration().toSeconds(),
+                     TimeUnit.MINUTES.toSeconds(20),
+                     30L)) {
+                String msg = "You have possibly been kicked by 2b2t's AntiAFK plugin";
+                if (!MODULE.get(AntiAFK.class).isEnabled()) {
+                    msg += "\n\nConsider enabling ZenithProxy's AntiAFK module: `antiAFK on`";
+                }
+                embed.description(msg);
             }
         }
         if (CONFIG.discord.mentionRoleOnDisconnect) {
@@ -240,10 +267,43 @@ public class NotificationEventListener {
             .title("Client Connected")
             .addField("Username", escape(event.clientGameProfile().getName()), false)
             .addField("MC Version", event.session().getMCVersion(), false)
+            .thumbnail(Proxy.getInstance().getPlayerBodyURL(event.clientGameProfile().getId()).toString())
             .primaryColor();
         if (CONFIG.discord.mentionOnClientConnected) {
             sendEmbedMessage(notificationMention(), embed);
         } else {
+            sendEmbedMessage(embed);
+        }
+    }
+
+    public void handleProxyClientConnectedEventCheck2b2tMCVersionMatch(ProxyClientConnectedEvent event) {
+        if (!Proxy.getInstance().isOn2b2t() || !Proxy.getInstance().isConnected()) return;
+        var client = Proxy.getInstance().getClient();
+        if (client == null) return;
+        var clientProtocolVersion = client.getProtocolVersion();
+        var playerProtocolVersion = event.session().getProtocolVersion();
+        if (!clientProtocolVersion.equalTo(playerProtocolVersion)) {
+            var embed = Embed.builder()
+                .title("MC Version Mismatch")
+                .description("""
+                     **Client MC Version**: %s
+                     **ZenithProxy Client MC Version**: %s
+                     
+                     It is recommended to use the same MC version as the ZenithProxy client.
+                     
+                     Otherwise you may experience issues with 2b2t's anti-cheat, which changes its checks based on client MC version.
+                     """.formatted(playerProtocolVersion.getName(), clientProtocolVersion.getName()))
+                .errorColor();
+            var nativeZenithProtocolVersion = ProtocolVersion.getProtocol(MinecraftCodec.CODEC.getProtocolVersion());
+            if (nativeZenithProtocolVersion.equalTo(ProtocolVersion.v1_21_4) && playerProtocolVersion.equalTo(ProtocolVersion.v1_21)) {
+                embed.description(embed.description() + """
+                     Switch ZenithProxy to the 1.21.0 channel: `channel set <java/linux> 1.21.0`
+                     """);
+            } else {
+                embed.description(embed.description() + """
+                     To configure ZenithProxy's client ViaVersion: `via zenithToServer version <version>`
+                     """);
+            }
             sendEmbedMessage(embed);
         }
     }
@@ -254,6 +314,7 @@ public class NotificationEventListener {
             .title("Spectator Connected")
             .addField("Username", escape(event.clientGameProfile().getName()), false)
             .addField("MC Version", event.session().getMCVersion(), false)
+            .thumbnail(Proxy.getInstance().getPlayerBodyURL(event.clientGameProfile().getId()).toString())
             .primaryColor();
         if (CONFIG.discord.mentionOnSpectatorConnected) {
             sendEmbedMessage(notificationMention(), embed);
@@ -514,6 +575,7 @@ public class NotificationEventListener {
         try {
             String message = event.message();
             boolean customSenderFormatting = false;
+            Color color = Color.BLACK;
             if (!event.isDefaultMessageSchema()) {
                 if (Proxy.getInstance().isOn2b2t()) {
                     DISCORD_LOG.error("Received non-default schema chat message on 2b2t: {}", message);
@@ -521,6 +583,7 @@ public class NotificationEventListener {
             } else {
                 message = event.extractMessageDefaultSchema();
                 customSenderFormatting = true;
+                if (message.startsWith(">")) color = Color.MEDIUM_SEA_GREEN;
             }
             String ping = "";
             if (CONFIG.discord.chatRelay.mentionWhileConnected || isNull(Proxy.getInstance().getCurrentPlayer().get())) {
@@ -539,7 +602,7 @@ public class NotificationEventListener {
             var embed = Embed.builder()
                 .description(escape(message))
                 .footer("\u200b", avatarURL)
-                .color(event.message().startsWith(">") ? Color.MEDIUM_SEA_GREEN : Color.BLACK)
+                .color(color)
                 .timestamp(Instant.now());
             if (ping.isEmpty()) {
                 sendRelayEmbedMessage(embed);

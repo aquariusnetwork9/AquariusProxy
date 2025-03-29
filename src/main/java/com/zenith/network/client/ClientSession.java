@@ -1,5 +1,6 @@
 package com.zenith.network.client;
 
+import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.zenith.Proxy;
 import com.zenith.event.proxy.ConnectEvent;
 import com.zenith.event.proxy.DisconnectEvent;
@@ -19,6 +20,7 @@ import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.network.tcp.TcpClientSession;
 import org.geysermc.mcprotocollib.network.tcp.TcpConnectionManager;
 import org.geysermc.mcprotocollib.protocol.MinecraftProtocol;
+import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.data.handshake.HandshakeIntent;
 import org.geysermc.mcprotocollib.protocol.packet.handshake.serverbound.ClientIntentionPacket;
@@ -28,6 +30,7 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import static com.zenith.Shared.*;
+import static com.zenith.via.ZenithViaInitializer.VIA_USER;
 import static java.util.Objects.isNull;
 
 @Getter
@@ -47,6 +50,7 @@ public class ClientSession extends TcpClientSession {
     // MC servers can send a different profile back, which will be stored in `CACHE.getProfileCache()`
     private final GameProfile profile;
     private final String accessToken;
+    private int protocolVersionId;
     private static final ClientTickManager clientTickManager = new ClientTickManager();
 
     public ClientSession(String host, int port, String bindAddress, MinecraftProtocol protocol, ProxyInfo proxyInfo, TcpConnectionManager tcpManager) {
@@ -135,9 +139,22 @@ public class ClientSession extends TcpClientSession {
         switchInboundState(ProtocolState.LOGIN);
         send(new ClientIntentionPacket(getPacketProtocol().getCodec().getProtocolVersion(), getHost(), getPort(), HandshakeIntent.LOGIN));
         switchOutboundState(ProtocolState.LOGIN);
+        updateClientProtocolVersion();
         EVENT_BUS.postAsync(new ConnectEvent());
         send(new ServerboundHelloPacket(profile.getName(), profile.getId()));
         if (CONFIG.client.ping.mode == Config.Client.Ping.Mode.PACKET) EXECUTOR.execute(new ClientPacketPingTask(this));
+    }
+
+    private void updateClientProtocolVersion() {
+        var nativeZenithProtocol = ProtocolVersion.getProtocol(MinecraftCodec.CODEC.getProtocolVersion());;
+        var clientProtocolVersion = nativeZenithProtocol;
+        var clientChannel = Proxy.getInstance().getClient().getChannel();
+        if (clientChannel.hasAttr(VIA_USER)) {
+            var viaUserConnection = clientChannel.attr(VIA_USER).get();
+            if (viaUserConnection == null) return;
+            clientProtocolVersion = viaUserConnection.getProtocolInfo().serverProtocolVersion();
+        }
+        protocolVersionId = clientProtocolVersion.getVersion();
     }
 
     @Override
@@ -173,6 +190,10 @@ public class ClientSession extends TcpClientSession {
         // stop processing packets before we reset the client cache to avoid race conditions
         getClientEventLoop().shutdownGracefully(0L, 15L, TimeUnit.SECONDS).awaitUninterruptibly();
         EVENT_BUS.post(new DisconnectEvent(reasonStr, onlineDuration, onlineDurationWithQueueSkip, Proxy.getInstance().isInQueue(), Proxy.getInstance().getQueuePosition()));
+    }
+
+    public ProtocolVersion getProtocolVersion() {
+        return ProtocolVersion.getProtocol(protocolVersionId);
     }
 
     public EventLoop getClientEventLoop() {
