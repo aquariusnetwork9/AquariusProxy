@@ -187,11 +187,11 @@ See the [Linux Guide](https://github.com/rfresh2/ZenithProxy/wiki/Linux-Guide) f
 
 Current limits are documented in [a discord channel](https://discord.com/channels/1127460556710883391/1200685719073599488)
 
-## Development
+### Development
 
 I highly recommend using Intellij for building and running local development instances.
 
-Gradle will automatically install the required Java version for compiling (currently Java 24)
+Gradle will automatically install the required Java version for compiling (currently Java 23)
 
 Most useful gradle tasks:
 * `run` - Builds and runs a local dev instance

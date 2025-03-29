@@ -13,7 +13,7 @@ group = "com.zenith"
 version = "1.21.0"
 
 val javaReleaseVersion = 21
-val javaVersion = JavaLanguageVersion.of(24)
+val javaVersion = JavaLanguageVersion.of(23)
 val javaLauncherProvider = javaToolchains.launcherFor { languageVersion = javaVersion }
 java {
     toolchain { languageVersion = javaVersion }
@@ -43,12 +43,6 @@ repositories {
         content {
             includeGroup("net.raphimc")
             includeGroup("net.lenni0451")
-        }
-    }
-    // todo: remove when 1.18.37 is released
-    maven("https://projectlombok.org/edge-releases") {
-        content {
-            includeGroup("org.projectlombok")
         }
     }
     mavenCentral()
@@ -109,7 +103,7 @@ dependencies {
     api("org.jspecify:jspecify:1.0.0")
     testImplementation("org.junit.jupiter:junit-jupiter:5.12.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    val lombokVersion = "edge-SNAPSHOT"
+    val lombokVersion = "1.18.36"
     compileOnly("org.projectlombok:lombok:$lombokVersion")
     testCompileOnly("org.projectlombok:lombok:$lombokVersion")
     annotationProcessor("org.projectlombok:lombok:$lombokVersion")
@@ -173,7 +167,7 @@ tasks {
         workingDir = layout.projectDirectory.dir("run").asFile
         classpath = sourceSets.main.get().runtimeClasspath
         mainClass.set("com.zenith.Proxy")
-        jvmArgs = listOf("-Xmx300m", "-XX:+UseG1GC", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseCompactObjectHeaders")
+        jvmArgs = listOf("-Xmx300m", "-XX:+UseG1GC")
         standardInput = System.`in`
         environment("ZENITH_DEV", "true")
         outputs.upToDateWhen { false }
@@ -244,8 +238,7 @@ tasks {
                 "Implementation-Title" to "ZenithProxy",
                 "Implementation-Version" to project.version,
                 "Main-Class" to "com.zenith.Proxy",
-                "Multi-Release" to "true",
-                "Enable-Native-Access" to "ALL-UNNAMED"
+                "Multi-Release" to "true"
             ))
         }
     }
@@ -277,8 +270,6 @@ graalvmNative {
                 "-H:DeadlockWatchdogInterval=30",
                 "-H:IncludeLocales=en",
                 "-H:+CompactingOldGen",
-                "-H:+TrackPrimitiveValues",
-                "-H:+UsePredicates",
 //                "--emit build-report",
                 "-R:MaxHeapSize=200m",
                 "-march=x86-64-v3",
