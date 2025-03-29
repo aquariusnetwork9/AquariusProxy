@@ -12,7 +12,6 @@ import com.zenith.util.Maps;
 import com.zenith.util.Wait;
 import net.kyori.adventure.key.Key;
 import org.geysermc.mcprotocollib.auth.GameProfile;
-import org.geysermc.mcprotocollib.protocol.MinecraftConstants;
 import org.geysermc.mcprotocollib.protocol.data.game.ServerLink;
 import org.geysermc.mcprotocollib.protocol.data.game.ServerLinkType;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
@@ -30,13 +29,21 @@ public class ProxyServerLoginHandler {
     public static final ProxyServerLoginHandler INSTANCE = new ProxyServerLoginHandler();
 
     public void loggedIn(ServerSession session) {
-        final GameProfile clientGameProfile = session.getFlag(MinecraftConstants.PROFILE_KEY);
+        final GameProfile clientGameProfile = session.getProfileCache().getProfile();
+        if (clientGameProfile == null) {
+            session.disconnect("Failed to retrieve profile.");
+            return;
+        }
         SERVER_LOG.info("Player connected: UUID: {}, Username: {}, MC: {} Address: {}", clientGameProfile.getId(), clientGameProfile.getName(), session.getMCVersion(), session.getRemoteAddress());
         EXECUTOR.execute(() -> finishLogin(session));
     }
 
     private void finishLogin(ServerSession connection) {
-        final GameProfile clientGameProfile = connection.getFlag(MinecraftConstants.PROFILE_KEY);
+        final GameProfile clientGameProfile = connection.getProfileCache().getProfile();
+        if (clientGameProfile == null) {
+            connection.disconnect("Failed to retrieve profile.");
+            return;
+        }
         if (!Wait.waitUntil(() -> Proxy.getInstance().isConnected()
                                 && (Proxy.getInstance().getOnlineTimeSeconds() > 1 || Proxy.getInstance().isInQueue())
                                 && CACHE.getPlayerCache().getEntityId() != -1

@@ -7,7 +7,6 @@ import com.zenith.network.registry.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.Wait;
 import org.geysermc.mcprotocollib.auth.GameProfile;
-import org.geysermc.mcprotocollib.protocol.MinecraftConstants;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.ClientboundGameProfilePacket;
 import org.jspecify.annotations.NonNull;
@@ -16,7 +15,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static com.zenith.Shared.*;
-import static java.util.Objects.isNull;
 
 public class SGameProfileOutgoingHandler implements PacketHandler<ClientboundGameProfilePacket, ServerSession> {
     // can be anything really, just needs to be unique and not taken by a real player seen in-game
@@ -27,8 +25,8 @@ public class SGameProfileOutgoingHandler implements PacketHandler<ClientboundGam
         try {
             // finishLogin will send a second ClientboundGameProfilePacket, just return it as is
             if (session.isWhitelistChecked()) return packet;
-            final GameProfile clientGameProfile = session.getFlag(MinecraftConstants.PROFILE_KEY);
-            if (isNull(clientGameProfile)) {
+            final GameProfile clientGameProfile = session.getProfileCache().getProfile();
+            if (clientGameProfile == null) {
                 session.disconnect("Failed to Login");
                 return null;
             }
@@ -78,7 +76,7 @@ public class SGameProfileOutgoingHandler implements PacketHandler<ClientboundGam
     }
 
     private void finishLogin(ServerSession session, final Optional<Boolean> onlySpectator) {
-        final GameProfile clientGameProfile = session.getFlag(MinecraftConstants.PROFILE_KEY);
+        final GameProfile clientGameProfile = session.getProfileCache().getProfile();
         synchronized (this) {
             if (!Proxy.getInstance().isConnected()) {
                     if (CONFIG.client.extra.autoConnectOnLogin && !onlySpectator.orElse(false)) {
@@ -118,7 +116,6 @@ public class SGameProfileOutgoingHandler implements PacketHandler<ClientboundGam
         // avoid race condition if player disconnects sometime during our wait
         if (!session.isConnected()) return;
         SERVER_LOG.debug("User UUID: {}\nBot UUID: {}", clientGameProfile.getId().toString(), CACHE.getProfileCache().getProfile().getId().toString());
-        session.getProfileCache().setProfile(clientGameProfile);
         if (!onlySpectator.orElse(false) && Proxy.getInstance().getCurrentPlayer().compareAndSet(null, session)) {
             SERVER_LOG.info("Logging in {} [{}] ({}) as controlling player", clientGameProfile.getName(), clientGameProfile.getId().toString(), session.getMCVersion());
             session.getEventLoop().execute(() -> {

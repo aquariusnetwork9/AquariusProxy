@@ -1,19 +1,19 @@
 package com.zenith.via;
 
 import com.viaversion.vialoader.impl.platform.ViaVersionPlatformImpl;
-import com.viaversion.viaversion.api.Via;
 import com.viaversion.viaversion.api.connection.UserConnection;
 import com.viaversion.viaversion.configuration.AbstractViaConfig;
 import com.zenith.Proxy;
 import com.zenith.network.server.ServerSession;
+import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
+import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundCustomPayloadPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.Optional;
-import java.util.UUID;
 
 public class ZenithViaPlatform extends ViaVersionPlatformImpl {
     private static final Logger LOGGER = LoggerFactory.getLogger("ViaVersion");
@@ -55,19 +55,15 @@ public class ZenithViaPlatform extends ViaVersionPlatformImpl {
         }
     }
 
-    private Optional<ServerSession> getServerConnection(final UUID viaUuid) {
-        if (viaUuid == null) return Optional.empty();
-        UserConnection connectedClient = Via.getManager().getConnectionManager().getConnectedClient(viaUuid);
-        if (connectedClient == null) return Optional.empty();
-        var channel = connectedClient.getChannel();
-        var connections = Proxy.getInstance().getActiveConnections().getArray();
-        for (int i = 0; i < connections.length; i++) {
-            var connection = connections[i];
-            if (connection.getChannel() == channel) {
-                return Optional.of(connection);
-            }
+    @Override
+    public void sendCustomPayload(UserConnection connection, String channel, byte[] message) {
+        var serverConnection = getServerConnection(connection);
+        if (serverConnection.isPresent()) {
+            LOGGER.info("Sending custom payload: {} to player: {}", channel, serverConnection.get().getLoginProfileUUID());
+            serverConnection.get().send(new ClientboundCustomPayloadPacket(Key.key(channel), message));
+        } else {
+            LOGGER.warn("Failed to send custom payload: {}", channel);
         }
-        return Optional.empty();
     }
 
     private Optional<ServerSession> getServerConnection(final UserConnection userConnection) {

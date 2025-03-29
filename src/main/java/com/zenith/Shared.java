@@ -57,12 +57,6 @@ public class Shared {
     public static final Logger TERMINAL_LOG = LoggerFactory.getLogger("Terminal");
     public static final File CONFIG_FILE = new File("config.json");
     public static final File LAUNCH_CONFIG_FILE = new File("launch_config.json");
-    public static final String SERVER_RESTARTING = "Server restarting";
-    public static final String MAX_PT_DISCONNECT = "Max Playtime Disconnect";
-    public static final String SYSTEM_DISCONNECT = "System Disconnect";
-    public static final String MANUAL_DISCONNECT = "Manual Disconnect";
-    public static final String LOGIN_FAILED = "Login Failed";
-    public static final String AUTH_REQUIRED = "Cannot join online mode server with offline auth";
     public static final Config CONFIG;
     public static final LaunchConfig LAUNCH_CONFIG;
     public static final DataCache CACHE;

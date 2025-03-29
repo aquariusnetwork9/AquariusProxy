@@ -8,7 +8,6 @@ import com.zenith.event.proxy.ConnectEvent;
 import com.zenith.event.proxy.DisconnectEvent;
 import com.zenith.module.Module;
 import com.zenith.util.Wait;
-import org.geysermc.mcprotocollib.protocol.MinecraftConstants;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
@@ -17,6 +16,7 @@ import java.util.concurrent.Future;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
+import static com.zenith.util.DisconnectMessages.*;
 
 public class AutoReconnect extends Module {
     private @Nullable Future<?> autoReconnectFuture;
@@ -114,7 +114,7 @@ public class AutoReconnect extends Module {
     private static final Set<String> RECONNECTABLE_DISCONNECT_REASONS = Sets.newHashSet(
         SYSTEM_DISCONNECT,
         MANUAL_DISCONNECT,
-        MinecraftConstants.SERVER_CLOSING_MESSAGE,
+        SERVER_CLOSING_MESSAGE,
         LOGIN_FAILED,
         AUTH_REQUIRED,
         MAX_PT_DISCONNECT

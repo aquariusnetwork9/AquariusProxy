@@ -8,7 +8,9 @@ import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
 import com.zenith.module.impl.AutoReconnect;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Shared.EXECUTOR;
+import static com.zenith.Shared.MODULE;
+import static com.zenith.util.DisconnectMessages.SYSTEM_DISCONNECT;
 
 public class ReconnectCommand extends Command {
     @Override

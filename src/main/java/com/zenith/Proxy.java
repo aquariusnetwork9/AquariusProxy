@@ -66,6 +66,7 @@ import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
 import static com.zenith.util.Config.Authentication.AccountType.MSA;
 import static com.zenith.util.Config.Authentication.AccountType.OFFLINE;
+import static com.zenith.util.DisconnectMessages.*;
 import static java.util.Objects.nonNull;
 
 
@@ -307,7 +308,7 @@ public class Proxy {
         DEFAULT_LOG.info("Shutting Down...");
         try {
             CompletableFuture.runAsync(() -> {
-                if (nonNull(this.client)) this.client.disconnect(MinecraftConstants.SERVER_CLOSING_MESSAGE);
+                if (nonNull(this.client)) this.client.disconnect(SERVER_CLOSING_MESSAGE);
                 MODULE.get(AutoReconnect.class).cancelAutoReconnect();
                 stopServer();
                 tcpManager.close();
@@ -438,7 +439,6 @@ public class Proxy {
             this.lanBroadcaster = new LanBroadcaster();
             lanBroadcaster.start();
         }
-        this.server.setGlobalFlag(MinecraftConstants.AUTOMATIC_KEEP_ALIVE_MANAGEMENT, true);
         this.server.addListener(new ProxyServerListener());
         this.server.bind(false);
     }

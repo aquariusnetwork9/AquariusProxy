@@ -67,6 +67,7 @@ public final class Config {
         public String bindAddress = "0.0.0.0";
         public boolean maxPlaytimeReconnect = false;
         public long maxPlaytimeReconnectMins = 1440;
+        public boolean automaticKeepAliveManagement = true;
         public final ClientTimeout timeout = new ClientTimeout();
         public final Ping ping = new Ping();
         public final ChatSigning chatSigning = new ChatSigning();
