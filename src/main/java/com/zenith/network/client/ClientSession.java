@@ -18,7 +18,6 @@ import org.geysermc.mcprotocollib.network.ProxyInfo;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.network.tcp.TcpClientSession;
 import org.geysermc.mcprotocollib.network.tcp.TcpConnectionManager;
-import org.geysermc.mcprotocollib.protocol.MinecraftConstants;
 import org.geysermc.mcprotocollib.protocol.MinecraftProtocol;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.data.handshake.HandshakeIntent;
@@ -44,10 +43,16 @@ public class ClientSession extends TcpClientSession {
     // in game
     private boolean online = false;
     private boolean disconnected = true;
+    // profile we logged in with
+    // MC servers can send a different profile back, which will be stored in `CACHE.getProfileCache()`
+    private final GameProfile profile;
+    private final String accessToken;
     private static final ClientTickManager clientTickManager = new ClientTickManager();
 
     public ClientSession(String host, int port, String bindAddress, MinecraftProtocol protocol, ProxyInfo proxyInfo, TcpConnectionManager tcpManager) {
         super(host, port, bindAddress, 0, protocol, proxyInfo, tcpManager);
+        profile = protocol.getProfile();
+        accessToken = protocol.getAccessToken();
     }
 
     public ClientSession(String host, int port, String bindAddress, MinecraftProtocol protocol, TcpConnectionManager tcpManager) {
@@ -131,7 +136,6 @@ public class ClientSession extends TcpClientSession {
         send(new ClientIntentionPacket(getPacketProtocol().getCodec().getProtocolVersion(), getHost(), getPort(), HandshakeIntent.LOGIN));
         switchOutboundState(ProtocolState.LOGIN);
         EVENT_BUS.postAsync(new ConnectEvent());
-        GameProfile profile = getFlag(MinecraftConstants.PROFILE_KEY);
         send(new ServerboundHelloPacket(profile.getName(), profile.getId()));
         if (CONFIG.client.ping.mode == Config.Client.Ping.Mode.PACKET) EXECUTOR.execute(new ClientPacketPingTask(this));
     }

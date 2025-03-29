@@ -1,15 +1,15 @@
 package com.zenith.via;
 
+import com.viaversion.vialoader.ViaLoader;
+import com.viaversion.vialoader.impl.platform.ViaBackwardsPlatformImpl;
+import com.viaversion.vialoader.netty.VLPipeline;
+import com.viaversion.vialoader.netty.ViaCodec;
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.viaversion.viaversion.connection.UserConnectionImpl;
 import com.viaversion.viaversion.protocol.ProtocolPipelineImpl;
 import com.zenith.Proxy;
 import io.netty.channel.Channel;
 import io.netty.util.AttributeKey;
-import net.raphimc.vialoader.ViaLoader;
-import net.raphimc.vialoader.impl.platform.ViaBackwardsPlatformImpl;
-import net.raphimc.vialoader.netty.VLPipeline;
-import net.raphimc.vialoader.netty.ViaCodec;
 import org.geysermc.mcprotocollib.network.tcp.TcpPacketCodec;
 import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
 

@@ -1,6 +1,5 @@
 package com.zenith.network.server.handler.spectator.incoming;
 
-import com.viaversion.viaversion.api.Via;
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.zenith.Proxy;
 import com.zenith.cache.data.entity.Entity;
@@ -16,8 +15,6 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.Clientbound
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundRemoveEntitiesPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 
-import java.util.Optional;
-
 import static com.zenith.Shared.*;
 
 public class ServerChatSpectatorHandler implements PacketHandler<ServerboundChatPacket, ServerSession> {
@@ -31,7 +28,11 @@ public class ServerChatSpectatorHandler implements PacketHandler<ServerboundChat
                         final String fullCommandAndArgs = packet.getMessage().substring(CONFIG.inGameCommands.prefix.length()).trim(); // cut off the prefix
                         IN_GAME_COMMAND.handleInGameCommandSpectator(fullCommandAndArgs, session, true);
                     } else {
-                        handleCommandInput(packet.getMessage(), session);
+                        try {
+                            handleCommandInput(packet.getMessage(), session);
+                        } catch (Exception e) {
+                            SERVER_LOG.error("Failed to handle spectator command: {} from: {}", packet.getMessage(), session.getProfileCache().getProfile(), e);
+                        }
                     }
                 } else {
                     EVENT_BUS.postAsync(new PrivateMessageSendEvent(session.getProfileCache().getProfile().getId(), session.getProfileCache().getProfile().getName(), packet.getMessage()));
@@ -126,11 +127,7 @@ public class ServerChatSpectatorHandler implements PacketHandler<ServerboundChat
                     return;
                 }
                 if (CONFIG.server.viaversion.enabled) {
-                    Optional<ProtocolVersion> viaClientProtocolVersion = Via.getManager().getConnectionManager().getConnectedClients().values().stream()
-                        .filter(client -> client.getChannel() == session.getChannel())
-                        .map(con -> con.getProtocolInfo().protocolVersion())
-                        .findFirst();
-                    if (viaClientProtocolVersion.isPresent() && viaClientProtocolVersion.get().olderThan(ProtocolVersion.v1_20_5)) {
+                    if (session.getProtocolVersion().olderThan(ProtocolVersion.v1_20_5)) {
                         session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>Unsupported Client MC Version"), false));
                         return;
                     }

@@ -67,12 +67,15 @@ public class NotificationEventListener {
             of(NonWhitelistedPlayerConnectedEvent.class, this::handleNonWhitelistedPlayerConnectedEvent),
             of(ProxySpectatorDisconnectedEvent.class, this::handleProxySpectatorDisconnectedEvent),
             of(ActiveHoursConnectEvent.class, this::handleActiveHoursConnectEvent),
-            of(DeathMessageChatEvent.class, this::handleDeathMessageChatEvent),
+            of(DeathMessageChatEvent.class, this::handleDeathMessageChatEventKillMessage),
+            of(DeathMessageChatEvent.class, this::handleDeathMessageChatEventChatRelay),
             of(PublicChatEvent.class, this::handlePublicChatEvent),
             of(SystemChatEvent.class, this::handleSystemChatEvent),
             of(WhisperChatEvent.class, this::handleWhisperChatEvent),
-            of(ServerPlayerConnectedEvent.class, this::handleServerPlayerConnectedEvent),
-            of(ServerPlayerDisconnectedEvent.class, this::handleServerPlayerDisconnectedEvent),
+            of(ServerPlayerConnectedEvent.class, this::handleServerPlayerConnectedEventChatRelay),
+            of(ServerPlayerConnectedEvent.class, this::handleServerPlayerConnectedEventStalk),
+            of(ServerPlayerDisconnectedEvent.class, this::handleServerPlayerDisconnectedEventChatRelay),
+            of(ServerPlayerDisconnectedEvent.class, this::handleServerPlayerDisconnectedEventStalk),
             of(DiscordMessageSentEvent.class, this::handleDiscordMessageSentEvent),
             of(UpdateStartEvent.class, this::handleUpdateStartEvent),
             of(ServerRestartingEvent.class, this::handleServerRestartingEvent),
@@ -283,7 +286,7 @@ public class NotificationEventListener {
             .color(event.isFriend() ? CONFIG.theme.success.color() : CONFIG.theme.error.color())
             .addField("Player Name", escape(event.playerEntry().getName()), true)
             .addField("Player UUID", ("[" + event.playerEntry().getProfileId() + "](https://namemc.com/profile/" + event.playerEntry().getProfileId() + ")"), true)
-            .thumbnail(Proxy.getInstance().getAvatarURL(event.playerEntry().getProfileId()).toString());
+            .thumbnail(Proxy.getInstance().getPlayerBodyURL(event.playerEntry().getProfileId()).toString());
 
         if (CONFIG.discord.reportCoords) {
             embedCreateSpec.addField("Coordinates", "||["
@@ -308,7 +311,7 @@ public class NotificationEventListener {
                                          .successColor()
                                          .addField("Player Name", escape(event.playerEntry().getName()), true)
                                          .addField("Player UUID", ("[" + event.playerEntry().getProfileId() + "](https://namemc.com/profile/" + event.playerEntry().getProfileId() + ")"), true)
-                                         .thumbnail(Proxy.getInstance().getAvatarURL(event.playerEntry().getProfileId()).toString())
+                                         .thumbnail(Proxy.getInstance().getPlayerBodyURL(event.playerEntry().getProfileId()).toString())
                                          .toJDAEmbed())
                     .complete();
                 saveConfigAsync();
@@ -332,7 +335,7 @@ public class NotificationEventListener {
             .color(event.isFriend() ? CONFIG.theme.success.color() : CONFIG.theme.error.color())
             .addField("Player Name", escape(event.playerEntry().getName()), true)
             .addField("Player UUID", ("[" + event.playerEntity().getUuid() + "](https://namemc.com/profile/" + event.playerEntry().getProfileId() + ")"), true)
-            .thumbnail(Proxy.getInstance().getAvatarURL(event.playerEntity().getUuid()).toString());
+            .thumbnail(Proxy.getInstance().getPlayerBodyURL(event.playerEntity().getUuid()).toString());
 
         if (CONFIG.discord.reportCoords) {
             embedCreateSpec.addField("Coordinates", "||["
@@ -350,7 +353,7 @@ public class NotificationEventListener {
             .color(event.isFriend() ? CONFIG.theme.success.color() : CONFIG.theme.error.color())
             .addField("Player Name", escape(event.playerEntry().getName()), true)
             .addField("Player UUID", ("[" + event.playerEntity().getUuid() + "](https://namemc.com/profile/" + event.playerEntry().getProfileId() + ")"), true)
-            .thumbnail(Proxy.getInstance().getAvatarURL(event.playerEntity().getUuid()).toString());
+            .thumbnail(Proxy.getInstance().getPlayerBodyURL(event.playerEntity().getUuid()).toString());
 
         if (CONFIG.discord.reportCoords) {
             embedCreateSpec.addField("Coordinates", "||["
@@ -364,7 +367,7 @@ public class NotificationEventListener {
 
     public void handleNonWhitelistedPlayerConnectedEvent(NonWhitelistedPlayerConnectedEvent event) {
         var embed = Embed.builder()
-            .title("Non-Whitelisted Player Connected")
+            .title("Non-Whitelisted Player Disconnected")
             .errorColor();
         if (nonNull(event.remoteAddress()) && CONFIG.discord.showNonWhitelistLoginIP) {
             embed = embed.addField("IP", escape(event.remoteAddress().toString()), false);
@@ -373,7 +376,7 @@ public class NotificationEventListener {
             embed
                 .addField("Username", escape(event.gameProfile().getName()), false)
                 .addField("Player UUID", ("[" + event.gameProfile().getId().toString() + "](https://namemc.com/profile/" + event.gameProfile().getId().toString() + ")"), true)
-                .thumbnail(Proxy.getInstance().getAvatarURL(event.gameProfile().getId()).toString());
+                .thumbnail(Proxy.getInstance().getPlayerBodyURL(event.gameProfile().getId()).toString());
             final String buttonId = "whitelist" + ThreadLocalRandom.current().nextInt(10000000);
             final List<Button> buttons = asList(Button.primary(buttonId, "Whitelist Player"));
             final Consumer<ButtonInteractionEvent> mapper = e -> {
@@ -389,7 +392,7 @@ public class NotificationEventListener {
                                                  .successColor()
                                                  .addField("Player Name", escape(event.gameProfile().getName()), true)
                                                  .addField("Player UUID", ("[" + event.gameProfile().getId().toString() + "](https://namemc.com/profile/" + event.gameProfile().getId().toString() + ")"), true)
-                                                 .thumbnail(Proxy.getInstance().getAvatarURL(event.gameProfile().getId()).toString())
+                                                 .thumbnail(Proxy.getInstance().getPlayerBodyURL(event.gameProfile().getId()).toString())
                                                  .toJDAEmbed()).complete();
                         saveConfigAsync();
                     } else {
@@ -470,7 +473,7 @@ public class NotificationEventListener {
             message = message.replace(event.sender().getName(), "**" + event.sender().getName() + "**");
             message = message.replace(event.receiver().getName(), "**" + event.receiver().getName() + "**");
             UUID senderUUID = event.sender().getProfileId();
-            final String avatarURL = Proxy.getInstance().getAvatarURL(senderUUID).toString();
+            final String avatarURL = Proxy.getInstance().getPlayerHeadURL(senderUUID).toString();
             var embed = Embed.builder()
                 .description(escape(message))
                 .footer("\u200b", avatarURL)
@@ -492,7 +495,7 @@ public class NotificationEventListener {
         if (CONFIG.discord.chatRelay.ignoreQueue && Proxy.getInstance().isInQueue()) return;
         try {
             String message = event.message();
-            final String avatarURL = Proxy.getInstance().isOn2b2t() ? Proxy.getInstance().getAvatarURL("Hausemaster").toString() : null;
+            final String avatarURL = Proxy.getInstance().isOn2b2t() ? Proxy.getInstance().getPlayerHeadURL("Hausemaster").toString() : null;
             var embed = Embed.builder()
                 .description(escape(message))
                 .footer("\u200b", avatarURL)
@@ -532,7 +535,7 @@ public class NotificationEventListener {
                 message = "**" + event.sender().getName() + ":** " + message;
             }
             UUID senderUUID = event.sender().getProfileId();
-            final String avatarURL = Proxy.getInstance().getAvatarURL(senderUUID).toString();
+            final String avatarURL = Proxy.getInstance().getPlayerHeadURL(senderUUID).toString();
             var embed = Embed.builder()
                 .description(escape(message))
                 .footer("\u200b", avatarURL)
@@ -548,18 +551,20 @@ public class NotificationEventListener {
         }
     }
 
-    private void handleDeathMessageChatEvent(DeathMessageChatEvent event) {
-        if (CONFIG.client.extra.killMessage) {
-            event.deathMessage().killer().ifPresent(killer -> {
-                if (!killer.name().equals(CONFIG.authentication.username)) return;
-                sendEmbedMessage(Embed.builder()
-                                     .title("Kill Detected")
-                                     .primaryColor()
-                                     .addField("Victim", escape(event.deathMessage().victim()), false)
-                                     .addField("Message", escape(event.message()), false)
-                                     .thumbnail(Proxy.getInstance().getAvatarURL(event.deathMessage().victim()).toString()));
-            });
-        }
+    private void handleDeathMessageChatEventKillMessage(DeathMessageChatEvent event) {
+        if (!CONFIG.client.extra.killMessage) return;
+        event.deathMessage().killer().ifPresent(killer -> {
+            if (!killer.name().equals(CONFIG.authentication.username)) return;
+            sendEmbedMessage(Embed.builder()
+                                 .title("Kill Detected")
+                                 .primaryColor()
+                                 .addField("Victim", escape(event.deathMessage().victim()), false)
+                                 .addField("Message", escape(event.message()), false)
+                                 .thumbnail(Proxy.getInstance().getPlayerHeadURL(event.deathMessage().victim()).toString()));
+        });
+    }
+
+    private void handleDeathMessageChatEventChatRelay(DeathMessageChatEvent event) {
         if (!CONFIG.discord.chatRelay.deathMessages) return;
         if (!CONFIG.discord.chatRelay.enable || CONFIG.discord.chatRelay.channelId.isEmpty()) return;
         if (CONFIG.discord.chatRelay.ignoreQueue && Proxy.getInstance().isInQueue()) return;
@@ -572,8 +577,8 @@ public class NotificationEventListener {
             String senderName = death.victim();
             UUID senderUUID = CACHE.getTabListCache().getFromName(death.victim()).map(PlayerListEntry::getProfileId).orElse(null);
             final String avatarURL = senderUUID != null
-                ? Proxy.getInstance().getAvatarURL(senderUUID).toString()
-                : Proxy.getInstance().getAvatarURL(senderName).toString();
+                ? Proxy.getInstance().getPlayerHeadURL(senderUUID).toString()
+                : Proxy.getInstance().getPlayerHeadURL(senderName).toString();
             var embed = Embed.builder()
                 .description(escape(message))
                 .footer("\u200b", avatarURL)
@@ -585,42 +590,44 @@ public class NotificationEventListener {
         }
     }
 
-    public void handleServerPlayerConnectedEvent(ServerPlayerConnectedEvent event) {
-        if (CONFIG.discord.chatRelay.enable && CONFIG.discord.chatRelay.connectionMessages && !CONFIG.discord.chatRelay.channelId.isEmpty()) {
-            if (!Proxy.getInstance().isOnlineForAtLeastDuration(Duration.ofSeconds(3))) return;
-            if (CONFIG.discord.chatRelay.ignoreQueue && Proxy.getInstance().isInQueue()) return;
-            sendRelayEmbedMessage(Embed.builder()
-                                      .description(escape("**" + event.playerEntry().getName() + "** connected"))
-                                      .successColor()
-                                      .footer("\u200b", Proxy.getInstance().getAvatarURL(event.playerEntry().getProfileId()).toString())
-                                      .timestamp(Instant.now()));
-        }
-        if (CONFIG.client.extra.stalk.enabled && PLAYER_LISTS.getStalkList().contains(event.playerEntry().getProfile())) {
-            sendEmbedMessage(notificationMention(), Embed.builder()
-                .title("Stalked Player Online!")
-                .successColor()
-                .addField("Player Name", event.playerEntry().getName(), true)
-                .thumbnail(Proxy.getInstance().getAvatarURL(event.playerEntry().getProfileId()).toString()));
-        }
+    public void handleServerPlayerConnectedEventChatRelay(ServerPlayerConnectedEvent event) {
+        if (!CONFIG.discord.chatRelay.enable || !CONFIG.discord.chatRelay.connectionMessages || CONFIG.discord.chatRelay.channelId.isEmpty()) return;
+        if (!Proxy.getInstance().isOnlineForAtLeastDuration(Duration.ofSeconds(3))) return;
+        if (CONFIG.discord.chatRelay.ignoreQueue && Proxy.getInstance().isInQueue()) return;
+        sendRelayEmbedMessage(Embed.builder()
+                                  .description(escape("**" + event.playerEntry().getName() + "** connected"))
+                                  .successColor()
+                                  .footer("\u200b", Proxy.getInstance().getPlayerHeadURL(event.playerEntry().getProfileId()).toString())
+                                  .timestamp(Instant.now()));
     }
 
-    public void handleServerPlayerDisconnectedEvent(ServerPlayerDisconnectedEvent event) {
-        if (CONFIG.discord.chatRelay.enable && CONFIG.discord.chatRelay.connectionMessages && !CONFIG.discord.chatRelay.channelId.isEmpty()) {
-            if (!Proxy.getInstance().isOnlineForAtLeastDuration(Duration.ofSeconds(3))) return;
-            if (CONFIG.discord.chatRelay.ignoreQueue && Proxy.getInstance().isInQueue()) return;
-            sendRelayEmbedMessage(Embed.builder()
-                                      .description(escape("**" + event.playerEntry().getName() + "** disconnected"))
-                                      .errorColor()
-                                      .footer("\u200b", Proxy.getInstance().getAvatarURL(event.playerEntry().getProfileId()).toString())
-                                      .timestamp(Instant.now()));
-        }
-        if (CONFIG.client.extra.stalk.enabled && PLAYER_LISTS.getStalkList().contains(event.playerEntry().getProfile())) {
-            sendEmbedMessage(notificationMention(), Embed.builder()
-                .title("Stalked Player Offline!")
-                .errorColor()
-                .addField("Player Name", event.playerEntry().getName(), true)
-                .thumbnail(Proxy.getInstance().getAvatarURL(event.playerEntry().getProfileId()).toString()));
-        }
+    public void handleServerPlayerConnectedEventStalk(ServerPlayerConnectedEvent event) {
+        if (!CONFIG.client.extra.stalk.enabled || !PLAYER_LISTS.getStalkList().contains(event.playerEntry().getProfile())) return;
+        sendEmbedMessage(notificationMention(), Embed.builder()
+            .title("Stalked Player Online!")
+            .successColor()
+            .addField("Player Name", event.playerEntry().getName(), true)
+            .thumbnail(Proxy.getInstance().getPlayerBodyURL(event.playerEntry().getProfileId()).toString()));
+    }
+
+    public void handleServerPlayerDisconnectedEventChatRelay(ServerPlayerDisconnectedEvent event) {
+        if (!CONFIG.discord.chatRelay.enable || !CONFIG.discord.chatRelay.connectionMessages || CONFIG.discord.chatRelay.channelId.isEmpty()) return;
+        if (!Proxy.getInstance().isOnlineForAtLeastDuration(Duration.ofSeconds(3))) return;
+        if (CONFIG.discord.chatRelay.ignoreQueue && Proxy.getInstance().isInQueue()) return;
+        sendRelayEmbedMessage(Embed.builder()
+                                  .description(escape("**" + event.playerEntry().getName() + "** disconnected"))
+                                  .errorColor()
+                                  .footer("\u200b", Proxy.getInstance().getPlayerHeadURL(event.playerEntry().getProfileId()).toString())
+                                  .timestamp(Instant.now()));
+    }
+
+    public void handleServerPlayerDisconnectedEventStalk(ServerPlayerDisconnectedEvent event) {
+        if (!CONFIG.client.extra.stalk.enabled || !PLAYER_LISTS.getStalkList().contains(event.playerEntry().getProfile())) return;
+        sendEmbedMessage(notificationMention(), Embed.builder()
+            .title("Stalked Player Offline!")
+            .errorColor()
+            .addField("Player Name", event.playerEntry().getName(), true)
+            .thumbnail(Proxy.getInstance().getPlayerBodyURL(event.playerEntry().getProfileId()).toString()));
     }
 
     public void handleDiscordMessageSentEvent(DiscordMessageSentEvent event) {
@@ -849,7 +856,7 @@ public class NotificationEventListener {
             .color(PRIVATE_MESSAGE_EMBED_COLOR)
             .timestamp(Instant.now());
         if (event.getSenderUUID() != null) {
-            embed.footer("Private Message", Proxy.getInstance().getAvatarURL(event.getSenderUUID()).toString());
+            embed.footer("Private Message", Proxy.getInstance().getPlayerHeadURL(event.getSenderUUID()).toString());
         } else {
             embed.footer("Private Message", null);
         }

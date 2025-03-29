@@ -1,6 +1,6 @@
 package com.zenith.via;
 
-import net.raphimc.vialoader.impl.viaversion.VLViaConfig;
+import com.viaversion.vialoader.impl.viaversion.VLViaConfig;
 
 import java.io.File;
 import java.util.logging.LogManager;

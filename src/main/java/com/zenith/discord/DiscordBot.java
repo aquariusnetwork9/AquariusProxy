@@ -10,7 +10,6 @@ import com.zenith.feature.autoupdater.AutoUpdater;
 import com.zenith.feature.queue.Queue;
 import com.zenith.module.impl.AutoReconnect;
 import com.zenith.util.MentionUtil;
-import lombok.Getter;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.OnlineStatus;
@@ -23,16 +22,18 @@ import net.dv8tion.jda.api.events.StatusChangeEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.session.*;
+import net.dv8tion.jda.api.exceptions.ErrorResponseException;
+import net.dv8tion.jda.api.exceptions.PermissionException;
 import net.dv8tion.jda.api.hooks.SimpleEventBusListener;
 import net.dv8tion.jda.api.interactions.components.ActionComponent;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import net.dv8tion.jda.api.requests.ErrorResponse;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.Color;
 import net.dv8tion.jda.api.utils.FileUpload;
 import net.dv8tion.jda.api.utils.ShutdownException;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import net.dv8tion.jda.api.utils.messages.MessageCreateData;
-import net.dv8tion.jda.internal.JDAImpl;
 import net.dv8tion.jda.internal.utils.ShutdownReason;
 import org.jspecify.annotations.Nullable;
 
@@ -54,18 +55,14 @@ import static java.util.Arrays.asList;
 
 public class DiscordBot {
 
-    private TextChannel mainChannel;
-    private TextChannel relayChannel;
-    @Getter
-    private boolean isRunning;
+    private TextChannel mainChannel; // Null if not running
+    private @Nullable TextChannel relayChannel;
     private ScheduledFuture<?> presenceUpdateFuture;
-    private ScheduledFuture<?> healthCheckFuture;
-    protected JDA jda;
+    protected JDA jda; // Null if not running
     public Optional<Instant> lastRelayMessage = Optional.empty();
     private final SimpleEventBus jdaEventBus = new SimpleEventBus();
 
     public DiscordBot() {
-        this.isRunning = false;
         jdaEventBus.subscribe(
             this,
             of(MessageReceivedEvent.class, this::onMessageReceived),
@@ -79,7 +76,8 @@ public class DiscordBot {
     }
 
     public synchronized void start() {
-        createClient();
+        if (isRunning()) return;
+        initializeJda();
 
         if (CONFIG.discord.isUpdating) {
             handleProxyUpdateComplete();
@@ -88,32 +86,72 @@ public class DiscordBot {
             this::updatePresence, 0L,
             15L, // discord rate limit
             TimeUnit.SECONDS);
-        this.healthCheckFuture = EXECUTOR.scheduleWithFixedDelay(
-            this::healthCheck, 5L,
-            5L,
-            TimeUnit.MINUTES);
-        this.isRunning = true;
+    }
+
+    public synchronized void stop(boolean clearQueue) {
+        if (!isRunning()) return;
+        if (presenceUpdateFuture != null) presenceUpdateFuture.cancel(true);
+        try {
+            if (clearQueue) {
+                jda.shutdownNow();
+            } else {
+                jda.shutdown();
+            }
+            jda.awaitShutdown(Duration.ofSeconds(20));
+        } catch (final Exception e) {
+            DISCORD_LOG.warn("Exception during JDA shutdown", e);
+        }
+    }
+
+    public void initializeJda() {
+        if (CONFIG.discord.channelId.isEmpty()) throw new RuntimeException("Discord bot is enabled but channel id is not set");
+        if (CONFIG.discord.chatRelay.enable) {
+            if (CONFIG.discord.chatRelay.channelId.isEmpty()) throw new RuntimeException("Discord chat relay is enabled and channel id is not set");
+            if (CONFIG.discord.channelId.equals(CONFIG.discord.chatRelay.channelId)) throw new RuntimeException("Discord channel id and chat relay channel id cannot be the same");
+        }
+        if (CONFIG.discord.accountOwnerRoleId.isEmpty()) throw new RuntimeException("Discord account owner role id is not set");
+        try {
+            Long.parseUnsignedLong(CONFIG.discord.accountOwnerRoleId);
+        } catch (final Exception e) {
+            throw new RuntimeException("Invalid account owner role ID set: " + CONFIG.discord.accountOwnerRoleId);
+        }
+
+        JDABuilder builder = JDABuilder.createLight(
+                CONFIG.discord.token,
+                asList(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MESSAGES))
+            .setActivity(Activity.customStatus("Disconnected"))
+            .setStatus(OnlineStatus.DO_NOT_DISTURB)
+            .addEventListeners(new SimpleEventBusListener(jdaEventBus));
+        this.jda = builder.build();
+        try {
+            jda.awaitReady();
+        } catch (ShutdownException e) {
+            if (e.getShutdownReason() == ShutdownReason.DISALLOWED_INTENTS) {
+                throw new RuntimeException("You must enable MESSAGE CONTENT INTENT on the Discord developer website: https://i.imgur.com/iznLeDV.png");
+            }
+            throw e;
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        this.mainChannel = Objects.requireNonNull(
+            jda.getChannelById(TextChannel.class, CONFIG.discord.channelId),
+            "Discord channel not found with ID: " + CONFIG.discord.channelId);
+        if (CONFIG.discord.chatRelay.enable) {
+            this.relayChannel = Objects.requireNonNull(
+                jda.getChannelById(TextChannel.class, CONFIG.discord.chatRelay.channelId),
+                "Discord relay channel not found with ID: " + CONFIG.discord.chatRelay.channelId);
+        }
+    }
+
+    public boolean isRunning() {
+        var status = getJdaStatus();
+        return status != JDA.Status.SHUTDOWN && status != JDA.Status.FAILED_TO_LOGIN;
     }
 
     public JDA.Status getJdaStatus() {
         var jda = this.jda;
         if (jda == null) return JDA.Status.SHUTDOWN;
         return jda.getStatus();
-    }
-
-    public void healthCheck() {
-        if (!isRunning) return;
-        var jda = this.jda;
-        if (jda == null) return;
-        if (!(jda instanceof JDAImpl jdaImpl)) return;
-        var wsConnected = jdaImpl.getClient().isConnected();
-        if (wsConnected) return;
-        DISCORD_LOG.info("Attempting discord gateway reconnect from status: {}", jda.getStatus());
-        try {
-            jdaImpl.getClient().reconnect(false);
-        } catch (Exception e) {
-            DISCORD_LOG.error("Failed reconnecting to discord", e);
-        }
     }
 
     public void onMessageReceived(MessageReceivedEvent event) {
@@ -181,21 +219,24 @@ public class DiscordBot {
     }
 
     public void setBotNickname(final String nick) {
-        if (!isRunning) return;
+        if (!isRunning()) return;
         try {
             mainChannel.getGuild().getSelfMember().modifyNickname(nick).complete();
-        } catch (final Exception e) {
+        } catch (PermissionException e) {
             DISCORD_LOG.warn("Failed updating bot's nickname. Check that the bot has correct permissions: {}", e.getMessage());
             DISCORD_LOG.debug("Failed updating bot's nickname. Check that the bot has correct permissions", e);
+        } catch (final Exception e) {
+            DISCORD_LOG.warn("Failed updating bot's nickname: {}", e.getMessage());
+            DISCORD_LOG.debug("Failed updating bot's nickname", e);
         }
     }
 
     public void setBotDescription(String description) {
-        if (!isRunning) return;
+        if (!isRunning()) return;
         try {
             jda.updateApplicationDescription(description).complete();
         } catch (final Exception e) {
-            DISCORD_LOG.warn("Failed updating bot's description. Check that the bot has correct permissions: {}", e.getMessage());
+            DISCORD_LOG.warn("Failed updating bot's description: {}", e.getMessage());
             DISCORD_LOG.debug("Failed updating bot's description", e);
         }
     }
@@ -213,25 +254,8 @@ public class DiscordBot {
         return message.replaceAll("_", "\\\\_");
     }
 
-    public synchronized void stop(boolean clearQueue) {
-        if (!isRunning) return;
-        if (presenceUpdateFuture != null) presenceUpdateFuture.cancel(true);
-        if (healthCheckFuture != null) healthCheckFuture.cancel(true);
-        try {
-            if (clearQueue) {
-                jda.shutdownNow();
-            } else {
-                jda.shutdown();
-            }
-            jda.awaitShutdown(Duration.ofSeconds(20));
-        } catch (final Exception e) {
-            DISCORD_LOG.warn("Exception during JDA shutdown", e);
-        }
-        isRunning = false;
-    }
-
     void updatePresence() {
-        if (!isRunning) return;
+        if (!isRunning()) return;
         try {
             if (LAUNCH_CONFIG.auto_update) {
                 final AutoUpdater autoUpdater = Proxy.getInstance().getAutoUpdater();
@@ -265,12 +289,12 @@ public class DiscordBot {
     }
 
     public void updatePresence(final OnlineStatus onlineStatus, final Activity activity) {
-        if (!isRunning) return;
+        if (!isRunning()) return;
         jda.getPresence().setPresence(onlineStatus, activity);
     }
 
     public void sendEmbedMessageWithFileAttachment(Embed embed) {
-        if (!isRunning) return;
+        if (!isRunning()) return;
         try {
             var msgBuilder = new MessageCreateBuilder()
                 .addEmbeds(embed.toJDAEmbed());
@@ -298,46 +322,6 @@ public class DiscordBot {
                 .map(ISnowflake::getId)
                 .anyMatch(roleId -> roleId.equals(CONFIG.discord.accountOwnerRoleId)))
             .orElse(false);
-    }
-
-    public void createClient() {
-        if (CONFIG.discord.channelId.isEmpty()) throw new RuntimeException("Discord bot is enabled but channel id is not set");
-        if (CONFIG.discord.chatRelay.enable) {
-            if (CONFIG.discord.chatRelay.channelId.isEmpty()) throw new RuntimeException("Discord chat relay is enabled and channel id is not set");
-            if (CONFIG.discord.channelId.equals(CONFIG.discord.chatRelay.channelId)) throw new RuntimeException("Discord channel id and chat relay channel id cannot be the same");
-        }
-        if (CONFIG.discord.accountOwnerRoleId.isEmpty()) throw new RuntimeException("Discord account owner role id is not set");
-        try {
-            Long.parseUnsignedLong(CONFIG.discord.accountOwnerRoleId);
-        } catch (final Exception e) {
-            throw new RuntimeException("Invalid account owner role ID set: " + CONFIG.discord.accountOwnerRoleId);
-        }
-
-        JDABuilder builder = JDABuilder.createLight(
-            CONFIG.discord.token,
-            asList(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MESSAGES))
-            .setActivity(Activity.customStatus("Disconnected"))
-            .setStatus(OnlineStatus.DO_NOT_DISTURB)
-            .addEventListeners(new SimpleEventBusListener(jdaEventBus));
-        this.jda = builder.build();
-        try {
-            jda.awaitReady();
-        } catch (ShutdownException e) {
-            if (e.getShutdownReason() == ShutdownReason.DISALLOWED_INTENTS) {
-                throw new RuntimeException("You must enable MESSAGE CONTENT INTENT on the Discord developer website: https://i.imgur.com/iznLeDV.png");
-            }
-            throw e;
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-        this.mainChannel = Objects.requireNonNull(
-            jda.getChannelById(TextChannel.class, CONFIG.discord.channelId),
-            "Discord channel not found with ID: " + CONFIG.discord.channelId);
-        if (CONFIG.discord.chatRelay.enable) {
-            this.relayChannel = Objects.requireNonNull(
-                jda.getChannelById(TextChannel.class, CONFIG.discord.chatRelay.channelId),
-                "Discord relay channel not found with ID: " + CONFIG.discord.chatRelay.channelId);
-        }
     }
 
     public String extractRelayEmbedSenderUsername(@Nullable final Color color, final String msgContent) {
@@ -378,12 +362,19 @@ public class DiscordBot {
     }
 
     public void updateProfileImage(final byte[] imageBytes) {
-        if (!isRunning) return;
+        if (!isRunning()) return;
         try {
             jda.getSelfUser().getManager().setAvatar(Icon.from(imageBytes)).complete();
+        } catch (ErrorResponseException e) {
+            if (e.getErrorResponse() == ErrorResponse.INVALID_FORM_BODY) {
+                DISCORD_LOG.debug("Rate limited while updating discord profile image.", e);
+                return;
+            }
+            DISCORD_LOG.warn("Failed updating discord profile image: {}", e.getMessage());
+            DISCORD_LOG.debug("Failed updating discord profile image", e);
         } catch (final Exception e) {
-            DISCORD_LOG.warn("Failed updating discord profile image. Check that the bot has correct permissions: {}", e.getMessage());
-            DISCORD_LOG.debug("Failed updating discord profile image. Check that the bot has correct permissions", e);
+            DISCORD_LOG.warn("Failed updating discord profile image: {}", e.getMessage());
+            DISCORD_LOG.debug("Failed updating discord profile image", e);
         }
     }
 
@@ -405,7 +396,7 @@ public class DiscordBot {
     }
 
     public void sendEmbedMessage(Embed embed) {
-        if (isRunning) {
+        if (isRunning()) {
             mainChannel.sendMessage(
                     new MessageCreateBuilder()
                         .addEmbeds(embed.toJDAEmbed())
@@ -416,7 +407,7 @@ public class DiscordBot {
     }
 
     public void sendEmbedMessage(String message, Embed embed) {
-        if (isRunning) {
+        if (isRunning()) {
             mainChannel.sendMessage(
                 new MessageCreateBuilder()
                     .setContent(message)
@@ -429,7 +420,7 @@ public class DiscordBot {
     }
 
     public void sendRelayEmbedMessage(Embed embed) {
-        if (isRunning && CONFIG.discord.chatRelay.enable) {
+        if (isRunning() && CONFIG.discord.chatRelay.enable) {
             relayChannel.sendMessage(
                 new MessageCreateBuilder()
                     .addEmbeds(embed.toJDAEmbed())
@@ -439,7 +430,7 @@ public class DiscordBot {
     }
 
     public void sendRelayEmbedMessage(String message, Embed embed) {
-        if (isRunning && CONFIG.discord.chatRelay.enable) {
+        if (isRunning() && CONFIG.discord.chatRelay.enable) {
             relayChannel.sendMessage(
                 new MessageCreateBuilder()
                     .setContent(message)
@@ -450,7 +441,7 @@ public class DiscordBot {
     }
 
     public void sendMessage(final String message) {
-        if (isRunning) {
+        if (isRunning()) {
             mainChannel.sendMessage(
                 new MessageCreateBuilder()
                     .setContent(message)
@@ -461,7 +452,7 @@ public class DiscordBot {
     }
 
     public void sendRelayMessage(final String message) {
-        if (isRunning && CONFIG.discord.chatRelay.enable) {
+        if (isRunning() && CONFIG.discord.chatRelay.enable) {
             relayChannel.sendMessage(
                 new MessageCreateBuilder()
                     .setContent(message)
@@ -471,7 +462,7 @@ public class DiscordBot {
     }
 
     public void sendEmbedMessageWithButtons(String message, Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> mapper, Duration timeout) {
-        if (isRunning) {
+        if (isRunning()) {
             mainChannel.sendMessage(
                 new MessageCreateBuilder()
                     .setEmbeds(embed.toJDAEmbed())
@@ -490,7 +481,7 @@ public class DiscordBot {
     }
 
     public void sendEmbedMessageWithButtons(Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> mapper, Duration timeout) {
-        if (isRunning) {
+        if (isRunning()) {
             mainChannel.sendMessage(
                 new MessageCreateBuilder()
                     .setEmbeds(embed.toJDAEmbed())

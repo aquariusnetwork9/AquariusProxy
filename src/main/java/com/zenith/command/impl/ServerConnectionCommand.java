@@ -28,7 +28,7 @@ public class ServerConnectionCommand extends Command {
             
             The `proxyIP` is the IP players should connect to. This is purely informational.
             
-            The `bind` argument changes the port ZenithProxy listens on..
+            The `port` argument changes the port the ZenithProxy MC server listens on
             
             The `ping` arguments configure the server list ping response ZenithProxy sends to players.
             `onlinePlayers` = MC profiles of players

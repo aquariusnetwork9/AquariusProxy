@@ -2,7 +2,6 @@ package com.zenith.network.server.handler.shared.postoutgoing;
 
 import com.zenith.network.registry.PostOutgoingPacketHandler;
 import com.zenith.network.server.ServerSession;
-import org.geysermc.mcprotocollib.protocol.MinecraftConstants;
 import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.ClientboundLoginCompressionPacket;
 import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.ClientboundLoginFinishedPacket;
 
@@ -12,6 +11,11 @@ public class LoginCompressionPostOutgoingHandler implements PostOutgoingPacketHa
     @Override
     public void accept(final ClientboundLoginCompressionPacket packet, final ServerSession session) {
         session.setCompressionThreshold(packet.getThreshold(), CONFIG.server.compressionLevel, true);
-        session.sendAsync(new ClientboundLoginFinishedPacket(session.getFlag(MinecraftConstants.PROFILE_KEY)));
+        var profile = session.getProfileCache().getProfile();
+        if (profile == null) {
+            session.disconnect("Failed to get profile");
+            return;
+        }
+        session.sendAsync(new ClientboundLoginFinishedPacket(profile));
     }
 }

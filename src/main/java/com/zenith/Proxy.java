@@ -66,6 +66,7 @@ import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
 import static com.zenith.util.Config.Authentication.AccountType.MSA;
 import static com.zenith.util.Config.Authentication.AccountType.OFFLINE;
+import static com.zenith.util.DisconnectMessages.*;
 import static java.util.Objects.nonNull;
 
 
@@ -120,7 +121,7 @@ public class Proxy {
 
     public void start() {
         DEFAULT_LOG.info("Starting ZenithProxy-{}", LAUNCH_CONFIG.version);
-        @Nullable String exeReleaseVersion = getExecutableReleaseVersion();
+        var exeReleaseVersion = getExecutableReleaseVersion();
         if (exeReleaseVersion == null) {
             DEFAULT_LOG.warn("Detected unofficial ZenithProxy development build!");
         } else if (!LAUNCH_CONFIG.version.split("\\+")[0].equals(exeReleaseVersion.split("\\+")[0])) {
@@ -140,15 +141,13 @@ public class Proxy {
                 DEFAULT_LOG.info("Started Databases");
             }
             if (CONFIG.discord.enable) {
-                boolean err = false;
                 try {
                     DISCORD.start();
+                    DISCORD_LOG.info("Started Discord Bot");
                 } catch (final Throwable e) {
-                    err = true;
                     DISCORD_LOG.error("Failed starting discord bot: {}", e.getMessage());
                     DISCORD_LOG.debug("Failed starting discord bot", e);
                 }
-                if (!err) DISCORD_LOG.info("Started Discord Bot");
             }
             NotificationEventListener.INSTANCE.subscribeEvents();
             Queue.start();
@@ -194,7 +193,7 @@ public class Proxy {
                             """
                             You are currently using a ZenithProxy prerelease
                             
-                            Prereleases include experiments that may contain bugs and are not always updated with fixes             
+                            Prereleases include experiments that may contain bugs and are not always updated with fixes
                             
                             Switch to a stable release with the `channel` command
                             """));
@@ -309,7 +308,7 @@ public class Proxy {
         DEFAULT_LOG.info("Shutting Down...");
         try {
             CompletableFuture.runAsync(() -> {
-                if (nonNull(this.client)) this.client.disconnect(MinecraftConstants.SERVER_CLOSING_MESSAGE);
+                if (nonNull(this.client)) this.client.disconnect(SERVER_CLOSING_MESSAGE);
                 MODULE.get(AutoReconnect.class).cancelAutoReconnect();
                 stopServer();
                 tcpManager.close();
@@ -440,7 +439,6 @@ public class Proxy {
             this.lanBroadcaster = new LanBroadcaster();
             lanBroadcaster.start();
         }
-        this.server.setGlobalFlag(MinecraftConstants.AUTOMATIC_KEEP_ALIVE_MANAGEMENT, true);
         this.server.addListener(new ProxyServerListener());
         this.server.bind(false);
     }
@@ -461,7 +459,7 @@ public class Proxy {
         for (int tries = 0; tries < 3; tries++) {
             minecraftProtocol = retrieveLoginTaskResult(loginTask());
             if (minecraftProtocol != null || !loggingIn.get()) break;
-            AUTH_LOG.warn("Failed login attempt " + (tries + 1));
+            AUTH_LOG.warn("Failed login attempt {}", tries + 1);
             Wait.wait((int) (3 + (Math.random() * 7.0)));
         }
         if (!loggingIn.compareAndSet(true, false)) throw new RuntimeException("Login Cancelled");
@@ -514,15 +512,24 @@ public class Proxy {
         }
     }
 
-    public URL getAvatarURL(UUID uuid) {
-        return getAvatarURL(uuid.toString().replace("-", ""));
+    public URL getPlayerHeadURL(UUID uuid) {
+        return getPlayerHeadURL(uuid.toString().replace("-", ""));
     }
 
-    public URL getAvatarURL(String playerName) {
+    public URL getPlayerHeadURL(String playerName) {
         try {
             return URI.create(String.format("https://minotar.net/helm/%s/64", playerName)).toURL();
         } catch (MalformedURLException e) {
-            SERVER_LOG.error("Failed to get avatar URL for player: {}", playerName, e);
+            SERVER_LOG.error("Failed to get player head URL for: {}", playerName, e);
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    public URL getPlayerBodyURL(UUID uuid) {
+        try {
+            return URI.create(String.format("https://api.mineatar.io/body/full/%s", uuid)).toURL();
+        } catch (MalformedURLException e) {
+            SERVER_LOG.error("Failed to get player body URL for: {}", uuid, e);
             throw new UncheckedIOException(e);
         }
     }

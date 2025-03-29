@@ -1,12 +1,10 @@
 package com.zenith.network.client.handler.incoming;
 
-import com.zenith.Shared;
 import com.zenith.feature.api.sessionserver.SessionServerApi;
 import com.zenith.network.client.ClientSession;
 import com.zenith.network.registry.PacketHandler;
 import com.zenith.util.Config;
 import org.geysermc.mcprotocollib.auth.GameProfile;
-import org.geysermc.mcprotocollib.protocol.MinecraftConstants;
 import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.ClientboundHelloPacket;
 import org.geysermc.mcprotocollib.protocol.packet.login.serverbound.ServerboundKeyPacket;
 
@@ -14,16 +12,17 @@ import javax.crypto.SecretKey;
 
 import static com.zenith.Shared.CONFIG;
 import static com.zenith.Shared.EXECUTOR;
+import static com.zenith.util.DisconnectMessages.AUTH_REQUIRED;
 
 public class CHelloHandler implements PacketHandler<ClientboundHelloPacket, ClientSession> {
     @Override
     public ClientboundHelloPacket apply(final ClientboundHelloPacket packet, final ClientSession session) {
-        final GameProfile profile = session.getFlag(MinecraftConstants.PROFILE_KEY);
-        final String accessToken = session.getFlag(MinecraftConstants.ACCESS_TOKEN_KEY);
+        final GameProfile profile = session.getProfile();
+        final String accessToken = session.getAccessToken();
 
         if (CONFIG.authentication.accountType == Config.Authentication.AccountType.OFFLINE) {
             if (packet.isShouldAuthenticate()) {
-                session.disconnect(Shared.AUTH_REQUIRED);
+                session.disconnect(AUTH_REQUIRED);
                 return null;
             }
         } else {

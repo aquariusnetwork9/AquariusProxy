@@ -1,8 +1,8 @@
 package com.zenith.event.proxy;
 
-import com.zenith.Shared;
-
 import java.time.Duration;
+
+import static com.zenith.util.DisconnectMessages.MANUAL_DISCONNECT;
 
 public record DisconnectEvent(
     String reason,
@@ -13,7 +13,7 @@ public record DisconnectEvent(
     int queuePosition
 ) {
     public DisconnectEvent(String reason, final Duration onlineDuration, Duration onlineDurationWithQueueSkip, boolean wasInQueue, int queuePosition) {
-        this(reason, (Shared.MANUAL_DISCONNECT.equals(reason)), onlineDuration, onlineDurationWithQueueSkip, wasInQueue, queuePosition);
+        this(reason, (MANUAL_DISCONNECT.equals(reason)), onlineDuration, onlineDurationWithQueueSkip, wasInQueue, queuePosition);
     }
 
     public DisconnectEvent(String reason) {
