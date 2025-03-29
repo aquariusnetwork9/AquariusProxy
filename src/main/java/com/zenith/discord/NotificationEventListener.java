@@ -12,7 +12,10 @@ import com.zenith.feature.deathmessages.DeathMessageParseResult;
 import com.zenith.feature.deathmessages.KillerType;
 import com.zenith.feature.queue.Queue;
 import com.zenith.feature.world.World;
+import com.zenith.module.impl.AntiAFK;
+import com.zenith.module.impl.SessionTimeLimit;
 import com.zenith.util.DisconnectReasonInfo;
+import com.zenith.util.math.MathHelper;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.MessageEmbed;
@@ -30,6 +33,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static com.github.rfresh2.EventConsumer.of;
@@ -136,16 +140,36 @@ public class NotificationEventListener {
             if (event.onlineDuration().toSeconds() >= 0L
                 && event.onlineDuration().toSeconds() <= 1L) {
                 embed.description("""
-                              You have likely been kicked for reaching the 2b2t non-prio account IP limit.
-                              Consider configuring a connection proxy with the `clientConnection` command.
-                              Or migrate ZenithProxy instances to multiple hosts/IP's.
-                              """);
+                      You have likely been kicked for reaching the 2b2t non-prio account IP limit.
+                      Consider configuring a connection proxy with the `clientConnection` command.
+                      Or migrate ZenithProxy instances to multiple hosts/IP's.
+                      """);
             } else if (event.wasInQueue() && event.queuePosition() <= 1) {
                 embed.description("""
-                              You have likely been kicked due to being IP banned by 2b2t.
-                              
-                              To check, try connecting and waiting through queue with the same account from a different IP.
-                              """);
+                      You have likely been kicked due to being IP banned by 2b2t.
+                      
+                      To check, try connecting and waiting through queue with the same account from a different IP.
+                      """);
+            } else if (!event.wasInQueue()
+                && MathHelper.isInRange( // whether we were kicked at session time limit +- 30s
+                    event.onlineDuration().toSeconds(),
+                    MODULE.get(SessionTimeLimit.class).getSessionTimeLimit().toSeconds(),
+                    30L)) {
+                embed.description("""
+                        You have likely been kicked for reaching the non-prio session time limit.
+                        
+                        2b2t kicks non-prio players after %s hours online.
+                        """.formatted(MODULE.get(SessionTimeLimit.class).getSessionTimeLimit().toHours()));
+            } else if (!event.wasInQueue()
+                && MathHelper.isInRange( // whether we were kicked at 20 minutes +- 30s
+                     event.onlineDuration().toSeconds(),
+                     TimeUnit.MINUTES.toSeconds(20),
+                     30L)) {
+                String msg = "You have possibly been kicked by 2b2t's AntiAFK plugin";
+                if (!MODULE.get(AntiAFK.class).isEnabled()) {
+                    msg += "\n\nConsider enabling ZenithProxy's AntiAFK module: `antiAFK on`";
+                }
+                embed.description(msg);
             }
         }
         if (CONFIG.discord.mentionRoleOnDisconnect) {
