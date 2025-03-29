@@ -11,11 +11,11 @@ import static com.zenith.Shared.LAUNCH_CONFIG;
 public class LicenseCommand extends Command {
     @Override
     public CommandUsage commandUsage() {
-        return CommandUsage.simple(
-            "license",
-            CommandCategory.INFO,
-            "Displays the software license and information about your legal rights"
-        );
+        return CommandUsage.builder()
+            .name("license")
+            .category(CommandCategory.INFO)
+            .description("Displays the software license and information about your legal rights")
+            .build();
     }
 
     @Override

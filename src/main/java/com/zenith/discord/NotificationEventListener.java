@@ -111,7 +111,7 @@ public class NotificationEventListener {
             .title("Target Killed")
             .addField("Target", "[" + event.profile().getName() + "](https://namemc.com/profile/" + event.profile().getId() + ")", false)
             .addField("Death Message", escape(event.message())  , false)
-            .thumbnail(Proxy.getInstance().getAvatarURL(event.profile().getId()).toString())
+            .thumbnail(Proxy.getInstance().getPlayerBodyURL(event.profile().getId()).toString())
             .successColor();
         sendEmbedMessage(embed);
     }
@@ -124,7 +124,7 @@ public class NotificationEventListener {
             .addField("Position",getCoordinates(event.target()), false)
             .addField("Our Position", getCoordinates(CACHE.getPlayerCache().getThePlayer()), false)
             .addField("Distance", String.format("%.2f", Math.sqrt(CACHE.getPlayerCache().distanceSqToSelf(event.target()))), false)
-            .thumbnail(Proxy.getInstance().getAvatarURL(profile.getProfileId()).toString())
+            .thumbnail(Proxy.getInstance().getPlayerBodyURL(profile.getProfileId()).toString())
             .primaryColor();
         sendEmbedMessage(embed);
     }
@@ -973,7 +973,7 @@ public class NotificationEventListener {
             .addField("Command Type", event.command().isBlank() ? "None" : event.command(), false)
             .addField("Input", String.join(" ", event.input()), false)
             .addField("Executed", event.success() ? "Yes" : "No", false)
-            .thumbnail(Proxy.getInstance().getAvatarURL(event.sender().getProfileId()).toString());
+            .thumbnail(Proxy.getInstance().getPlayerBodyURL(event.sender().getProfileId()).toString());
         embed = event.success() ? embed.successColor() : embed.errorColor();
         sendEmbedMessage(embed);
     }
