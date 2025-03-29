@@ -462,7 +462,7 @@ public final class Config {
 
             public static final class CoordObfuscation {
                 // all offsets in chunk coords
-                public boolean enabled = true;
+                public boolean enabled = false;
                 public boolean validateSetup = true;
                 public ObfuscationMode mode = ObfuscationMode.RANDOM_OFFSET;
                 public boolean obfuscateBedrock = true;
