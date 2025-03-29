@@ -22,9 +22,12 @@ import net.dv8tion.jda.api.events.StatusChangeEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.session.*;
+import net.dv8tion.jda.api.exceptions.ErrorResponseException;
+import net.dv8tion.jda.api.exceptions.PermissionException;
 import net.dv8tion.jda.api.hooks.SimpleEventBusListener;
 import net.dv8tion.jda.api.interactions.components.ActionComponent;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import net.dv8tion.jda.api.requests.ErrorResponse;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.Color;
 import net.dv8tion.jda.api.utils.FileUpload;
@@ -141,7 +144,8 @@ public class DiscordBot {
     }
 
     public boolean isRunning() {
-        return getJdaStatus() != JDA.Status.SHUTDOWN;
+        var status = getJdaStatus();
+        return status != JDA.Status.SHUTDOWN && status != JDA.Status.FAILED_TO_LOGIN;
     }
 
     public JDA.Status getJdaStatus() {
@@ -218,9 +222,12 @@ public class DiscordBot {
         if (!isRunning()) return;
         try {
             mainChannel.getGuild().getSelfMember().modifyNickname(nick).complete();
-        } catch (final Exception e) {
+        } catch (PermissionException e) {
             DISCORD_LOG.warn("Failed updating bot's nickname. Check that the bot has correct permissions: {}", e.getMessage());
             DISCORD_LOG.debug("Failed updating bot's nickname. Check that the bot has correct permissions", e);
+        } catch (final Exception e) {
+            DISCORD_LOG.warn("Failed updating bot's nickname: {}", e.getMessage());
+            DISCORD_LOG.debug("Failed updating bot's nickname", e);
         }
     }
 
@@ -229,7 +236,7 @@ public class DiscordBot {
         try {
             jda.updateApplicationDescription(description).complete();
         } catch (final Exception e) {
-            DISCORD_LOG.warn("Failed updating bot's description. Check that the bot has correct permissions: {}", e.getMessage());
+            DISCORD_LOG.warn("Failed updating bot's description: {}", e.getMessage());
             DISCORD_LOG.debug("Failed updating bot's description", e);
         }
     }
@@ -358,9 +365,16 @@ public class DiscordBot {
         if (!isRunning()) return;
         try {
             jda.getSelfUser().getManager().setAvatar(Icon.from(imageBytes)).complete();
+        } catch (ErrorResponseException e) {
+            if (e.getErrorResponse() == ErrorResponse.INVALID_FORM_BODY) {
+                DISCORD_LOG.debug("Rate limited while updating discord profile image.", e);
+                return;
+            }
+            DISCORD_LOG.warn("Failed updating discord profile image: {}", e.getMessage());
+            DISCORD_LOG.debug("Failed updating discord profile image", e);
         } catch (final Exception e) {
-            DISCORD_LOG.warn("Failed updating discord profile image. Check that the bot has correct permissions: {}", e.getMessage());
-            DISCORD_LOG.debug("Failed updating discord profile image. Check that the bot has correct permissions", e);
+            DISCORD_LOG.warn("Failed updating discord profile image: {}", e.getMessage());
+            DISCORD_LOG.debug("Failed updating discord profile image", e);
         }
     }
 
