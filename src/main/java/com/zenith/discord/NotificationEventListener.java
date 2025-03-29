@@ -540,6 +540,7 @@ public class NotificationEventListener {
         try {
             String message = event.message();
             boolean customSenderFormatting = false;
+            Color color = Color.BLACK;
             if (!event.isDefaultMessageSchema()) {
                 if (Proxy.getInstance().isOn2b2t()) {
                     DISCORD_LOG.error("Received non-default schema chat message on 2b2t: {}", message);
@@ -547,6 +548,7 @@ public class NotificationEventListener {
             } else {
                 message = event.extractMessageDefaultSchema();
                 customSenderFormatting = true;
+                if (message.startsWith(">")) color = Color.MEDIUM_SEA_GREEN;
             }
             String ping = "";
             if (CONFIG.discord.chatRelay.mentionWhileConnected || isNull(Proxy.getInstance().getCurrentPlayer().get())) {
@@ -565,7 +567,7 @@ public class NotificationEventListener {
             var embed = Embed.builder()
                 .description(escape(message))
                 .footer("\u200b", avatarURL)
-                .color(event.message().startsWith(">") ? Color.MEDIUM_SEA_GREEN : Color.BLACK)
+                .color(color)
                 .timestamp(Instant.now());
             if (ping.isEmpty()) {
                 sendRelayEmbedMessage(embed);
