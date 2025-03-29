@@ -94,10 +94,10 @@ public class TerminalManager {
         var embed = commandContext.getEmbed();
         if (CONFIG.interactiveTerminal.logToDiscord && DISCORD.isRunning() && !commandContext.isSensitiveInput()) {
             CommandOutputHelper.logEmbedOutputToDiscord(embed);
-            CommandOutputHelper.logMultiLineOutputToDiscord(commandContext);
+            CommandOutputHelper.logMultiLineOutputToDiscord(commandContext.getMultiLineOutput());
         } else {
             CommandOutputHelper.logEmbedOutputToTerminal(embed);
-            CommandOutputHelper.logMultiLineOutputToTerminal(commandContext);
+            CommandOutputHelper.logMultiLineOutputToTerminal(commandContext.getMultiLineOutput());
         }
     }
 }

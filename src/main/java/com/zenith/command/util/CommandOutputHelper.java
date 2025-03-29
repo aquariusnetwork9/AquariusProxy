@@ -1,6 +1,6 @@
 package com.zenith.command.util;
 
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.Proxy;
 import com.zenith.command.brigadier.CommandSource;
 import com.zenith.discord.Embed;
 import com.zenith.feature.whitelist.PlayerList;
@@ -17,9 +17,9 @@ import static com.zenith.Shared.TERMINAL_LOG;
 
 @UtilityClass
 public class CommandOutputHelper {
-    public void logMultiLineOutputToDiscord(CommandContext commandContext) {
+    public void logMultiLineOutputToDiscord(List<String> multiLine) {
         if (DISCORD.isRunning()) {
-            commandContext.getMultiLineOutput().forEach(DISCORD::sendMessage);
+            multiLine.forEach(DISCORD::sendMessage);
         }
     }
 
@@ -42,8 +42,24 @@ public class CommandOutputHelper {
         session.sendAsync(new ClientboundSystemChatPacket(component, false));
     }
 
-    public void logMultiLineOutputToInGame(final CommandContext commandContext, final ServerSession session) {
-        commandContext.getMultiLineOutput().forEach(line -> session.sendAsync(new ClientboundSystemChatPacket(Component.text(line), false)));
+    public void logEmbedOutputToInGameAllConnectedPlayers(final Embed embed) {
+        var connections = Proxy.getInstance().getActiveConnections().getArray();
+        for (int i = 0; i < connections.length; i++) {
+            var connection = connections[i];
+            logEmbedOutputToInGame(embed, connection);
+        }
+    }
+
+    public void logMultiLineOutputToInGame(final List<String> multiLine, final ServerSession session) {
+        multiLine.forEach(line -> session.sendAsync(new ClientboundSystemChatPacket(Component.text(line), false)));
+    }
+
+    public void logMultiLineOutputToInGameAllConnectedPlayers(final List<String> multLine) {
+        var connections = Proxy.getInstance().getActiveConnections().getArray();
+        for (int i = 0; i < connections.length; i++) {
+            var connection = connections[i];
+            logMultiLineOutputToInGame(multLine, connection);
+        }
     }
 
     public void logEmbedOutputToTerminal(final Embed embed) {
@@ -56,8 +72,8 @@ public class CommandOutputHelper {
         return s.replace("\\_", "_");
     }
 
-    public void logMultiLineOutputToTerminal(CommandContext context) {
-        context.getMultiLineOutput().forEach(TERMINAL_LOG::info);
+    public void logMultiLineOutputToTerminal(List<String> multiLine) {
+        multiLine.forEach(TERMINAL_LOG::info);
     }
 
     public void logMultiLineOutput(final List<String> multiLineOutput) {

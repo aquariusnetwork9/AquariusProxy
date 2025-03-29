@@ -2,6 +2,8 @@ package com.zenith.module;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
+import com.zenith.command.util.CommandOutputHelper;
+import com.zenith.discord.Embed;
 import com.zenith.network.client.ClientSession;
 import com.zenith.network.registry.PacketHandlerCodec;
 import com.zenith.network.registry.ZenithHandlerCodec;
@@ -11,8 +13,7 @@ import org.geysermc.mcprotocollib.network.packet.Packet;
 import java.util.Collections;
 import java.util.List;
 
-import static com.zenith.Shared.EVENT_BUS;
-import static com.zenith.Shared.MODULE_LOG;
+import static com.zenith.Shared.*;
 
 /**
  * Module system base class.
@@ -187,5 +188,16 @@ public abstract class Module {
         var connection = Proxy.getInstance().getActivePlayer();
         if (connection == null) return;
         connection.sendAsyncAlert(moduleAlertPrefix + minedown);
+    }
+
+    // is also logged to the terminal
+    public void discordNotification(Embed embed) {
+        embed.title("[" + this.getClass().getSimpleName() + "] " + (embed.isTitlePresent() ? embed.title() : ""));
+        DISCORD.sendEmbedMessage(embed);
+    }
+
+    public void discordAndIngameNotification(Embed embed) {
+        discordNotification(embed);
+        CommandOutputHelper.logEmbedOutputToInGameAllConnectedPlayers(embed);
     }
 }

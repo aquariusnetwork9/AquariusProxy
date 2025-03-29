@@ -190,7 +190,7 @@ public class DiscordBot {
                 for (final String line : context.getMultiLineOutput()) {
                     mainChannel.sendMessage(line).queue();
                 }
-                CommandOutputHelper.logMultiLineOutputToTerminal(context);
+                CommandOutputHelper.logMultiLineOutputToTerminal(context.getMultiLineOutput());
             }
         } catch (final Exception e) {
             DISCORD_LOG.error("Failed processing discord command: {}", message, e);
