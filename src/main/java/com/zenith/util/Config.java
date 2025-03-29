@@ -58,7 +58,6 @@ public final class Config {
     }
 
     public static final class Client {
-        public final Extra extra = new Extra();
         public final Server server = new Server();
         public final ConnectionProxy connectionProxy = new ConnectionProxy();
         public int compressionLevel = -1;
@@ -71,6 +70,7 @@ public final class Config {
         public final ClientTimeout timeout = new ClientTimeout();
         public final Ping ping = new Ping();
         public final ChatSigning chatSigning = new ChatSigning();
+        public final Extra extra = new Extra();
 
         public static final class ChatSigning {
             public boolean enabled = true;
