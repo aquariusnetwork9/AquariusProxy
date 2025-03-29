@@ -240,6 +240,7 @@ public class NotificationEventListener {
             .title("Client Connected")
             .addField("Username", escape(event.clientGameProfile().getName()), false)
             .addField("MC Version", event.session().getMCVersion(), false)
+            .thumbnail(Proxy.getInstance().getPlayerBodyURL(event.clientGameProfile().getId()).toString())
             .primaryColor();
         if (CONFIG.discord.mentionOnClientConnected) {
             sendEmbedMessage(notificationMention(), embed);
@@ -254,6 +255,7 @@ public class NotificationEventListener {
             .title("Spectator Connected")
             .addField("Username", escape(event.clientGameProfile().getName()), false)
             .addField("MC Version", event.session().getMCVersion(), false)
+            .thumbnail(Proxy.getInstance().getPlayerBodyURL(event.clientGameProfile().getId()).toString())
             .primaryColor();
         if (CONFIG.discord.mentionOnSpectatorConnected) {
             sendEmbedMessage(notificationMention(), embed);
