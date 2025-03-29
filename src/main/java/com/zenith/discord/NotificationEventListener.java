@@ -1,5 +1,6 @@
 package com.zenith.discord;
 
+import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.zenith.Proxy;
 import com.zenith.event.module.*;
 import com.zenith.event.proxy.*;
@@ -23,6 +24,7 @@ import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.utils.Color;
+import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 
@@ -63,6 +65,7 @@ public class NotificationEventListener {
             of(SelfDeathMessageEvent.class, this::handleSelfDeathMessageEvent),
             of(HealthAutoDisconnectEvent.class, this::handleHealthAutoDisconnectEvent),
             of(ProxyClientConnectedEvent.class, this::handleProxyClientConnectedEvent),
+            of(ProxyClientConnectedEvent.class, this::handleProxyClientConnectedEventCheck2b2tMCVersionMatch),
             of(ProxySpectatorConnectedEvent.class, this::handleProxySpectatorConnectedEvent),
             of(ProxyClientDisconnectedEvent.class, this::handleProxyClientDisconnectedEvent),
             of(VisualRangeEnterEvent.class, this::handleVisualRangeEnterEvent),
@@ -269,6 +272,38 @@ public class NotificationEventListener {
         if (CONFIG.discord.mentionOnClientConnected) {
             sendEmbedMessage(notificationMention(), embed);
         } else {
+            sendEmbedMessage(embed);
+        }
+    }
+
+    public void handleProxyClientConnectedEventCheck2b2tMCVersionMatch(ProxyClientConnectedEvent event) {
+        if (!Proxy.getInstance().isOn2b2t() || !Proxy.getInstance().isConnected()) return;
+        var client = Proxy.getInstance().getClient();
+        if (client == null) return;
+        var clientProtocolVersion = client.getProtocolVersion();
+        var playerProtocolVersion = event.session().getProtocolVersion();
+        if (!clientProtocolVersion.equalTo(playerProtocolVersion)) {
+            var embed = Embed.builder()
+                .title("MC Version Mismatch")
+                .description("""
+                     **Client MC Version**: %s
+                     **ZenithProxy Client MC Version**: %s
+                     
+                     It is recommended to use the same MC version as the ZenithProxy client.
+                     
+                     Otherwise you may experience issues with 2b2t's anti-cheat, which changes its checks based on client MC version.
+                     """.formatted(playerProtocolVersion.getName(), clientProtocolVersion.getName()))
+                .errorColor();
+            var nativeZenithProtocolVersion = ProtocolVersion.getProtocol(MinecraftCodec.CODEC.getProtocolVersion());
+            if (nativeZenithProtocolVersion.equalTo(ProtocolVersion.v1_21) && playerProtocolVersion.equalTo(ProtocolVersion.v1_21_4)) {
+                embed.description(embed.description() + """
+                     Switch ZenithProxy to the 1.21.4 channel: `channel set <java/linux> 1.21.4`
+                     """);
+            } else {
+                embed.description(embed.description() + """
+                     To configure ZenithProxy's client ViaVersion: `via zenithToServer version <version>`
+                     """);
+            }
             sendEmbedMessage(embed);
         }
     }

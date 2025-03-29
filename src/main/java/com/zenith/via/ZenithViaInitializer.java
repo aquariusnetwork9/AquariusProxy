@@ -44,6 +44,7 @@ public class ZenithViaInitializer {
             UserConnectionImpl userConnection = new UserConnectionImpl(channel, true);
             new ProtocolPipelineImpl(userConnection);
             channel.pipeline().addBefore(TcpPacketCodec.ID, VLPipeline.VIA_CODEC_NAME, new ViaCodec(userConnection));
+            channel.attr(VIA_USER).set(userConnection);
         }
     }
 
