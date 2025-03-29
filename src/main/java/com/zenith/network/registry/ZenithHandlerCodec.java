@@ -52,6 +52,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.title.Clien
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.*;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClickPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClosePacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundSetCreativeModeSlotPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundAcceptTeleportationPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundMoveVehiclePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundTeleportToEntityPacket;
@@ -212,6 +213,7 @@ public final class ZenithHandlerCodec {
                 .registerPostOutbound(ServerboundContainerClickPacket.class, new PostOutgoingContainerClickHandler())
                 .registerPostOutbound(ServerboundPlayerActionPacket.class, new PostOutgoingPlayerActionHandler())
                 .registerPostOutbound(ServerboundClientInformationPacket.class, PostOutgoingClientInformationHandler.INSTANCE)
+                .registerPostOutbound(ServerboundSetCreativeModeSlotPacket.class, new PostOutgoingSetCreativeModeSlotHandler())
                 .build())
             .build();
 

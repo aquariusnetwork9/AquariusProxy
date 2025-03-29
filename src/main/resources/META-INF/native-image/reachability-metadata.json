@@ -1162,6 +1162,9 @@
       ]
     },
     {
+      "type": "com.viaversion.vialoader.netty.ViaCodec"
+    },
+    {
       "type": "com.viaversion.viaversion.api.minecraft.item.DataItem",
       "allDeclaredFields": true,
       "methods": [

@@ -7,6 +7,7 @@ import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerType;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClickPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundSetCreativeModeSlotPacket;
 import org.jspecify.annotations.Nullable;
 
 import static com.zenith.Shared.CACHE_LOG;
@@ -86,6 +87,11 @@ public class InventoryCache {
             return;
         }
         packet.getChangedSlots().forEach(container::setItemStack);
+    }
+
+    public void handleSetCreativeModeSlot(ServerboundSetCreativeModeSlotPacket packet) {
+        Container playerInventory = getPlayerInventory();
+        playerInventory.setItemStack(packet.getSlot(), packet.getClickedItem());
     }
 
     public synchronized void reset() {
