@@ -459,7 +459,7 @@ public class Proxy {
         for (int tries = 0; tries < 3; tries++) {
             minecraftProtocol = retrieveLoginTaskResult(loginTask());
             if (minecraftProtocol != null || !loggingIn.get()) break;
-            AUTH_LOG.warn("Failed login attempt " + (tries + 1));
+            AUTH_LOG.warn("Failed login attempt {}", tries + 1);
             Wait.wait((int) (3 + (Math.random() * 7.0)));
         }
         if (!loggingIn.compareAndSet(true, false)) throw new RuntimeException("Login Cancelled");
@@ -512,15 +512,24 @@ public class Proxy {
         }
     }
 
-    public URL getAvatarURL(UUID uuid) {
-        return getAvatarURL(uuid.toString().replace("-", ""));
+    public URL getPlayerHeadURL(UUID uuid) {
+        return getPlayerHeadURL(uuid.toString().replace("-", ""));
     }
 
-    public URL getAvatarURL(String playerName) {
+    public URL getPlayerHeadURL(String playerName) {
         try {
             return URI.create(String.format("https://minotar.net/helm/%s/64", playerName)).toURL();
         } catch (MalformedURLException e) {
-            SERVER_LOG.error("Failed to get avatar URL for player: {}", playerName, e);
+            SERVER_LOG.error("Failed to get player head URL for: {}", playerName, e);
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    public URL getPlayerBodyURL(UUID uuid) {
+        try {
+            return URI.create(String.format("https://api.mineatar.io/body/full/%s", uuid)).toURL();
+        } catch (MalformedURLException e) {
+            SERVER_LOG.error("Failed to get player body URL for: {}", uuid, e);
             throw new UncheckedIOException(e);
         }
     }

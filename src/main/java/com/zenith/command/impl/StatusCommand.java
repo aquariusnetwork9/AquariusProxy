@@ -107,7 +107,7 @@ public class StatusCommand extends Command {
                                     ? CONFIG.theme.inQueue.discord()
                                     : CONFIG.theme.success.discord())
                                : CONFIG.theme.error.discord())
-                    .thumbnail(Proxy.getInstance().getAvatarURL(CONFIG.authentication.username).toString())
+                    .thumbnail(getThumbnailImage())
                     .addField("AutoDisconnect", toggleStr(MODULE.get(AutoDisconnect.class).isEnabled()), true)
                     .addField("AutoReconnect", toggleStr(MODULE.get(AutoReconnect.class).isEnabled()), true)
                     .addField("KillAura", toggleStr(MODULE.get(KillAura.class).isEnabled()), true)
@@ -140,7 +140,7 @@ public class StatusCommand extends Command {
                         ? CONFIG.theme.inQueue.discord()
                         : CONFIG.theme.success.discord())
                                : CONFIG.theme.error.discord())
-                    .thumbnail(Proxy.getInstance().getAvatarURL(CONFIG.authentication.username).toString())
+                    .thumbnail(getThumbnailImage())
                     .addField("Status", getStatus(), true)
                     .addField("Connected Player", getCurrentClientUserName(), true)
                     .addField("Online For", getOnlineTime(), true)
@@ -166,5 +166,12 @@ public class StatusCommand extends Command {
                     .addField("AutoUpdate", toggleStr(LAUNCH_CONFIG.auto_update), true);
                  return OK;
             });
+    }
+
+    private static String getThumbnailImage() {
+        if (Proxy.getInstance().isConnected() && CACHE.getProfileCache().getProfile() != null) {
+
+        }
+        return Proxy.getInstance().getPlayerHeadURL(CONFIG.authentication.username).toString();
     }
 }

@@ -39,7 +39,7 @@ public class PlaytimeCommand extends Command {
                                              .title("Playtime")
                                              .addField("Player", playerName, true)
                                              .description(MathHelper.formatDurationLong(Duration.ofSeconds(response.playtimeSeconds())))
-                                             .thumbnail(Proxy.getInstance().getAvatarURL(playerName).toString())
+                                             .thumbnail(Proxy.getInstance().getPlayerHeadURL(playerName).toString())
                                              .primaryColor(),
                                      () -> c.getSource().getEmbed()
                                          .title(playerName + " not found")
