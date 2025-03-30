@@ -146,6 +146,10 @@ public class CoordObfuscator extends Module {
 
     public void onPlayerLoginEvent(final PlayerLoginEvent event) {
         try {
+            if (CACHE.getPlayerCache().isRespawning()) {
+                event.serverConnection().disconnect("Respawning...");
+                return;
+            }
             ServerSession serverConnection = event.serverConnection();
             var profile = serverConnection.getProfileCache().getProfile();
             var proxyProfile = CACHE.getProfileCache().getProfile();

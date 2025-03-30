@@ -101,8 +101,8 @@ public class CoordinateObfuscationCommand extends Command {
                 CONFIG.client.extra.coordObfuscation.constantOffsetZ = c.getArgument("zOffset", Integer.class);
                 return OK;
             }))))
-            .then(literal("constantOffsetNetherTranslate").then(argument("toggle", toggle()).executes(c -> {
-                CONFIG.client.extra.coordObfuscation.constantOffsetNetherTranslate = getToggle(c, "toggle");
+            .then(literal("constantOffsetNetherTranslate").then(argument("toggleArg", toggle()).executes(c -> {
+                CONFIG.client.extra.coordObfuscation.constantOffsetNetherTranslate = getToggle(c, "toggleArg");
                 return OK;
             })))
             .then(literal("constantOffsetMinSpawnDistance").then(argument("chunks", integer(0, 30000000)).executes(c -> {
@@ -114,8 +114,8 @@ public class CoordinateObfuscationCommand extends Command {
                 CONFIG.client.extra.coordObfuscation.atLocationZ = c.getArgument("z", Integer.class);
                 return OK;
             }))))
-            .then(literal("validateSetup").then(argument("toggle", toggle()).executes(c -> {
-                CONFIG.client.extra.coordObfuscation.validateSetup = getToggle(c, "toggle");
+            .then(literal("validateSetup").then(argument("toggleArg", toggle()).executes(c -> {
+                CONFIG.client.extra.coordObfuscation.validateSetup = getToggle(c, "toggleArg");
                 c.getSource().getEmbed()
                     .addField("Validate Setup", toggleStr(CONFIG.client.extra.coordObfuscation.validateSetup), false);
                 return OK;
@@ -125,6 +125,7 @@ public class CoordinateObfuscationCommand extends Command {
     @Override
     public void postPopulate(final Embed embed) {
         embed
+            .title("Coordinate Obfuscation")
             .addField("Coordinate Obfuscation", toggleStr(CONFIG.client.extra.coordObfuscation.enabled), false)
             .addField("Mode", CONFIG.client.extra.coordObfuscation.mode.name(), true)
             .addField("Available Modes", "`constant`, `random`, `atLocation`", true)
@@ -135,7 +136,8 @@ public class CoordinateObfuscationCommand extends Command {
             .addField("Constant Offset", CONFIG.client.extra.coordObfuscation.constantOffsetX + ", " + CONFIG.client.extra.coordObfuscation.constantOffsetZ, true)
             .addField("Constant Offset Nether Translate", toggleStr(CONFIG.client.extra.coordObfuscation.constantOffsetNetherTranslate), true)
             .addField("Constant Offset Minimum Spawn Distance", CONFIG.client.extra.coordObfuscation.constantOffsetMinSpawnDistance, true)
-            .addField("At Location", CONFIG.client.extra.coordObfuscation.atLocationX + ", " + CONFIG.client.extra.coordObfuscation.atLocationZ, true);
+            .addField("At Location", CONFIG.client.extra.coordObfuscation.atLocationX + ", " + CONFIG.client.extra.coordObfuscation.atLocationZ, true)
+            .primaryColor();
         MODULE.get(CoordObfuscator.class).onConfigChange();
     }
 }
