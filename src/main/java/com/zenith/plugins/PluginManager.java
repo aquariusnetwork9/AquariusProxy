@@ -8,6 +8,7 @@ import com.google.gson.GsonBuilder;
 import com.zenith.api.PluginInfo;
 import com.zenith.api.ZenithProxyPlugin;
 import com.zenith.event.proxy.PluginLoadFailureEvent;
+import com.zenith.event.proxy.PluginLoadedEvent;
 import com.zenith.util.ImageInfo;
 import lombok.SneakyThrows;
 
@@ -150,6 +151,7 @@ public class PluginManager {
                 pluginClassLoaders.remove(id);
                 throw new RuntimeException("Exception in plugin onLoad: + " + e.getMessage(), e);
             }
+            EVENT_BUS.postAsync(new PluginLoadedEvent(pluginInfo));
         } catch (Throwable e) {
             if (classLoader != null) {
                 try {

@@ -1,10 +1,13 @@
 package com.zenith.api;
 
+import org.jspecify.annotations.NullMarked;
+
 import java.util.List;
 
 /**
  * Data from each plugin's {@link Plugin} annotation.
  */
+@NullMarked
 public record PluginInfo(
     String entrypoint,
     String id,

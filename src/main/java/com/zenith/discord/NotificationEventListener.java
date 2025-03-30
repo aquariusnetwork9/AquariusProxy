@@ -99,6 +99,7 @@ public class NotificationEventListener {
             of(NoTotemsEvent.class, this::handleNoTotemsEvent),
             of(PrivateMessageSendEvent.class, this::handlePrivateMessageSendEvent),
             of(PluginLoadFailureEvent.class, this::handlePluginLoadFailure),
+            of(PluginLoadedEvent.class, this::handlePluginLoadedEvent),
             of(PrivateMessageSendEvent.class, this::handlePrivateMessageSendEvent),
             of(ChatControlExecuteEvent.class, this::handleChatControlExecuteEvent),
             of(SpawnPatrolTargetAcquiredEvent.class, this::handleSpawnPatrolTargetAcquiredEvent),
@@ -963,6 +964,18 @@ public class NotificationEventListener {
             .description("Error: " + escape(event.message()))
             .addField("Plugin ID", escape(id), false)
             .addField("Plugin Jar", escape(event.jarPath().getFileName().toString()), false);
+        sendEmbedMessage(embed);
+    }
+
+    private void handlePluginLoadedEvent(PluginLoadedEvent event) {
+        var embed = Embed.builder()
+            .title("Plugin Loaded")
+            .successColor()
+            .addField("ID", escape(event.pluginInfo().id()), false)
+            .addField("Description", escape(event.pluginInfo().description()))
+            .addField("Version", escape(event.pluginInfo().version()), false)
+            .addField("URL", escape(event.pluginInfo().url()), false)
+            .addField("Author(s)", String.join(", ", event.pluginInfo().authors()), false);
         sendEmbedMessage(embed);
     }
 
