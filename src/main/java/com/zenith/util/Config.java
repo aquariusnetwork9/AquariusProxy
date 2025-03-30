@@ -631,6 +631,7 @@ public final class Config {
         public boolean mentionRoleOnLoginFailed = false;
         public boolean clientConnectionMessages = true;
         public boolean mentionOnClientConnected = false;
+        public boolean mcVersionMismatchWarning = true;
         public boolean mentionOnSpectatorConnected = false;
         public boolean mentionOnClientDisconnected = false;
         public boolean mentionOnNonWhitelistedClientConnected = false;
