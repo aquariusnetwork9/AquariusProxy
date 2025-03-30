@@ -42,7 +42,8 @@ public class DiscordNotificationsCommand extends Command {
                 "clientDisconnect mention on/off",
                 "spectatorConnect mention on/off",
                 "spectatorDisconnect mention on/off",
-                "nonWhitelistedConnect mention on/off"
+                "nonWhitelistedConnect mention on/off",
+                "mcVersionMismatchWarning on/off"
             )
             .aliases(
                 "alerts",
@@ -150,7 +151,13 @@ public class DiscordNotificationsCommand extends Command {
                 c.getSource().getEmbed()
                     .title("Non Whitelisted Connect Mention " + toggleStrCaps(CONFIG.discord.mentionOnNonWhitelistedClientConnected));
                 return OK;
-            }))));
+            }))))
+            .then(literal("mcVersionMismatchWarning").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.discord.mcVersionMismatchWarning = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("MC Version Mismatch Warning " + toggleStrCaps(CONFIG.discord.mcVersionMismatchWarning));
+                return OK;
+            })));
     }
 
     @Override
@@ -171,7 +178,8 @@ public class DiscordNotificationsCommand extends Command {
             .addField("Client Disconnect Mention", toggleStr(CONFIG.discord.mentionOnClientDisconnected), false)
             .addField("Spectator Connect Mention", toggleStr(CONFIG.discord.mentionOnSpectatorConnected), false)
             .addField("Spectator Disconnect Mention", toggleStr(CONFIG.discord.mentionOnSpectatorDisconnected), false)
-            .addField("Non Whitelisted Connect Mention", toggleStr(CONFIG.discord.mentionOnNonWhitelistedClientConnected), false);
+            .addField("Non Whitelisted Connect Mention", toggleStr(CONFIG.discord.mentionOnNonWhitelistedClientConnected), false)
+            .addField("MC Version Mismatch Warning", toggleStr(CONFIG.discord.mcVersionMismatchWarning), false);
     }
 
     private String getRoleMention(final String roleId) {

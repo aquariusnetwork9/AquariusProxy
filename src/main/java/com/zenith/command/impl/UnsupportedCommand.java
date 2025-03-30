@@ -59,9 +59,9 @@ public class UnsupportedCommand extends Command {
                 return OK;
             })))
             .then(literal("allowOfflinePlayers").then(argument("toggle", toggle()).executes(c -> {
-                CONFIG.server.verifyUsers = getToggle(c, "toggle");
+                CONFIG.server.verifyUsers = !getToggle(c, "toggle");
                 c.getSource().getEmbed()
-                    .title("Allow Offline Players " + toggleStrCaps(CONFIG.server.verifyUsers));
+                    .title("Allow Offline Players " + toggleStrCaps(!CONFIG.server.verifyUsers));
                 return OK;
             })))
             .then(literal("auth")
@@ -87,7 +87,7 @@ public class UnsupportedCommand extends Command {
         builder
             .addField("Whitelist", toggleStr(CONFIG.server.extra.whitelist.enable))
             .addField("Spectator Whitelist", toggleStr(CONFIG.server.spectator.whitelistEnabled))
-            .addField("Allow Offline Players", toggleStr(CONFIG.server.verifyUsers))
+            .addField("Allow Offline Players", toggleStr(!CONFIG.server.verifyUsers))
             .addField("Offline Authentication", toggleStr(CONFIG.authentication.accountType == OFFLINE))
             .addField("Offline Username", escape(CONFIG.authentication.username))
             .primaryColor();

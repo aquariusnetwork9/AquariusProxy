@@ -277,6 +277,7 @@ public class NotificationEventListener {
     }
 
     public void handleProxyClientConnectedEventCheck2b2tMCVersionMatch(ProxyClientConnectedEvent event) {
+        if (!CONFIG.discord.mcVersionMismatchWarning) return;
         if (!Proxy.getInstance().isOn2b2t() || !Proxy.getInstance().isConnected()) return;
         var client = Proxy.getInstance().getClient();
         if (client == null) return;

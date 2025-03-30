@@ -1,10 +1,13 @@
 package com.zenith.database;
 
 import com.zenith.event.proxy.DatabaseTickEvent;
+import com.zenith.feature.world.World;
+import com.zenith.mc.dimension.DimensionRegistry;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.concurrent.TimeUnit;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
@@ -41,7 +44,26 @@ public class TimeDatabase extends LockingDatabase {
         );
     }
 
+    @Override
+    public boolean tryLock() {
+        if (World.getCurrentDimension().id() != DimensionRegistry.OVERWORLD.id()) return false;
+        return super.tryLock();
+    }
+
     private void handleDatabaseTick(DatabaseTickEvent event) {
+        if (World.getCurrentDimension().id() != DimensionRegistry.OVERWORLD.id()) {
+            if (lockAcquired.get()) {
+                try {
+                    lockExecutorService.submit(() -> {
+                        releaseLock();
+                        onLockReleased();
+                    }, true).get(5, TimeUnit.SECONDS);
+                } catch (final Exception e) {
+                    DATABASE_LOG.warn("Failed releasing lock", e);
+                }
+            }
+            return;
+        }
         var worldTimeData = CACHE.getChunkCache().getWorldTimeData();
         if (worldTimeData == null) return;
         // cached worldtime data is updated in-place
