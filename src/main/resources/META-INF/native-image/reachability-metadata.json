@@ -2808,7 +2808,13 @@
     },
     {
       "type": "com.zenith.util.Config$Plugins",
-      "allDeclaredFields": true
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "com.zenith.util.Config$Server",
@@ -2958,7 +2964,13 @@
     },
     {
       "type": "com.zenith.util.Config$Server$PlaytimeLimiter",
-      "allDeclaredFields": true
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "com.zenith.util.Config$Server$RateLimiter",
