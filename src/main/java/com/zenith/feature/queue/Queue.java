@@ -4,7 +4,6 @@ import com.zenith.feature.api.vcapi.VcApi;
 import com.zenith.feature.api.vcapi.model.QueueEtaEquationResponse;
 import com.zenith.feature.queue.mcping.MCPing;
 import com.zenith.feature.queue.mcping.data.MCResponse;
-import lombok.Getter;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -18,7 +17,6 @@ import java.util.regex.Pattern;
 import static com.zenith.Shared.*;
 
 public class Queue {
-    @Getter
     private static QueueStatus queueStatus = new QueueStatus(0, 0, 0);
     private static final Pattern digitPattern = Pattern.compile("\\d+");
     private volatile static Instant lastUpdate = Instant.EPOCH;
@@ -37,6 +35,13 @@ public class Queue {
             60,
             TimeUnit.MINUTES
         );
+    }
+
+    public static QueueStatus getQueueStatus() {
+        if (lastUpdate == Instant.EPOCH) {
+            updateQueueStatusNow();
+        }
+        return queueStatus;
     }
 
     public static void updateQueueStatus() {
@@ -58,6 +63,9 @@ public class Queue {
 
     // returns seconds until estimated queue completion time
     public static long getQueueWait(final Integer queuePos) {
+        if (lastQueueEtaEquationUpdate == Instant.EPOCH) {
+            updateQueueEtaEquation();
+        }
         return (long) (queueEtaEquation.factor() * (Math.pow(queuePos.doubleValue(), queueEtaEquation.pow())));
     }
 
