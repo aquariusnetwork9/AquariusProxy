@@ -4,6 +4,7 @@ import com.zenith.feature.api.vcapi.VcApi;
 import com.zenith.feature.api.vcapi.model.QueueEtaEquationResponse;
 import com.zenith.feature.queue.mcping.MCPing;
 import com.zenith.feature.queue.mcping.data.MCResponse;
+import lombok.Locked;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -51,6 +52,7 @@ public class Queue {
         updateQueueStatusNow();
     }
 
+    @Locked
     public static void updateQueueStatusNow() {
         if (lastUpdate.isAfter(Instant.now().minus(Duration.ofSeconds(5)))) return; // avoid getting rate limited by tcpshield
         lastUpdate = Instant.now();
@@ -123,6 +125,7 @@ public class Queue {
         }
     }
 
+    @Locked
     public static void updateQueueEtaEquation() {
         if (!CONFIG.server.dynamicQueueEtaEquation) return;
         if (lastQueueEtaEquationUpdate.isAfter(Instant.now().minus(Duration.ofHours(1)))) return;
