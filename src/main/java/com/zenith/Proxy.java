@@ -132,7 +132,6 @@ public class Proxy {
         }
         initEventHandlers();
         try {
-            if (CONFIG.plugins.enabled) PLUGIN_MANAGER.initialize();
             if (CONFIG.debug.clearOldLogs) EXECUTOR.schedule(Proxy::clearOldLogs, 10L, TimeUnit.SECONDS);
             if (CONFIG.interactiveTerminal.enable) TERMINAL.start();
             MODULE.init();
@@ -151,6 +150,7 @@ public class Proxy {
                 }
             }
             NotificationEventListener.INSTANCE.subscribeEvents();
+            if (CONFIG.plugins.enabled) PLUGIN_MANAGER.initialize();
             Queue.start();
             saveConfigAsync();
             MinecraftConstants.CHUNK_SECTION_COUNT_PROVIDER = CACHE.getSectionCountProvider();
