@@ -7,6 +7,8 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerSpawnInfo;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
 
+import static com.zenith.Shared.CACHE;
+
 public class COLoginHandler implements PacketHandler<ClientboundLoginPacket, ServerSession> {
     @Override
     public ClientboundLoginPacket apply(final ClientboundLoginPacket packet, final ServerSession session) {
@@ -18,7 +20,7 @@ public class COLoginHandler implements PacketHandler<ClientboundLoginPacket, Ser
         if (Proxy.getInstance().isOn2b2t())
             if (!Proxy.getInstance().getClient().isOnline()
                 || Proxy.getInstance().isInQueue()
-                || packet.getCommonPlayerSpawnInfo().getGameMode() == GameMode.SPECTATOR
+                || CACHE.getPlayerCache().getGameMode() == GameMode.SPECTATOR
             ) {
                 // prevent queue from leaking the offset
                 session.disconnect("Queueing");
