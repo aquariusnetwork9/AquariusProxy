@@ -1,31 +1,36 @@
 package com.zenith.feature.coordobf.handlers.inbound;
 
+import com.zenith.feature.world.World;
+import com.zenith.mc.dimension.DimensionRegistry;
+import com.zenith.module.impl.CoordObfuscator;
 import com.zenith.network.registry.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundUseItemOnPacket;
 
-import static com.zenith.Shared.CACHE;
 import static com.zenith.Shared.CONFIG;
+import static com.zenith.Shared.MODULE;
 
 public class COUseItemOnHandler implements PacketHandler<ServerboundUseItemOnPacket, ServerSession> {
     @Override
     public ServerboundUseItemOnPacket apply(final ServerboundUseItemOnPacket packet, final ServerSession session) {
         if (CONFIG.client.extra.coordObfuscation.obfuscateBedrock) {
-            int minY = CACHE.getChunkCache().getCurrentDimension().minY();
+            var dim = World.getCurrentDimension();
+            int minY = dim.minY();
             if (packet.getY() <= minY + 5) {
                 // cancel packet
                 return null;
             }
-            if (CACHE.getChunkCache().getCurrentDimension().name().contains("nether")) {
+            if (dim.id() == DimensionRegistry.THE_NETHER.id()) {
                 if (packet.getY() >= 123) {
                     return null;
                 }
             }
         }
+        CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
         return new ServerboundUseItemOnPacket(
-            session.getCoordOffset().reverseOffsetX(packet.getX()),
+            coordObf.getCoordOffset(session).reverseOffsetX(packet.getX()),
             packet.getY(),
-            session.getCoordOffset().reverseOffsetZ(packet.getZ()),
+            coordObf.getCoordOffset(session).reverseOffsetZ(packet.getZ()),
             packet.getFace(),
             packet.getHand(),
             packet.getCursorX(),

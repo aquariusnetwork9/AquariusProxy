@@ -1,6 +1,7 @@
 package com.zenith.feature.coordobf.handlers.outbound;
 
 import com.zenith.Proxy;
+import com.zenith.module.impl.CoordObfuscator;
 import com.zenith.network.registry.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
@@ -8,13 +9,15 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerSpawnIn
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
 
 import static com.zenith.Shared.CACHE;
+import static com.zenith.Shared.MODULE;
 
 public class COLoginHandler implements PacketHandler<ClientboundLoginPacket, ServerSession> {
     @Override
     public ClientboundLoginPacket apply(final ClientboundLoginPacket packet, final ServerSession session) {
+        var coordObf = MODULE.get(CoordObfuscator.class);
         if (session.isInGame()) {
             // i.e. velocity world switching
-            session.disconnect("World switching");
+            coordObf.disconnect(session, "World switching");
             return null;
         }
         if (Proxy.getInstance().isOn2b2t())
@@ -23,7 +26,7 @@ public class COLoginHandler implements PacketHandler<ClientboundLoginPacket, Ser
                 || CACHE.getPlayerCache().getGameMode() == GameMode.SPECTATOR
             ) {
                 // prevent queue from leaking the offset
-                session.disconnect("Queueing");
+                coordObf.disconnect(session, "Queueing");
                 return null;
             }
         return new ClientboundLoginPacket(

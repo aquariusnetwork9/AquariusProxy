@@ -12,6 +12,7 @@ import static com.zenith.Shared.CACHE;
 public class COUseItemHandler implements PacketHandler<ServerboundUseItemPacket, ServerSession> {
     @Override
     public ServerboundUseItemPacket apply(final ServerboundUseItemPacket packet, final ServerSession session) {
+        // todo: move this to action limiter
         int slot = 36;
         if (packet.getHand() == Hand.MAIN_HAND) {
             int heldItemSlot = CACHE.getPlayerCache().getHeldItemSlot();

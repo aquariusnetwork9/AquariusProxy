@@ -467,8 +467,7 @@ public final class Config {
                 public boolean exemptProxyAccount = false;
                 public ObfuscationMode mode = ObfuscationMode.RANDOM_OFFSET;
                 public boolean obfuscateBedrock = true;
-//                public boolean regenerateOnDistantTeleport = true;
-//                public int regenerateDistanceMin = 64; // minimum distance to regenerate coords at
+                public int teleportOffsetRegenerateDistanceMin = 64; // minimum distance to regenerate coords at
                 public int randomBound = 10000000; // maximum bound to randomize coords by
                 public int randomMinOffset = 100000; // minimum bound to randomize coords by
                 public int randomMinSpawnDistance = 100000; // min distance to spawn the coords are

@@ -16,18 +16,20 @@ public class COMovePlayerPosRotHandler implements PacketHandler<ServerboundMoveP
             if (session.isSpectator()) {
                 session.setInGame(true);
             } else {
-                if (packet.getX() == session.getCoordOffset().offsetX(CACHE.getPlayerCache().getX())
+                CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
+                if (packet.getX() == coordObf.getCoordOffset(session).offsetX(CACHE.getPlayerCache().getX())
                     && packet.getY() == CACHE.getPlayerCache().getY()
-                    && packet.getZ() == session.getCoordOffset().offsetZ(CACHE.getPlayerCache().getZ())) {
+                    && packet.getZ() == coordObf.getCoordOffset(session).offsetZ(CACHE.getPlayerCache().getZ())) {
                     session.setInGame(true);
                 } else {
-                    MODULE.get(CoordObfuscator.class).info("Received pos: {} {} {} but expected: {} {} {}",
+                    coordObf.info("Received {} pos: {} {} {} but expected: {} {} {}",
+                                    session.getProfileCache().getProfile().getName(),
                                     packet.getX(),
                                     packet.getY(),
                                     packet.getZ(),
-                                    session.getCoordOffset().offsetX(CACHE.getPlayerCache().getX()),
+                                    coordObf.getCoordOffset(session).offsetX(CACHE.getPlayerCache().getX()),
                                     CACHE.getPlayerCache().getY(),
-                                    session.getCoordOffset().offsetZ(CACHE.getPlayerCache().getZ()));
+                                    coordObf.getCoordOffset(session).offsetZ(CACHE.getPlayerCache().getZ()));
                     session.sendAsync(new ClientboundPlayerPositionPacket(
                         CACHE.getPlayerCache().getX(),
                         CACHE.getPlayerCache().getY(),
@@ -40,24 +42,26 @@ public class COMovePlayerPosRotHandler implements PacketHandler<ServerboundMoveP
                 }
             }
         }
-        CoordObfuscator coordObfuscator = MODULE.get(CoordObfuscator.class);
-        coordObfuscator.playerMovePos(session, session.getCoordOffset().reverseOffsetX(packet.getX()), session.getCoordOffset().reverseOffsetZ(packet.getZ()));
-        if (coordObfuscator.isNextPlayerMovePacketIsTeleport()) {
-            coordObfuscator.setNextPlayerMovePacketIsTeleport(false);
+        CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
+        double reverseOffsetX = coordObf.getCoordOffset(session).reverseOffsetX(packet.getX());
+        double reverseOffsetZ = coordObf.getCoordOffset(session).reverseOffsetZ(packet.getZ());
+        coordObf.playerMovePos(session, reverseOffsetX, reverseOffsetZ);
+        if (coordObf.isNextPlayerMovePacketIsTeleport()) {
+            coordObf.setNextPlayerMovePacketIsTeleport(false);
             return new ServerboundMovePlayerPosRotPacket(
                 packet.isOnGround(),
-                coordObfuscator.getServerTeleportPos().getX(),
-                coordObfuscator.getServerTeleportPos().getY(),
-                coordObfuscator.getServerTeleportPos().getZ(),
+                coordObf.getServerTeleportPos().getX(),
+                coordObf.getServerTeleportPos().getY(),
+                coordObf.getServerTeleportPos().getZ(),
                 packet.getYaw(),
                 packet.getPitch()
             );
         }
         return new ServerboundMovePlayerPosRotPacket(
             packet.isOnGround(),
-            session.getCoordOffset().reverseOffsetX(packet.getX()),
+            reverseOffsetX,
             packet.getY(),
-            session.getCoordOffset().reverseOffsetZ(packet.getZ()),
+            reverseOffsetZ,
             packet.getYaw(),
             packet.getPitch()
         );

@@ -10,11 +10,12 @@ import static com.zenith.Shared.MODULE;
 public class COCMoveVehicleHandler implements PacketHandler<ClientboundMoveVehiclePacket, ServerSession> {
     @Override
     public ClientboundMoveVehiclePacket apply(final ClientboundMoveVehiclePacket packet, final ServerSession session) {
-        MODULE.get(CoordObfuscator.class).playerMovePos(session, packet.getX(), packet.getZ());
+        CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
+        coordObf.playerMovePos(session, packet.getX(), packet.getZ());
         return new ClientboundMoveVehiclePacket(
-            session.getCoordOffset().offsetX(packet.getX()),
+            coordObf.getCoordOffset(session).offsetX(packet.getX()),
             packet.getY(),
-            session.getCoordOffset().offsetZ(packet.getZ()),
+            coordObf.getCoordOffset(session).offsetZ(packet.getZ()),
             packet.getYaw(),
             packet.getPitch()
         );

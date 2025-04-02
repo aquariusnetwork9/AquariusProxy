@@ -14,23 +14,23 @@ public class COMovePlayerPosHandler implements PacketHandler<ServerboundMovePlay
             return null;
         }
 
-        CoordObfuscator coordObfuscator = MODULE.get(CoordObfuscator.class);
-        coordObfuscator.playerMovePos(session, session.getCoordOffset().reverseOffsetX(packet.getX()), session.getCoordOffset().reverseOffsetZ(packet.getZ()));
-        if (coordObfuscator.isNextPlayerMovePacketIsTeleport()) {
-            coordObfuscator.setNextPlayerMovePacketIsTeleport(false);
-            MODULE.get(CoordObfuscator.class).info("Sending corrected teleport packet {} {} {}", coordObfuscator.getServerTeleportPos().getX(), coordObfuscator.getServerTeleportPos().getY(), coordObfuscator.getServerTeleportPos().getZ());
+        CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
+        coordObf.playerMovePos(session, coordObf.getCoordOffset(session).reverseOffsetX(packet.getX()), coordObf.getCoordOffset(session).reverseOffsetZ(packet.getZ()));
+        if (coordObf.isNextPlayerMovePacketIsTeleport()) {
+            coordObf.setNextPlayerMovePacketIsTeleport(false);
+            MODULE.get(CoordObfuscator.class).info("Sending corrected teleport packet {} {} {}", coordObf.getServerTeleportPos().getX(), coordObf.getServerTeleportPos().getY(), coordObf.getServerTeleportPos().getZ());
             return new ServerboundMovePlayerPosPacket(
                 packet.isOnGround(),
-                coordObfuscator.getServerTeleportPos().getX(),
-                coordObfuscator.getServerTeleportPos().getY(),
-                coordObfuscator.getServerTeleportPos().getZ()
+                coordObf.getServerTeleportPos().getX(),
+                coordObf.getServerTeleportPos().getY(),
+                coordObf.getServerTeleportPos().getZ()
             );
         }
         return new ServerboundMovePlayerPosPacket(
             packet.isOnGround(),
-            session.getCoordOffset().reverseOffsetX(packet.getX()),
+            coordObf.getCoordOffset(session).reverseOffsetX(packet.getX()),
             packet.getY(),
-            session.getCoordOffset().reverseOffsetZ(packet.getZ())
+            coordObf.getCoordOffset(session).reverseOffsetZ(packet.getZ())
         );
     }
 }

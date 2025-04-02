@@ -46,7 +46,6 @@ public class CoordinateObfuscationCommand extends Command {
             .usageLines(
                 "on/off",
                 "mode <mode>",
-                "regenOnTp on/off",
                 "regenOnTpMinDistance <blocks>",
                 "randomBound <chunks>",
                 "randomMinOffset <blocks>",
@@ -92,18 +91,14 @@ public class CoordinateObfuscationCommand extends Command {
                           CONFIG.client.extra.coordObfuscation.mode = ObfuscationMode.RANDOM_OFFSET;
                           return OK;
                       }))
-                      .then(literal("atlocation").executes(c -> {
+                      .then(literal("atLocation").executes(c -> {
                           CONFIG.client.extra.coordObfuscation.mode = ObfuscationMode.AT_LOCATION;
                           return OK;
                       })))
-//            .then(literal("regenOnTp").then(argument("toggle", toggle()).executes(c -> {
-//                CONFIG.client.extra.coordObfuscation.regenerateOnDistantTeleport = getToggle(c, "toggle");
-//                return OK;
-//            })))
-//            .then(literal("regenOnTpMinDistance").then(argument("blocks", integer(64)).executes(c -> {
-//                CONFIG.client.extra.coordObfuscation.regenerateDistanceMin = c.getArgument("blocks", Integer.class);
-//                return OK;
-//            })))
+            .then(literal("regenOnTpMinDistance").then(argument("blocks", integer(64)).executes(c -> {
+                CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin = c.getArgument("blocks", Integer.class);
+                return OK;
+            })))
             .then(literal("randomBound").then(argument("randomBound", integer(0, 1000000)).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.randomBound = c.getArgument("randomBound", Integer.class);
                 return OK;
@@ -152,18 +147,26 @@ public class CoordinateObfuscationCommand extends Command {
     public void postPopulate(final Embed embed) {
         embed
             .title("Coordinate Obfuscation")
-            .addField("Coordinate Obfuscation", toggleStr(CONFIG.client.extra.coordObfuscation.enabled), false)
-            .addField("Mode", CONFIG.client.extra.coordObfuscation.mode.name(), true)
-            .addField("Available Modes", "`constant`, `random`, `atLocation`", true)
-//            .addField("Regenerate On Teleport", toggleStr(CONFIG.client.extra.coordObfuscation.regenerateOnDistantTeleport), true)
-            .addField("Random Bound", CONFIG.client.extra.coordObfuscation.randomBound, true)
-            .addField("Random Minimum Offset", CONFIG.client.extra.coordObfuscation.randomMinOffset, true)
-            .addField("Random Minimum Spawn Distance", CONFIG.client.extra.coordObfuscation.randomMinSpawnDistance, true)
-            .addField("Constant Offset", CONFIG.client.extra.coordObfuscation.constantOffsetX + ", " + CONFIG.client.extra.coordObfuscation.constantOffsetZ, true)
-            .addField("Constant Offset Nether Translate", toggleStr(CONFIG.client.extra.coordObfuscation.constantOffsetNetherTranslate), true)
-            .addField("Constant Offset Minimum Spawn Distance", CONFIG.client.extra.coordObfuscation.constantOffsetMinSpawnDistance, true)
-            .addField("At Location", CONFIG.client.extra.coordObfuscation.atLocationX + ", " + CONFIG.client.extra.coordObfuscation.atLocationZ, true)
+            .addField("Coordinate Obfuscation", toggleStr(CONFIG.client.extra.coordObfuscation.enabled))
+            .addField("Mode", modeToString(CONFIG.client.extra.coordObfuscation.mode))
+            .addField("Available Modes", "`constant`, `random`, `atLocation`")
+            .addField("Regenerate on Teleport Min Distance", CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin)
+            .addField("Random Bound", CONFIG.client.extra.coordObfuscation.randomBound)
+            .addField("Random Minimum Offset", CONFIG.client.extra.coordObfuscation.randomMinOffset)
+            .addField("Random Minimum Spawn Distance", CONFIG.client.extra.coordObfuscation.randomMinSpawnDistance)
+            .addField("Constant Offset", CONFIG.client.extra.coordObfuscation.constantOffsetX + ", " + CONFIG.client.extra.coordObfuscation.constantOffsetZ)
+            .addField("Constant Offset Nether Translate", toggleStr(CONFIG.client.extra.coordObfuscation.constantOffsetNetherTranslate))
+            .addField("Constant Offset Minimum Spawn Distance", CONFIG.client.extra.coordObfuscation.constantOffsetMinSpawnDistance)
+            .addField("At Location", CONFIG.client.extra.coordObfuscation.atLocationX + ", " + CONFIG.client.extra.coordObfuscation.atLocationZ)
             .primaryColor();
         MODULE.get(CoordObfuscator.class).onConfigChange();
+    }
+
+    public String modeToString(ObfuscationMode mode) {
+        return switch (mode) {
+            case RANDOM_OFFSET -> "random";
+            case CONSTANT_OFFSET -> "constant";
+            case AT_LOCATION -> "atLocation";
+        };
     }
 }

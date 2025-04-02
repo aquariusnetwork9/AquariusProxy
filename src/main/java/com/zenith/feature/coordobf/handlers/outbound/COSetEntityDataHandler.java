@@ -4,6 +4,7 @@ import com.viaversion.nbt.mini.MNBT;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityStandard;
 import com.zenith.mc.item.ItemRegistry;
+import com.zenith.module.impl.CoordObfuscator;
 import com.zenith.network.registry.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import lombok.NonNull;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static com.zenith.Shared.CACHE;
+import static com.zenith.Shared.MODULE;
 
 public class COSetEntityDataHandler implements PacketHandler<ClientboundSetEntityDataPacket, ServerSession> {
     @Override
@@ -43,21 +45,22 @@ public class COSetEntityDataHandler implements PacketHandler<ClientboundSetEntit
                 }
             }
         }
+        CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
         List<EntityMetadata<?, ?>> modifiedMetadata = metadata.stream()
             .map(m -> {
                 if (m.getType() == MetadataTypes.POSITION) {
                     return new ObjectEntityMetadata<>(m.getId(),
                                                       MetadataTypes.POSITION,
-                                                      session.getCoordOffset().offsetVector((Vector3i) m.getValue()));
+                                                      coordObf.getCoordOffset(session).offsetVector((Vector3i) m.getValue()));
                 } else if (m.getType() == MetadataTypes.OPTIONAL_POSITION) {
                     return new ObjectEntityMetadata<>(m.getId(),
                                                       MetadataTypes.OPTIONAL_POSITION,
-                                                      ((Optional<Vector3i>) m.getValue()).map(p -> session.getCoordOffset()
+                                                      ((Optional<Vector3i>) m.getValue()).map(p -> coordObf.getCoordOffset(session)
                                                           .offsetVector(p)));
                 } else if (m.getType() == MetadataTypes.NBT_TAG) {
                     return new ObjectEntityMetadata<>(m.getId(),
                                                       MetadataTypes.NBT_TAG,
-                                                      session.getCoordOffset()
+                                                      coordObf.getCoordOffset(session)
                                                           .offsetNbt((MNBT) m.getValue()));
                 } else if (m.getType() == MetadataTypes.OPTIONAL_GLOBAL_POS) {
                     return new ObjectEntityMetadata<>(m.getId(),
@@ -66,10 +69,10 @@ public class COSetEntityDataHandler implements PacketHandler<ClientboundSetEntit
                                                           .map(globalPos ->
                                                                    new GlobalPos(
                                                                        globalPos.getDimension(),
-                                                                       session.getCoordOffset()
+                                                                       coordObf.getCoordOffset(session)
                                                                            .offsetX(globalPos.getX()),
                                                                        globalPos.getY(),
-                                                                       session.getCoordOffset()
+                                                                       coordObf.getCoordOffset(session)
                                                                            .offsetZ(globalPos.getZ())
                                                                    )
                                                           )

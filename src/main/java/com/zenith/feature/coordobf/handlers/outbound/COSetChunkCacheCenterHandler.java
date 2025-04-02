@@ -1,15 +1,19 @@
 package com.zenith.feature.coordobf.handlers.outbound;
 
+import com.zenith.module.impl.CoordObfuscator;
 import com.zenith.network.registry.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundSetChunkCacheCenterPacket;
 
+import static com.zenith.Shared.MODULE;
+
 public class COSetChunkCacheCenterHandler implements PacketHandler<ClientboundSetChunkCacheCenterPacket, ServerSession> {
     @Override
     public ClientboundSetChunkCacheCenterPacket apply(final ClientboundSetChunkCacheCenterPacket packet, final ServerSession session) {
+        CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
         return new ClientboundSetChunkCacheCenterPacket(
-                session.getCoordOffset().offsetChunkX(packet.getChunkX()),
-                session.getCoordOffset().offsetChunkZ(packet.getChunkZ())
+            coordObf.getCoordOffset(session).offsetChunkX(packet.getChunkX()),
+            coordObf.getCoordOffset(session).offsetChunkZ(packet.getChunkZ())
         );
     }
 }

@@ -9,7 +9,6 @@ import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityCache;
 import com.zenith.event.proxy.ProxyClientDisconnectedEvent;
 import com.zenith.event.proxy.ProxySpectatorDisconnectedEvent;
-import com.zenith.feature.coordobf.CoordOffset;
 import com.zenith.feature.ratelimiter.LoginRateLimiter;
 import com.zenith.feature.ratelimiter.PacketRateLimiter;
 import com.zenith.feature.spectator.SpectatorEntityRegistry;
@@ -122,8 +121,6 @@ public class ServerSession extends TcpServerSession {
     private static final Component suffix = Component.text("");
     private static final boolean friendlyFire = false;
     private static final boolean seeFriendlyInvisibles = false;
-    @Setter @Getter
-    private CoordOffset coordOffset = new CoordOffset(0, 0);
     protected boolean respawning = false;
     private final long connectionTimeEpochMs = Instant.now().toEpochMilli();
     @Getter(lazy = true) private final PacketRateLimiter packetRateLimiter = new PacketRateLimiter();

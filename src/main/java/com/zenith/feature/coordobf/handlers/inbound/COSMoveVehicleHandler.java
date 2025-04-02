@@ -10,14 +10,15 @@ import static com.zenith.Shared.MODULE;
 public class COSMoveVehicleHandler implements PacketHandler<ServerboundMoveVehiclePacket, ServerSession> {
     @Override
     public ServerboundMoveVehiclePacket apply(final ServerboundMoveVehiclePacket packet, final ServerSession session) {
-        MODULE.get(CoordObfuscator.class).playerMovePos(
+        CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
+        coordObf.playerMovePos(
             session,
-            session.getCoordOffset().reverseOffsetX(packet.getX()),
-            session.getCoordOffset().reverseOffsetZ(packet.getZ()));
+            coordObf.getCoordOffset(session).reverseOffsetX(packet.getX()),
+            coordObf.getCoordOffset(session).reverseOffsetZ(packet.getZ()));
         return new ServerboundMoveVehiclePacket(
-            session.getCoordOffset().reverseOffsetX(packet.getX()),
+            coordObf.getCoordOffset(session).reverseOffsetX(packet.getX()),
             packet.getY(),
-            session.getCoordOffset().reverseOffsetZ(packet.getZ()),
+            coordObf.getCoordOffset(session).reverseOffsetZ(packet.getZ()),
             packet.getYaw(),
             packet.getPitch()
         );
