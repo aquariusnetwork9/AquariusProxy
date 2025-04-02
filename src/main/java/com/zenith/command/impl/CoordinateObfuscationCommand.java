@@ -139,6 +139,12 @@ public class CoordinateObfuscationCommand extends Command {
                 c.getSource().getEmbed()
                     .addField("Validate Setup", toggleStr(CONFIG.client.extra.coordObfuscation.validateSetup), false);
                 return OK;
+            })))
+            .then(literal("exemptProxyAccount").then(argument("toggleArg", toggle()).executes(c -> {
+                CONFIG.client.extra.coordObfuscation.exemptProxyAccount = getToggle(c, "toggleArg");
+                c.getSource().getEmbed()
+                    .addField("Exempt Proxy Account", toggleStr(CONFIG.client.extra.coordObfuscation.exemptProxyAccount), false);
+                return OK;
             })));
     }
 

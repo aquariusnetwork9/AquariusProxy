@@ -153,7 +153,7 @@ public class CoordObfuscator extends Module {
             ServerSession serverConnection = event.serverConnection();
             var profile = serverConnection.getProfileCache().getProfile();
             var proxyProfile = CACHE.getProfileCache().getProfile();
-            if (profile != null && proxyProfile != null && profile.getId().equals(proxyProfile.getId())) {
+            if (CONFIG.client.extra.coordObfuscation.exemptProxyAccount && profile != null && proxyProfile != null && profile.getId().equals(proxyProfile.getId())) {
                 info("Disabled for session: {}", profile.getName());
                 return;
             }

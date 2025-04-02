@@ -464,6 +464,7 @@ public final class Config {
                 // all offsets in chunk coords
                 public boolean enabled = false;
                 public boolean validateSetup = true;
+                public boolean exemptProxyAccount = false;
                 public ObfuscationMode mode = ObfuscationMode.RANDOM_OFFSET;
                 public boolean obfuscateBedrock = true;
 //                public boolean regenerateOnDistantTeleport = true;
