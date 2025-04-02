@@ -36,7 +36,7 @@ public class COMovePlayerPosRotHandler implements PacketHandler<ServerboundMoveP
                         CACHE.getPlayerCache().getZ(),
                         CACHE.getPlayerCache().getYaw(),
                         CACHE.getPlayerCache().getPitch(),
-                        0
+                        session.getSpawnTeleportId()
                     ));
                     return null;
                 }

@@ -53,7 +53,7 @@ public final class SpectatorSync {
                 spectConnection.getSpectatorPlayerCache().getZ(),
                 spectConnection.getSpectatorPlayerCache().getYaw(),
                 spectConnection.getSpectatorPlayerCache().getPitch(),
-                12345
+                spectConnection.getSpawnTeleportId()
         ));
         spectConnection.setAllowSpectatorServerPlayerPosRotate(false);
         updateSpectatorPosition(spectConnection);
