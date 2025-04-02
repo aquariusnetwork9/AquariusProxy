@@ -14,6 +14,7 @@ import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.module.Module;
 import com.zenith.network.registry.PacketHandlerCodec;
 import com.zenith.network.registry.PacketHandlerStateCodec;
+import com.zenith.network.registry.ZenithHandlerCodec;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.Config.Client.Extra.CoordObfuscation.ObfuscationMode;
 import com.zenith.util.TickTimerManager;
@@ -37,6 +38,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.Serve
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundMoveVehiclePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundSignUpdatePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.*;
+import org.geysermc.mcprotocollib.protocol.packet.login.serverbound.ServerboundLoginAcknowledgedPacket;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -44,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
@@ -139,14 +142,30 @@ public class CoordObfuscator extends Module {
                 .build())
             .build();
     }
+    AtomicLong awaitLoginsUntil = new AtomicLong(0);
+    PacketHandlerCodec loginSlowDownPacketHandlerCodec = PacketHandlerCodec.serverBuilder()
+        .setId("coord-obf-rate-limit")
+        .setPriority(Integer.MAX_VALUE-1)
+        .state(ProtocolState.LOGIN, PacketHandlerStateCodec.serverBuilder()
+            .registerInbound(ServerboundLoginAcknowledgedPacket.class, (packet, session) -> {
+                if(Wait.waitUntil(() -> awaitLoginsUntil.get() < System.currentTimeMillis(), 5)) {
+                    return packet;
+                }
+                session.disconnect("[Coord Obfuscation] Login took too long");
+                return packet;
+            })
+            .build())
+        .build();
 
     @Override
     public void onEnable() {
         reconnectAllActiveConnections();
+        ZenithHandlerCodec.SERVER_REGISTRY.register(loginSlowDownPacketHandlerCodec);
     }
 
     @Override
     public void onDisable() {
+        ZenithHandlerCodec.SERVER_REGISTRY.unregister(loginSlowDownPacketHandlerCodec);
         reconnectAllActiveConnections();
         playerStateMap.clear();
     }
@@ -359,9 +378,7 @@ public class CoordObfuscator extends Module {
     }
 
     public void reconnect(ServerSession session) {
-        // todo: slow down the reconnect (as in their subsequent join) to help mitigate racey conditions
-        //  we could create a cache of sessions and a timer
-        //  or a global timer
+        awaitLoginsUntil.set(System.currentTimeMillis() + 1000);
         if (session.isSpectator()) {
             session.transferToSpectator();
         } else {
