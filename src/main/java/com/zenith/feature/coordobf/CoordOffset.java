@@ -182,11 +182,9 @@ public record CoordOffset(
         }
         if (itemStack.getDataComponents() != null) {
             Map<DataComponentType<?>, DataComponent<?, ?>> components = new HashMap<>(itemStack.getDataComponents().getDataComponents());
-            for (var entry : components.entrySet()) {
-                if (componentsToStrip.contains(entry.getKey())) {
-                    components.remove(entry.getKey());
-                }
-            }
+            components.entrySet()
+                .removeIf(entry ->
+                              componentsToStrip.contains(entry.getKey()));
 
             return new ItemStack(itemStack.getId(), itemStack.getAmount(), new DataComponents(components));
         }
