@@ -97,7 +97,6 @@ public class NotificationEventListener {
             of(ReplayStoppedEvent.class, this::handleReplayStoppedEvent),
             of(PlayerTotemPopAlertEvent.class, this::handleTotemPopEvent),
             of(NoTotemsEvent.class, this::handleNoTotemsEvent),
-            of(PrivateMessageSendEvent.class, this::handlePrivateMessageSendEvent),
             of(PluginLoadFailureEvent.class, this::handlePluginLoadFailure),
             of(PluginLoadedEvent.class, this::handlePluginLoadedEvent),
             of(PrivateMessageSendEvent.class, this::handlePrivateMessageSendEvent),
