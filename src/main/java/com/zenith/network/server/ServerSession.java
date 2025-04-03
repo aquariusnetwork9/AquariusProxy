@@ -401,7 +401,11 @@ public class ServerSession extends TcpServerSession {
     public void transfer(final String address, final int port) {
         LOGIN_RATE_LIMITER.reset(this);
         cookieCache.getStoreSrcPacket(this::send);
-        send(new ClientboundTransferPacket(address, port));
+        try {
+            send(new ClientboundTransferPacket(address, port)).get(1L, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            // fall through
+        }
         disconnect(Component.text("Transferring to " + address + ":" + port));
     }
 
