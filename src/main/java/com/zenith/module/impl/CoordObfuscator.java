@@ -298,16 +298,18 @@ public class CoordObfuscator extends Module {
     public void playerMovePos(final ServerSession session, final double x, final double z) {
         var state = getPlayerState(session);
         MutableVec3d pos = state.getPlayerPos();
-        if (MathHelper.distance2d(x, z, pos.getX(), pos.getZ()) > CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin) {
-            info("Reconnecting {} due to long distance movement", session.getProfileCache().getProfile().getName());
-            reconnect(session);
-            return;
-        }
-        var playerMoveDist = MathHelper.distance2d(x, z, CACHE.getPlayerCache().getX(), CACHE.getPlayerCache().getZ());
-        if (playerMoveDist > CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin) {
-            info("Reconnecting {} due to long distance movement", session.getProfileCache().getProfile().getName());
-            reconnect(session);
-            return;
+        if (!session.isSpectator()) {
+            if (MathHelper.distance2d(x, z, pos.getX(), pos.getZ()) > CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin) {
+                info("Reconnecting {} due to long distance movement", session.getProfileCache().getProfile().getName());
+                reconnect(session);
+                return;
+            }
+            var playerMoveDist = MathHelper.distance2d(x, z, CACHE.getPlayerCache().getX(), CACHE.getPlayerCache().getZ());
+            if (playerMoveDist > CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin) {
+                info("Reconnecting {} due to long distance movement", session.getProfileCache().getProfile().getName());
+                reconnect(session);
+                return;
+            }
         }
         pos.setX(x);
         pos.setZ(z);
