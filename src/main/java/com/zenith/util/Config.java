@@ -211,9 +211,9 @@ public final class Config {
             public static class SpawnPatrol {
                 public boolean enabled = false;
                 public boolean ignoreFriends = true;
-                public boolean targetOnlyNakeds = false;
-                public boolean targetAttackers = false;
-                public boolean stickyTargeting = false;
+                public boolean targetOnlyNakeds = true;
+                public boolean targetAttackers = true;
+                public boolean stickyTargeting = true;
                 public boolean nether = true;
                 public boolean stuckKill = true;
                 public int stuckKillSeconds = 60;
