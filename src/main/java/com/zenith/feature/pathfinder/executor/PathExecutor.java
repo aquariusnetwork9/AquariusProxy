@@ -94,7 +94,7 @@ public class PathExecutor {
                 // also don't check pathPosition+2 because reasons
                 if (((Movement) path.movements().get(i)).getValidPositions().contains(whereAmI)) {
                     if (i - pathPosition > 2) {
-                        PATH_LOG.info("Skipping forward {} steps, to {}", i - pathPosition, i);
+                        PATH_LOG.debug("Skipping forward {} steps, to {}", i - pathPosition, i);
                     }
                     //PATH_LOG.info("Double skip sundae");
                     pathPosition = i - 1;
@@ -107,9 +107,9 @@ public class PathExecutor {
         Pair<Double, BlockPos> status = closestPathPos(path);
         if (possiblyOffPath(status, MAX_DIST_FROM_PATH)) {
             ticksAway++;
-            PATH_LOG.info("FAR AWAY FROM PATH FOR {} TICKS. Current distance: {}. Threshold: " + MAX_DIST_FROM_PATH, ticksAway, status.left());
+            PATH_LOG.debug("FAR AWAY FROM PATH FOR {} TICKS. Current distance: {}. Threshold: " + MAX_DIST_FROM_PATH, ticksAway, status.left());
             if (ticksAway > MAX_TICKS_AWAY) {
-                PATH_LOG.info("Too far away from path for too long, cancelling path");
+                PATH_LOG.debug("Too far away from path for too long, cancelling path");
                 cancel();
                 return false;
             }
@@ -117,7 +117,7 @@ public class PathExecutor {
             ticksAway = 0;
         }
         if (possiblyOffPath(status, MAX_MAX_DIST_FROM_PATH)) { // ok, stop right away, we're way too far.
-            PATH_LOG.info("too far from path");
+            PATH_LOG.debug("too far from path");
             cancel();
             return false;
         }
@@ -158,7 +158,7 @@ public class PathExecutor {
         if (pathPosition < path.movements().size() - 1) {
             IMovement next = path.movements().get(pathPosition + 1);
             if (!BlockStateInterface.worldContainsLoadedChunk(next.getDest().x(), next.getDest().z())) {
-                PATH_LOG.info("Pausing since destination is at edge of loaded chunks");
+                PATH_LOG.debug("Pausing since destination is at edge of loaded chunks");
                 clearKeys();
                 return true;
             }
@@ -170,7 +170,7 @@ public class PathExecutor {
             currentMovementOriginalCostEstimate = movement.getCost();
             for (int i = 1; i < 5 && pathPosition + i < path.length() - 1; i++) {
                 if (((Movement) path.movements().get(pathPosition + i)).calculateCost(behavior.secretInternalGetCalculationContext()) >= ActionCosts.COST_INF && canCancel) {
-                    PATH_LOG.info("Something has changed in the world and a future movement has become impossible. Cancelling.");
+                    PATH_LOG.debug("Something has changed in the world and a future movement has become impossible. Cancelling.");
                     cancel();
                     return true;
                 }
@@ -178,25 +178,25 @@ public class PathExecutor {
         }
         double currentCost = movement.recalculateCost(behavior.secretInternalGetCalculationContext());
         if (currentCost >= ActionCosts.COST_INF && canCancel) {
-            PATH_LOG.info("Something has changed in the world and this movement has become impossible. Cancelling.");
+            PATH_LOG.debug("Something has changed in the world and this movement has become impossible. Cancelling.");
             cancel();
             return true;
         }
         if (!movement.calculatedWhileLoaded() && currentCost - currentMovementOriginalCostEstimate > 10 && canCancel) {
             // don't do this if the movement was calculated while loaded
             // that means that this isn't a cache error, it's just part of the path interfering with a later part
-            PATH_LOG.info("Original cost {} current cost {}. Cancelling.", currentMovementOriginalCostEstimate, currentCost);
+            PATH_LOG.debug("Original cost {} current cost {}. Cancelling.", currentMovementOriginalCostEstimate, currentCost);
             cancel();
             return true;
         }
         if (shouldPause()) {
-            PATH_LOG.info("Pausing since current best path is a backtrack");
+            PATH_LOG.debug("Pausing since current best path is a backtrack");
             clearKeys();
             return true;
         }
         MovementStatus movementStatus = movement.update();
         if (movementStatus == UNREACHABLE || movementStatus == FAILED) {
-            PATH_LOG.info("Movement returns status {}", movementStatus);
+            PATH_LOG.debug("Movement returns status {}", movementStatus);
             cancel();
             return true;
         }
@@ -614,7 +614,7 @@ public class PathExecutor {
             if (!newPath.getDest().equals(path.getDest())) {
                 throw new IllegalStateException();
             }
-            PATH_LOG.info("Discarding earliest segment movements, length cut from {} to {}", path.length(), newPath.length());
+            PATH_LOG.debug("Discarding earliest segment movements, length cut from {} to {}", path.length(), newPath.length());
             PathExecutor ret = new PathExecutor(behavior, newPath);
             ret.pathPosition = pathPosition - cutoffAmt;
             ret.currentMovementOriginalCostEstimate = currentMovementOriginalCostEstimate;

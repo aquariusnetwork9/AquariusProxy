@@ -43,10 +43,8 @@ import static com.zenith.Shared.*;
  *
  * todo:
  *  doors, fences, and gates opening interactions
- *  inventory behavior conflicting with existing modules - need a way to prioritize hotbar slot selections
  *  interface for dispatching pathing commands with configurations
  *      i.e. disallow block breaking for certain goals, allow long distance falling, etc
- *  Unify legacy "Pathing" class and Baritone
  *  Rethink the baritone "Process" system. is there a better abstraction for multi-step goals?
  */
 
@@ -195,10 +193,9 @@ public class Baritone {
             var req = InputRequest.builder()
                 .input(inputOverrideHandler.currentInput)
                 .priority(MOVEMENT_PRIORITY);
-            if (currentRotation.isPresent()) {
-                req.yaw(currentRotation.get().yaw())
-                    .pitch(currentRotation.get().pitch());
-            }
+            currentRotation.ifPresent(rotation -> req
+                .yaw(rotation.yaw())
+                .pitch(rotation.pitch()));
             INPUTS.submit(req.build());
         }
     }

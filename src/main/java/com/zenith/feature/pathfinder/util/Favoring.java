@@ -16,7 +16,7 @@ public class Favoring {
 //        for (Avoidance avoid : Avoidance.create(ctx)) {
 //            avoid.applySpherical(favorings);
 //        }
-        Shared.PATH_LOG.info("Favoring size: {}", favorings.size());
+        Shared.PATH_LOG.debug("Favoring size: {}", favorings.size());
     }
 
     public Favoring(IPath previous, CalculationContext context) { // create one just from previous path, no mob avoidances

@@ -135,7 +135,7 @@ public class PathingBehavior extends Behavior {
             if (current.failed() || current.finished()) {
                 current = null;
                 if (goal == null || goal.isInGoal(ctx.playerFeet())) {
-                    PATH_LOG.info("All done. At " + goal);
+                    PATH_LOG.info("All done. At {}", goal);
                     queuePathEvent(PathEvent.AT_GOAL);
                     next = null;
 //                    if (Baritone.settings().disconnectOnArrival.value) {
@@ -145,7 +145,7 @@ public class PathingBehavior extends Behavior {
                 }
                 if (next != null && !next.getPath().positions().contains(ctx.playerFeet()) && !next.getPath().positions().contains(expectedSegmentStart)) { // can contain either one
                     // if the current path failed, we may not actually be on the next one, so make sure
-                    PATH_LOG.info("Discarding next path as it does not contain current position");
+                    PATH_LOG.debug("Discarding next path as it does not contain current position");
                     // for example if we had a nicely planned ahead path that starts where current ends
                     // that's all fine and good
                     // but if we fail in the middle of current
@@ -155,7 +155,7 @@ public class PathingBehavior extends Behavior {
                     next = null;
                 }
                 if (next != null) {
-                    PATH_LOG.info("Continuing on to planned next path");
+                    PATH_LOG.debug("Continuing on to planned next path");
                     queuePathEvent(PathEvent.CONTINUING_ONTO_PLANNED_NEXT);
                     current = next;
                     next = null;
@@ -171,14 +171,14 @@ public class PathingBehavior extends Behavior {
                     }
                     // we aren't calculating
                     queuePathEvent(PathEvent.CALC_STARTED);
-                    findPathInNewThread(expectedSegmentStart, true, context);
+                    findPathInNewThread(expectedSegmentStart, context);
                 }
                 return;
             }
             // at this point, we know current is in progress
             if (safeToCancel && next != null && next.snipsnapifpossible()) {
                 // a movement just ended; jump directly onto the next path
-                PATH_LOG.info("Splicing into planned next path early...");
+                PATH_LOG.debug("Splicing into planned next path early...");
                 queuePathEvent(PathEvent.SPLICING_ONTO_NEXT_EARLY);
                 current = next;
                 next = null;
@@ -207,9 +207,9 @@ public class PathingBehavior extends Behavior {
                     // and this path has 7.5 seconds or less left
                     // don't include the current movement so a very long last movement (e.g. descend) doesn't trip it up
                     // if we actually included current, it wouldn't start planning ahead until the last movement was done, if the last movement took more than 7.5 seconds on its own
-                    PATH_LOG.info("Path almost over. Planning ahead...");
+                    PATH_LOG.debug("Path almost over. Planning ahead...");
                     queuePathEvent(PathEvent.NEXT_SEGMENT_CALC_STARTED);
-                    findPathInNewThread(current.getPath().getDest(), false, context);
+                    findPathInNewThread(current.getPath().getDest(), context);
                 }
             }
         }
@@ -238,7 +238,7 @@ public class PathingBehavior extends Behavior {
                     return false;
                 }
                 queuePathEvent(PathEvent.CALC_STARTED);
-                findPathInNewThread(expectedSegmentStart, true, context);
+                findPathInNewThread(expectedSegmentStart, context);
                 return true;
             }
         }
@@ -402,11 +402,8 @@ public class PathingBehavior extends Behavior {
 
     /**
      * In a new thread, pathfind to target blockpos
-     *
-     * @param start
-     * @param talkAboutIt
      */
-    private void findPathInNewThread(final BlockPos start, final boolean talkAboutIt, CalculationContext context) {
+    private void findPathInNewThread(final BlockPos start, CalculationContext context) {
         // this must be called with synchronization on pathCalcLock!
         // actually, we can check this, muahaha
         if (!Thread.holdsLock(pathCalcLock)) {
@@ -418,7 +415,7 @@ public class PathingBehavior extends Behavior {
         }
         Goal goal = this.goal;
         if (goal == null) {
-            PATH_LOG.info("no goal"); // TODO should this be an exception too? definitely should be checked by caller
+            PATH_LOG.debug("no goal"); // TODO should this be an exception too? definitely should be checked by caller
             return;
         }
         long primaryTimeout;
@@ -432,7 +429,7 @@ public class PathingBehavior extends Behavior {
         }
         AbstractNodeCostSearch pathfinder = createPathfinder(start, goal, current == null ? null : current.getPath(), context);
         if (!Objects.equals(pathfinder.getGoal(), goal)) { // will return the exact same object if simplification didn't happen
-            PATH_LOG.info("Simplifying {} to GoalXZ due to distance", goal.getClass());
+            PATH_LOG.debug("Simplifying {} to GoalXZ due to distance", goal.getClass());
         }
         inProgress = pathfinder;
         pathSearchFuture = Baritone.getExecutor().submit(() -> {
@@ -442,9 +439,8 @@ public class PathingBehavior extends Behavior {
                 } catch (InterruptedException ignored) {
                 }
             }
-            if (talkAboutIt) {
-                PATH_LOG.info("Starting to search for path from {} to {}", start, goal);
-            }
+
+            PATH_LOG.debug("Searching for path from {} to {}", start, goal);
 
             PathCalculationResult calcResult = pathfinder.calculate(primaryTimeout, failureTimeout);
             if (calcResult.getType() == PathCalculationResult.Type.FAILURE || calcResult.getType() == PathCalculationResult.Type.EXCEPTION) {
@@ -462,7 +458,7 @@ public class PathingBehavior extends Behavior {
                             current = executor.get();
                             resetEstimatedTicksToGoal(start);
                         } else {
-                            PATH_LOG.info("Warning: discarding orphan path segment with incorrect start");
+                            PATH_LOG.debug("Warning: discarding orphan path segment with incorrect start");
                         }
                     } else {
                         if (calcResult.getType() != PathCalculationResult.Type.CANCELLATION && calcResult.getType() != PathCalculationResult.Type.EXCEPTION) {
@@ -477,7 +473,7 @@ public class PathingBehavior extends Behavior {
                                 queuePathEvent(PathEvent.NEXT_SEGMENT_CALC_FINISHED);
                                 next = executor.get();
                             } else {
-                                PATH_LOG.info("Warning: discarding orphan next segment with incorrect start");
+                                PATH_LOG.debug("Warning: discarding orphan next segment with incorrect start");
                             }
                         } else {
                             queuePathEvent(PathEvent.NEXT_CALC_FAILED);
@@ -485,14 +481,14 @@ public class PathingBehavior extends Behavior {
                     } else {
                         //throw new IllegalStateException("I have no idea what to do with this path");
                         // no point in throwing an exception here, and it gets it stuck with inProgress being not null
-                        PATH_LOG.info("Warning: PathingBehaivor illegal state! Discarding invalid path!");
+                        PATH_LOG.debug("Warning: PathingBehaivor illegal state! Discarding invalid path!");
                     }
                 }
-                if (talkAboutIt && current != null && current.getPath() != null) {
+                if (current != null && current.getPath() != null) {
                     if (goal.isInGoal(current.getPath().getDest())) {
-                        PATH_LOG.info("Finished finding a path from " + start + " to " + goal + ". " + current.getPath().getNumNodesConsidered() + " nodes considered");
+                        PATH_LOG.debug("Finished finding a path from {} to {}. {} nodes considered", start, goal, current.getPath().getNumNodesConsidered());
                     } else {
-                        PATH_LOG.info("Found path segment from " + start + " towards " + goal + ". " + current.getPath().getNumNodesConsidered() + " nodes considered");
+                        PATH_LOG.debug("Found path segment from {} towards {}. {} nodes considered", start, goal, current.getPath().getNumNodesConsidered());
                     }
                 }
                 synchronized (pathCalcLock) {

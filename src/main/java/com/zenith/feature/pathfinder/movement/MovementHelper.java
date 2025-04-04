@@ -785,7 +785,7 @@ public final class MovementHelper {
             BlockPos against1 = placeAt.relative(HORIZONTALS_BUT_ALSO_DOWN_____SO_EVERY_DIRECTION_EXCEPT_UP[i]);
             if (MovementHelper.canPlaceAgainst(against1)) {
                 if (!Baritone.INSTANCE.getInventoryBehavior().selectThrowawayForLocation(false, placeAt.x(), placeAt.y(), placeAt.z())) { // get ready to place a throwaway block
-                    PATH_LOG.info("bb pls get me some blocks. dirt, netherrack, cobble");
+                    PATH_LOG.info("No throwaway blocks found in inventory :(");
                     state.setStatus(MovementStatus.UNREACHABLE);
                     return PlaceResult.NO_OPTION;
                 }

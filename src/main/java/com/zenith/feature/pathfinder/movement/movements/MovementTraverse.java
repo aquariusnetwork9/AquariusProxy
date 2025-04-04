@@ -225,9 +225,8 @@ public class MovementTraverse extends Movement {
         boolean isTheBridgeBlockThere = MovementHelper.canWalkOn(positionToPlace) || ladder || MovementHelper.canUseFrostWalker(ctx, positionToPlace);
         BlockPos feet = ctx.playerFeet();
         if (feet.y() != dest.y() && !ladder) {
-            PATH_LOG.info("Wrong Y coordinate");
+            PATH_LOG.debug("Wrong Y coordinate");
             if (feet.y() < dest.y()) {
-                PATH_LOG.info("In movement traverse");
                 return state.setInput(PathInput.JUMP, true);
             }
             return state;
@@ -282,7 +281,7 @@ public class MovementTraverse extends Movement {
             if ((p == PlaceResult.READY_TO_PLACE || dist1 < 0.6)) {
                 state.setInput(PathInput.SNEAK, true);
             }
-            PATH_LOG.info("PlaceResult: {}", p);
+            PATH_LOG.debug("PlaceResult: {}", p);
             switch (p) {
                 case READY_TO_PLACE: {
                     if (ctx.player().isSneaking()) {

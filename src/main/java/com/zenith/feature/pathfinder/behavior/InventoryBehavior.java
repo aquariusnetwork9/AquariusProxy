@@ -50,7 +50,7 @@ public class InventoryBehavior extends Behavior {
             requestSwapWithHotBar(pickIndex, 0);
         }
         if (lastTickRequestedMove != null) {
-            PATH_LOG.info("Remembering to move " + lastTickRequestedMove[0] + " " + lastTickRequestedMove[1] + " from a previous tick");
+            PATH_LOG.debug("Remembering to move " + lastTickRequestedMove[0] + " " + lastTickRequestedMove[1] + " from a previous tick");
             requestSwapWithHotBar(lastTickRequestedMove[0], lastTickRequestedMove[1]);
         }
     }
@@ -89,7 +89,7 @@ public class InventoryBehavior extends Behavior {
     private boolean requestSwapWithHotBar(int inInventory, int inHotbar) {
         lastTickRequestedMove = new int[]{inInventory, inHotbar};
         if (ticksSinceLastInventoryMove < 1) {// Baritone.settings().ticksBetweenInventoryMoves.value) {
-            PATH_LOG.info("Inventory move requested but delaying " + ticksSinceLastInventoryMove + " " + "1"); // Baritone.settings().ticksBetweenInventoryMoves.value);
+            PATH_LOG.debug("Inventory move requested but delaying " + ticksSinceLastInventoryMove + " " + "1"); // Baritone.settings().ticksBetweenInventoryMoves.value);
             return false;
         }
 //        if (Baritone.settings().inventoryMoveOnlyIfStationary.value && !baritone.getInventoryPauserProcess().stationaryForInventoryMove()) {

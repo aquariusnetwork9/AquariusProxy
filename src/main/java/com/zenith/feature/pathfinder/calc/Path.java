@@ -113,7 +113,7 @@ public class Path extends PathBase {
             }
         }
         // this is no longer called from bestPathSoFar, now it's in postprocessing
-        PATH_LOG.info("Movement became impossible during calculation {} {} {}", src, dest, dest.subtract(src));
+        PATH_LOG.debug("Movement became impossible during calculation {} {} {}", src, dest, dest.subtract(src));
         return null;
     }
 

@@ -72,7 +72,7 @@ public class AStarPathFinder extends AbstractNodeCostSearch {
             mostRecentConsidered = currentNode;
             numNodes++;
             if (goal.isInGoal(currentNode.x, currentNode.y, currentNode.z)) {
-                PATH_LOG.info("Took {}ms, {} movements considered", System.currentTimeMillis() - startTime, numMovementsConsidered);
+                PATH_LOG.info("Calculated path to goal in {}ms, {} movements considered", System.currentTimeMillis() - startTime, numMovementsConsidered);
                 return Optional.of(new Path(realStart, startNode, currentNode, numNodes, goal, calcContext));
             }
             for (int j = 0; j < allMoves.length; j++) {
@@ -147,12 +147,19 @@ public class AStarPathFinder extends AbstractNodeCostSearch {
         if (cancelRequested) {
             return Optional.empty();
         }
-        PATH_LOG.info("{} movements considered", numMovementsConsidered);
-        PATH_LOG.info("Open set size: {}", openSet.size());
-        PATH_LOG.info("PathNode map size: {}", mapSize());
-        PATH_LOG.info("{} nodes per second", (int) (numNodes * 1.0 / ((System.currentTimeMillis() - startTime) / 1000F)));
+        PATH_LOG.debug("{} movements considered", numMovementsConsidered);
+        PATH_LOG.debug("Open set size: {}", openSet.size());
+        PATH_LOG.debug("PathNode map size: {}", mapSize());
+        PATH_LOG.debug("{} nodes per second", (int) (numNodes * 1.0 / ((System.currentTimeMillis() - startTime) / 1000F)));
         Optional<IPath> result = bestSoFar(true, numNodes);
-        PATH_LOG.info("Took {}ms, {} movements considered", System.currentTimeMillis() - startTime, numMovementsConsidered);
+        if (result.isPresent()) {
+            PATH_LOG.info("Calculated path in {}ms, goes for: {} blocks, {} movements considered",
+                          System.currentTimeMillis() - startTime,
+                          String.format("%.2f", result.map(p -> p.getSrc().distance(p.getDest())).orElse(0.0)),
+                          numMovementsConsidered);
+        } else {
+            PATH_LOG.info("No path found in {}ms, {} movements considered", System.currentTimeMillis() - startTime, numMovementsConsidered);
+        }
 
         return result;
     }

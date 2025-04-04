@@ -87,15 +87,15 @@ public abstract class AbstractNodeCostSearch {
             int previousLength = path.length();
             path = path.cutoffAtLoadedChunks();
             if (path.length() < previousLength) {
-                PATH_LOG.info("Cutting off path at edge of loaded chunks");
-                PATH_LOG.info("Length decreased by " + (previousLength - path.length()));
+                PATH_LOG.debug("Cutting off path at edge of loaded chunks");
+                PATH_LOG.debug("Length decreased by " + (previousLength - path.length()));
             } else {
-                PATH_LOG.info("Path ends within loaded chunks");
+                PATH_LOG.debug("Path ends within loaded chunks");
             }
             previousLength = path.length();
             path = path.staticCutoff(goal);
             if (path.length() < previousLength) {
-                PATH_LOG.info("Static cutoff " + previousLength + " to " + path.length());
+                PATH_LOG.debug("Static cutoff " + previousLength + " to " + path.length());
             }
             if (goal.isInGoal(path.getDest())) {
                 return new PathCalculationResult(PathCalculationResult.Type.SUCCESS_TO_GOAL, path);
@@ -103,8 +103,7 @@ public abstract class AbstractNodeCostSearch {
                 return new PathCalculationResult(PathCalculationResult.Type.SUCCESS_SEGMENT, path);
             }
         } catch (Exception e) {
-            PATH_LOG.info("Pathing exception: " + e);
-            e.printStackTrace();
+            PATH_LOG.info("Pathing exception: ", e);
             return new PathCalculationResult(PathCalculationResult.Type.EXCEPTION);
         } finally {
             // this is run regardless of what exception may or may not be raised by calculate0
@@ -172,23 +171,13 @@ public abstract class AbstractNodeCostSearch {
                 bestDist = dist;
             }
             if (dist > MIN_DIST_PATH * MIN_DIST_PATH) { // square the comparison since distFromStartSq is squared
-                if (logInfo) {
-                    if (COEFFICIENTS[i] >= 3) {
-                        PATH_LOG.info("Warning: cost coefficient is greater than three! Probably means that");
-                        PATH_LOG.info("the path I found is pretty terrible (like sneak-bridging for dozens of blocks)");
-                        PATH_LOG.info("But I'm going to do it anyway, because yolo");
-                    }
-                    PATH_LOG.info("Path goes for {} blocks", Math.sqrt(dist));
-                    PATH_LOG.info("A* cost coefficient {}", COEFFICIENTS[i]);
-                }
                 return Optional.of(new Path(realStart, startNode, bestSoFar[i], numNodes, goal, context));
             }
         }
         // instead of returning bestSoFar[0], be less misleading
         // if it actually won't find any path, don't make them think it will by rendering a dark blue that will never actually happen
         if (logInfo) {
-            PATH_LOG.info("Even with a cost coefficient of {}, I couldn't get more than {} blocks", COEFFICIENTS[COEFFICIENTS.length - 1], Math.sqrt(bestDist));
-            PATH_LOG.info("No path found =(");
+            PATH_LOG.info("No path found, couldn't get more than {} blocks", Math.sqrt(bestDist));
         }
         return Optional.empty();
     }
