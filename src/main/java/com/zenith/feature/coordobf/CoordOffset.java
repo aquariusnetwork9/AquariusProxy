@@ -6,6 +6,7 @@ import com.viaversion.nbt.tag.CompoundTag;
 import com.viaversion.nbt.tag.IntTag;
 import com.viaversion.nbt.tag.ListTag;
 import com.viaversion.nbt.tag.Tag;
+import com.zenith.feature.world.World;
 import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
@@ -25,7 +26,8 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.Clien
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Shared.CONFIG;
+import static com.zenith.Shared.SERVER_LOG;
 
 /**
  * Important to deep copy all objects that are offset by this class
@@ -192,12 +194,12 @@ public record CoordOffset(
     }
 
     public boolean shouldAddBedrockLayerToChunkData() {
-        DimensionData currentDimension = CACHE.getChunkCache().getCurrentDimension();
-        return CONFIG.client.extra.coordObfuscation.obfuscateBedrock && currentDimension != null && currentDimension != DimensionRegistry.THE_END;
+        DimensionData currentDimension = World.getCurrentDimension();
+        return CONFIG.client.extra.coordObfuscation.obfuscateBedrock && currentDimension != DimensionRegistry.THE_END;
     }
     // all of this is terribly inefficient with memory copies but seems unavoidable if we apply this at the packet handler
     public ChunkSection[] addBedrockLayerToChunkData(final ClientboundLevelChunkWithLightPacket p) {
-        var currentDimension = CACHE.getChunkCache().getCurrentDimension();
+        var currentDimension = World.getCurrentDimension();
         // generally this will always be true unless we're serving chunks from cache
         // deep copy sections so we don't stomp on other sessions being sent this packet
         var sections = p.getSections();
@@ -212,7 +214,7 @@ public record CoordOffset(
                 }
             }
         }
-        if (currentDimension != null && currentDimension == DimensionRegistry.THE_NETHER) {
+        if (currentDimension.id() == DimensionRegistry.THE_NETHER.id()) {
             // set nether ceiling layers to bedrock
             ChunkSection topSection = new ChunkSection(sections[7]);
             sections[7] = topSection;
