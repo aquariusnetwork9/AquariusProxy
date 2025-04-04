@@ -40,9 +40,7 @@ public class ClientTickManager {
     }
 
     public void handleDisconnectEvent(final DisconnectEvent event) {
-        Proxy.getInstance().getClient().executeInEventLoop(() -> {
-            stopBotTicks();
-        });
+        stopBotTicks();
     }
 
     public void handleProxyClientConnectedEvent(final ProxyClientConnectedEvent event) {

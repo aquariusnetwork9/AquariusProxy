@@ -201,7 +201,7 @@ public class ClientSession extends TcpClientSession {
     }
 
     public void executeInEventLoop(Runnable runnable) {
-        if (eventLoop.inEventLoop()) {
+        if (eventLoop.inEventLoop() || eventLoop.isShuttingDown()) {
             runnable.run();
         } else {
             eventLoop.execute(runnable);

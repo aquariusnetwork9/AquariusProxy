@@ -176,8 +176,8 @@ public class CoordObfuscator extends Module {
     public ObfPlayerState getPlayerState(ServerSession session) {
         var state = playerStateMap.get(session);
         if (state == null) {
+            if (!session.isDisconnected()) error("Tried to get player state for {} but it was null", session.getProfileCache().getProfile().getName(), new Exception(""));
             disconnect(session, "Invalid state");
-            error("Tried to get player state for {} but it was null", session.getProfileCache().getProfile().getName(), new Exception(""));
             return new ObfPlayerState(session);
         }
         return state;
