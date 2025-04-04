@@ -16,6 +16,7 @@ import com.zenith.network.registry.PacketHandlerCodec;
 import com.zenith.network.registry.PacketHandlerStateCodec;
 import com.zenith.network.registry.ZenithHandlerCodec;
 import com.zenith.network.server.ServerSession;
+import com.zenith.util.ComponentSerializer;
 import com.zenith.util.Config.Client.Extra.CoordObfuscation.ObfuscationMode;
 import com.zenith.util.TickTimerManager;
 import com.zenith.util.Wait;
@@ -186,12 +187,17 @@ public class CoordObfuscator extends Module {
 
     public void onPlayerLoginEvent(final PlayerLoginEvent event) {
         try {
-            awaitNextClientTick(event.serverConnection());
-            if (event.serverConnection().isDisconnected()) return;
             if (!Proxy.getInstance().isConnected()) {
                 disconnect(event.serverConnection(), "Disconnected");
                 return;
             }
+            if (Proxy.getInstance().getClient().isInQueue() || !Proxy.getInstance().getClient().isOnline()) {
+                info("Disconnecting {} as we are in queue", event.serverConnection().getProfileCache().getProfile().getName());
+                disconnect(event.serverConnection(), "Queueing");
+                return;
+            }
+            awaitNextClientTick(event.serverConnection());
+            if (event.serverConnection().isDisconnected()) return;
             if (CACHE.getPlayerCache().isRespawning()) {
                 info("Reconnecting {} due to respawn in progress", event.serverConnection().getProfileCache().getProfile().getName());
                 reconnect(event.serverConnection());
@@ -340,6 +346,9 @@ public class CoordObfuscator extends Module {
                 if (clientEventLoop.isShuttingDown()) {
                     throw new RuntimeException("Client event loop is shutting down");
                 }
+                if (!client.isOnline()) { // client does not tick unless its online (not in queue)
+                    throw new RuntimeException("Client is not online");
+                }
                 clientEventLoop.submit(() -> {}).get();
                 if (TickTimerManager.INSTANCE.getTickTime() - tickTime > 1)
                     break;
@@ -408,7 +417,7 @@ public class CoordObfuscator extends Module {
     }
 
     public void disconnect(ServerSession session, String reason) {
-        session.disconnect("[Coordinate Obfuscation] " + reason);
+        session.disconnect(ComponentSerializer.minimessage("<red>[Coordinate Obfuscation]</red> <gray>" + reason));
     }
 
     public record ValidationResult(boolean valid, List<String> invalidReasons) {}

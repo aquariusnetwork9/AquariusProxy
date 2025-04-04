@@ -15,6 +15,7 @@ import com.zenith.feature.spectator.SpectatorEntityRegistry;
 import com.zenith.feature.spectator.entity.SpectatorEntity;
 import com.zenith.network.registry.ZenithHandlerCodec;
 import com.zenith.util.ComponentSerializer;
+import com.zenith.util.Wait;
 import io.netty.channel.ChannelException;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.DecoderException;
@@ -403,6 +404,8 @@ public class ServerSession extends TcpServerSession {
         cookieCache.getStoreSrcPacket(this::send);
         try {
             send(new ClientboundTransferPacket(address, port)).get(1L, TimeUnit.SECONDS);
+            // give them a fair shot to process the transfer as it needs to be done on the main thread
+            Wait.waitMs(100);
         } catch (Exception e) {
             // fall through
         }
