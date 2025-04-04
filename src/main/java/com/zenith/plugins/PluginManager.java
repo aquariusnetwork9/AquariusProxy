@@ -20,9 +20,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
@@ -68,16 +66,8 @@ public class PluginManager {
     }
 
     private void linuxChannelIncompatibilityWarning() {
-        int potentialPluginCount = 0;
-        if (!PLUGINS_PATH.toFile().exists()) return;
-        try (var stream = Files.walk(PLUGINS_PATH)) {
-            potentialPluginCount = (int) stream
-                .filter(Files::isRegularFile)
-                .filter(path -> path.toString().endsWith(".jar"))
-                .count();
-        } catch (Throwable e) {
-            PLUGIN_LOG.error("Error walking plugins directory", e);
-        }
+        var potentialJars = findPotentialPluginJars();
+        int potentialPluginCount = potentialJars.size();
         if (potentialPluginCount > 0) {
             PLUGIN_LOG.warn("""
                 Plugins are not supported on the `linux` release channel.
@@ -89,14 +79,29 @@ public class PluginManager {
     }
 
     private void loadPlugins() {
-        if (!PLUGINS_PATH.toFile().exists()) return;
+        var potentialPlugins = findPotentialPluginJars();
+        for (var jar : potentialPlugins) {
+            try {
+                loadPotentialPluginJar(jar);
+            } catch (Throwable e) {
+                PLUGIN_LOG.error("Error loading plugin jar: {}", jar, e);
+            }
+        }
+    }
+
+    private List<Path> findPotentialPluginJars() {
+        if (!PLUGINS_PATH.toFile().exists()) return Collections.emptyList();
+        final List<Path> list = new ArrayList<>();
         try (var jarStream = Files.newDirectoryStream(PLUGINS_PATH, p -> p.toFile().isFile() && p.toString().endsWith(".jar"))) {
             for (var jarPath : jarStream) {
-                loadPotentialPluginJar(jarPath);
+                list.add(jarPath);
             }
         } catch (Throwable e) {
             PLUGIN_LOG.error("Error loading plugins", e);
         }
+        // sort alphabetically by filename
+        list.sort(Comparator.comparing(p -> p.getFileName().toString()));
+        return list;
     }
 
     private void loadPotentialPluginJar(final Path jarPath) {
