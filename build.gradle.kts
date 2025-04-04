@@ -305,6 +305,7 @@ graalvmNative {
                 if (pgoInstrument != null) {
                     println("Instrumenting PGO")
                     buildArgs.add("--pgo-instrument")
+                    buildArgs.add("-R:ProfilesDumpFile=profile.iprof")
                 }
             }
             configurationFileDirectories.from(file("src/main/resources/META-INF/native-image"))
