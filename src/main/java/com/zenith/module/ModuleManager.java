@@ -28,7 +28,6 @@ public class ModuleManager {
             new AutoReply(),
             new AutoRespawn(),
             new AutoTotem(),
-            new ChatControl(),
             new ChatHistory(),
             new Click(),
             new CoordObfuscator(),

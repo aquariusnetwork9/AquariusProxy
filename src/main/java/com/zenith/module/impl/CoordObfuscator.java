@@ -433,10 +433,6 @@ public class CoordObfuscator extends Module {
             invalidReasons.add("In-game commands should be disabled, many commands leak coordinates in outputs and behavior");
             valid = false;
         }
-        if (CONFIG.client.extra.chatControl.enabled) {
-            invalidReasons.add("Chat Control should be disabled, many commands leak coordinates in outputs and behavior");
-            valid = false;
-        }
         if (!CONFIG.client.extra.actionLimiter.enabled) {
             invalidReasons.add("Action Limiter should be enabled to prevent long distance movement and respawning");
             valid = false;

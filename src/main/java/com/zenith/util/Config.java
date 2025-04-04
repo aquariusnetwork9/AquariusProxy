@@ -131,7 +131,6 @@ public final class Config {
             public final SessionTimeLimit sessionTimeLimit = new SessionTimeLimit();
             public final AutoOmen autoOmen = new AutoOmen();
             public final Pathfinder pathfinder = new Pathfinder();
-            public final ChatControl chatControl = new ChatControl();
             public final SpawnPatrol spawnPatrol = new SpawnPatrol();
             public final PearlLoader pearlLoader = new PearlLoader();
 
@@ -143,11 +142,6 @@ public final class Config {
                  * @param x  the position of the block we need to interact with to load the pearl
                  */
                 public record Pearl(String id, int x, int y, int z) { }
-            }
-
-            public static final class ChatControl {
-                public boolean enabled = false;
-                public final ArrayList<PlayerEntry> blacklist = new ArrayList<>();
             }
 
             public static final class Pathfinder {

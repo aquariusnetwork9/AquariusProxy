@@ -30,7 +30,6 @@ public class PlayerListsManager {
     private PlayerList friendsList;
     private PlayerList ignoreList;
     private PlayerList stalkList;
-    private PlayerList chatControlBlacklist;
     private PlayerList spawnPatrolIgnoreList;
     private ScheduledFuture<?> refreshScheduledFuture;
 
@@ -41,7 +40,6 @@ public class PlayerListsManager {
         friendsList = new PlayerList("friendsList", CONFIG.client.extra.friendsList);
         ignoreList = new PlayerList("ignoreList", CONFIG.client.extra.chat.ignoreList);
         stalkList = new PlayerList("stalkList", CONFIG.client.extra.stalk.stalking);
-        chatControlBlacklist = new PlayerList("chatControlBlacklist", CONFIG.client.extra.chatControl.blacklist);
         spawnPatrolIgnoreList = new PlayerList("spawnPatrolIgnoreList", CONFIG.client.extra.spawnPatrol.ignoreList);
         startRefreshTask();
     }

@@ -44,7 +44,6 @@ public class CommandManager {
         new AutoRespawnCommand(),
         new AutoTotemCommand(),
         new AutoUpdateCommand(),
-        new ChatControlCommand(),
         new ChatHistoryCommand(),
         new ChatRelayCommand(),
         new ClickCommand(),

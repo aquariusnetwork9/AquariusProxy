@@ -125,7 +125,6 @@ public class SpawnPatrol extends Module {
     }
 
     private void handleBotTick(ClientBotTick event) {
-        if (MODULE.get(ChatControl.class).isEnabled() && MODULE.get(ChatControl.class).hasController()) return;
         if (CONFIG.client.extra.spawnPatrol.kill && killTimer.tick(20L * CONFIG.client.extra.spawnPatrol.killSeconds) && !MODULE.get(KillAura.class).isActive()) {
             double dist = MathHelper.distance3d(lastX, lastY, lastZ, CACHE.getPlayerCache().getX(), CACHE.getPlayerCache().getY(), CACHE.getPlayerCache().getZ());
             if (dist < CONFIG.client.extra.spawnPatrol.killMinDist) {
@@ -210,7 +209,6 @@ public class SpawnPatrol extends Module {
 
     private void handlePlayerAttackedUs(PlayerAttackedUsEvent event) {
         if (!CONFIG.client.extra.spawnPatrol.spookStickyTarget || !CONFIG.client.extra.spawnPatrol.spookAttackers) return;
-        if (MODULE.get(ChatControl.class).isEnabled() && MODULE.get(ChatControl.class).hasController()) return;
         int currentTargetId = spookTarget;
         EntityPlayer newTarget = event.attacker();
         if (spookTarget == newTarget.getEntityId()) return;
