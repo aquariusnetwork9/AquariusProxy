@@ -32,23 +32,31 @@ public class ClientTickManager {
     }
 
     public void handlePlayerOnlineEvent(final PlayerOnlineEvent event) {
-        if (!Proxy.getInstance().hasActivePlayer()) {
-            startBotTicks();
-        }
+        Proxy.getInstance().getClient().executeInEventLoop(() -> {
+            if (!Proxy.getInstance().hasActivePlayer()) {
+                startBotTicks();
+            }
+        });
     }
 
     public void handleDisconnectEvent(final DisconnectEvent event) {
-        stopBotTicks();
+        Proxy.getInstance().getClient().executeInEventLoop(() -> {
+            stopBotTicks();
+        });
     }
 
     public void handleProxyClientConnectedEvent(final ProxyClientConnectedEvent event) {
-        stopBotTicks();
+        Proxy.getInstance().getClient().executeInEventLoop(() -> {
+            stopBotTicks();
+        });
     }
 
     public void handleProxyClientDisconnectedEvent(final ProxyClientDisconnectedEvent event) {
-        if (nonNull(Proxy.getInstance().getClient()) && Proxy.getInstance().getClient().isOnline()) {
-            startBotTicks();
-        }
+        Proxy.getInstance().getClient().executeInEventLoop(() -> {
+            if (nonNull(Proxy.getInstance().getClient()) && Proxy.getInstance().getClient().isOnline()) {
+                startBotTicks();
+            }
+        });
     }
 
     public synchronized void startClientTicks() {
