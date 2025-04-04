@@ -52,6 +52,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Shared.*;
 
+// todo: delay player logins until teleport queue is empty, there's some race condition on dimension switch transfers where a tp is lost
+// todo: better way to determine if we should replace bedrock layer in a dimension. dimension registry is not guaranteed to be sync'd to server's dim registry
 public class CoordObfuscator extends Module {
     private final Random random = new SecureRandom();
     private final Map<ServerSession, ObfPlayerState> playerStateMap = new ConcurrentHashMap<>();
@@ -438,15 +440,19 @@ public class CoordObfuscator extends Module {
             valid = false;
         }
         if (CONFIG.client.extra.actionLimiter.allowMovement) {
-            invalidReasons.add("Action Limiter `allowMovement` should be disabled to prevent long distance movement: `actionLimiter allowMovement off`");
+            invalidReasons.add("Action Limiter movement should be disabled to prevent long distance movement: `actionLimiter allowMovement off`");
             valid = false;
         }
         if (CONFIG.client.extra.actionLimiter.allowRespawn) {
-            invalidReasons.add("Action Limiter `allowRespawn` should be disabled to prevent respawning: `actionLimiter allowRespawn off`");
+            invalidReasons.add("Action Limiter respawns should be disabled to prevent respawning: `actionLimiter allowRespawn off`");
             valid = false;
         }
         if (CONFIG.client.extra.actionLimiter.allowChat) {
-            invalidReasons.add("Action Limiter `allowChat` should be disabled to prevent server commands like `/kill`: `actionLimiter allowChat off`");
+            invalidReasons.add("Action Limiter chat should be disabled to prevent you getting muted or AntiLeak interactions: `actionLimiter allowChat off`");
+            valid = false;
+        }
+        if (CONFIG.client.extra.actionLimiter.allowServerCommands) {
+            invalidReasons.add("Action Limiter server commands should be disabled to prevent `/kill` or whispers: `actionLimiter allowServerCommands off`");
             valid = false;
         }
 

@@ -42,7 +42,8 @@ public class ActionLimiterCommand extends Command {
                 "allowEnderChest on/off",
                 "allowUseItem on/off",
                 "allowBookSigning on/off",
-                "allowChat on/off"
+                "allowChat on/off",
+                "allowServerCommands on/off"
             )
             .aliases(
                 "al"
@@ -56,52 +57,43 @@ public class ActionLimiterCommand extends Command {
             .then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.actionLimiter.enabled = getToggle(c, "toggle");
                 MODULE.get(ActionLimiter.class).syncEnabledFromConfig();
-                return OK;
             }))
             .then(literal("allowMovement").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.actionLimiter.allowMovement = getToggle(c, "toggle");
-                return OK;
             })))
             .then(literal("movementDistance").then(argument("distance", integer(0)).executes(c -> {
                 CONFIG.client.extra.actionLimiter.movementDistance = getInteger(c, "distance");
-                return OK;
             })))
             .then(literal("movementHome").then(argument("x", integer()).then(argument("z", integer()).executes(c -> {
                 CONFIG.client.extra.actionLimiter.movementHomeX = getInteger(c, "x");
                 CONFIG.client.extra.actionLimiter.movementHomeZ = getInteger(c, "z");
-                return OK;
             }))))
             .then(literal("movementMinY").then(argument("y", integer(-64, 400)).executes(c -> {
                 CONFIG.client.extra.actionLimiter.movementMinY = getInteger(c, "y");
-                return OK;
             })))
             .then(literal("allowInventory").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.actionLimiter.allowInventory = getToggle(c, "toggle");
-                return OK;
             })))
             .then(literal("allowBlockBreaking").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.actionLimiter.allowBlockBreaking = getToggle(c, "toggle");
-                return OK;
             })))
             .then(literal("allowInteract").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.actionLimiter.allowInteract = getToggle(c, "toggle");
-                return OK;
             })))
             .then(literal("allowEnderChest").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.actionLimiter.allowEnderChest = getToggle(c, "toggle");
-                return OK;
             })))
             .then(literal("allowUseItem").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.actionLimiter.allowUseItem = getToggle(c, "toggle");
-                return OK;
             })))
             .then(literal("allowBookSigning").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.actionLimiter.allowBookSigning = getToggle(c, "toggle");
-                return OK;
             })))
             .then(literal("allowChat").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.actionLimiter.allowChat = getToggle(c, "toggle");
-                return OK;
+            })))
+            .then(literal("allowServerCommands").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.actionLimiter.allowServerCommands = getToggle(c, "toggle");
             })));
     }
 
@@ -109,18 +101,19 @@ public class ActionLimiterCommand extends Command {
     public void postPopulate(final Embed builder) {
         builder
             .title("Action Limiter")
-            .addField("Action Limiter", toggleStr(CONFIG.client.extra.actionLimiter.enabled), true)
-            .addField("Allow Movement", toggleStr(CONFIG.client.extra.actionLimiter.allowMovement), true)
-            .addField("Movement Distance", String.valueOf(CONFIG.client.extra.actionLimiter.movementDistance), true)
-            .addField("Movement Home", String.format("%d, %d", CONFIG.client.extra.actionLimiter.movementHomeX, CONFIG.client.extra.actionLimiter.movementHomeZ), true)
-            .addField("Movement Min Y", String.valueOf(CONFIG.client.extra.actionLimiter.movementMinY), true)
-            .addField("Allow Inventory", toggleStr(CONFIG.client.extra.actionLimiter.allowInventory), true)
-            .addField("Allow Block Breaking", toggleStr(CONFIG.client.extra.actionLimiter.allowBlockBreaking), true)
-            .addField("Allow Interact", toggleStr(CONFIG.client.extra.actionLimiter.allowInteract), true)
-            .addField("Allow Ender Chest", toggleStr(CONFIG.client.extra.actionLimiter.allowEnderChest), true)
-            .addField("Allow Use Item", toggleStr(CONFIG.client.extra.actionLimiter.allowUseItem), true)
-            .addField("Allow Book Signing", toggleStr(CONFIG.client.extra.actionLimiter.allowBookSigning), true)
-            .addField("Allow Chat", toggleStr(CONFIG.client.extra.actionLimiter.allowChat), true)
+            .addField("Action Limiter", toggleStr(CONFIG.client.extra.actionLimiter.enabled))
+            .addField("Allow Movement", toggleStr(CONFIG.client.extra.actionLimiter.allowMovement))
+            .addField("Movement Distance", String.valueOf(CONFIG.client.extra.actionLimiter.movementDistance))
+            .addField("Movement Home", String.format("%d, %d", CONFIG.client.extra.actionLimiter.movementHomeX, CONFIG.client.extra.actionLimiter.movementHomeZ))
+            .addField("Movement Min Y", String.valueOf(CONFIG.client.extra.actionLimiter.movementMinY))
+            .addField("Allow Inventory", toggleStr(CONFIG.client.extra.actionLimiter.allowInventory))
+            .addField("Allow Block Breaking", toggleStr(CONFIG.client.extra.actionLimiter.allowBlockBreaking))
+            .addField("Allow Interact", toggleStr(CONFIG.client.extra.actionLimiter.allowInteract))
+            .addField("Allow Ender Chest", toggleStr(CONFIG.client.extra.actionLimiter.allowEnderChest))
+            .addField("Allow Use Item", toggleStr(CONFIG.client.extra.actionLimiter.allowUseItem))
+            .addField("Allow Book Signing", toggleStr(CONFIG.client.extra.actionLimiter.allowBookSigning))
+            .addField("Allow Chat", toggleStr(CONFIG.client.extra.actionLimiter.allowChat))
+            .addField("Allow Server Commands", toggleStr(CONFIG.client.extra.actionLimiter.allowServerCommands))
             .primaryColor();
     }
 }

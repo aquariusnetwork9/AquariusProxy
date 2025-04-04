@@ -493,7 +493,8 @@ public final class Config {
                 public boolean allowUseItem = true;
                 public boolean allowBookSigning = true;
                 public boolean allowInteract = true;
-                public boolean allowChat = true; // outbound chats, including commands
+                public boolean allowChat = true; // outbound chats
+                public boolean allowServerCommands = true; // includes whispers
             }
         }
 
