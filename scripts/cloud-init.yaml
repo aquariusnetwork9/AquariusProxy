@@ -5,6 +5,10 @@ packages:
   - zsh
   - unzip
   - zip
+write_files:
+  - path: /root/.tmux.conf
+    content: |
+      set -g mouse on
 runcmd:
   - [runuser, -l, root, -c, 'chsh -s /usr/bin/zsh root']
   - 'cd /root && wget https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh && chmod +x install.sh'
