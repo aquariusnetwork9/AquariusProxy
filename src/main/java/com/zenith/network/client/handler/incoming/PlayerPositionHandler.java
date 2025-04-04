@@ -36,7 +36,9 @@ public class PlayerPositionHandler implements ClientEventLoopPacketHandler<Clien
         ServerSession currentPlayer = Proxy.getInstance().getCurrentPlayer().get();
         if (isNull(currentPlayer) || !currentPlayer.isLoggedIn()) {
             MODULE.get(PlayerSimulation.class).handlePlayerPosRotate(packet.getTeleportId());
-        } // else send to active player
+        } else {
+            CLIENT_LOG.debug("Passing teleport {} through to current player", packet.getTeleportId());
+        }
         Baritone.INSTANCE.onPlayerPosRotate();
         SpectatorSync.syncPlayerPositionWithSpectators();
         MODULE.get(AntiAFK.class).handlePlayerPosRotate();

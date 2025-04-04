@@ -52,7 +52,8 @@ public class ProxyServerLoginHandler {
                                 && nonNull(CACHE.getChunkCache().getCurrentDimension())
                                 && nonNull(CACHE.getChunkCache().getWorldName())
                                 && nonNull(CACHE.getTabListCache().get(CACHE.getProfileCache().getProfile().getId()))
-                                && connection.isWhitelistChecked(),
+                                && connection.isWhitelistChecked()
+                                && CACHE.getPlayerCache().getTeleportQueue().isEmpty(),
                             20)) {
             connection.disconnect("Client login timed out.");
             return;
