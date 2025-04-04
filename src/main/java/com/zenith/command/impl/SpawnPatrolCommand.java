@@ -28,17 +28,15 @@ public class SpawnPatrolCommand extends Command {
             """)
             .usageLines(
                 "on/off",
-                "random on/off",
-                "goal <x> <z>",
                 "goal <x> <y> <z>",
-                "spook on/off",
-                "spook onlyNakeds on/off",
-                "spook stickyTarget on/off",
-                "spook attackers on/off",
+                "targetOnlyNakeds on/off",
+                "stickyTargeting on/off",
+                "targetAttackers on/off",
                 "nether on/off",
-                "kill on/off",
-                "kill seconds <seconds>",
-                "kill minDist <blocks>",
+                "stuckKill on/off",
+                "stuckKill seconds <seconds>",
+                "stuckKill minDist <blocks>",
+                "stuckKill antiStuck on/off",
                 "ignore add/del <player>",
                 "ignore list"
             )
@@ -55,84 +53,62 @@ public class SpawnPatrolCommand extends Command {
                     .title("SpawnPatrol " + toggleStrCaps(CONFIG.client.extra.spawnPatrol.enabled));
                 return OK;
             }))
-            .then(literal("random").then(argument("toggle", toggle()).executes(c -> {
-                CONFIG.client.extra.spawnPatrol.random = getToggle(c, "toggle");
-                c.getSource().getEmbed()
-                    .title("Random " + toggleStrCaps(CONFIG.client.extra.spawnPatrol.random));
-                return OK;
-            })))
             .then(literal("goal")
-                      .then(argument("x", integer()).then(argument("z", integer()).executes(c -> {
-                          CONFIG.client.extra.spawnPatrol.goalX = getInteger(c, "x");
-                          CONFIG.client.extra.spawnPatrol.goalZ = getInteger(c, "z");
-                          CONFIG.client.extra.spawnPatrol.goalXZ = true;
-                          c.getSource().getEmbed()
-                              .title("Goal Set");
-                          return OK;
-                      })))
                       .then(argument("x", integer()).then(argument("y", integer(-64, 320)).then(argument("z", integer()).executes(c -> {
                           CONFIG.client.extra.spawnPatrol.goalX = getInteger(c, "x");
                           CONFIG.client.extra.spawnPatrol.goalY = getInteger(c, "y");
                           CONFIG.client.extra.spawnPatrol.goalZ = getInteger(c, "z");
-                          CONFIG.client.extra.spawnPatrol.goalXZ = false;
                           c.getSource().getEmbed()
                               .title("Goal Set");
                           return OK;
                       })))))
-            .then(literal("spook")
-                      .then(argument("toggle", toggle()).executes(c -> {
-                          CONFIG.client.extra.spawnPatrol.spook = getToggle(c, "toggle");
-                          c.getSource().getEmbed()
-                              .title("Spook " + toggleStrCaps(CONFIG.client.extra.spawnPatrol.spook));
-                          return OK;
-                      }))
-                      .then(literal("onlyNakeds").then(argument("toggle", toggle()).executes(c -> {
-                          CONFIG.client.extra.spawnPatrol.spookOnlyNakeds = getToggle(c, "toggle");
-                          c.getSource().getEmbed()
-                              .title("Spook Only Nakeds " + toggleStrCaps(CONFIG.client.extra.spawnPatrol.spookOnlyNakeds));
-                          return OK;
-                      })))
-                      .then(literal("stickyTarget").then(argument("toggle", toggle()).executes(c -> {
-                          CONFIG.client.extra.spawnPatrol.spookStickyTarget = getToggle(c, "toggle");
-                          c.getSource().getEmbed()
-                              .title("Spook Sticky Target " + toggleStrCaps(CONFIG.client.extra.spawnPatrol.spookStickyTarget));
-                          return OK;
-                      })))
-                      .then(literal("attackers").then(argument("toggle", toggle()).executes(c -> {
-                          CONFIG.client.extra.spawnPatrol.spookAttackers = getToggle(c, "toggle");
-                          c.getSource().getEmbed()
-                              .title("Spook Attackers " + toggleStrCaps(CONFIG.client.extra.spawnPatrol.spookAttackers));
-                          return OK;
-                      }))))
+            .then(literal("targetOnlyNakeds").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.spawnPatrol.targetOnlyNakeds = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("Target Only Nakeds " + toggleStrCaps(CONFIG.client.extra.spawnPatrol.targetOnlyNakeds));
+                return OK;
+            })))
+            .then(literal("stickyTargeting").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.spawnPatrol.stickyTargeting = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("Sticky Targeting " + toggleStrCaps(CONFIG.client.extra.spawnPatrol.stickyTargeting));
+                return OK;
+            })))
+            .then(literal("targetAttackers").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.spawnPatrol.targetAttackers = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("Target Attackers " + toggleStrCaps(CONFIG.client.extra.spawnPatrol.targetAttackers));
+                return OK;
+            })))
             .then(literal("nether").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.spawnPatrol.nether = getToggle(c, "toggle");
                 c.getSource().getEmbed()
                     .title("Nether " + toggleStrCaps(CONFIG.client.extra.spawnPatrol.nether));
                 return OK;
             })))
-            .then(literal("kill")
+            .then(literal("stuckKill")
                       .then(argument("toggle", toggle()).executes(c -> {
-                            CONFIG.client.extra.spawnPatrol.kill = getToggle(c, "toggle");
+                            CONFIG.client.extra.spawnPatrol.stuckKill = getToggle(c, "toggle");
                             c.getSource().getEmbed()
-                                .title("/kill " + toggleStrCaps(CONFIG.client.extra.spawnPatrol.kill));
+                                .title("Stuck /kill " + toggleStrCaps(CONFIG.client.extra.spawnPatrol.stuckKill));
                             return OK;
                       }))
                       .then(literal("seconds").then(argument("seconds", integer()).executes(c -> {
-                            CONFIG.client.extra.spawnPatrol.killSeconds = getInteger(c, "seconds");
+                            CONFIG.client.extra.spawnPatrol.stuckKillSeconds = getInteger(c, "seconds");
                             c.getSource().getEmbed()
-                                .title("/kill Seconds Set");
+                                .title("Stuck /kill Seconds Set");
                             return OK;
                       })))
                       .then(literal("minDist").then(argument("blocks", integer()).executes(c -> {
-                          CONFIG.client.extra.spawnPatrol.killMinDist = getInteger(c, "blocks");
+                          CONFIG.client.extra.spawnPatrol.stuckKillMinDist = getInteger(c, "blocks");
                           c.getSource().getEmbed()
-                              .title("/kill MinDist Set");
+                              .title("Stuck /kill MinDist Set");
                           return OK;
                       })))
                       .then(literal("antiStuck").then(argument("toggle", toggle()).executes(c -> {
-                          CONFIG.client.extra.spawnPatrol.killAntiStuck = getToggle(c, "toggle");
+                          CONFIG.client.extra.spawnPatrol.stuckKillAntiStuck = getToggle(c, "toggle");
                           c.getSource().getEmbed()
-                              .title("/kill AntiStuck " + toggleStrCaps(CONFIG.client.extra.spawnPatrol.killAntiStuck));
+                              .title("Stuck /kill AntiStuck " + toggleStrCaps(CONFIG.client.extra.spawnPatrol.stuckKillAntiStuck));
                           return OK;
                       })))
             )
@@ -169,20 +145,15 @@ public class SpawnPatrolCommand extends Command {
     public void postPopulate(Embed embed) {
         embed
             .addField("SpawnPatrol", toggleStr(CONFIG.client.extra.spawnPatrol.enabled), false)
-            .addField("Random", toggleStr(CONFIG.client.extra.spawnPatrol.random), false)
-            .addField("Goal", CONFIG.client.extra.spawnPatrol.goalX
-                + ", "
-                + (CONFIG.client.extra.spawnPatrol.goalXZ ? "" : CONFIG.client.extra.spawnPatrol.goalY + ", ")
-                + CONFIG.client.extra.spawnPatrol.goalZ, false)
-            .addField("Spook", toggleStr(CONFIG.client.extra.spawnPatrol.spook), false)
-            .addField("Spook Only Nakeds", toggleStr(CONFIG.client.extra.spawnPatrol.spookOnlyNakeds), false)
-            .addField("Spook Sticky Target", toggleStr(CONFIG.client.extra.spawnPatrol.spookStickyTarget), false)
-            .addField("Spook Attackers", toggleStr(CONFIG.client.extra.spawnPatrol.spookAttackers), false)
+            .addField("Goal", CONFIG.client.extra.spawnPatrol.goalX + ", " + CONFIG.client.extra.spawnPatrol.goalY + ", " + CONFIG.client.extra.spawnPatrol.goalZ, false)
+            .addField("Target Only Nakeds", toggleStr(CONFIG.client.extra.spawnPatrol.targetOnlyNakeds), false)
+            .addField("Sticky Targeting", toggleStr(CONFIG.client.extra.spawnPatrol.stickyTargeting), false)
+            .addField("Target Attackers", toggleStr(CONFIG.client.extra.spawnPatrol.targetAttackers), false)
             .addField("Nether", toggleStr(CONFIG.client.extra.spawnPatrol.nether), false)
-            .addField("Kill", toggleStr(CONFIG.client.extra.spawnPatrol.kill), false)
-            .addField("Kill Seconds", CONFIG.client.extra.spawnPatrol.killSeconds, false)
-            .addField("Kill MinDist", CONFIG.client.extra.spawnPatrol.killMinDist, false)
-            .addField("Kill AntiStuck", toggleStr(CONFIG.client.extra.spawnPatrol.killAntiStuck), false)
+            .addField("Stuck Kill", toggleStr(CONFIG.client.extra.spawnPatrol.stuckKill), false)
+            .addField("Stuck Kill Seconds", CONFIG.client.extra.spawnPatrol.stuckKillSeconds, false)
+            .addField("Stuck Kill MinDist", CONFIG.client.extra.spawnPatrol.stuckKillMinDist, false)
+            .addField("Stuck Kill AntiStuck", toggleStr(CONFIG.client.extra.spawnPatrol.stuckKillAntiStuck), false)
             .primaryColor();
     }
 }

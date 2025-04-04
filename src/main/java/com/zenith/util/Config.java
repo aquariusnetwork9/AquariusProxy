@@ -210,21 +210,18 @@ public final class Config {
 
             public static class SpawnPatrol {
                 public boolean enabled = false;
-                public boolean random = false;
-                public boolean spook = true;
-                public boolean spookIgnoreFriends = true;
-                public boolean spookOnlyNakeds = false;
-                public boolean spookAttackers = false;
-                public boolean spookStickyTarget = false;
+                public boolean ignoreFriends = true;
+                public boolean targetOnlyNakeds = false;
+                public boolean targetAttackers = false;
+                public boolean stickyTargeting = false;
                 public boolean nether = true;
-                public boolean kill = true;
-                public int killSeconds = 60;
-                public int killMinDist = 10;
-                public boolean killAntiStuck = true;
+                public boolean stuckKill = true;
+                public int stuckKillSeconds = 60;
+                public int stuckKillMinDist = 10;
+                public boolean stuckKillAntiStuck = true;
                 public int goalX = 0;
-                public int goalZ = 0;
-                public boolean goalXZ = true;
                 public int goalY = 120;
+                public int goalZ = 0;
                 public final ArrayList<PlayerEntry> ignoreList = new ArrayList<>();
             }
 

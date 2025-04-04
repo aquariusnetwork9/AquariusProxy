@@ -46,8 +46,8 @@ public class SpawnPatrol extends Module {
     private double lastX = Double.MIN_VALUE;
     private double lastY = Double.MIN_VALUE;
     private double lastZ = Double.MIN_VALUE;
-    private int spookTarget = -1;
-    @Nullable private GameProfile spookTargetProfile = null;
+    private int targetEntityId = -1;
+    @Nullable private GameProfile targetProfile = null;
     private long lastDeath = 0;
 
     @Override
@@ -74,13 +74,13 @@ public class SpawnPatrol extends Module {
     @Override
     public void onDisable() {
         Baritone.INSTANCE.stop();
-        spookTarget = -1;
+        targetEntityId = -1;
     }
 
     private void handleBotTickStarting(ClientBotTick.Starting event) {
         pathTimer.reset();
         killTimer.reset();
-        spookTarget = -1;
+        targetEntityId = -1;
     }
 
     private void awaitSlashKill() {
@@ -125,12 +125,12 @@ public class SpawnPatrol extends Module {
     }
 
     private void handleBotTick(ClientBotTick event) {
-        if (CONFIG.client.extra.spawnPatrol.kill && killTimer.tick(20L * CONFIG.client.extra.spawnPatrol.killSeconds) && !MODULE.get(KillAura.class).isActive()) {
+        if (CONFIG.client.extra.spawnPatrol.stuckKill && killTimer.tick(20L * CONFIG.client.extra.spawnPatrol.stuckKillSeconds) && !MODULE.get(KillAura.class).isActive()) {
             double dist = MathHelper.distance3d(lastX, lastY, lastZ, CACHE.getPlayerCache().getX(), CACHE.getPlayerCache().getY(), CACHE.getPlayerCache().getZ());
-            if (dist < CONFIG.client.extra.spawnPatrol.killMinDist) {
-                info("sending /kill. expected: {} actual: {}", CONFIG.client.extra.spawnPatrol.killMinDist, dist);
+            if (dist < CONFIG.client.extra.spawnPatrol.stuckKillMinDist) {
+                info("sending /kill. expected: {} actual: {}", CONFIG.client.extra.spawnPatrol.stuckKillMinDist, dist);
                 sendClientPacketAsync(new ServerboundChatPacket("/kill"));
-                if (CONFIG.client.extra.spawnPatrol.killAntiStuck) {
+                if (CONFIG.client.extra.spawnPatrol.stuckKillAntiStuck) {
                     EXECUTOR.schedule(this::awaitSlashKill, 5L, TimeUnit.SECONDS);
                 }
             }
@@ -149,69 +149,63 @@ public class SpawnPatrol extends Module {
                 }
             }
             if (!Baritone.INSTANCE.isActive() && !Baritone.INSTANCE.getFollowProcess().isActive() && !netherPathing) {
-                if (CONFIG.client.extra.spawnPatrol.random) {
-                    pathRandom();
-                } else {
-                    pathToGoal();
-                }
+                pathToGoal();
             }
-            if (CONFIG.client.extra.spawnPatrol.spook) {
-                if (CONFIG.client.extra.spawnPatrol.spookStickyTarget) {
-                    boolean targetUnset = spookTarget == -1;
-                    EntityLiving spookTargetEntity = null;
-                    if (spookTarget != -1) {
-                        var e = CACHE.getEntityCache().get(spookTarget);
-                        if (e instanceof EntityLiving el) spookTargetEntity = el;
-                    }
-                    boolean targetEntityExists = !targetUnset && spookTargetEntity != null;
-                    if (targetUnset) {
-                        Optional<EntityPlayer> potentialTarget = anyoneToSpookTarget();
-                        if (potentialTarget.isPresent()) {
-                            spookTarget = potentialTarget.get().getEntityId();
-                            var targetPlayerListEntry = CACHE.getTabListCache().get(potentialTarget.get().getUuid());
-                            if (targetPlayerListEntry.isEmpty()) {
-                                warn("Failed to get player list entry for spook target");
-                                return;
-                            }
-                            spookTargetProfile = targetPlayerListEntry.get().getProfile();
-                            info("Target Acquired: {}", targetPlayerListEntry.map(PlayerListEntry::getName).orElse("???"));
-                            EVENT_BUS.postAsync(new SpawnPatrolTargetAcquiredEvent(potentialTarget.get(), targetPlayerListEntry.get()));
-                            Baritone.INSTANCE.follow(potentialTarget.get());
+            if (CONFIG.client.extra.spawnPatrol.stickyTargeting) {
+                boolean targetUnset = targetEntityId == -1;
+                EntityLiving targetEntity = null;
+                if (targetEntityId != -1) {
+                    var e = CACHE.getEntityCache().get(targetEntityId);
+                    if (e instanceof EntityLiving el) targetEntity = el;
+                }
+                boolean targetEntityExists = !targetUnset && targetEntity != null;
+                if (targetUnset) {
+                    Optional<EntityPlayer> potentialTarget = findNewTarget();
+                    if (potentialTarget.isPresent()) {
+                        targetEntityId = potentialTarget.get().getEntityId();
+                        var targetPlayerListEntry = CACHE.getTabListCache().get(potentialTarget.get().getUuid());
+                        if (targetPlayerListEntry.isEmpty()) {
+                            warn("Failed to get player list entry for target");
+                            return;
                         }
-                    } else if (!targetEntityExists) {
-                        info("Target escaped :(");
-                        spookTarget = -1;
-                        spookTargetProfile = null;
-                        Baritone.INSTANCE.getFollowProcess().onLostControl();
-                    } else {
-                        if (!Baritone.INSTANCE.getFollowProcess().isActive()) {
-                            Baritone.INSTANCE.follow(spookTargetEntity);
-                        }
+                        targetProfile = targetPlayerListEntry.get().getProfile();
+                        info("Target Acquired: {}", targetPlayerListEntry.map(PlayerListEntry::getName).orElse("???"));
+                        EVENT_BUS.postAsync(new SpawnPatrolTargetAcquiredEvent(potentialTarget.get(), targetPlayerListEntry.get()));
+                        Baritone.INSTANCE.follow(potentialTarget.get());
                     }
-                } else if (anyoneToSpook()) {
+                } else if (!targetEntityExists) {
+                    info("Target escaped :(");
+                    targetEntityId = -1;
+                    targetProfile = null;
+                    Baritone.INSTANCE.getFollowProcess().onLostControl();
+                } else {
                     if (!Baritone.INSTANCE.getFollowProcess().isActive()) {
-                        Baritone.INSTANCE.follow(this::spookFilter);
+                        Baritone.INSTANCE.follow(targetEntity);
                     }
+                }
+            } else if (isValidTargetsPresent()) {
+                if (!Baritone.INSTANCE.getFollowProcess().isActive()) {
+                    Baritone.INSTANCE.follow(this::targetFilter);
                 }
             }
         }
     }
 
     private void handleDeathMessage(DeathMessageChatEvent event) {
-        if (!CONFIG.client.extra.spawnPatrol.spookStickyTarget) return;
-        var profile = spookTargetProfile;
+        if (!CONFIG.client.extra.spawnPatrol.stickyTargeting) return;
+        var profile = targetProfile;
         if (profile == null) return;
         if (event.deathMessage().victim().equals(profile.getName())) {
-            info("Spook target killed :)");
+            info("Target killed :)");
             EVENT_BUS.postAsync(new SpawnPatrolTargetKilledEvent(profile, event.component(), event.message(), event.deathMessage()));
         }
     }
 
     private void handlePlayerAttackedUs(PlayerAttackedUsEvent event) {
-        if (!CONFIG.client.extra.spawnPatrol.spookStickyTarget || !CONFIG.client.extra.spawnPatrol.spookAttackers) return;
-        int currentTargetId = spookTarget;
+        if (!CONFIG.client.extra.spawnPatrol.stickyTargeting || !CONFIG.client.extra.spawnPatrol.targetAttackers) return;
+        int currentTargetId = targetEntityId;
         EntityPlayer newTarget = event.attacker();
-        if (spookTarget == newTarget.getEntityId()) return;
+        if (targetEntityId == newTarget.getEntityId()) return;
         if (currentTargetId != -1) {
             Entity currentTarget = CACHE.getEntityCache().get(currentTargetId);
             if (currentTarget instanceof EntityPlayer player) {
@@ -223,53 +217,52 @@ public class SpawnPatrol extends Module {
             }
         }
         if (PLAYER_LISTS.getSpawnPatrolIgnoreList().contains(newTarget.getUuid())) return;
-        spookTarget = newTarget.getEntityId();
+        targetEntityId = newTarget.getEntityId();
         var targetPlayerListEntry = CACHE.getTabListCache().get(newTarget.getUuid());
         if (targetPlayerListEntry.isEmpty()) {
-            warn("Failed to get player list entry for spook target");
+            warn("Failed to get player list entry for1 target");
             return;
         }
-        spookTargetProfile = targetPlayerListEntry.get().getProfile();
+        targetProfile = targetPlayerListEntry.get().getProfile();
         info("Attacker Target Acquired: {}", targetPlayerListEntry.map(PlayerListEntry::getName).orElse("???"));
         Baritone.INSTANCE.follow(newTarget);
         EVENT_BUS.postAsync(new SpawnPatrolTargetAcquiredEvent(newTarget, targetPlayerListEntry.get()));
     }
 
-    private boolean anyoneToSpook() {
-        return CACHE.getEntityCache().getEntities().values().stream()
-            .filter(e -> e instanceof EntityPlayer)
-            .map(e -> (EntityPlayer) e)
-            .anyMatch(this::spookFilter);
+    private boolean isValidTargetsPresent() {
+        return findNewTarget().isPresent();
     }
 
-    private Optional<EntityPlayer> anyoneToSpookTarget() {
+    private Optional<EntityPlayer> findNewTarget() {
         return CACHE.getEntityCache().getEntities().values().stream()
             .filter(e -> e instanceof EntityPlayer)
             .map(e -> (EntityPlayer) e)
-            .filter(this::spookFilter)
+            .filter(this::targetFilter)
             .findFirst();
     }
 
-    private boolean spookFilter(EntityLiving e) {
+    private boolean targetFilter(EntityLiving e) {
         if (!(e instanceof EntityPlayer player)) return false;
         if (player.isSelfPlayer()) return false;
         if (PLAYER_LISTS.getSpawnPatrolIgnoreList().contains(player.getUuid())) return false;
-        if (CONFIG.client.extra.spawnPatrol.spookIgnoreFriends && PLAYER_LISTS.getFriendsList().contains(player.getUuid())) return false;
-        if (CONFIG.client.extra.spawnPatrol.spookOnlyNakeds) {
+        if (CONFIG.client.extra.spawnPatrol.ignoreFriends && PLAYER_LISTS.getFriendsList().contains(player.getUuid())) return false;
+        if (CONFIG.client.extra.spawnPatrol.targetOnlyNakeds) {
             int equipCount = 0;
             for (var equipEntry : e.getEquipment().entrySet()) {
                 if (equipEntry.getKey() == EquipmentSlot.MAIN_HAND || equipEntry.getKey() == EquipmentSlot.OFF_HAND) continue;
                 if (equipEntry.getValue() != Container.EMPTY_STACK) equipCount++;
             }
-            if (equipCount > 1) return false;
+            return equipCount <= 1;
         }
         return true;
     }
 
     private void pathToGoal() {
-        Goal goal = CONFIG.client.extra.spawnPatrol.goalXZ ?
-            new GoalXZ(CONFIG.client.extra.spawnPatrol.goalX, CONFIG.client.extra.spawnPatrol.goalZ) :
-            new GoalNear(CONFIG.client.extra.spawnPatrol.goalX, CONFIG.client.extra.spawnPatrol.goalY, CONFIG.client.extra.spawnPatrol.goalZ, 10 * 10);
+        Goal goal = new GoalNear(
+            CONFIG.client.extra.spawnPatrol.goalX,
+            CONFIG.client.extra.spawnPatrol.goalY,
+            CONFIG.client.extra.spawnPatrol.goalZ,
+            (int) Math.pow(10, 2));
         if (goal.isInGoal(
             MathHelper.floorI(CACHE.getPlayerCache().getX()),
             MathHelper.floorI(CACHE.getPlayerCache().getY()),
