@@ -9,6 +9,7 @@ import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityCache;
 import com.zenith.event.proxy.ProxyClientDisconnectedEvent;
 import com.zenith.event.proxy.ProxySpectatorDisconnectedEvent;
+import com.zenith.event.proxy.ServerConnectionRemovedEvent;
 import com.zenith.feature.ratelimiter.LoginRateLimiter;
 import com.zenith.feature.ratelimiter.PacketRateLimiter;
 import com.zenith.feature.spectator.SpectatorEntityRegistry;
@@ -204,7 +205,9 @@ public class ServerSession extends TcpServerSession {
 
     @Override
     public void callDisconnected(Component reason, Throwable cause) {
+        Proxy.getInstance().getCurrentPlayer().compareAndSet(this, null);
         Proxy.getInstance().getActiveConnections().remove(this);
+        EVENT_BUS.post(new ServerConnectionRemovedEvent(this));
         if (!this.isPlayer && cause != null && !(cause instanceof DecoderException || cause instanceof IOException || cause instanceof ChannelException)) {
             // any scanners or TCP connections established result in a lot of these coming in even when they are not actually speaking mc protocol
             SERVER_LOG.debug("Connection disconnected: {}", getRemoteAddress(), cause);
