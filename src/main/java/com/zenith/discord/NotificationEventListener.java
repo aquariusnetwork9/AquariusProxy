@@ -100,7 +100,6 @@ public class NotificationEventListener {
             of(PluginLoadFailureEvent.class, this::handlePluginLoadFailure),
             of(PluginLoadedEvent.class, this::handlePluginLoadedEvent),
             of(PrivateMessageSendEvent.class, this::handlePrivateMessageSendEvent),
-            of(ChatControlExecuteEvent.class, this::handleChatControlExecuteEvent),
             of(SpawnPatrolTargetAcquiredEvent.class, this::handleSpawnPatrolTargetAcquiredEvent),
             of(SpawnPatrolTargetKilledEvent.class, this::handleSpawnPatrolTargetKilledEvent)
         );
@@ -975,18 +974,6 @@ public class NotificationEventListener {
             .addField("Version", escape(event.pluginInfo().version()), false)
             .addField("URL", escape(event.pluginInfo().url()), false)
             .addField("Author(s)", String.join(", ", event.pluginInfo().authors()), false);
-        sendEmbedMessage(embed);
-    }
-
-    private void handleChatControlExecuteEvent(ChatControlExecuteEvent event) {
-        var embed = Embed.builder()
-            .title("Chat Control")
-            .addField("Sender", ("[" + event.sender().getName() + "](https://namemc.com/profile/" + event.sender().getProfileId() + ")"), false)
-            .addField("Command Type", event.command().isBlank() ? "None" : event.command(), false)
-            .addField("Input", String.join(" ", event.input()), false)
-            .addField("Executed", event.success() ? "Yes" : "No", false)
-            .thumbnail(Proxy.getInstance().getPlayerBodyURL(event.sender().getProfileId()).toString());
-        embed = event.success() ? embed.successColor() : embed.errorColor();
         sendEmbedMessage(embed);
     }
 
