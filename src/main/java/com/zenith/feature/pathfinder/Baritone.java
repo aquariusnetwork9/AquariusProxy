@@ -3,36 +3,26 @@ package com.zenith.feature.pathfinder;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.zenith.Proxy;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.event.module.ClientBotTick;
 import com.zenith.feature.pathfinder.behavior.InventoryBehavior;
 import com.zenith.feature.pathfinder.behavior.LookBehavior;
 import com.zenith.feature.pathfinder.behavior.PathingBehavior;
-import com.zenith.feature.pathfinder.calc.IPath;
 import com.zenith.feature.pathfinder.goals.Goal;
 import com.zenith.feature.pathfinder.goals.GoalBlock;
 import com.zenith.feature.pathfinder.goals.GoalXZ;
 import com.zenith.feature.pathfinder.process.*;
 import com.zenith.feature.world.InputRequest;
-import com.zenith.feature.world.Rotation;
 import com.zenith.mc.block.Block;
-import com.zenith.mc.block.BlockPos;
 import com.zenith.util.Timer;
 import com.zenith.util.Timers;
 import com.zenith.util.math.MathHelper;
 import lombok.Data;
 import lombok.Getter;
 import org.cloudburstmc.math.vector.Vector3d;
-import org.geysermc.mcprotocollib.protocol.data.game.level.particle.Particle;
-import org.geysermc.mcprotocollib.protocol.data.game.level.particle.ParticleType;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundLevelParticlesPacket;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.function.Predicate;
 
@@ -69,7 +59,8 @@ public class Baritone {
     private final GetToBlockProcess getToBlockProcess = new GetToBlockProcess(this);
     private final MineProcess mineProcess = new MineProcess(this);
     private final InteractWithProcess interactWithProcess = new InteractWithProcess(this);
-    private Timer teleportDelayTimer = Timers.timer();
+    private final Timer teleportDelayTimer = Timers.timer();
+    private final IngamePathRenderer ingamePathRenderer = new IngamePathRenderer();
 
     private Baritone() {
         pathingControlManager.registerProcess(customGoalProcess);
@@ -177,25 +168,18 @@ public class Baritone {
             inventoryBehavior.onTick();
         }
         inputOverrideHandler.onTick();
-
-        if (pathingBehavior.isPathing() && CONFIG.client.extra.pathfinder.renderPath) {
-            if (renderPathTimer.tick(CONFIG.client.extra.pathfinder.pathRenderIntervalTicks)) {
-                try {
-                    renderPath();
-                } catch (Exception e) {
-                    PATH_LOG.error("Error rendering path", e);
-                }
-            }
-        }
+        ingamePathRenderer.onTick();
 
         if (pathingBehavior.isPathing()) {
-            Optional<Rotation> currentRotation = Optional.ofNullable(lookBehavior.currentRotation);
+            var rotation = lookBehavior.currentRotation;
             var req = InputRequest.builder()
                 .input(inputOverrideHandler.currentInput)
                 .priority(MOVEMENT_PRIORITY);
-            currentRotation.ifPresent(rotation -> req
-                .yaw(rotation.yaw())
-                .pitch(rotation.pitch()));
+            if (rotation != null) {
+                req
+                    .yaw(rotation.yaw())
+                    .pitch(rotation.pitch());
+            }
             INPUTS.submit(req.build());
         }
     }
@@ -214,105 +198,5 @@ public class Baritone {
 
     public void onPlayerPosRotate() {
         teleportDelayTimer.reset();
-    }
-
-    private Timer renderPathTimer = Timers.tickTimer();
-
-    private void renderPath() {
-        if (Proxy.getInstance().getActiveConnections().isEmpty()) return;
-        var pathOptional = pathingBehavior.getPath();
-        if (pathOptional.isEmpty()) return;
-        IPath path = pathOptional.get();
-        int pathPosition = pathingBehavior.getCurrent().getPosition();
-        List<ClientboundLevelParticlesPacket> packets = CONFIG.client.extra.pathfinder.renderPathDetailed
-            ? renderPathDetailed(path.positions(), pathPosition)
-            : renderPathSimple(path.positions(), pathPosition);
-
-        var connections = Proxy.getInstance().getActiveConnections().getArray();
-        for (int i = 0; i < connections.length; i++) {
-            var session = connections[i];
-            for (int j = 0; j < packets.size(); j++) {
-                session.sendAsync(packets.get(j));
-            }
-        }
-    }
-
-    private List<ClientboundLevelParticlesPacket> renderPathSimple(List<BlockPos> path, int pathPosition) {
-        var particle = new Particle(ParticleType.SMALL_FLAME, null);
-        return path.stream()
-            .skip(pathPosition)
-            .map(pos -> new ClientboundLevelParticlesPacket(
-                particle,
-                true,
-                pos.x() + 0.5f,
-                pos.y() + 0.5f,
-                pos.z() + 0.5f,
-                0,
-                0,
-                0,
-                0f,
-                1))
-            .toList();
-    }
-
-    private List<ClientboundLevelParticlesPacket> renderPathDetailed(List<BlockPos> path, int pathPosition) {
-        var middlePosParticle = new Particle(ParticleType.SOUL_FIRE_FLAME, null);
-        var lineParticle = new Particle(ParticleType.SMALL_FLAME, null);
-        List<ClientboundLevelParticlesPacket> packets = new ArrayList<>(path.size() - pathPosition);
-        BlockPos prevPos = path.get(pathPosition);
-        packets.add(new ClientboundLevelParticlesPacket(
-            middlePosParticle,
-            true,
-            prevPos.x() + 0.5f,
-            prevPos.y() + 0.5f,
-            prevPos.z() + 0.5f,
-            0,
-            0,
-            0,
-            0f,
-            1));
-        for (int i = pathPosition+1; i < path.size(); i++) {
-            BlockPos blockPos = path.get(i);
-            packets.add(new ClientboundLevelParticlesPacket(
-                middlePosParticle,
-                true,
-                blockPos.x() + 0.5f,
-                blockPos.y() + 0.5f,
-                blockPos.z() + 0.5f,
-                0,
-                0,
-                0,
-                0f,
-                1));
-            // create "line" particle every 0.2 between prev and current
-            double xDiff = blockPos.x() - prevPos.x();
-            double yDiff = blockPos.y() - prevPos.y();
-            double zDiff = blockPos.z() - prevPos.z();
-            double distance = Math.sqrt(xDiff * xDiff + yDiff * yDiff + zDiff * zDiff);
-            double xStep = xDiff / distance;
-            double yStep = yDiff / distance;
-            double zStep = zDiff / distance;
-            double x = prevPos.x() + 0.5;
-            double y = prevPos.y() + 0.5;
-            double z = prevPos.z() + 0.5;
-            for (double j = 0; j < distance; j += 0.2) {
-                x += xStep * 0.2;
-                y += yStep * 0.2;
-                z += zStep * 0.2;
-                packets.add(new ClientboundLevelParticlesPacket(
-                    lineParticle,
-                    true,
-                    x,
-                    y,
-                    z,
-                    0,
-                    0,
-                    0,
-                    0f,
-                    1));
-            }
-            prevPos = blockPos;
-        }
-        return packets;
     }
 }
