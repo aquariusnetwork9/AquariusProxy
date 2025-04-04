@@ -430,23 +430,23 @@ public class CoordObfuscator extends Module {
 
         // ingame commands, both sending/receiving
         if (CONFIG.inGameCommands.enable) {
-            invalidReasons.add("In-game commands should be disabled, many commands leak coordinates in outputs and behavior");
+            invalidReasons.add("In-game commands should be disabled, many commands leak coordinates in outputs and behavior: `commandConfig ingame off`");
             valid = false;
         }
         if (!CONFIG.client.extra.actionLimiter.enabled) {
-            invalidReasons.add("Action Limiter should be enabled to prevent long distance movement and respawning");
+            invalidReasons.add("Action Limiter should be enabled to prevent long distance movement and respawning: `actionLimiter on`");
             valid = false;
         }
         if (CONFIG.client.extra.actionLimiter.allowMovement) {
-            invalidReasons.add("Action Limiter `allowMovement` should be disabled to prevent long distance movement");
+            invalidReasons.add("Action Limiter `allowMovement` should be disabled to prevent long distance movement: `actionLimiter allowMovement off`");
             valid = false;
         }
         if (CONFIG.client.extra.actionLimiter.allowRespawn) {
-            invalidReasons.add("Action Limiter `allowRespawn` should be disabled to prevent respawning");
+            invalidReasons.add("Action Limiter `allowRespawn` should be disabled to prevent respawning: `actionLimiter allowRespawn off`");
             valid = false;
         }
         if (CONFIG.client.extra.actionLimiter.allowChat) {
-            invalidReasons.add("Action Limiter `allowChat` should be disabled to prevent server commands like `/kill`");
+            invalidReasons.add("Action Limiter `allowChat` should be disabled to prevent server commands like `/kill`: `actionLimiter allowChat off`");
             valid = false;
         }
 

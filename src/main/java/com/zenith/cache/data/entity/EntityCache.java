@@ -98,8 +98,6 @@ public class EntityCache implements CachedData {
         return this.entities.get(entity.getEntityId());
     }
 
-    // todo: this is not particularly efficient but is currently used infrequently.
-    //  if there are higher frequency use cases, consider building a secondary cached map of uuids to entity
     public Entity get(UUID uuid) {
         return this.players.get(uuid);
     }
