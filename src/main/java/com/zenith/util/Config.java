@@ -572,16 +572,6 @@ public final class Config {
         public final LoginRateLimiter loginRateLimiter = new LoginRateLimiter();
         public boolean connectionTestOnStart = true;
         public final PacketRateLimiter packetRateLimiter = new PacketRateLimiter();
-        public final PlaytimeLimiter playtimeLimiter = new PlaytimeLimiter();
-
-        public static final class PlaytimeLimiter {
-            public boolean enabled = false;
-            public boolean allowSpectatorFallback = false;
-            public boolean limitSessionLength = true;
-            public int maxSessionLengthSeconds = 300;
-            public boolean limitConnectionInterval = true;
-            public int connectionIntervalCooldownSeconds = 300;
-        }
 
         public static final class PacketRateLimiter {
             public boolean enabled = true;

@@ -34,7 +34,6 @@ public class ModuleManager {
             new ExtraChat(),
             new KillAura(),
             new PlayerSimulation(),
-            new PlaytimeLimiter(),
             new QueueWarning(),
             new ReplayMod(),
             new Requeue(),
