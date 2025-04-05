@@ -3669,6 +3669,10 @@
       ],
       "methods": [
         {
+          "name": "isVirtual",
+          "parameterTypes": []
+        },
+        {
           "name": "ofVirtual",
           "parameterTypes": []
         }
