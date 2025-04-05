@@ -31,12 +31,13 @@ public class COMovePlayerPosRotHandler implements PacketHandler<ServerboundMoveP
                                     CACHE.getPlayerCache().getY(),
                                     coordObf.getCoordOffset(session).offsetZ(CACHE.getPlayerCache().getZ()));
                     session.sendAsync(new ClientboundPlayerPositionPacket(
+                        session.getSpawnTeleportId(),
                         CACHE.getPlayerCache().getX(),
                         CACHE.getPlayerCache().getY(),
                         CACHE.getPlayerCache().getZ(),
+                        0, 0, 0,
                         CACHE.getPlayerCache().getYaw(),
-                        CACHE.getPlayerCache().getPitch(),
-                        session.getSpawnTeleportId()
+                        CACHE.getPlayerCache().getPitch()
                     ));
                     return null;
                 }
@@ -50,6 +51,7 @@ public class COMovePlayerPosRotHandler implements PacketHandler<ServerboundMoveP
             coordObf.setNextPlayerMovePacketIsTeleport(false);
             return new ServerboundMovePlayerPosRotPacket(
                 packet.isOnGround(),
+                packet.isHorizontalCollision(),
                 coordObf.getServerTeleportPos().getX(),
                 coordObf.getServerTeleportPos().getY(),
                 coordObf.getServerTeleportPos().getZ(),
@@ -59,6 +61,7 @@ public class COMovePlayerPosRotHandler implements PacketHandler<ServerboundMoveP
         }
         return new ServerboundMovePlayerPosRotPacket(
             packet.isOnGround(),
+            packet.isHorizontalCollision(),
             reverseOffsetX,
             packet.getY(),
             reverseOffsetZ,

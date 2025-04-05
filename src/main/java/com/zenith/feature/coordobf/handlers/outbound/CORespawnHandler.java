@@ -22,7 +22,8 @@ public class CORespawnHandler implements PacketHandler<ClientboundRespawnPacket,
                 packet.getCommonPlayerSpawnInfo().isDebug(),
                 packet.getCommonPlayerSpawnInfo().isFlat(),
                 null, // strip pos
-                packet.getCommonPlayerSpawnInfo().getPortalCooldown()
+                packet.getCommonPlayerSpawnInfo().getPortalCooldown(),
+                packet.getCommonPlayerSpawnInfo().getSeaLevel()
             ),
             packet.isKeepMetadata(),
             packet.isKeepAttributeModifiers()

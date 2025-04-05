@@ -11,15 +11,19 @@ public class COPlayerPositionHandler implements PacketHandler<ClientboundPlayerP
     @Override
     public ClientboundPlayerPositionPacket apply(final ClientboundPlayerPositionPacket packet, final ServerSession session) {
         CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
-        coordObf.onServerTeleport(session, packet.getX(), packet.getY(), packet.getZ(), packet.getTeleportId());
+        coordObf.onServerTeleport(session, packet.getX(), packet.getY(), packet.getZ(), packet.getId());
         return new ClientboundPlayerPositionPacket(
+            packet.getId(),
             coordObf.getCoordOffset(session).offsetX(packet.getX()),
             packet.getY(),
             coordObf.getCoordOffset(session).offsetZ(packet.getZ()),
+            packet.getDeltaX(),
+            packet.getDeltaY(),
+            packet.getDeltaZ(),
             packet.getYaw(),
             packet.getPitch(),
-            packet.getTeleportId(),
-            packet.getRelative()
+            // todo: check if relatives state can lead to us leaking offset by offsetting unset 0 values
+            packet.getRelatives()
         );
     }
 }

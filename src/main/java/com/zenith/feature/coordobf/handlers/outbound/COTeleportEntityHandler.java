@@ -14,7 +14,7 @@ import static com.zenith.Shared.MODULE;
 public class COTeleportEntityHandler implements PacketHandler<ClientboundTeleportEntityPacket, ServerSession> {
     @Override
     public ClientboundTeleportEntityPacket apply(final ClientboundTeleportEntityPacket packet, final ServerSession session) {
-        Entity entity = CACHE.getEntityCache().get(packet.getEntityId());
+        Entity entity = CACHE.getEntityCache().get(packet.getId());
         if (entity instanceof EntityStandard e) {
             if (e.getEntityType() == EntityType.EYE_OF_ENDER) {
                 return null;
@@ -22,10 +22,13 @@ public class COTeleportEntityHandler implements PacketHandler<ClientboundTelepor
         }
         CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
         return new ClientboundTeleportEntityPacket(
-            packet.getEntityId(),
+            packet.getId(),
             coordObf.getCoordOffset(session).offsetX(packet.getX()),
             packet.getY(),
             coordObf.getCoordOffset(session).offsetZ(packet.getZ()),
+            packet.getDeltaX(),
+            packet.getDeltaY(),
+            packet.getDeltaZ(),
             packet.getYaw(),
             packet.getPitch(),
             packet.isOnGround()

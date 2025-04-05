@@ -21,6 +21,7 @@ public class COMovePlayerPosHandler implements PacketHandler<ServerboundMovePlay
             MODULE.get(CoordObfuscator.class).info("Sending corrected teleport packet {} {} {}", coordObf.getServerTeleportPos().getX(), coordObf.getServerTeleportPos().getY(), coordObf.getServerTeleportPos().getZ());
             return new ServerboundMovePlayerPosPacket(
                 packet.isOnGround(),
+                packet.isHorizontalCollision(),
                 coordObf.getServerTeleportPos().getX(),
                 coordObf.getServerTeleportPos().getY(),
                 coordObf.getServerTeleportPos().getZ()
@@ -28,6 +29,7 @@ public class COMovePlayerPosHandler implements PacketHandler<ServerboundMovePlay
         }
         return new ServerboundMovePlayerPosPacket(
             packet.isOnGround(),
+            packet.isHorizontalCollision(),
             coordObf.getCoordOffset(session).reverseOffsetX(packet.getX()),
             packet.getY(),
             coordObf.getCoordOffset(session).reverseOffsetZ(packet.getZ())

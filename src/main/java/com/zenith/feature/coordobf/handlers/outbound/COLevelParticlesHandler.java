@@ -41,6 +41,7 @@ public class COLevelParticlesHandler implements PacketHandler<ClientboundLevelPa
         return new ClientboundLevelParticlesPacket(
             particle,
             packet.isLongDistance(),
+            packet.isAlwaysShow(),
             coordObf.getCoordOffset(session).offsetX(packet.getX()),
             packet.getY(),
             coordObf.getCoordOffset(session).offsetZ(packet.getZ()),

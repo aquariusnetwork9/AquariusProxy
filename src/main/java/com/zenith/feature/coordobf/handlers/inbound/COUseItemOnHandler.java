@@ -37,6 +37,7 @@ public class COUseItemOnHandler implements PacketHandler<ServerboundUseItemOnPac
             packet.getCursorY(),
             packet.getCursorZ(),
             packet.isInsideBlock(),
+            packet.isHitWorldBorder(),
             packet.getSequence());
     }
 }

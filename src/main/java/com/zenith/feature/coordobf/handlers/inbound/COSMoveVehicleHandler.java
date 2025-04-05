@@ -20,7 +20,8 @@ public class COSMoveVehicleHandler implements PacketHandler<ServerboundMoveVehic
             packet.getY(),
             coordObf.getCoordOffset(session).reverseOffsetZ(packet.getZ()),
             packet.getYaw(),
-            packet.getPitch()
+            packet.getPitch(),
+            packet.isOnGround()
         );
     }
 }

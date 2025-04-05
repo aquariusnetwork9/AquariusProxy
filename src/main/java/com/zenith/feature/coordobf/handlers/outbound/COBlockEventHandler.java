@@ -15,8 +15,8 @@ public class COBlockEventHandler implements PacketHandler<ClientboundBlockEventP
             coordObf.getCoordOffset(session).offsetX(packet.getX()),
             packet.getY(),
             coordObf.getCoordOffset(session).offsetZ(packet.getZ()),
-            packet.getType(),
-            packet.getValue(),
+            packet.getRawType(),
+            packet.getRawValue(),
             packet.getBlockId()
         );
     }

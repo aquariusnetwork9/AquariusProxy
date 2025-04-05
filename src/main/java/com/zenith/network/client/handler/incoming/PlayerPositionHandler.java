@@ -14,6 +14,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.play
 import org.jspecify.annotations.NonNull;
 
 import static com.zenith.Shared.*;
+import static java.util.Objects.isNull;
 
 public class PlayerPositionHandler implements ClientEventLoopPacketHandler<ClientboundPlayerPositionPacket, ClientSession> {
     @Override
@@ -39,7 +40,7 @@ public class PlayerPositionHandler implements ClientEventLoopPacketHandler<Clien
         if (isNull(currentPlayer) || !currentPlayer.isLoggedIn()) {
             MODULE.get(PlayerSimulation.class).handlePlayerPosRotate(packet.getId());
         } else {
-            CLIENT_LOG.debug("Passing teleport {} through to current player", packet.getTeleportId());
+            CLIENT_LOG.debug("Passing teleport {} through to current player", packet.getId());
         }
         Baritone.INSTANCE.onPlayerPosRotate();
         SpectatorSync.syncPlayerPositionWithSpectators();

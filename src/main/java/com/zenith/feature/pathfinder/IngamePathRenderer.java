@@ -58,7 +58,7 @@ public class IngamePathRenderer {
         return path.stream()
             .skip(pathPosition)
             .map(pos -> new ClientboundLevelParticlesPacket(
-                particle, true,
+                particle, true, true,
                 pos.x() + 0.5f, pos.y() + 0.5f, pos.z() + 0.5f,
                 0, 0, 0, 0f,
                 1
@@ -72,7 +72,7 @@ public class IngamePathRenderer {
         List<ClientboundLevelParticlesPacket> packets = new ArrayList<>(path.size() - pathPosition);
         BlockPos prevPos = path.get(pathPosition);
         packets.add(new ClientboundLevelParticlesPacket(
-            middlePosParticle, true,
+            middlePosParticle, true, true,
             prevPos.x() + 0.5f, prevPos.y() + 0.5f, prevPos.z() + 0.5f,
             0, 0, 0, 0f,
             1
@@ -80,7 +80,7 @@ public class IngamePathRenderer {
         for (int i = pathPosition+1; i < path.size(); i++) {
             BlockPos blockPos = path.get(i);
             packets.add(new ClientboundLevelParticlesPacket(
-                middlePosParticle, true,
+                middlePosParticle, true, true,
                 blockPos.x() + 0.5f, blockPos.y() + 0.5f, blockPos.z() + 0.5f,
                 0, 0, 0, 0f,
                 1
@@ -101,7 +101,7 @@ public class IngamePathRenderer {
                 y += yStep * 0.2;
                 z += zStep * 0.2;
                 packets.add(new ClientboundLevelParticlesPacket(
-                    lineParticle, true,
+                    lineParticle, true, true,
                     x, y, z,
                     0, 0, 0, 0f,
                     1
