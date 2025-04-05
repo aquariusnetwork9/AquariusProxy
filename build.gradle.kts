@@ -83,7 +83,9 @@ dependencies {
     api("com.github.rfresh2.fastutil.maps:object-int-maps:$fastutilVersion")
     api("com.github.rfresh2.fastutil.maps:long-object-maps:$fastutilVersion")
     api("com.github.rfresh2.fastutil.maps:int-int-maps:$fastutilVersion")
+    api("com.github.rfresh2.fastutil.maps:int-double-maps:$fastutilVersion")
     api("com.github.rfresh2.fastutil.maps:reference-object-maps:$fastutilVersion")
+    api("com.github.rfresh2.fastutil.maps:long-double-maps:$fastutilVersion")
     api("com.github.rfresh2.fastutil.queues:int-queues:$fastutilVersion")
     api("com.viaversion:vialoader:4.0.2")
     api("com.viaversion:viaversion:5.3.1")
@@ -108,6 +110,8 @@ dependencies {
     testCompileOnly("org.projectlombok:lombok:$lombokVersion")
     annotationProcessor("org.projectlombok:lombok:$lombokVersion")
     testAnnotationProcessor("org.projectlombok:lombok:$lombokVersion")
+    compileOnly("com.google.auto.service:auto-service-annotations:1.0.1")
+    annotationProcessor("com.google.auto.service:auto-service:1.0.1")
 }
 
 tasks {
@@ -160,6 +164,18 @@ tasks {
         }
         outputs.upToDateWhen { false }
     }
+    val mcVersionTask = register("mcVersion") {
+        group = "build"
+        description = "Write release tag to file"
+        doLast {
+            file(layout.buildDirectory.asFile.get().absolutePath + "/resources/main/zenith_mc_version.txt").apply {
+                parentFile.mkdirs()
+                println("Writing MC Version: $version")
+                writeText(version.toString())
+            }
+        }
+        outputs.upToDateWhen { false }
+    }
     val runGroup = "run"
     register("run", JavaExec::class.java) {
         group = runGroup
@@ -193,7 +209,7 @@ tasks {
             }
         }
     }
-    processResources{ finalizedBy(commitHashTask, releaseTagTask) }
+    processResources{ finalizedBy(commitHashTask, releaseTagTask, mcVersionTask) }
     val devOutputDir = layout.buildDirectory.get().dir("dev").asFile
     jar {
         enabled = true
@@ -289,6 +305,7 @@ graalvmNative {
                 if (pgoInstrument != null) {
                     println("Instrumenting PGO")
                     buildArgs.add("--pgo-instrument")
+                    buildArgs.add("-R:ProfilesDumpFile=profile.iprof")
                 }
             }
             configurationFileDirectories.from(file("src/main/resources/META-INF/native-image"))

@@ -1,0 +1,24 @@
+package com.zenith.feature.coordobf.handlers.outbound;
+
+import com.zenith.cache.data.entity.Entity;
+import com.zenith.cache.data.entity.EntityStandard;
+import com.zenith.network.registry.PacketHandler;
+import com.zenith.network.server.ServerSession;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundSetEntityMotionPacket;
+
+import static com.zenith.Shared.CACHE;
+
+public class COSetEntityMotionHandler implements PacketHandler<ClientboundSetEntityMotionPacket, ServerSession> {
+    @Override
+    public ClientboundSetEntityMotionPacket apply(final ClientboundSetEntityMotionPacket packet, final ServerSession session) {
+        Entity entity = CACHE.getEntityCache().get(packet.getEntityId());
+        if (entity == null) return null;
+        if (entity instanceof EntityStandard e) {
+            if (e.getEntityType() == EntityType.EYE_OF_ENDER) {
+                return null;
+            }
+        }
+        return packet;
+    }
+}

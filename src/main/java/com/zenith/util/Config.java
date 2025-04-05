@@ -18,6 +18,7 @@ public final class Config {
     public final Client client = new Client();
     public final Debug debug = new Debug();
     public final Server server = new Server();
+    public final Plugins plugins = new Plugins();
     public final InteractiveTerminal interactiveTerminal = new InteractiveTerminal();
     public final InGameCommands inGameCommands = new InGameCommands();
     public final Theme theme = new Theme();
@@ -119,6 +120,7 @@ public final class Config {
             public boolean prioStatusChangeMention = true;
             public boolean killMessage = true;
             public boolean logChatMessages = true;
+            public final CoordObfuscation coordObfuscation = new CoordObfuscation();
             public final ActionLimiter actionLimiter = new ActionLimiter();
             public final VisualRange visualRange = new VisualRange();
             public final AutoArmor autoArmor = new AutoArmor();
@@ -128,6 +130,52 @@ public final class Config {
             public final Click click = new Click();
             public final SessionTimeLimit sessionTimeLimit = new SessionTimeLimit();
             public final AutoOmen autoOmen = new AutoOmen();
+            public final Pathfinder pathfinder = new Pathfinder();
+            public final SpawnPatrol spawnPatrol = new SpawnPatrol();
+            public final PearlLoader pearlLoader = new PearlLoader();
+
+            public static final class PearlLoader {
+                public ArrayList<Pearl> pearls = new ArrayList<>();
+
+                /**
+                 * @param id player name or some other unique identifier
+                 * @param x  the position of the block we need to interact with to load the pearl
+                 */
+                public record Pearl(String id, int x, int y, int z) { }
+            }
+
+            public static final class Pathfinder {
+                public boolean allowBreak = true;
+                public boolean allowSprint = false;
+                public boolean allowPlace = true;
+                public boolean allowInventory = true;
+                public boolean allowDownward = true;
+                public boolean allowParkour = false;
+                public boolean allowParkourPlace = false;
+                public boolean allowParkourAscend = false;
+                public boolean allowDiagonalDescend = false;
+                public boolean allowDiagonalAscend = false;
+                public boolean diagonalCentering = false;
+                public boolean traverseCentering = false;
+                public double blockBreakAdditionalCost = 2;
+                public int maxFallHeightNoWater = 3;
+                public boolean allowLongFall = true;
+                public double longFallCostLogMultiplier = 50;
+                public double longFallCostAddCost = 100;
+                public int followRadius = 2;
+                public int teleportDelayMs = 500;
+                public boolean renderPath = true;
+                public int pathRenderIntervalTicks = 10;
+                public boolean renderPathDetailed = false;
+                public int primaryTimeoutMs = 500;
+                public int failureTimeoutMs = 2000;
+                public int planAheadPrimaryTimeoutMs = 4000;
+                public int planAheadFailureTimeoutMs = 5000;
+                public int failedPathSearchCooldownMs = 1000;
+                public boolean getToBlockExploreForBlocks = true;
+                public boolean getToBlockBlacklistClosestOnFailure = false;
+                public boolean simplifyUnloadedYGoal = false;
+            }
 
             public static class SessionTimeLimit {
                 public boolean enabled = true;
@@ -156,12 +204,25 @@ public final class Config {
 
             public static final class Wander {
                 public boolean enabled = false;
-                public boolean turn = true;
-                public int turnDelaySeconds = 5;
-                public boolean jump = true;
-                public int jumpDelaySeconds = 5;
-                public boolean sneak = false;
-                public boolean alwaysJumpInWater = true;
+                public int radius = 2000;
+                public int minRadius = 100;
+            }
+
+            public static class SpawnPatrol {
+                public boolean enabled = false;
+                public boolean ignoreFriends = true;
+                public boolean targetOnlyNakeds = true;
+                public boolean targetAttackers = true;
+                public boolean stickyTargeting = true;
+                public boolean nether = true;
+                public boolean stuckKill = true;
+                public int stuckKillSeconds = 60;
+                public int stuckKillMinDist = 10;
+                public boolean stuckKillAntiStuck = true;
+                public int goalX = 0;
+                public int goalY = 120;
+                public int goalZ = 0;
+                public final ArrayList<PlayerEntry> ignoreList = new ArrayList<>();
             }
 
             public static final class QueueWarning {
@@ -389,6 +450,31 @@ public final class Config {
                 public int cooldownSeconds = 15;
                 public String message = "I am currently AFK, check back later or message me on discord.";
             }
+
+            public static final class CoordObfuscation {
+                // all offsets in chunk coords
+                public boolean enabled = false;
+                public boolean validateSetup = true;
+                public boolean exemptProxyAccount = false;
+                public ObfuscationMode mode = ObfuscationMode.RANDOM_OFFSET;
+                public boolean obfuscateBedrock = true;
+                public int teleportOffsetRegenerateDistanceMin = 64; // minimum distance to regenerate coords at
+                public int randomBound = 10000000; // maximum bound to randomize coords by
+                public int randomMinOffset = 100000; // minimum bound to randomize coords by
+                public int randomMinSpawnDistance = 100000; // min distance to spawn the coords are
+                public int constantOffsetX = 0;
+                public int constantOffsetZ = 0;
+                public boolean constantOffsetNetherTranslate = true;
+                public int constantOffsetMinSpawnDistance = 100000; // min distance to spawn the actual coords are before player is disconnected
+                public int atLocationX = 0;
+                public int atLocationZ = 0;
+                public enum ObfuscationMode {
+                    RANDOM_OFFSET,
+                    CONSTANT_OFFSET,
+                    AT_LOCATION
+                }
+            }
+
             public static class ActionLimiter {
                 public boolean enabled = false;
                 // be careful with this, auto respawn will still respawn after they disconnect
@@ -407,7 +493,8 @@ public final class Config {
                 public boolean allowUseItem = true;
                 public boolean allowBookSigning = true;
                 public boolean allowInteract = true;
-                public boolean allowChat = true; // outbound chats, including commands
+                public boolean allowChat = true; // outbound chats
+                public boolean allowServerCommands = true; // includes whispers
             }
         }
 
@@ -516,7 +603,6 @@ public final class Config {
         public static final class Extra {
             public final ServerTimeout timeout = new ServerTimeout();
             public final Whitelist whitelist = new Whitelist();
-            public final ESP esp = new ESP();
             public final ChatHistory chatHistory = new ChatHistory();
             public final ServerSwitcher serverSwitcher = new ServerSwitcher();
 
@@ -539,15 +625,13 @@ public final class Config {
                 // Automatically adds the proxy client account to the whitelist if not present
                 // does not remove any entries
                 public boolean autoAddClient = true;
+                // only checked when whitelist is disabled
+                public final ArrayList<PlayerEntry> blacklist = new ArrayList<>();
             }
 
             public static final class ServerTimeout {
                 public boolean enable = true;
                 public int seconds = 30;
-            }
-
-            public static final class ESP {
-                public boolean enable = false;
             }
         }
 
@@ -595,6 +679,10 @@ public final class Config {
                 return this.bind.port;
             }
         }
+    }
+
+    public static class Plugins {
+        public boolean enabled = true;
     }
 
     public static final class InteractiveTerminal {

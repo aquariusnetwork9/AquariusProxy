@@ -9,7 +9,7 @@ import static com.zenith.Shared.CONFIG;
 public class ALChatCommandHandler implements PacketHandler<ServerboundChatCommandPacket, ServerSession> {
     @Override
     public ServerboundChatCommandPacket apply(final ServerboundChatCommandPacket packet, final ServerSession session) {
-        if (CONFIG.client.extra.actionLimiter.allowChat) return packet;
+        if (CONFIG.client.extra.actionLimiter.allowServerCommands) return packet;
         else return null;
     }
 }

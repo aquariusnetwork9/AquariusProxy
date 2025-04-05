@@ -97,8 +97,35 @@ public class NotificationEventListener {
             of(ReplayStoppedEvent.class, this::handleReplayStoppedEvent),
             of(PlayerTotemPopAlertEvent.class, this::handleTotemPopEvent),
             of(NoTotemsEvent.class, this::handleNoTotemsEvent),
-            of(PrivateMessageSendEvent.class, this::handlePrivateMessageSendEvent)
+            of(PluginLoadFailureEvent.class, this::handlePluginLoadFailure),
+            of(PluginLoadedEvent.class, this::handlePluginLoadedEvent),
+            of(PrivateMessageSendEvent.class, this::handlePrivateMessageSendEvent),
+            of(SpawnPatrolTargetAcquiredEvent.class, this::handleSpawnPatrolTargetAcquiredEvent),
+            of(SpawnPatrolTargetKilledEvent.class, this::handleSpawnPatrolTargetKilledEvent)
         );
+    }
+
+    private void handleSpawnPatrolTargetKilledEvent(SpawnPatrolTargetKilledEvent event) {
+        var embed = Embed.builder()
+            .title("Target Killed")
+            .addField("Target", "[" + event.profile().getName() + "](https://namemc.com/profile/" + event.profile().getId() + ")", false)
+            .addField("Death Message", escape(event.message())  , false)
+            .thumbnail(Proxy.getInstance().getPlayerBodyURL(event.profile().getId()).toString())
+            .successColor();
+        sendEmbedMessage(embed);
+    }
+
+    private void handleSpawnPatrolTargetAcquiredEvent(SpawnPatrolTargetAcquiredEvent event) {
+        var profile = event.targetProfile();
+        var embed = Embed.builder()
+            .title("Target Acquired")
+            .addField("Target", "[" + profile.getName() + "](https://namemc.com/profile/" + profile.getProfileId() + ")", false)
+            .addField("Position",getCoordinates(event.target()), false)
+            .addField("Our Position", getCoordinates(CACHE.getPlayerCache().getThePlayer()), false)
+            .addField("Distance", String.format("%.2f", Math.sqrt(CACHE.getPlayerCache().distanceSqToSelf(event.target()))), false)
+            .thumbnail(Proxy.getInstance().getPlayerBodyURL(profile.getProfileId()).toString())
+            .primaryColor();
+        sendEmbedMessage(embed);
     }
 
     public void handleConnectEvent(ConnectEvent event) {
@@ -925,6 +952,29 @@ public class NotificationEventListener {
             embed.footer("Private Message", null);
         }
         sendRelayEmbedMessage(embed);
+    }
+
+    private void handlePluginLoadFailure(PluginLoadFailureEvent event) {
+        String id = event.id() != null ? event.id() : "?";
+        var embed = Embed.builder()
+            .title("Plugin Load Failure")
+            .errorColor()
+            .description("Error: " + escape(event.message()))
+            .addField("Plugin ID", escape(id), false)
+            .addField("Plugin Jar", escape(event.jarPath().getFileName().toString()), false);
+        sendEmbedMessage(embed);
+    }
+
+    private void handlePluginLoadedEvent(PluginLoadedEvent event) {
+        var embed = Embed.builder()
+            .title("Plugin Loaded")
+            .successColor()
+            .addField("ID", escape(event.pluginInfo().id()), false)
+            .addField("Description", escape(event.pluginInfo().description()))
+            .addField("Version", escape(event.pluginInfo().version()), false)
+            .addField("URL", escape(event.pluginInfo().url()), false)
+            .addField("Author(s)", String.join(", ", event.pluginInfo().authors()), false);
+        sendEmbedMessage(embed);
     }
 
     /**

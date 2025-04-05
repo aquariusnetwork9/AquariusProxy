@@ -9,12 +9,14 @@ import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityCache;
 import com.zenith.event.proxy.ProxyClientDisconnectedEvent;
 import com.zenith.event.proxy.ProxySpectatorDisconnectedEvent;
+import com.zenith.event.proxy.ServerConnectionRemovedEvent;
 import com.zenith.feature.ratelimiter.LoginRateLimiter;
 import com.zenith.feature.ratelimiter.PacketRateLimiter;
 import com.zenith.feature.spectator.SpectatorEntityRegistry;
 import com.zenith.feature.spectator.entity.SpectatorEntity;
 import com.zenith.network.registry.ZenithHandlerCodec;
 import com.zenith.util.ComponentSerializer;
+import com.zenith.util.Wait;
 import io.netty.channel.ChannelException;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.DecoderException;
@@ -44,6 +46,7 @@ import java.io.IOException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -119,6 +122,8 @@ public class ServerSession extends TcpServerSession {
     private static final Component suffix = Component.text("");
     private static final boolean friendlyFire = false;
     private static final boolean seeFriendlyInvisibles = false;
+    protected boolean respawning = false;
+    private final long connectionTimeEpochMs = Instant.now().toEpochMilli();
     @Getter(lazy = true) private final PacketRateLimiter packetRateLimiter = new PacketRateLimiter();
     public static final LoginRateLimiter LOGIN_RATE_LIMITER = new LoginRateLimiter();
 
@@ -199,7 +204,9 @@ public class ServerSession extends TcpServerSession {
 
     @Override
     public void callDisconnected(Component reason, Throwable cause) {
+        Proxy.getInstance().getCurrentPlayer().compareAndSet(this, null);
         Proxy.getInstance().getActiveConnections().remove(this);
+        EVENT_BUS.post(new ServerConnectionRemovedEvent(this));
         if (!this.isPlayer && cause != null && !(cause instanceof DecoderException || cause instanceof IOException || cause instanceof ChannelException)) {
             // any scanners or TCP connections established result in a lot of these coming in even when they are not actually speaking mc protocol
             SERVER_LOG.debug("Connection disconnected: {}", getRemoteAddress(), cause);
@@ -397,7 +404,13 @@ public class ServerSession extends TcpServerSession {
     public void transfer(final String address, final int port) {
         LOGIN_RATE_LIMITER.reset(this);
         cookieCache.getStoreSrcPacket(this::send);
-        send(new ClientboundTransferPacket(address, port));
+        try {
+            send(new ClientboundTransferPacket(address, port)).get(1L, TimeUnit.SECONDS);
+            // give them a fair shot to process the transfer as it needs to be done on the main thread
+            Wait.waitMs(100);
+        } catch (Exception e) {
+            // fall through
+        }
         disconnect(Component.text("Transferring to " + address + ":" + port));
     }
 

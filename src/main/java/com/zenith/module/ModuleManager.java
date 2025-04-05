@@ -30,7 +30,7 @@ public class ModuleManager {
             new AutoTotem(),
             new ChatHistory(),
             new Click(),
-            new ESP(),
+            new CoordObfuscator(),
             new ExtraChat(),
             new KillAura(),
             new PlayerSimulation(),
@@ -40,6 +40,7 @@ public class ModuleManager {
             new SessionTimeLimit(),
             new Spammer(),
             new Spook(),
+            new SpawnPatrol(),
             new VisualRange(),
             new Wander()
         ).forEach(m -> {
@@ -58,6 +59,11 @@ public class ModuleManager {
         } catch (final Throwable e) {
             return null;
         }
+    }
+
+    public void registerModule(Module module) {
+        addModule(module);
+        module.syncEnabledFromConfig();
     }
 
     public List<Module> getModules() {

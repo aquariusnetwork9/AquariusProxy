@@ -50,7 +50,8 @@ public class RespawnHandler implements ClientEventLoopPacketHandler<ClientboundR
         CACHE.getPlayerCache()
             .setGameMode(packet.getCommonPlayerSpawnInfo().getGameMode())
             .setLastDeathPos(packet.getCommonPlayerSpawnInfo().getLastDeathPos())
-            .setPortalCooldown(packet.getCommonPlayerSpawnInfo().getPortalCooldown());
+            .setPortalCooldown(packet.getCommonPlayerSpawnInfo().getPortalCooldown())
+            .setRespawning(true);
         CACHE.getChunkCache().updateCurrentDimension(packet);
         if (!packet.isKeepMetadata()) {
             CACHE.getPlayerCache().getThePlayer().getMetadata().clear();

@@ -30,6 +30,11 @@ public class SLoginFinishedOutgoingHandler implements PacketHandler<ClientboundL
                 session.disconnect("Failed to Login");
                 return null;
             }
+            if (PLAYER_LISTS.getBlacklist().contains(clientGameProfile)) {
+                session.disconnect(CONFIG.server.extra.whitelist.kickmsg);
+                SERVER_LOG.warn("Blacklisted! Username: {} UUID: {} [{}] MC: {} tried to connect!", clientGameProfile.getName(), clientGameProfile.getIdAsString(), session.getMCVersion(), session.getRemoteAddress());
+                return null;
+            }
             // this has some bearing on authorization
             // can be set by cookie. or forcefully set if they're only on spectator whitelist
             // true: only spectator -> also set by authorization, overrides any cookie state

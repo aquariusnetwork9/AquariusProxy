@@ -1,5 +1,9 @@
 package com.zenith.util;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
+import java.util.List;
+
 /**
  * Utility class to retrieve information about the context in which code gets executed. The provided
  * string constants are part of the API and guaranteed to remain unchanged in future versions. This
@@ -77,7 +81,7 @@ public final class ImageInfo {
      * @since 19.0
      */
     public static boolean inImageCode() {
-        return inImageBuildtimeCode() || inImageRuntimeCode();
+        return inImageBuildtimeCode() || inImageRuntimeCode() || inAgentRuntime();
     }
 
     /**
@@ -126,6 +130,15 @@ public final class ImageInfo {
             throw new UnsupportedOperationException(
                 "The kind of image that is built (executable or shared library) is not available yet because the relevant command line option has not been parsed yet.");
         }
+    }
+
+    public static boolean inAgentRuntime() {
+        RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
+        List<String> jvmArgs = runtimeMXBean.getInputArguments();
+        for (String arg : jvmArgs) {
+            if (arg.contains("native-image-agent")) return true;
+        }
+        return false;
     }
 }
 

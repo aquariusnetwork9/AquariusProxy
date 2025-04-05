@@ -48,7 +48,7 @@ public final class SpectatorSync {
             .setPitch(target.getPitch());
         spectConnection.setAllowSpectatorServerPlayerPosRotate(true);
         spectConnection.send(new ClientboundPlayerPositionPacket(
-            12345,
+            spectConnection.getSpawnTeleportId(),
             spectConnection.getSpectatorPlayerCache().getX(),
             spectConnection.getSpectatorPlayerCache().getY(),
             spectConnection.getSpectatorPlayerCache().getZ(),

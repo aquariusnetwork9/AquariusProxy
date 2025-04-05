@@ -16,6 +16,9 @@ public class ALPlayerPositionHandler implements PacketHandler<ClientboundPlayerP
             session.disconnect("ActionLimiter: Movement not allowed");
             return null;
         }
+        // todo: can the server ever send some other packet with identifying coordinates
+        //  before this?
+
         if (MathHelper.distance2d(CONFIG.client.extra.actionLimiter.movementHomeX,
                                   CONFIG.client.extra.actionLimiter.movementHomeZ,
                                   packet.getX(),

@@ -52,7 +52,8 @@ public class ProxyServerLoginHandler {
                                 && nonNull(CACHE.getChunkCache().getCurrentDimension())
                                 && nonNull(CACHE.getChunkCache().getWorldName())
                                 && nonNull(CACHE.getTabListCache().get(CACHE.getProfileCache().getProfile().getId()))
-                                && connection.isWhitelistChecked(),
+                                && connection.isWhitelistChecked()
+                                && CACHE.getPlayerCache().getTeleportQueue().isEmpty(),
                             20)) {
             connection.disconnect("Client login timed out.");
             return;
@@ -61,6 +62,7 @@ public class ProxyServerLoginHandler {
         if (!connection.isConnected()) return;
         connection.setPlayer(true);
         EVENT_BUS.post(new PlayerLoginEvent(connection));
+        if (!connection.isConnected()) return;
         if (connection.isSpectator()) {
             EVENT_BUS.post(new ProxySpectatorConnectedEvent(connection, clientGameProfile));
             connection.send(new ClientboundLoginPacket(

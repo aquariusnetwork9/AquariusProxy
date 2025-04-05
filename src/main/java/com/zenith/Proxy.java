@@ -150,6 +150,7 @@ public class Proxy {
                 }
             }
             NotificationEventListener.INSTANCE.subscribeEvents();
+            if (CONFIG.plugins.enabled) PLUGIN_MANAGER.initialize();
             Queue.start();
             saveConfigAsync();
             MinecraftConstants.CHUNK_SECTION_COUNT_PROVIDER = CACHE.getSectionCountProvider();

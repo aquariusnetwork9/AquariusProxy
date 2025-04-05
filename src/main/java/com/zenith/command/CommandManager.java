@@ -1,6 +1,6 @@
 package com.zenith.command;
 
-import com.google.common.base.Suppliers;
+import com.google.common.collect.Lists;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.context.ParsedCommandNode;
@@ -15,10 +15,10 @@ import com.zenith.command.impl.*;
 import com.zenith.command.util.BrigadierToMCProtocolLibConverter;
 import lombok.Getter;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandNode;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static com.zenith.Shared.*;
@@ -26,7 +26,7 @@ import static java.util.Arrays.asList;
 
 @Getter
 public class CommandManager {
-    private final List<Command> commandsList = asList(
+    private final List<Command> commandsList = Lists.newArrayList(
         new ActionLimiterCommand(),
         new ActiveHoursCommand(),
         new AntiAFKCommand(),
@@ -51,13 +51,13 @@ public class CommandManager {
         new CommandConfigCommand(),
         new ConnectCommand(),
         new ConnectionTestCommand(),
+        new CoordinateObfuscationCommand(),
         new DatabaseCommand(),
         new DebugCommand(),
         new DisconnectCommand(),
         new DiscordManageCommand(),
         new DiscordNotificationsCommand(),
         new DisplayCoordsCommand(),
-        new ESPCommand(),
         new ExtraChatCommand(),
         new FriendCommand(),
         new HelpCommand(),
@@ -66,8 +66,12 @@ public class CommandManager {
         new JvmArgsCommand(),
         new KickCommand(),
         new KillAuraCommand(),
+        new LicenseCommand(),
         new MapCommand(),
+        new PathfinderCommand(),
+        new PearlLoader(),
         new PlaytimeCommand(),
+        new PluginsCommand(),
         new PrioCommand(),
         new QueueStatusCommand(),
         new QueueWarningCommand(),
@@ -97,6 +101,7 @@ public class CommandManager {
         new StatsCommand(),
         new StatusCommand(),
         new TablistCommand(),
+        new SpawnPatrolCommand(),
         new ThemeCommand(),
         new TransferCommand(),
         new UpdateCommand(),
@@ -107,18 +112,22 @@ public class CommandManager {
         new WhitelistCommand()
     );
     private final CommandDispatcher<CommandContext> dispatcher;
-    private final Supplier<CommandNode[]> MCProtocolLibCommandNodesSupplier;
+    @Getter private @NonNull CommandNode[] MCProtocolLibCommandNodes;
 
     public CommandManager() {
         this.dispatcher = new CommandDispatcher<>();
         registerCommands();
-        this.MCProtocolLibCommandNodesSupplier = Suppliers.memoize(
-            // should be safe to cache as we don't mutate zenith commands after startup
-            () -> BrigadierToMCProtocolLibConverter.convertNodesToMCProtocolLibNodes(this.dispatcher));
+        syncCommandNodes();
     }
 
     public void registerCommands() {
        commandsList.forEach(this::registerCommand);
+    }
+
+    public void registerPluginCommand(Command command) {
+        registerCommand(command);
+        commandsList.add(command);
+        syncCommandNodes();
     }
 
     public List<Command> getCommands() {
@@ -131,9 +140,13 @@ public class CommandManager {
             .toList();
     }
 
-    private void registerCommand(final Command command) {
+    void registerCommand(final Command command) {
         final LiteralCommandNode<CommandContext> node = dispatcher.register(command.register());
         command.commandUsage().getAliases().forEach(alias -> dispatcher.register(command.redirect(alias, node)));
+    }
+
+    void syncCommandNodes() {
+        this.MCProtocolLibCommandNodes = BrigadierToMCProtocolLibConverter.convertNodesToMCProtocolLibNodes(this.dispatcher);
     }
 
     public void execute(final CommandContext context, final ParseResults<CommandContext> parseResults) {

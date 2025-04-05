@@ -70,4 +70,9 @@ public record Block(
     ) {
         this(id, name, isBlock, minStateId, maxStateId, mapColorId, offsetType, maxHorizontalOffset, maxVerticalOffset, destroySpeed, requiresCorrectToolForDrops, blockTags, null);
     }
+
+    @Override
+    public String toString() {
+        return "Block[name=" + name + ", id=" + id + "]";
+    }
 }

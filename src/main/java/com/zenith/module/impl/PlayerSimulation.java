@@ -454,7 +454,7 @@ public class PlayerSimulation extends Module {
 
     public synchronized void handlePlayerPosRotate(final int teleportId) {
         syncFromCache(false);
-        CLIENT_LOG.debug("Server teleport {} to: {}, {}, {}", teleportId, this.x, this.y, this.z);
+        CLIENT_LOG.info("Server teleport {} to: {}, {}, {}", teleportId, this.x, this.y, this.z);
         sendClientPacketAwait(new ServerboundMovePlayerPosRotPacket(false, false, this.x, this.y, this.z, this.yaw, this.pitch));
         sendClientPacketAwait(new ServerboundAcceptTeleportationPacket(teleportId));
         CLIENT_LOG.debug("Accepted teleport: {}", teleportId);
@@ -1169,5 +1169,9 @@ public class PlayerSimulation extends Module {
 
     public double getEntityInteractDistance() {
         return MathHelper.clamp(getAttributeValue(AttributeType.Builtin.ENTITY_INTERACTION_RANGE, 3.0f) + CONFIG.client.extra.click.additionalEntityReach, 0, Float.MAX_VALUE);
+    }
+
+    public BlockPos blockPosition() {
+        return new BlockPos(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z));
     }
 }

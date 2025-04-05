@@ -10,7 +10,7 @@ public final class TickTimerManager {
     public static final TickTimerManager INSTANCE = new TickTimerManager();
 
     @Getter
-    private long tickTime = 0;
+    private volatile long tickTime = 0;
 
     private TickTimerManager() {
         EVENT_BUS.subscribe(
