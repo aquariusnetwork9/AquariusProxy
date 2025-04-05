@@ -48,7 +48,7 @@ public class IntentionHandler implements PacketHandler<ClientIntentionPacket, Se
         if (!CONFIG.server.enforceMatchingConnectingAddress) return false;
         // special handling in here is related to how the mc client handles srv records and intents
         var hostname = packet.getHostname();
-        if (packet.getIntent() != HandshakeIntent.STATUS && hostname.endsWith(".")) {
+        if (hostname.endsWith(".")) {
             // remove trailing dot
             hostname = packet.getHostname().substring(0, packet.getHostname().length() - 1);
         }

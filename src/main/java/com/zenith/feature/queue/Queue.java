@@ -4,7 +4,7 @@ import com.zenith.feature.api.vcapi.VcApi;
 import com.zenith.feature.api.vcapi.model.QueueEtaEquationResponse;
 import com.zenith.feature.queue.mcping.MCPing;
 import com.zenith.feature.queue.mcping.data.MCResponse;
-import lombok.Getter;
+import lombok.Locked;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -18,7 +18,6 @@ import java.util.regex.Pattern;
 import static com.zenith.Shared.*;
 
 public class Queue {
-    @Getter
     private static QueueStatus queueStatus = new QueueStatus(0, 0, 0);
     private static final Pattern digitPattern = Pattern.compile("\\d+");
     private volatile static Instant lastUpdate = Instant.EPOCH;
@@ -28,15 +27,22 @@ public class Queue {
     public static void start() {
         EXECUTOR.scheduleAtFixedRate(
             () -> Thread.ofVirtual().name("Queue Update").start(Queue::updateQueueStatus),
-            500L,
+            1,
             CONFIG.server.queueStatusRefreshMinutes,
             TimeUnit.MINUTES);
         EXECUTOR.scheduleAtFixedRate(
             () -> Thread.ofVirtual().name("Queue ETA Update").start(Queue::updateQueueEtaEquation),
-            500L,
-            6,
-            TimeUnit.HOURS
+            1,
+            60,
+            TimeUnit.MINUTES
         );
+    }
+
+    public static QueueStatus getQueueStatus() {
+        if (lastUpdate == Instant.EPOCH) {
+            updateQueueStatusNow();
+        }
+        return queueStatus;
     }
 
     public static void updateQueueStatus() {
@@ -46,6 +52,7 @@ public class Queue {
         updateQueueStatusNow();
     }
 
+    @Locked
     public static void updateQueueStatusNow() {
         if (lastUpdate.isAfter(Instant.now().minus(Duration.ofSeconds(5)))) return; // avoid getting rate limited by tcpshield
         lastUpdate = Instant.now();
@@ -58,6 +65,9 @@ public class Queue {
 
     // returns seconds until estimated queue completion time
     public static long getQueueWait(final Integer queuePos) {
+        if (lastQueueEtaEquationUpdate == Instant.EPOCH) {
+            updateQueueEtaEquation();
+        }
         return (long) (queueEtaEquation.factor() * (Math.pow(queuePos.doubleValue(), queueEtaEquation.pow())));
     }
 
@@ -115,6 +125,7 @@ public class Queue {
         }
     }
 
+    @Locked
     public static void updateQueueEtaEquation() {
         if (!CONFIG.server.dynamicQueueEtaEquation) return;
         if (lastQueueEtaEquationUpdate.isAfter(Instant.now().minus(Duration.ofHours(1)))) return;

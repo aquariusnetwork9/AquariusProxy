@@ -14,7 +14,7 @@ import java.util.regex.Pattern;
 
 public class EmbedSerializer {
     private static final Pattern DISCORD_TIMESTAMP_PATTERN = Pattern.compile("<t:(\\d+):.>");
-    private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss O");
     // used to find discord formatted text and replace it with the appropriate style
     // **bold** -> bold
     // `code` -> code
@@ -64,8 +64,8 @@ public class EmbedSerializer {
     public static String replaceDiscordTime(final String input) {
         return DISCORD_TIMESTAMP_PATTERN.matcher(input).replaceAll(matchResult -> {
             var timestamp = Long.parseLong(matchResult.group(1));
-            var instant = Instant.ofEpochSecond(timestamp);
-            return dateTimeFormatter.format(instant.atOffset(ZoneOffset.UTC));
+            var instant = Instant.ofEpochSecond(timestamp).atZone(ZoneOffset.systemDefault());
+            return dateTimeFormatter.format(instant);
         });
     }
 

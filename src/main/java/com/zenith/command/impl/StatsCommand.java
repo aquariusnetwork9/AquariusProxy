@@ -11,15 +11,12 @@ import com.zenith.feature.api.vcapi.model.StatsResponse;
 import net.dv8tion.jda.api.utils.TimeFormat;
 
 import java.time.Duration;
-import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.util.math.MathHelper.formatDurationLong;
 
 public class StatsCommand extends Command {
-    final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
     @Override
     public CommandUsage commandUsage() {
         return CommandUsage.builder()
