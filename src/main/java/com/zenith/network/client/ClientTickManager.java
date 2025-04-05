@@ -62,7 +62,7 @@ public class ClientTickManager {
             CLIENT_LOG.debug("Starting Client Ticks");
             EVENT_BUS.post(ClientTickEvent.Starting.INSTANCE);
             var eventLoop = Proxy.getInstance().getClient().getClientEventLoop();
-            this.clientTickFuture = eventLoop.scheduleWithFixedDelay(tickRunnable, 0, 50, TimeUnit.MILLISECONDS);
+            this.clientTickFuture = eventLoop.scheduleWithFixedDelay(this::tick, 0, 50, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -70,7 +70,7 @@ public class ClientTickManager {
     private static final long LONG_TICK_WARNING_INTERVAL_MS = TimeUnit.SECONDS.toMillis(60);
     private long lastLongTickWarning = 0L;
 
-    private final Runnable tickRunnable = () -> {
+    private void tick() {
         try {
             long before = System.currentTimeMillis();
             EVENT_BUS.post(ClientTickEvent.INSTANCE);
