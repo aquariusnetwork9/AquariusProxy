@@ -21,6 +21,10 @@ import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponen
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponents;
 import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockEntityInfo;
+import org.geysermc.mcprotocollib.protocol.data.game.level.particle.ItemParticleData;
+import org.geysermc.mcprotocollib.protocol.data.game.level.particle.Particle;
+import org.geysermc.mcprotocollib.protocol.data.game.level.particle.VibrationParticleData;
+import org.geysermc.mcprotocollib.protocol.data.game.level.particle.positionsource.BlockPositionSource;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundLevelChunkWithLightPacket;
 
 import java.util.HashMap;
@@ -226,7 +230,33 @@ public record CoordOffset(
                 }
             }
         }
-
         return sections;
+    }
+
+    public Particle offsetParticle(Particle particle) {
+        if (particle == null) return particle;
+        if (particle.getData() instanceof ItemParticleData itemParticleData) {
+            particle = new Particle(
+                particle.getType(),
+                new ItemParticleData(
+                    sanitizeItemStack(itemParticleData.getItemStack())
+                )
+            );
+        } else if (particle.getData() instanceof VibrationParticleData vibrationParticleData) {
+            var positionSrc = vibrationParticleData.getPositionSource();
+            if (positionSrc instanceof BlockPositionSource bps) {
+                positionSrc = new BlockPositionSource(
+                    offsetVector(bps.getPosition())
+                );
+            }
+            particle = new Particle(
+                particle.getType(),
+                new VibrationParticleData(
+                    positionSrc,
+                    vibrationParticleData.getArrivalTicks()
+                )
+            );
+        }
+        return particle;
     }
 }

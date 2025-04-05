@@ -17,10 +17,12 @@ public class CODamageEventHandler implements PacketHandler<ClientboundDamageEven
             packet.getSourceTypeId(),
             packet.getSourceCauseId(),
             packet.getSourceDirectId(),
-            packet.getSourcePosition() == null ? null : Vector3d.from(
-                coordObf.getCoordOffset(session).offsetX(packet.getSourcePosition().getX()),
-                packet.getSourcePosition().getY(),
-                coordObf.getCoordOffset(session).offsetZ(packet.getSourcePosition().getZ()))
+            packet.getSourcePosition() == null
+                ? null
+                : Vector3d.from(
+                    coordObf.getCoordOffset(session).offsetX(packet.getSourcePosition().getX()),
+                    packet.getSourcePosition().getY(),
+                    coordObf.getCoordOffset(session).offsetZ(packet.getSourcePosition().getZ()))
         );
     }
 }

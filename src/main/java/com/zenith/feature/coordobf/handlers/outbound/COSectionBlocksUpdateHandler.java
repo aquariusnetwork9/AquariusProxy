@@ -1,5 +1,6 @@
 package com.zenith.feature.coordobf.handlers.outbound;
 
+import com.google.common.collect.Lists;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.module.impl.CoordObfuscator;
@@ -8,8 +9,6 @@ import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockChangeEntry;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundSectionBlocksUpdatePacket;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import static com.zenith.Shared.*;
@@ -17,7 +16,7 @@ import static com.zenith.Shared.*;
 public class COSectionBlocksUpdateHandler implements PacketHandler<ClientboundSectionBlocksUpdatePacket, ServerSession> {
     @Override
     public ClientboundSectionBlocksUpdatePacket apply(final ClientboundSectionBlocksUpdatePacket packet, final ServerSession session) {
-        List<BlockChangeEntry> entries = new ArrayList<>(Arrays.asList(packet.getEntries()));
+        List<BlockChangeEntry> entries = Lists.newArrayList(packet.getEntries());
         if (CONFIG.client.extra.coordObfuscation.obfuscateBedrock) {
             DimensionData currentDimension = CACHE.getChunkCache().getCurrentDimension();
             if (currentDimension == null) return null;
