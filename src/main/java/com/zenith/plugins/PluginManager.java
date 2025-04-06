@@ -1,8 +1,5 @@
 package com.zenith.plugins;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
-import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.zenith.api.PluginInfo;
@@ -24,27 +21,31 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 
 import static com.zenith.Shared.*;
 
 public class PluginManager {
     public static final Path PLUGINS_PATH = Path.of("plugins");
-    private final BiMap<String, ZenithProxyPlugin> pluginInstances = Maps.synchronizedBiMap(HashBiMap.create());
-    private final Map<String, PluginInfo> pluginInfos = new ConcurrentHashMap<>();
     private final Map<String, ConfigInstance> pluginConfigurations = new ConcurrentHashMap<>();
-    private final Map<String, URLClassLoader> pluginClassLoaders = new ConcurrentHashMap<>();
+    private final Map<String, PluginInstance> pluginInstances = new ConcurrentHashMap<>();
     private final AtomicBoolean initialized = new AtomicBoolean(false);
+    private final AtomicBoolean pluginsLoaded = new AtomicBoolean(false);
 
     public List<PluginInfo> getPluginInfos() {
-        return List.copyOf(pluginInfos.values());
+        return pluginInstances.values().stream().map(PluginInstance::getPluginInfo).collect(Collectors.toList());
     }
 
     public String getId(final ZenithProxyPlugin pluginInstance) {
-        return pluginInstances.inverse().get(pluginInstance);
+        return pluginInstances.values().stream()
+            .filter(i -> i.getPluginInstance() == pluginInstance)
+            .findFirst()
+            .map(PluginInstance::getId)
+            .orElseThrow(() -> new RuntimeException("Plugin instance " + pluginInstance.getClass().getName() + " not found"));
     }
 
     public PluginInfo getPluginInfo(final ZenithProxyPlugin pluginInstance) {
-        return pluginInfos.get(getId(pluginInstance));
+        return pluginInstances.get(getId(pluginInstance)).getPluginInfo();
     }
 
     public void saveConfigs(BiConsumer<File, Object> saveFunction) {
@@ -54,9 +55,10 @@ public class PluginManager {
 
     public record ConfigInstance(Object instance, Class<?> clazz, File file) { }
 
-    public synchronized void initialize() {
+    public void initialize() {
         if (initialized.compareAndSet(false, true)) {
             if (!ImageInfo.inImageCode()) {
+                preLoadPlugins();
                 loadPlugins();
             } else {
                 if (ImageInfo.inImageRuntimeCode())
@@ -78,13 +80,23 @@ public class PluginManager {
         }
     }
 
-    private void loadPlugins() {
+    private void preLoadPlugins() {
         var potentialPlugins = findPotentialPluginJars();
         for (var jar : potentialPlugins) {
             try {
-                loadPotentialPluginJar(jar);
+                preLoadPotentialPluginJar(jar);
             } catch (Throwable e) {
                 PLUGIN_LOG.error("Error loading plugin jar: {}", jar, e);
+            }
+        }
+    }
+
+    private void loadPlugins() {
+        for (var instance : pluginInstances.entrySet()) {
+            try {
+                loadPlugin(instance.getValue());
+            } catch (Throwable e) {
+                PLUGIN_LOG.error("Error loading plugin: {} : {}", instance.getKey(), instance.getValue().getJarPath(), e);
             }
         }
     }
@@ -104,15 +116,16 @@ public class PluginManager {
         return list;
     }
 
-    private void loadPotentialPluginJar(final Path jarPath) {
+    private void preLoadPotentialPluginJar(final Path jarPath) {
         String id = null;
         URLClassLoader classLoader = null;
         try {
             classLoader = new URLClassLoader(new URL[]{jarPath.toUri().toURL()}, getClass().getClassLoader());;
             PluginInfo pluginInfo = readPluginInfo(classLoader, jarPath);
             id = Objects.requireNonNull(pluginInfo.id(), "Plugin id is null");
-            if (pluginInfos.containsKey(id)) {
-                throw new RuntimeException("Plugin id already exists (json)");
+            if (pluginInstances.containsKey(id)) {
+                // todo: we could try to sort by version and load the "newest" one
+                throw new RuntimeException("Plugin id already exists: " + id);
             }
             if (pluginInfo.mcVersions().isEmpty()) {
                 PLUGIN_LOG.error("Plugin: {} has no MC versions specified", jarPath);
@@ -122,10 +135,9 @@ public class PluginManager {
                 PLUGIN_LOG.warn("Plugin: {} not compatible with current MC version. Actual: {}, Plugin Required: {}", jarPath, MC_VERSION, pluginInfo.mcVersions());
                 return;
             }
-            String entrypoint = Objects.requireNonNull(pluginInfo.entrypoint(), "Plugin entrypoint is null");
 
             PLUGIN_LOG.info(
-                "Loading Plugin:\n  id: {}\n  version: {}\n  description: {}\n  url: {}\n  authors: {}\n  jar: {}",
+                "Found Plugin:\n  id: {}\n  version: {}\n  description: {}\n  url: {}\n  authors: {}\n  jar: {}",
                 pluginInfo.id(),
                 pluginInfo.version(),
                 pluginInfo.description(),
@@ -134,29 +146,7 @@ public class PluginManager {
                 jarPath.getFileName()
             );
 
-            Class<?> pluginClass = classLoader.loadClass(entrypoint);
-            if (!ZenithProxyPlugin.class.isAssignableFrom(pluginClass)) {
-                throw new RuntimeException("Plugin does not implement ZenithProxyPlugin interface");
-            }
-            ZenithProxyPlugin plugin = (ZenithProxyPlugin) pluginClass.getDeclaredConstructor().newInstance();
-
-            if (pluginInstances.get(id) != null) {
-                PLUGIN_LOG.error("Plugin id already exists: {} from: {} (instance)", id, jarPath);
-                throw new RuntimeException("Plugin id already exists (instance)");
-            }
-            pluginInstances.put(id, plugin);
-            pluginInfos.put(id, pluginInfo);
-            pluginClassLoaders.put(id, classLoader);
-            try {
-                plugin.onLoad(new InstancedPluginAPI(plugin, pluginInfo));
-            } catch (final Throwable e) {
-                PLUGIN_LOG.error("Exception in plugin onLoad: {}", jarPath, e);
-                pluginInstances.remove(id);
-                pluginInfos.remove(id);
-                pluginClassLoaders.remove(id);
-                throw new RuntimeException("Exception in plugin onLoad: + " + e.getMessage(), e);
-            }
-            EVENT_BUS.postAsync(new PluginLoadedEvent(pluginInfo));
+            pluginInstances.put(id, new PluginInstance(id, jarPath, pluginInfo, classLoader));
         } catch (Throwable e) {
             if (classLoader != null) {
                 try {
@@ -165,6 +155,40 @@ public class PluginManager {
             }
             PLUGIN_LOG.error("Error loading plugin: {}", jarPath, e);
             EVENT_BUS.postAsync(new PluginLoadFailureEvent(id, jarPath, e.getMessage()));
+        }
+    }
+
+    private void loadPlugin(final PluginInstance pluginInstance) {
+        try {
+            var pluginInfo = pluginInstance.getPluginInfo();
+            var classLoader = pluginInstance.getClassLoader();
+            var jarPath = pluginInstance.getJarPath();
+            String entrypoint = Objects.requireNonNull(pluginInfo.entrypoint(), "Plugin entrypoint is null");
+
+            PLUGIN_LOG.info("Loading Plugin: {}", pluginInfo.id());
+
+            Class<?> pluginClass = classLoader.loadClass(entrypoint);
+            if (!ZenithProxyPlugin.class.isAssignableFrom(pluginClass)) {
+                throw new RuntimeException("Plugin does not implement ZenithProxyPlugin interface");
+            }
+            ZenithProxyPlugin plugin = (ZenithProxyPlugin) pluginClass.getDeclaredConstructor().newInstance();
+
+            pluginInstance.setPluginInstance(plugin);
+
+            try {
+                plugin.onLoad(new InstancedPluginAPI(plugin, pluginInfo));
+            } catch (final Throwable e) {
+                PLUGIN_LOG.error("Exception in plugin onLoad: {}", jarPath, e);
+                pluginInstances.remove(pluginInstance.getId());
+                throw new RuntimeException("Exception in plugin onLoad: + " + e.getMessage(), e);
+            }
+            EVENT_BUS.postAsync(new PluginLoadedEvent(pluginInfo));
+        } catch (Throwable e) {
+            try {
+                pluginInstance.getClassLoader().close();
+            } catch (IOException ignored) { }
+            PLUGIN_LOG.error("Error loading plugin: {}", pluginInstance, e);
+            EVENT_BUS.postAsync(new PluginLoadFailureEvent(pluginInstance.getId(), pluginInstance.getJarPath(), e.getMessage()));
         }
     }
 
