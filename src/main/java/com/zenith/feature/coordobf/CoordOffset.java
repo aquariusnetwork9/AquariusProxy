@@ -27,6 +27,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.level.particle.VibrationPar
 import org.geysermc.mcprotocollib.protocol.data.game.level.particle.positionsource.BlockPositionSource;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundLevelChunkWithLightPacket;
 
+import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -42,11 +43,18 @@ public record CoordOffset(
     int x,
     int z
 ) {
+    static final SecureRandom RANDOM = new SecureRandom();
+    public static final double EPSILON = 0.0001;
+    public double obfuscateDouble(double d) {
+        // obfuscate double precision to prevent possible exploits
+        // this will cause values to be slightly off, but not enough to be an issue
+        return d + RANDOM.nextDouble(-EPSILON, EPSILON);
+    }
     public int offsetX(final int x) {
         return x + (x() * 16);
     }
     public double offsetX(final double x) {
-        return x + (x() * 16);
+        return obfuscateDouble(x + (x() * 16));
     }
     public int offsetChunkX(final int x) {
         return x + x();
@@ -55,7 +63,7 @@ public record CoordOffset(
         return z + (z() * 16);
     }
     public double offsetZ(final double z) {
-        return z + (z() * 16);
+        return obfuscateDouble(z + (z() * 16));
     }
     public int offsetChunkZ(final int z) {
         return z + z();
@@ -83,22 +91,6 @@ public record CoordOffset(
     }
     public Vector3i reverseOffsetVector(final Vector3i vec) {
         return vec.sub(x() * 16, 0, z() * 16);
-    }
-    public int safeOffsetX(final int x) {
-        // todo: verify X is not near or at 0, 0
-        //  need a better way to check this
-        if (Math.abs(x) < 16) {
-            return x;
-        }
-        return offsetX(x);
-    }
-    public int safeOffsetZ(final int z) {
-        // todo: verify Z is not near or at 0, 0
-        //  need a better way to check this
-        if (Math.abs(z) < 16) {
-            return z;
-        }
-        return offsetZ(z);
     }
     public MNBT offsetNbt(final MNBT nbt) {
         try {

@@ -156,6 +156,10 @@ public class MathHelper {
         return value >= (target - range) && value <= (target + range);
     }
 
+    public static boolean isInRange(double value, double target, double range) {
+        return value >= (target - range) && value <= (target + range);
+    }
+
     public static Vector3d calculateRayEndPos(double x, double y, double z, double yaw, double pitch, double maxDistance) {
         final Vector3d viewVec = MathHelper.calculateViewVector(yaw, pitch);
         final double targetX = x + (viewVec.getX() * maxDistance);

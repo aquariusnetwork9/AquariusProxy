@@ -1,8 +1,10 @@
 package com.zenith.feature.coordobf.handlers.inbound;
 
+import com.zenith.feature.coordobf.CoordOffset;
 import com.zenith.module.impl.CoordObfuscator;
 import com.zenith.network.registry.PacketHandler;
 import com.zenith.network.server.ServerSession;
+import com.zenith.util.math.MathHelper;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundMovePlayerPosRotPacket;
 
@@ -17,9 +19,9 @@ public class COMovePlayerPosRotHandler implements PacketHandler<ServerboundMoveP
                 session.setInGame(true);
             } else {
                 CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
-                if (packet.getX() == coordObf.getCoordOffset(session).offsetX(CACHE.getPlayerCache().getX())
+                if (MathHelper.isInRange(packet.getX(), coordObf.getCoordOffset(session).offsetX(CACHE.getPlayerCache().getX()), CoordOffset.EPSILON * 2)
                     && packet.getY() == CACHE.getPlayerCache().getY()
-                    && packet.getZ() == coordObf.getCoordOffset(session).offsetZ(CACHE.getPlayerCache().getZ())) {
+                    && MathHelper.isInRange(packet.getZ(), coordObf.getCoordOffset(session).offsetZ(CACHE.getPlayerCache().getZ()), CoordOffset.EPSILON * 2)) {
                     session.setInGame(true);
                 } else {
                     coordObf.info("Received {} pos: {} {} {} but expected: {} {} {}",
