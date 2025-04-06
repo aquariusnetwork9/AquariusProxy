@@ -46,26 +46,28 @@ public class TerminalManager {
                 new TerminalAutoCompletionWidget(lineReader);
             }
             TerminalConsoleAppender.setReader(lineReader);
-            var terminalThread = new Thread(interactiveRunnable, "ZenithProxy Terminal");
+            var terminalThread = new Thread(this::readTerminal, "ZenithProxy Terminal");
             terminalThread.setDaemon(true);
             terminal.handle(Terminal.Signal.INT, signal -> terminalThread.interrupt());
             terminalThread.start();
         }
     }
 
-    private final Runnable interactiveRunnable = () -> {
+    private void readTerminal() {
+        int eofCount = 0;
         while (true) {
             try {
-                String line;
-                try {
-                    line = lineReader.readLine("> ");
-                } catch (final EndOfFileException e) {
-                    continue;
-                }
+                String line = lineReader.readLine("> ");
                 if (line == null || line.isBlank()) {
                     continue;
                 }
                 handleTerminalCommand(line);
+                eofCount = 0;
+            } catch (final EndOfFileException e) {
+                if (eofCount++ > 20) {
+                    TERMINAL_LOG.warn("Detected misconfigured terminal input, disabling interactive terminal");
+                    return;
+                }
             } catch (final UserInterruptException e) {
                 // ignore. terminal is closing
                 TERMINAL_LOG.info("Exiting...");
