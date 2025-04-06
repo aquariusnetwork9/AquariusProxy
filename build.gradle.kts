@@ -38,6 +38,7 @@ dependencies {
         exclude(group = "io.netty")
     }
     val nettyVersion = "4.2.0.Final"
+    api("io.netty:netty-buffer:$nettyVersion")
     api("io.netty:netty-codec-haproxy:$nettyVersion")
     api("io.netty:netty-codec-dns:$nettyVersion")
     api("io.netty:netty-codec-http2:$nettyVersion")
