@@ -24,28 +24,7 @@ repositories {
     maven("https://maven.2b2t.vc/releases") {
         content { includeGroupByRegex("com.github.rfresh2.*") }
     }
-    maven("https://libraries.minecraft.net") {
-        content { includeGroup("com.mojang") }
-    }
-    maven("https://repo.opencollab.dev/maven-releases/") {
-        content { includeGroupByRegex("org.cloudburstmc.*") }
-    }
-    maven("https://repo.papermc.io/repository/maven-public/") {
-        content { includeGroup("com.velocitypowered") }
-    }
-    maven("https://repo.viaversion.com") {
-        content {
-            includeGroup("com.viaversion")
-            includeGroup("net.raphimc")
-        }
-    }
-    maven("https://maven.lenni0451.net/releases") {
-        content {
-            includeGroup("net.raphimc")
-            includeGroup("net.lenni0451")
-        }
-    }
-    mavenCentral()
+    maven("https://maven.2b2t.vc/remote")
     mavenLocal()
 }
 
