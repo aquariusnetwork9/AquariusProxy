@@ -233,7 +233,8 @@ tasks {
                 "Implementation-Title" to "ZenithProxy",
                 "Implementation-Version" to project.version,
                 "Main-Class" to "com.zenith.Proxy",
-                "Multi-Release" to "true"
+                "Multi-Release" to "true",
+                "Enable-Native-Access" to "ALL-UNNAMED"
             ))
         }
     }
