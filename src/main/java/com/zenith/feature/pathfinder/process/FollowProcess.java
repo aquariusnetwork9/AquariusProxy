@@ -1,6 +1,7 @@
 package com.zenith.feature.pathfinder.process;
 
 import com.zenith.cache.data.entity.EntityLiving;
+import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.feature.pathfinder.PathingCommand;
 import com.zenith.feature.pathfinder.PathingCommandType;
@@ -10,6 +11,7 @@ import com.zenith.feature.pathfinder.goals.GoalNear;
 import com.zenith.util.Timer;
 import com.zenith.util.Timers;
 import lombok.Data;
+import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -69,7 +71,14 @@ public final class FollowProcess extends BaritoneProcessHelper implements IBarit
     }
 
     public void follow(EntityLiving entity) {
-        PATH_LOG.info("Following entity {}", entity);
+        if (entity instanceof EntityPlayer player) {
+            var playerName = CACHE.getTabListCache().get(player.getUuid())
+                .map(PlayerListEntry::getName)
+                .orElse("Player ["+player.getUuid() + "]");
+            PATH_LOG.info("Following player: {}", playerName);
+        } else {
+            PATH_LOG.info("Following entity: {}", entity);
+        }
         this.followTarget = new SingleEntityTarget(entity);
     }
 
