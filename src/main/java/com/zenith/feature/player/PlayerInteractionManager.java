@@ -34,8 +34,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 
-import static com.zenith.Globals.BLOCK_DATA;
-import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.*;
 
 @Getter
 public class PlayerInteractionManager {
@@ -48,7 +47,6 @@ public class PlayerInteractionManager {
     private int destroyDelay;
     private final int destroyDelayInterval = 6;
     private boolean isDestroying;
-    private final PlayerSimulation player = PlayerSimulation.INSTANCE;
 
     private boolean sameDestroyTarget(final int x, final int y, final int z) {
         ItemStack itemStack = CACHE.getPlayerCache().getEquipment(EquipmentSlot.MAIN_HAND);
@@ -62,7 +60,7 @@ public class PlayerInteractionManager {
 
     public boolean startDestroyBlock(final int x, final int y, final int z, Direction face) {
         if (CACHE.getPlayerCache().getGameMode() == GameMode.CREATIVE) {
-            player.debug("[{}] [{}, {}, {}] StartDestroyBlock START: Creative break", System.currentTimeMillis(), x, y, z);
+            BOT.debug("[{}] [{}, {}, {}] StartDestroyBlock START: Creative break", System.currentTimeMillis(), x, y, z);
             Proxy.getInstance().getClient().sendAsync(
                 new ServerboundPlayerActionPacket(
                     PlayerAction.START_DESTROY_BLOCK,
@@ -75,7 +73,7 @@ public class PlayerInteractionManager {
             this.destroyDelay = destroyDelayInterval;
         } else if (!this.isDestroying || !this.sameDestroyTarget(x, y, z)) {
             if (this.isDestroying) {
-                player.debug("[{}] [{}, {}, {}] StartDestroyBlock CANCEL: Changed destroy target", System.currentTimeMillis(), x, y, z);
+                BOT.debug("[{}] [{}, {}, {}] StartDestroyBlock CANCEL: Changed destroy target", System.currentTimeMillis(), x, y, z);
                 Proxy.getInstance().getClient().sendAsync(
                     new ServerboundPlayerActionPacket(
                         PlayerAction.ABORT_DESTROY_BLOCK,
@@ -95,10 +93,10 @@ public class PlayerInteractionManager {
                 this.destroyingItem = CACHE.getPlayerCache().getEquipment(EquipmentSlot.MAIN_HAND);
                 this.destroyProgress = 0.0;
                 this.destroyTicks = 0.0F;
-                player.debug("[{}] [{}, {}, {}] StartDestroyBlock START: Start multi-tick break", System.currentTimeMillis(), x, y, z);
+                BOT.debug("[{}] [{}, {}, {}] StartDestroyBlock START: Start multi-tick break", System.currentTimeMillis(), x, y, z);
             } else {
                 destroyBlock(x, y, z);
-                player.debug("[{}] [{}, {}, {}] StartDestroyBlock START: Instant break", System.currentTimeMillis(), x, y, z);
+                BOT.debug("[{}] [{}, {}, {}] StartDestroyBlock START: Instant break", System.currentTimeMillis(), x, y, z);
             }
 
             Proxy.getInstance().getClient().send(
@@ -114,7 +112,7 @@ public class PlayerInteractionManager {
 
     public void stopDestroyBlock() {
         if (this.isDestroying) {
-            player.debug("[{}] [{}, {}, {}] StopDestroyBlock CANCEL", System.currentTimeMillis(), this.destroyBlockPosX, this.destroyBlockPosY, this.destroyBlockPosZ);
+            BOT.debug("[{}] [{}, {}, {}] StopDestroyBlock CANCEL", System.currentTimeMillis(), this.destroyBlockPosX, this.destroyBlockPosY, this.destroyBlockPosZ);
             Proxy.getInstance().getClient()
                 .send(new ServerboundPlayerActionPacket(
                     PlayerAction.ABORT_DESTROY_BLOCK,
@@ -141,7 +139,7 @@ public class PlayerInteractionManager {
                     CACHE.getPlayerCache().getSeqId().incrementAndGet()
                 ));
             destroyBlock(x, y, z);
-            player.debug("[{}] [{}, {}, {}] ContinueDestroyBlock START: Creative Break", System.currentTimeMillis(), x, y, z);
+            BOT.debug("[{}] [{}, {}, {}] ContinueDestroyBlock START: Creative Break", System.currentTimeMillis(), x, y, z);
             return true;
         } else if (this.sameDestroyTarget(x, y, z)) {
             Block block = World.getBlock(x, y, z);
@@ -164,7 +162,7 @@ public class PlayerInteractionManager {
                     this.destroyProgress = 0.0F;
                     this.destroyTicks = 0.0F;
                     this.destroyDelay = destroyDelayInterval;
-                    player.debug("[{}] [{}, {}, {}] ContinueDestroyBlock FINISH", System.currentTimeMillis(), x, y, z);
+                    BOT.debug("[{}] [{}, {}, {}] ContinueDestroyBlock FINISH", System.currentTimeMillis(), x, y, z);
                 }
                 return true;
             }
@@ -244,7 +242,7 @@ public class PlayerInteractionManager {
         }
 
         if (speed > 1.0) {
-            float miningEfficiencyAttribute = player
+            float miningEfficiencyAttribute = BOT
                 .getAttributeValue(AttributeType.Builtin.PLAYER_MINING_EFFICIENCY, 0);
             speed += miningEfficiencyAttribute;
         }
@@ -279,18 +277,18 @@ public class PlayerInteractionManager {
             };
         }
 
-        speed *= player.getAttributeValue(AttributeType.Builtin.PLAYER_BLOCK_BREAK_SPEED, 1.0f);
+        speed *= BOT.getAttributeValue(AttributeType.Builtin.PLAYER_BLOCK_BREAK_SPEED, 1.0f);
 
         boolean isEyeInWater = World.isWater(
             World.getBlock(
-                MathHelper.floorI(player.getX()),
-                MathHelper.floorI(player.getEyeY()),
-                MathHelper.floorI(player.getZ())));
+                MathHelper.floorI(BOT.getX()),
+                MathHelper.floorI(BOT.getEyeY()),
+                MathHelper.floorI(BOT.getZ())));
         if (isEyeInWater) {
-            speed *= player.getAttributeValue(AttributeType.Builtin.PLAYER_SUBMERGED_MINING_SPEED, 0.2f);
+            speed *= BOT.getAttributeValue(AttributeType.Builtin.PLAYER_SUBMERGED_MINING_SPEED, 0.2f);
         }
 
-        if (!player.isOnGround()) {
+        if (!BOT.isOnGround()) {
             speed /= 5.0;
         }
 
@@ -308,7 +306,7 @@ public class PlayerInteractionManager {
             InteractAction.INTERACT,
             0, 0, 0,
             hand,
-            player.isSneaking()
+            BOT.isSneaking()
         ));
         return InteractionResult.PASS;
     }
@@ -319,7 +317,7 @@ public class PlayerInteractionManager {
             InteractAction.INTERACT_AT,
             0, 0, 0,
             hand,
-            player.isSneaking()
+            BOT.isSneaking()
         ));
         return InteractionResult.PASS;
     }
@@ -344,14 +342,14 @@ public class PlayerInteractionManager {
         Proxy.getInstance().getClient().send(new ServerboundUseItemPacket(
             hand,
             CACHE.getPlayerCache().getSeqId().incrementAndGet(),
-            player.getYaw(),
-            player.getPitch()
+            BOT.getYaw(),
+            BOT.getPitch()
         ));
         return InteractionResult.PASS;
     }
 
     public void attackEntity(final EntityRaycastResult entity) {
-        player.debug("[{}] [{}, {}, {}] Attack Entity", System.currentTimeMillis(), entity.entity().getX(), entity.entity().getY(), entity.entity().getZ());
+        BOT.debug("[{}] [{}, {}, {}] Attack Entity", System.currentTimeMillis(), entity.entity().getX(), entity.entity().getY(), entity.entity().getZ());
         Proxy.getInstance().getClient().sendAsync(new ServerboundInteractPacket(entity.entity().getEntityId(), InteractAction.ATTACK, false));
     }
 }

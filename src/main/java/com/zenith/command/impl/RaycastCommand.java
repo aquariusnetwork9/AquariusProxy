@@ -6,9 +6,10 @@ import com.zenith.command.Command;
 import com.zenith.command.CommandUsage;
 import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
-import com.zenith.feature.player.PlayerSimulation;
 import com.zenith.feature.player.World;
 import com.zenith.feature.player.raycast.RaycastHelper;
+
+import static com.zenith.Globals.BOT;
 
 public class RaycastCommand extends Command {
     @Override
@@ -23,9 +24,8 @@ public class RaycastCommand extends Command {
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
         return command("raycast").executes(c -> {
-                var sim = PlayerSimulation.INSTANCE;
-                if (Proxy.getInstance().hasActivePlayer()) sim.syncFromCache(true);
-                var result = RaycastHelper.playerBlockOrEntityRaycast(sim.getBlockReachDistance(), sim.getEntityInteractDistance());
+                if (Proxy.getInstance().hasActivePlayer()) BOT.syncFromCache(true);
+                var result = RaycastHelper.playerBlockOrEntityRaycast(BOT.getBlockReachDistance(), BOT.getEntityInteractDistance());
                 var embed = c.getSource().getEmbed();
                 embed.title("Raycast Result")
                     .addField("Hit", result.hit(), false)
@@ -42,9 +42,8 @@ public class RaycastCommand extends Command {
                     embed.addField("Entity", type != null ? type : "N/A", false);
                 }})
             .then(literal("e").executes(c -> {
-                var sim = PlayerSimulation.INSTANCE;
-                if (Proxy.getInstance().hasActivePlayer()) sim.syncFromCache(true);
-                var result = RaycastHelper.playerEntityRaycast(sim.getEntityInteractDistance());
+                if (Proxy.getInstance().hasActivePlayer()) BOT.syncFromCache(true);
+                var result = RaycastHelper.playerEntityRaycast(BOT.getEntityInteractDistance());
                 c.getSource().getEmbed()
                     .title("Raycast Result")
                     .addField("Hit", result.hit(), false)
@@ -53,9 +52,8 @@ public class RaycastCommand extends Command {
                     .primaryColor();
             }))
             .then(literal("b").executes(c -> {
-                var sim = PlayerSimulation.INSTANCE;
-                if (Proxy.getInstance().hasActivePlayer()) sim.syncFromCache(true);
-                var result = RaycastHelper.playerBlockRaycast(sim.getBlockReachDistance(), false);
+                if (Proxy.getInstance().hasActivePlayer()) BOT.syncFromCache(true);
+                var result = RaycastHelper.playerBlockRaycast(BOT.getBlockReachDistance(), false);
                 c.getSource().getEmbed()
                     .title("Raycast Result")
                     .addField("Hit", result.hit(), false)

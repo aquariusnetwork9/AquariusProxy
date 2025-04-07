@@ -1,7 +1,7 @@
 package com.zenith.feature.pathfinder;
 
 import com.zenith.cache.data.entity.EntityLiving;
-import com.zenith.feature.player.PlayerSimulation;
+import com.zenith.feature.player.Bot;
 import com.zenith.feature.player.Rotation;
 import com.zenith.feature.player.raycast.BlockRaycastResult;
 import com.zenith.feature.player.raycast.RaycastHelper;
@@ -11,6 +11,7 @@ import org.cloudburstmc.math.vector.Vector3d;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static com.zenith.Globals.BOT;
 import static com.zenith.Globals.CACHE;
 
 public final class PlayerContext {
@@ -21,8 +22,8 @@ public final class PlayerContext {
         return ifSneaking ? 1.27 : 1.62;
     }
 
-    public PlayerSimulation player() {
-        return PlayerSimulation.INSTANCE;
+    public Bot player() {
+        return BOT;
     }
 
     public Stream<EntityLiving> entitiesStream() {

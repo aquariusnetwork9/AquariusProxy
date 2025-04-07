@@ -1,7 +1,6 @@
 package com.zenith.network.client.handler.incoming;
 
 import com.zenith.cache.CacheResetType;
-import com.zenith.feature.player.PlayerSimulation;
 import com.zenith.feature.player.World;
 import com.zenith.feature.spectator.SpectatorSync;
 import com.zenith.network.client.ClientSession;
@@ -13,8 +12,7 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.zenith.Globals.CACHE;
-import static com.zenith.Globals.EXECUTOR;
+import static com.zenith.Globals.*;
 
 public class RespawnHandler implements ClientEventLoopPacketHandler<ClientboundRespawnPacket, ClientSession> {
 
@@ -56,7 +54,7 @@ public class RespawnHandler implements ClientEventLoopPacketHandler<ClientboundR
         if (!packet.isKeepMetadata()) {
             CACHE.getPlayerCache().getThePlayer().getMetadata().clear();
         }
-        PlayerSimulation.INSTANCE.handleRespawn();
+        BOT.handleRespawn();
         return true;
     }
 

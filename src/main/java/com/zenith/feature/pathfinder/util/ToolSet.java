@@ -1,7 +1,6 @@
 package com.zenith.feature.pathfinder.util;
 
 import com.zenith.cache.data.inventory.Container;
-import com.zenith.feature.player.PlayerSimulation;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.enchantment.EnchantmentRegistry;
 import com.zenith.mc.item.ItemData;
@@ -16,6 +15,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.item.component.ItemEnchantm
 
 import java.util.List;
 
+import static com.zenith.Globals.BOT;
 import static com.zenith.Globals.CACHE;
 
 public class ToolSet {
@@ -27,7 +27,7 @@ public class ToolSet {
         }
         int bestSlot = getBestSlot(block, false, true);
         ItemStack itemStack = CACHE.getPlayerCache().getPlayerInventory().get(36 + bestSlot);
-        double blockBreakSpeed = PlayerSimulation.INSTANCE.getInteractions().blockBreakSpeed(block, itemStack);
+        double blockBreakSpeed = BOT.getInteractions().blockBreakSpeed(block, itemStack);
         if (blockBreakSpeed <= 0) {
             blockBreakSpeedCache.put(block.id(), -1);
             return -1;
@@ -70,7 +70,7 @@ public class ToolSet {
 //            if (Baritone.settings().itemSaver.value && (itemStack.getDamageValue() + Baritone.settings().itemSaverThreshold.value) >= itemStack.getMaxDamage() && itemStack.getMaxDamage() > 1) {
 //                continue;
 //            }
-            double speed = PlayerSimulation.INSTANCE.getInteractions().blockBreakSpeed(b, itemStack);
+            double speed = BOT.getInteractions().blockBreakSpeed(b, itemStack);
             boolean silkTouch = hasSilkTouch(itemStack);
             if (speed > highestSpeed) {
                 highestSpeed = speed;

@@ -3,7 +3,6 @@ package com.zenith.network.client.handler.incoming;
 import com.zenith.Proxy;
 import com.zenith.cache.data.PlayerCache;
 import com.zenith.feature.pathfinder.Baritone;
-import com.zenith.feature.player.PlayerSimulation;
 import com.zenith.feature.spectator.SpectatorSync;
 import com.zenith.module.impl.AntiAFK;
 import com.zenith.network.client.ClientSession;
@@ -35,7 +34,7 @@ public class PlayerPositionHandler implements ClientEventLoopPacketHandler<Clien
             .setPitch((packet.getRelative().contains(PositionElement.PITCH) ? cache.getPitch() : 0.0f) + packet.getPitch());
         ServerSession currentPlayer = Proxy.getInstance().getCurrentPlayer().get();
         if (isNull(currentPlayer) || !currentPlayer.isLoggedIn()) {
-            PlayerSimulation.INSTANCE.handlePlayerPosRotate(packet.getTeleportId());
+            BOT.handlePlayerPosRotate(packet.getTeleportId());
         } else {
             CLIENT_LOG.debug("Passing teleport {} through to current player", packet.getTeleportId());
         }

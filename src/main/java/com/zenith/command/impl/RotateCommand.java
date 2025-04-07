@@ -8,10 +8,10 @@ import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
 import com.zenith.discord.Embed;
 import com.zenith.feature.player.InputRequest;
-import com.zenith.feature.player.PlayerSimulation;
 
 import static com.mojang.brigadier.arguments.FloatArgumentType.floatArg;
 import static com.mojang.brigadier.arguments.FloatArgumentType.getFloat;
+import static com.zenith.Globals.BOT;
 import static com.zenith.Globals.INPUTS;
 
 public class RotateCommand extends Command {
@@ -121,8 +121,8 @@ public class RotateCommand extends Command {
         var accepted = INPUTS.submit(input)
             .get();
         embed
-            .addField("Yaw", PlayerSimulation.INSTANCE.getYaw(), false)
-            .addField("Pitch", PlayerSimulation.INSTANCE.getPitch(), false);
+            .addField("Yaw", BOT.getYaw(), false)
+            .addField("Pitch", BOT.getPitch(), false);
         if (accepted) {
             embed
                 .title("Rotated")

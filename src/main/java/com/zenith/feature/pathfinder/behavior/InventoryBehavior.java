@@ -3,7 +3,6 @@ package com.zenith.feature.pathfinder.behavior;
 import com.zenith.cache.data.inventory.Container;
 import com.zenith.feature.items.ContainerClickAction;
 import com.zenith.feature.pathfinder.Baritone;
-import com.zenith.feature.player.PlayerSimulation;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.item.ItemData;
@@ -172,7 +171,7 @@ public class InventoryBehavior extends Behavior {
             ToolTag toolTag = itemData.toolTag();
             if (toolTag == null) continue;
             if (toolTag.type() != ToolType.PICKAXE) continue;
-            double speed = PlayerSimulation.INSTANCE.getInteractions().blockBreakSpeed(against, itemStack);
+            double speed = BOT.getInteractions().blockBreakSpeed(against, itemStack);
             if (speed > bestSpeed) {
                 bestSpeed = speed;
                 bestInd = i;

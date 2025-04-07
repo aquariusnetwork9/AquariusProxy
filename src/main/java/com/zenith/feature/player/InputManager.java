@@ -4,6 +4,7 @@ import com.zenith.event.module.ClientBotTick;
 import org.jspecify.annotations.NonNull;
 
 import static com.github.rfresh2.EventConsumer.of;
+import static com.zenith.Globals.BOT;
 import static com.zenith.Globals.EVENT_BUS;
 
 public class InputManager {
@@ -38,7 +39,7 @@ public class InputManager {
 
     private synchronized void handleTick(final ClientBotTick event) {
         if (currentMovementInputRequest == DEFAULT_MOVEMENT_INPUT_REQUEST) return;
-        PlayerSimulation.INSTANCE.requestMovement(currentMovementInputRequest, currentMovementInputRequestFuture);
+        BOT.requestMovement(currentMovementInputRequest, currentMovementInputRequestFuture);
         currentMovementInputRequest = DEFAULT_MOVEMENT_INPUT_REQUEST;
         currentMovementInputRequestFuture.complete(true);
         currentMovementInputRequestFuture = DEFAULT_REQUEST_FUTURE;

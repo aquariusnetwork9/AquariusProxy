@@ -35,7 +35,7 @@ import java.util.Optional;
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Globals.*;
 
-public class PlayerSimulation extends ModuleUtils {
+public final class Bot extends ModuleUtils {
     @Getter private double x;
     @Getter private double y;
     @Getter private double z;
@@ -85,9 +85,7 @@ public class PlayerSimulation extends ModuleUtils {
     @Getter private boolean verticalCollision = false;
     @Getter private final PlayerInteractionManager interactions = new PlayerInteractionManager();
 
-    public static final PlayerSimulation INSTANCE = new PlayerSimulation();
-
-    public PlayerSimulation() {
+    public Bot() {
         EVENT_BUS.subscribe(
             this,
             // we want this to be one of the last thing that happens in the tick

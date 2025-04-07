@@ -6,7 +6,6 @@ import com.zenith.feature.pathfinder.PathInput;
 import com.zenith.feature.pathfinder.PlayerContext;
 import com.zenith.feature.pathfinder.util.RotationUtils;
 import com.zenith.feature.pathfinder.util.VecUtils;
-import com.zenith.feature.player.PlayerSimulation;
 import com.zenith.feature.player.Rotation;
 import com.zenith.feature.player.World;
 import com.zenith.mc.block.BlockPos;
@@ -15,6 +14,8 @@ import com.zenith.mc.block.LocalizedCollisionBox;
 import org.jspecify.annotations.Nullable;
 
 import java.util.*;
+
+import static com.zenith.Globals.BOT;
 
 public abstract class Movement implements IMovement {
     public static final Direction[] HORIZONTALS_BUT_ALSO_DOWN_____SO_EVERY_DIRECTION_EXCEPT_UP = {Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST, Direction.DOWN};
@@ -42,7 +43,6 @@ public abstract class Movement implements IMovement {
     public List<BlockPos> toBreakCached = null;
     public List<BlockPos> toPlaceCached = null;
 
-    private static final PlayerSimulation playerSim = PlayerSimulation.INSTANCE;
     protected final PlayerContext ctx = PlayerContext.INSTANCE;
 
     protected Movement(BlockPos src, BlockPos dest, BlockPos[] toBreak, BlockPos toPlace) {
@@ -92,15 +92,15 @@ public abstract class Movement implements IMovement {
     public MovementStatus update() {
         currentState = updateState(currentState);
 
-        if (playerSim.isTouchingWater() && playerSim.getY() < dest.y() + 0.6) {
-            LocalizedCollisionBox predictedCb = playerSim
+        if (BOT.isTouchingWater() && BOT.getY() < dest.y() + 0.6) {
+            LocalizedCollisionBox predictedCb = BOT
                 .getPlayerCollisionBox()
                 .move(dest.x() - src.x(), dest.y() - src.y(), dest.z() - src.z());
             List<LocalizedCollisionBox> predicatedCollisions = new ArrayList<>(1);
             World.getSolidBlockCollisionBoxes(predictedCb, predicatedCollisions);
             boolean willCollide = false;
             for (LocalizedCollisionBox box : predicatedCollisions) {
-                if (box.intersects(playerSim.getPlayerCollisionBox())) {
+                if (box.intersects(BOT.getPlayerCollisionBox())) {
                     willCollide = true;
                     break;
                 }

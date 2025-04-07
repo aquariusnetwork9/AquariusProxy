@@ -13,6 +13,7 @@ import com.zenith.command.CommandManager;
 import com.zenith.database.DatabaseManager;
 import com.zenith.discord.DiscordBot;
 import com.zenith.feature.items.PlayerInventoryManager;
+import com.zenith.feature.player.Bot;
 import com.zenith.feature.player.InputManager;
 import com.zenith.feature.tps.TPSCalculator;
 import com.zenith.feature.whitelist.PlayerListsManager;
@@ -78,6 +79,7 @@ public class Globals {
     public static final TerminalManager TERMINAL;
     public static final InGameCommandManager IN_GAME_COMMAND;
     public static final CommandManager COMMAND;
+    public static final Bot BOT;
     public static final PlayerInventoryManager INVENTORY;
     public static final ZenithViaInitializer VIA_INITIALIZER;
     public static final PluginManager PLUGIN_MANAGER;
@@ -228,6 +230,7 @@ public class Globals {
             ConfigVerifier.verifyConfigs();
             PLUGIN_MANAGER = new PluginManager();
             PLAYER_LISTS.init(); // must be init after config
+            BOT = new Bot();
         } catch (final Throwable e) {
             DEFAULT_LOG.error("Unable to initialize!", e);
             throw e;

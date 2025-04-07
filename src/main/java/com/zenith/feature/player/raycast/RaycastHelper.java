@@ -2,7 +2,6 @@ package com.zenith.feature.player.raycast;
 
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityPlayer;
-import com.zenith.feature.player.PlayerSimulation;
 import com.zenith.feature.player.World;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockRegistry;
@@ -19,7 +18,7 @@ import static com.zenith.Globals.*;
 public class RaycastHelper {
 
     public static BlockRaycastResult playerBlockRaycast(double maxDistance, boolean includeFluids) {
-        var sim = PlayerSimulation.INSTANCE;
+        var sim = BOT;
         return blockRaycastFromPos(sim.getX(), sim.getEyeY(), sim.getZ(), sim.getYaw(), sim.getPitch(), maxDistance, includeFluids);
     }
 
@@ -91,16 +90,16 @@ public class RaycastHelper {
     }
 
     public static BlockRaycastResult playerEyeRaycastThroughToBlockTarget(int blockX, int blockY, int blockZ) {
-        var sim = PlayerSimulation.INSTANCE;
+        var sim = BOT;
         return playerEyeRaycastThroughToBlockTarget(blockX, blockY, blockZ, sim.getYaw(), sim.getPitch(), sim.getBlockReachDistance());
     }
 
     public static BlockRaycastResult playerEyeRaycastThroughToBlockTarget(int blockX, int blockY, int blockZ, float yaw, float pitch) {
-        return playerEyeRaycastThroughToBlockTarget(blockX, blockY, blockZ, yaw, pitch, PlayerSimulation.INSTANCE.getBlockReachDistance());
+        return playerEyeRaycastThroughToBlockTarget(blockX, blockY, blockZ, yaw, pitch, BOT.getBlockReachDistance());
     }
 
     public static BlockRaycastResult playerEyeRaycastThroughToBlockTarget(int blockX, int blockY, int blockZ, float yaw, float pitch, double blockReachDistance) {
-        var sim = PlayerSimulation.INSTANCE;
+        var sim = BOT;
         final double x1 = sim.getX();
         final double y1 = sim.getEyeY();
         final double z1 = sim.getZ();
@@ -133,7 +132,7 @@ public class RaycastHelper {
     }
 
     public static EntityRaycastResult playerEntityRaycast(double maxDistance) {
-        var sim = PlayerSimulation.INSTANCE;
+        var sim = BOT;
         return entityRaycastFromPos(sim.getX(), sim.getEyeY(), sim.getZ(), sim.getYaw(), sim.getPitch(), maxDistance);
     }
 
@@ -178,16 +177,16 @@ public class RaycastHelper {
 
     // ignoring all intersections with other blocks and entities
     public static EntityRaycastResult playerEyeRaycastThroughToTarget(Entity target, double entityReachDistance) {
-        var sim = PlayerSimulation.INSTANCE;
+        var sim = BOT;
         return playerEyeRaycastThroughToTarget(target, sim.getYaw(), sim.getPitch(), entityReachDistance);
     }
 
     public static EntityRaycastResult playerEyeRaycastThroughToTarget(Entity target) {
-        return playerEyeRaycastThroughToTarget(target, PlayerSimulation.INSTANCE.getEntityInteractDistance());
+        return playerEyeRaycastThroughToTarget(target, BOT.getEntityInteractDistance());
     }
 
     public static EntityRaycastResult playerEyeRaycastThroughToTarget(Entity target, float yaw, float pitch, double entityReachDistance) {
-        var sim = PlayerSimulation.INSTANCE;
+        var sim = BOT;
         final double x1 = sim.getX();
         final double y1 = sim.getEyeY();
         final double z1 = sim.getZ();
@@ -210,7 +209,7 @@ public class RaycastHelper {
     }
 
     public static EntityRaycastResult playerEyeRaycastThroughToTarget(Entity target, float yaw, float pitch) {
-        return playerEyeRaycastThroughToTarget(target, yaw, pitch, PlayerSimulation.INSTANCE.getEntityInteractDistance());
+        return playerEyeRaycastThroughToTarget(target, yaw, pitch, BOT.getEntityInteractDistance());
     }
 
     private static LocalizedCollisionBox entityCollisionBox(final Entity entity, final EntityData data) {
@@ -261,7 +260,7 @@ public class RaycastHelper {
     }
 
     public static BlockOrEntityRaycastResult playerBlockOrEntityRaycast(double blockReachDistance, double entityReachDistance) {
-        var sim = PlayerSimulation.INSTANCE;
+        var sim = BOT;
         return blockOrEntityRaycastFromPos(sim.getX(), sim.getEyeY(), sim.getZ(), sim.getYaw(), sim.getPitch(), blockReachDistance, entityReachDistance);
     }
 
