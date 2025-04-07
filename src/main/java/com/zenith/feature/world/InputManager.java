@@ -1,12 +1,10 @@
 package com.zenith.feature.world;
 
 import com.zenith.event.module.ClientBotTick;
-import com.zenith.module.impl.PlayerSimulation;
 import org.jspecify.annotations.NonNull;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Globals.EVENT_BUS;
-import static com.zenith.Globals.MODULE;
 
 public class InputManager {
     private static final InputRequest DEFAULT_MOVEMENT_INPUT_REQUEST = InputRequest.builder()
@@ -40,7 +38,7 @@ public class InputManager {
 
     private synchronized void handleTick(final ClientBotTick event) {
         if (currentMovementInputRequest == DEFAULT_MOVEMENT_INPUT_REQUEST) return;
-        MODULE.get(PlayerSimulation.class).requestMovement(currentMovementInputRequest, currentMovementInputRequestFuture);
+        PlayerSimulation.INSTANCE.requestMovement(currentMovementInputRequest, currentMovementInputRequestFuture);
         currentMovementInputRequest = DEFAULT_MOVEMENT_INPUT_REQUEST;
         currentMovementInputRequestFuture.complete(true);
         currentMovementInputRequestFuture = DEFAULT_REQUEST_FUTURE;

@@ -33,7 +33,6 @@ public class ModuleManager {
             new CoordObfuscator(),
             new ExtraChat(),
             new KillAura(),
-            new PlayerSimulation(),
             new QueueWarning(),
             new ReplayMod(),
             new Requeue(),

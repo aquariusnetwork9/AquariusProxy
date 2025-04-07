@@ -1,6 +1,6 @@
 package com.zenith.cache.data.entity;
 
-import com.zenith.module.impl.PlayerSimulation;
+import com.zenith.feature.world.PlayerSimulation;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-import static com.zenith.Globals.MODULE;
 import static com.zenith.Globals.SERVER_LOG;
 
 
@@ -53,7 +52,7 @@ public class EntityPlayer extends EntityLiving {
     @Override
     public void updateAttributes(final List<Attribute> attributes) {
         super.updateAttributes(attributes);
-        if (this.selfPlayer) MODULE.get(PlayerSimulation.class).updateAttributes();
+        if (this.selfPlayer) PlayerSimulation.INSTANCE.updateAttributes();
     }
 
     public boolean isAlive() {

@@ -8,12 +8,11 @@ import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
 import com.zenith.discord.Embed;
 import com.zenith.feature.world.InputRequest;
-import com.zenith.module.impl.PlayerSimulation;
+import com.zenith.feature.world.PlayerSimulation;
 
 import static com.mojang.brigadier.arguments.FloatArgumentType.floatArg;
 import static com.mojang.brigadier.arguments.FloatArgumentType.getFloat;
 import static com.zenith.Globals.INPUTS;
-import static com.zenith.Globals.MODULE;
 
 public class RotateCommand extends Command {
     private static final int MOVE_PRIORITY = 1000000;
@@ -122,8 +121,8 @@ public class RotateCommand extends Command {
         var accepted = INPUTS.submit(input)
             .get();
         embed
-            .addField("Yaw", MODULE.get(PlayerSimulation.class).getYaw(), false)
-            .addField("Pitch", MODULE.get(PlayerSimulation.class).getPitch(), false);
+            .addField("Yaw", PlayerSimulation.INSTANCE.getYaw(), false)
+            .addField("Pitch", PlayerSimulation.INSTANCE.getPitch(), false);
         if (accepted) {
             embed
                 .title("Rotated")

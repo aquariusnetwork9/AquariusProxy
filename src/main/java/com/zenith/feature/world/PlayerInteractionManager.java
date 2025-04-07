@@ -13,7 +13,6 @@ import com.zenith.mc.item.ItemData;
 import com.zenith.mc.item.ItemRegistry;
 import com.zenith.mc.item.ToolTag;
 import com.zenith.mc.item.ToolTier;
-import com.zenith.module.impl.PlayerSimulation;
 import com.zenith.util.math.MathHelper;
 import lombok.Getter;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
@@ -49,11 +48,7 @@ public class PlayerInteractionManager {
     private int destroyDelay;
     private final int destroyDelayInterval = 6;
     private boolean isDestroying;
-    private final PlayerSimulation player;
-
-    public PlayerInteractionManager(final PlayerSimulation playerSimulation) {
-        this.player = playerSimulation;
-    }
+    private final PlayerSimulation player = PlayerSimulation.INSTANCE;
 
     private boolean sameDestroyTarget(final int x, final int y, final int z) {
         ItemStack itemStack = CACHE.getPlayerCache().getEquipment(EquipmentSlot.MAIN_HAND);

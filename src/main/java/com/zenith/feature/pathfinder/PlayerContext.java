@@ -1,18 +1,17 @@
 package com.zenith.feature.pathfinder;
 
 import com.zenith.cache.data.entity.EntityLiving;
+import com.zenith.feature.world.PlayerSimulation;
 import com.zenith.feature.world.Rotation;
 import com.zenith.feature.world.raycast.BlockRaycastResult;
 import com.zenith.feature.world.raycast.RaycastHelper;
 import com.zenith.mc.block.BlockPos;
-import com.zenith.module.impl.PlayerSimulation;
 import org.cloudburstmc.math.vector.Vector3d;
 
 import java.util.Optional;
 import java.util.stream.Stream;
 
 import static com.zenith.Globals.CACHE;
-import static com.zenith.Globals.MODULE;
 
 public final class PlayerContext {
     public static final PlayerContext INSTANCE = new PlayerContext();
@@ -23,7 +22,7 @@ public final class PlayerContext {
     }
 
     public PlayerSimulation player() {
-        return MODULE.get(PlayerSimulation.class);
+        return PlayerSimulation.INSTANCE;
     }
 
     public Stream<EntityLiving> entitiesStream() {

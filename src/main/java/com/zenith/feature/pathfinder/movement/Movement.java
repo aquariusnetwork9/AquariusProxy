@@ -6,17 +6,15 @@ import com.zenith.feature.pathfinder.PathInput;
 import com.zenith.feature.pathfinder.PlayerContext;
 import com.zenith.feature.pathfinder.util.RotationUtils;
 import com.zenith.feature.pathfinder.util.VecUtils;
+import com.zenith.feature.world.PlayerSimulation;
 import com.zenith.feature.world.Rotation;
 import com.zenith.feature.world.World;
 import com.zenith.mc.block.BlockPos;
 import com.zenith.mc.block.Direction;
 import com.zenith.mc.block.LocalizedCollisionBox;
-import com.zenith.module.impl.PlayerSimulation;
 import org.jspecify.annotations.Nullable;
 
 import java.util.*;
-
-import static com.zenith.Globals.MODULE;
 
 public abstract class Movement implements IMovement {
     public static final Direction[] HORIZONTALS_BUT_ALSO_DOWN_____SO_EVERY_DIRECTION_EXCEPT_UP = {Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST, Direction.DOWN};
@@ -44,7 +42,7 @@ public abstract class Movement implements IMovement {
     public List<BlockPos> toBreakCached = null;
     public List<BlockPos> toPlaceCached = null;
 
-    private static final PlayerSimulation playerSim = MODULE.get(PlayerSimulation.class);
+    private static final PlayerSimulation playerSim = PlayerSimulation.INSTANCE;
     protected final PlayerContext ctx = PlayerContext.INSTANCE;
 
     protected Movement(BlockPos src, BlockPos dest, BlockPos[] toBreak, BlockPos toPlace) {

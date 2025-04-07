@@ -1,12 +1,12 @@
 package com.zenith.feature.pathfinder.util;
 
 import com.zenith.cache.data.inventory.Container;
+import com.zenith.feature.world.PlayerSimulation;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.enchantment.EnchantmentRegistry;
 import com.zenith.mc.item.ItemData;
 import com.zenith.mc.item.ItemRegistry;
 import com.zenith.mc.item.ToolTag;
-import com.zenith.module.impl.PlayerSimulation;
 import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
 import it.unimi.dsi.fastutil.ints.Int2DoubleOpenHashMap;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
@@ -17,7 +17,6 @@ import org.geysermc.mcprotocollib.protocol.data.game.item.component.ItemEnchantm
 import java.util.List;
 
 import static com.zenith.Globals.CACHE;
-import static com.zenith.Globals.MODULE;
 
 public class ToolSet {
     private final Int2DoubleMap blockBreakSpeedCache = new Int2DoubleOpenHashMap();
@@ -28,7 +27,7 @@ public class ToolSet {
         }
         int bestSlot = getBestSlot(block, false, true);
         ItemStack itemStack = CACHE.getPlayerCache().getPlayerInventory().get(36 + bestSlot);
-        double blockBreakSpeed = MODULE.get(PlayerSimulation.class).getInteractions().blockBreakSpeed(block, itemStack);
+        double blockBreakSpeed = PlayerSimulation.INSTANCE.getInteractions().blockBreakSpeed(block, itemStack);
         if (blockBreakSpeed <= 0) {
             blockBreakSpeedCache.put(block.id(), -1);
             return -1;
@@ -71,7 +70,7 @@ public class ToolSet {
 //            if (Baritone.settings().itemSaver.value && (itemStack.getDamageValue() + Baritone.settings().itemSaverThreshold.value) >= itemStack.getMaxDamage() && itemStack.getMaxDamage() > 1) {
 //                continue;
 //            }
-            double speed = MODULE.get(PlayerSimulation.class).getInteractions().blockBreakSpeed(b, itemStack);
+            double speed = PlayerSimulation.INSTANCE.getInteractions().blockBreakSpeed(b, itemStack);
             boolean silkTouch = hasSilkTouch(itemStack);
             if (speed > highestSpeed) {
                 highestSpeed = speed;

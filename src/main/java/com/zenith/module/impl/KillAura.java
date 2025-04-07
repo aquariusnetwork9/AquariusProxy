@@ -213,7 +213,7 @@ public class KillAura extends AbstractInventoryModule {
     }
 
     private boolean canPossiblyReach(final EntityLiving entity) {
-        var rangeSq = Math.pow(MODULE.get(PlayerSimulation.class).getEntityInteractDistance(), 2) + 5;
+        var rangeSq = Math.pow(PlayerSimulation.INSTANCE.getEntityInteractDistance(), 2) + 5;
         if (CACHE.getPlayerCache().distanceSqToSelf(entity) > rangeSq) return false;
         var rotation = RotationHelper.shortestRotationTo(entity);
         var entityRaycastResult = RaycastHelper.playerEyeRaycastThroughToTarget(entity, rotation.getX(), rotation.getY());

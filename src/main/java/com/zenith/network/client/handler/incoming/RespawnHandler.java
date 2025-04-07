@@ -2,8 +2,8 @@ package com.zenith.network.client.handler.incoming;
 
 import com.zenith.cache.CacheResetType;
 import com.zenith.feature.spectator.SpectatorSync;
+import com.zenith.feature.world.PlayerSimulation;
 import com.zenith.feature.world.World;
-import com.zenith.module.impl.PlayerSimulation;
 import com.zenith.network.client.ClientSession;
 import com.zenith.network.registry.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundRespawnPacket;
@@ -13,7 +13,8 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.zenith.Globals.*;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.EXECUTOR;
 
 public class RespawnHandler implements ClientEventLoopPacketHandler<ClientboundRespawnPacket, ClientSession> {
 
@@ -55,7 +56,7 @@ public class RespawnHandler implements ClientEventLoopPacketHandler<ClientboundR
         if (!packet.isKeepMetadata()) {
             CACHE.getPlayerCache().getThePlayer().getMetadata().clear();
         }
-        MODULE.get(PlayerSimulation.class).handleRespawn();
+        PlayerSimulation.INSTANCE.handleRespawn();
         return true;
     }
 

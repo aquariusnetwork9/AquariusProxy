@@ -6,11 +6,9 @@ import com.zenith.command.Command;
 import com.zenith.command.CommandUsage;
 import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
+import com.zenith.feature.world.PlayerSimulation;
 import com.zenith.feature.world.World;
 import com.zenith.feature.world.raycast.RaycastHelper;
-import com.zenith.module.impl.PlayerSimulation;
-
-import static com.zenith.Globals.MODULE;
 
 public class RaycastCommand extends Command {
     @Override
@@ -25,7 +23,7 @@ public class RaycastCommand extends Command {
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
         return command("raycast").executes(c -> {
-                var sim = MODULE.get(PlayerSimulation.class);
+                var sim = PlayerSimulation.INSTANCE;
                 if (Proxy.getInstance().hasActivePlayer()) sim.syncFromCache(true);
                 var result = RaycastHelper.playerBlockOrEntityRaycast(sim.getBlockReachDistance(), sim.getEntityInteractDistance());
                 var embed = c.getSource().getEmbed();
@@ -44,7 +42,7 @@ public class RaycastCommand extends Command {
                     embed.addField("Entity", type != null ? type : "N/A", false);
                 }})
             .then(literal("e").executes(c -> {
-                var sim = MODULE.get(PlayerSimulation.class);
+                var sim = PlayerSimulation.INSTANCE;
                 if (Proxy.getInstance().hasActivePlayer()) sim.syncFromCache(true);
                 var result = RaycastHelper.playerEntityRaycast(sim.getEntityInteractDistance());
                 c.getSource().getEmbed()
@@ -55,7 +53,7 @@ public class RaycastCommand extends Command {
                     .primaryColor();
             }))
             .then(literal("b").executes(c -> {
-                var sim = MODULE.get(PlayerSimulation.class);
+                var sim = PlayerSimulation.INSTANCE;
                 if (Proxy.getInstance().hasActivePlayer()) sim.syncFromCache(true);
                 var result = RaycastHelper.playerBlockRaycast(sim.getBlockReachDistance(), false);
                 c.getSource().getEmbed()

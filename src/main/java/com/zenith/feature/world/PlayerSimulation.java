@@ -1,15 +1,13 @@
-package com.zenith.module.impl;
+package com.zenith.feature.world;
 
-import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.event.module.ClientBotTick;
-import com.zenith.feature.world.*;
 import com.zenith.mc.block.*;
 import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.mc.entity.EntityData;
-import com.zenith.module.Module;
+import com.zenith.module.ModuleUtils;
 import com.zenith.util.math.MathHelper;
 import com.zenith.util.math.MutableVec3d;
 import lombok.Getter;
@@ -37,7 +35,7 @@ import java.util.Optional;
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Globals.*;
 
-public class PlayerSimulation extends Module {
+public class PlayerSimulation extends ModuleUtils {
     @Getter private double x;
     @Getter private double y;
     @Getter private double z;
@@ -85,11 +83,13 @@ public class PlayerSimulation extends Module {
     @Getter private boolean horizontalCollision = false;
     private boolean horizontalCollisionMinor = false;
     @Getter private boolean verticalCollision = false;
-    @Getter private final PlayerInteractionManager interactions = new PlayerInteractionManager(this);
+    @Getter private final PlayerInteractionManager interactions = new PlayerInteractionManager();
 
-    @Override
-    public List<EventConsumer<?>> registerEvents() {
-        return List.of(
+    public static final PlayerSimulation INSTANCE = new PlayerSimulation();
+
+    public PlayerSimulation() {
+        EVENT_BUS.subscribe(
+            this,
             // we want this to be one of the last thing that happens in the tick
             // to allow other modules to update the player's input
             // other modules can also do actions after this tick by setting an even lower priority
@@ -98,11 +98,6 @@ public class PlayerSimulation extends Module {
             of(ClientBotTick.Starting.class, this::handleClientTickStarting),
             of(ClientBotTick.Stopped.class, this::handleClientTickStopped)
         );
-    }
-
-    @Override
-    public boolean enabledSetting() {
-        return true;
     }
 
     public synchronized void handleClientTickStarting(final ClientBotTick.Starting event) {

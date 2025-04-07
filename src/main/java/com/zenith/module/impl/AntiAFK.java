@@ -117,7 +117,7 @@ public class AntiAFK extends Module {
 
     private void jumpTick() {
         if (jumpTimer.tick(CONFIG.client.extra.antiafk.actions.jumpDelayTicks)) {
-            if (CONFIG.client.extra.antiafk.actions.jumpOnlyInWater && !MODULE.get(PlayerSimulation.class).isTouchingWater()) return;
+            if (CONFIG.client.extra.antiafk.actions.jumpOnlyInWater && !PlayerSimulation.INSTANCE.isTouchingWater()) return;
             INPUTS.submit(InputRequest.builder()
                               .input(Input.builder()
                                          .jumping(true)
@@ -143,7 +143,7 @@ public class AntiAFK extends Module {
             if (reachedPathingGoal()) {
                 shouldWalk = false;
             } else {
-                var shouldSneak = !MODULE.get(PlayerSimulation.class).isTouchingWater()
+                var shouldSneak = !PlayerSimulation.INSTANCE.isTouchingWater()
                     && (CONFIG.client.extra.antiafk.actions.safeWalk || CONFIG.client.extra.antiafk.actions.sneak);
                 INPUTS.submit(InputRequest.builder()
                                   .input(Input.builder()
