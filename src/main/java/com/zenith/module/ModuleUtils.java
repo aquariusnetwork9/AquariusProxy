@@ -4,6 +4,7 @@ import com.zenith.Proxy;
 import com.zenith.command.util.CommandOutputHelper;
 import com.zenith.discord.Embed;
 import com.zenith.network.client.ClientSession;
+import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 
 import static com.zenith.Globals.DISCORD;
@@ -47,12 +48,40 @@ public abstract class ModuleUtils {
 
     protected final String moduleLogPrefix = "[" + this.getClass().getSimpleName() + "] ";
 
+    public void debug(String msg) {
+        MODULE_LOG.debug(moduleLogPrefix + msg);
+    }
+
+    public void debug(String msg, Object... args) {
+        MODULE_LOG.debug(moduleLogPrefix + msg, args);
+    }
+
+    public void debug(Component msg) {
+        MODULE_LOG.debug("{}{}", moduleLogPrefix, msg);
+    }
+
     public void info(String msg) {
         MODULE_LOG.info(moduleLogPrefix + msg);
     }
 
     public void info(String msg, Object... args) {
         MODULE_LOG.info(moduleLogPrefix + msg, args);
+    }
+
+    public void info(Component msg) {
+        MODULE_LOG.info("{}{}", moduleLogPrefix, msg);
+    }
+
+    public void warn(String msg) {
+        MODULE_LOG.warn(moduleLogPrefix + msg);
+    }
+
+    public void warn(String msg, Object... args) {
+        MODULE_LOG.warn(moduleLogPrefix + msg, args);
+    }
+
+    public void warn(Component msg) {
+        MODULE_LOG.warn("{}{}", moduleLogPrefix, msg);
     }
 
     public void error(String msg) {
@@ -63,20 +92,8 @@ public abstract class ModuleUtils {
         MODULE_LOG.error(moduleLogPrefix + msg, args);
     }
 
-    public void debug(String msg) {
-        MODULE_LOG.debug(moduleLogPrefix + msg);
-    }
-
-    public void debug(String msg, Object... args) {
-        MODULE_LOG.debug(moduleLogPrefix + msg, args);
-    }
-
-    public void warn(String msg) {
-        MODULE_LOG.warn(moduleLogPrefix + msg);
-    }
-
-    public void warn(String msg, Object... args) {
-        MODULE_LOG.warn(moduleLogPrefix + msg, args);
+    public void error(Component msg) {
+        MODULE_LOG.error("{}{}", moduleLogPrefix, msg);
     }
 
     protected final String moduleAlertPrefix = "<gray>[<aqua>" + this.getClass().getSimpleName() + "<gray>]<reset> ";
@@ -97,7 +114,7 @@ public abstract class ModuleUtils {
 
     // is also logged to the terminal
     public void discordNotification(Embed embed) {
-        embed.title("[" + this.getClass().getSimpleName() + "] " + (embed.isTitlePresent() ? embed.title() : ""));
+        embed.title(moduleLogPrefix + (embed.isTitlePresent() ? embed.title() : ""));
         DISCORD.sendEmbedMessage(embed);
     }
 
