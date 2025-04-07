@@ -1,4 +1,4 @@
-package com.zenith.network.registry;
+package com.zenith.api.network;
 
 import com.zenith.util.SortedFastArrayList;
 import lombok.Data;

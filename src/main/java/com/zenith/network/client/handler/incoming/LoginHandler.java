@@ -2,9 +2,9 @@ package com.zenith.network.client.handler.incoming;
 
 import com.zenith.Proxy;
 import com.zenith.api.event.client.ClientOnlineEvent;
+import com.zenith.api.network.PacketHandler;
+import com.zenith.api.network.client.ClientSession;
 import com.zenith.cache.CacheResetType;
-import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.PacketHandler;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.HandPreference;
 import org.geysermc.mcprotocollib.protocol.data.game.setting.ChatVisibility;
 import org.geysermc.mcprotocollib.protocol.data.game.setting.SkinPart;

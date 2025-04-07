@@ -1,7 +1,7 @@
 package com.zenith.network.client.handler.incoming;
 
-import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.api.network.PacketHandler;
+import com.zenith.api.network.client.ClientSession;
 import com.zenith.util.BrandSerializer;
 import net.kyori.adventure.key.Key;
 import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundCustomPayloadPacket;

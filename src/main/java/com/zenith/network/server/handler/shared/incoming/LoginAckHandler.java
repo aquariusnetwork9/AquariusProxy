@@ -1,8 +1,8 @@
 package com.zenith.network.server.handler.shared.incoming;
 
 import com.zenith.Proxy;
-import com.zenith.network.registry.PacketHandler;
-import com.zenith.network.server.ServerSession;
+import com.zenith.api.network.PacketHandler;
+import com.zenith.api.network.server.ServerSession;
 import net.kyori.adventure.key.Key;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundCustomPayloadPacket;

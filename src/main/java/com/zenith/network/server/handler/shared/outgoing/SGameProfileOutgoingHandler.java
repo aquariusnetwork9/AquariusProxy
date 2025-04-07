@@ -2,9 +2,9 @@ package com.zenith.network.server.handler.shared.outgoing;
 
 import com.zenith.Proxy;
 import com.zenith.api.event.player.NonWhitelistedPlayerConnectedEvent;
+import com.zenith.api.network.PacketHandler;
+import com.zenith.api.network.server.ServerSession;
 import com.zenith.feature.api.sessionserver.SessionServerApi;
-import com.zenith.network.registry.PacketHandler;
-import com.zenith.network.server.ServerSession;
 import com.zenith.util.Wait;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;

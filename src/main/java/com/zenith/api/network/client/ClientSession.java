@@ -1,11 +1,12 @@
-package com.zenith.network.client;
+package com.zenith.api.network.client;
 
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.zenith.Proxy;
 import com.zenith.api.event.client.ClientConnectEvent;
 import com.zenith.api.event.client.ClientDisconnectEvent;
+import com.zenith.api.network.PacketCodecRegistries;
 import com.zenith.network.ClientPacketPingTask;
-import com.zenith.network.registry.PacketCodecRegistries;
+import com.zenith.network.client.ClientTickManager;
 import com.zenith.util.ComponentSerializer;
 import com.zenith.util.Config;
 import io.netty.channel.DefaultEventLoop;

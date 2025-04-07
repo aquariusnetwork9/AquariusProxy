@@ -1,7 +1,7 @@
 package com.zenith.network.server.handler.shared.postoutgoing;
 
-import com.zenith.network.registry.PostOutgoingPacketHandler;
-import com.zenith.network.server.ServerSession;
+import com.zenith.api.network.PostOutgoingPacketHandler;
+import com.zenith.api.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundStartConfigurationPacket;
 

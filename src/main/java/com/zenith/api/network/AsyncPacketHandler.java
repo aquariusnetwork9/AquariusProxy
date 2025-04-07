@@ -1,4 +1,4 @@
-package com.zenith.network.registry;
+package com.zenith.api.network;
 
 import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoop;

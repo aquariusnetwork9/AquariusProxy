@@ -1,8 +1,8 @@
 package com.zenith.feature.coordobf.handlers.outbound;
 
+import com.zenith.api.network.PacketHandler;
+import com.zenith.api.network.server.ServerSession;
 import com.zenith.module.impl.CoordObfuscator;
-import com.zenith.network.registry.PacketHandler;
-import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.ChunkBiomeData;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundChunksBiomesPacket;
 

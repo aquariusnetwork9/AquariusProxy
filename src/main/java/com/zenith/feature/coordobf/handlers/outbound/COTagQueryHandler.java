@@ -1,7 +1,7 @@
 package com.zenith.feature.coordobf.handlers.outbound;
 
-import com.zenith.network.registry.PacketHandler;
-import com.zenith.network.server.ServerSession;
+import com.zenith.api.network.PacketHandler;
+import com.zenith.api.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundTagQueryPacket;
 
 public class COTagQueryHandler implements PacketHandler<ClientboundTagQueryPacket, ServerSession> {

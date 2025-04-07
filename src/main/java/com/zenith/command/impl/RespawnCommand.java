@@ -6,8 +6,8 @@ import com.zenith.api.command.Command;
 import com.zenith.api.command.CommandCategory;
 import com.zenith.api.command.CommandContext;
 import com.zenith.api.command.CommandUsage;
+import com.zenith.api.network.client.ClientSession;
 import com.zenith.cache.data.entity.EntityPlayer;
-import com.zenith.network.client.ClientSession;
 import org.geysermc.mcprotocollib.protocol.data.game.ClientCommand;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundClientCommandPacket;
 

@@ -1,7 +1,7 @@
 package com.zenith.network.server.handler.shared.incoming;
 
-import com.zenith.network.registry.PacketHandler;
-import com.zenith.network.server.ServerSession;
+import com.zenith.api.network.PacketHandler;
+import com.zenith.api.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.packet.status.clientbound.ClientboundPongResponsePacket;
 import org.geysermc.mcprotocollib.protocol.packet.status.serverbound.ServerboundPingRequestPacket;
 

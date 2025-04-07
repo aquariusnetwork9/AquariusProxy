@@ -3,7 +3,7 @@ package com.zenith.network.server.handler.player;
 import com.zenith.api.command.CommandContext;
 import com.zenith.api.command.CommandOutputHelper;
 import com.zenith.api.command.CommandSource;
-import com.zenith.network.server.ServerSession;
+import com.zenith.api.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.jspecify.annotations.NonNull;

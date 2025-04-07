@@ -1,8 +1,8 @@
 package com.zenith.network.client.handler.incoming.entity;
 
 import com.zenith.api.event.module.TotemPopEvent;
-import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.api.network.ClientEventLoopPacketHandler;
+import com.zenith.api.network.client.ClientSession;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EntityEvent;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundEntityEventPacket;
 

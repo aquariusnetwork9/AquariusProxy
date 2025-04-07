@@ -1,7 +1,7 @@
 package com.zenith.network.client.handler.incoming.inventory;
 
-import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.api.network.ClientEventLoopPacketHandler;
+import com.zenith.api.network.client.ClientSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundRecipePacket;
 
 import static com.zenith.Globals.CACHE;

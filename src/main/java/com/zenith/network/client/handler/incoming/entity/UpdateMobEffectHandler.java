@@ -1,10 +1,10 @@
 package com.zenith.network.client.handler.incoming.entity;
 
+import com.zenith.api.network.ClientEventLoopPacketHandler;
+import com.zenith.api.network.client.ClientSession;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.cache.data.entity.PotionEffect;
-import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundUpdateMobEffectPacket;
 import org.jspecify.annotations.NonNull;
 

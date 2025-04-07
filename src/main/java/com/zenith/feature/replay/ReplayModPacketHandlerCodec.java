@@ -1,7 +1,7 @@
 package com.zenith.feature.replay;
 
+import com.zenith.api.network.PacketHandlerCodec;
 import com.zenith.module.impl.ReplayMod;
-import com.zenith.network.registry.PacketHandlerCodec;
 import org.geysermc.mcprotocollib.network.Session;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;

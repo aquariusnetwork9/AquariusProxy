@@ -1,6 +1,7 @@
 package com.zenith.network.server;
 
 import com.zenith.api.event.player.PlayerConnectionAddedEvent;
+import com.zenith.api.network.server.ServerSession;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.geysermc.mcprotocollib.network.event.server.*;

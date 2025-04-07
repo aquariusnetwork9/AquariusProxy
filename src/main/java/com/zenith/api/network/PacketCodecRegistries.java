@@ -1,5 +1,6 @@
-package com.zenith.network.registry;
+package com.zenith.api.network;
 
+import com.zenith.api.network.server.ServerSession;
 import com.zenith.network.client.handler.incoming.*;
 import com.zenith.network.client.handler.incoming.entity.*;
 import com.zenith.network.client.handler.incoming.inventory.*;
@@ -12,7 +13,6 @@ import com.zenith.network.client.handler.outgoing.OutgoingChatCommandSignedHandl
 import com.zenith.network.client.handler.outgoing.OutgoingChatHandler;
 import com.zenith.network.client.handler.outgoing.OutgoingContainerClickHandler;
 import com.zenith.network.client.handler.postoutgoing.*;
-import com.zenith.network.server.ServerSession;
 import com.zenith.network.server.handler.player.incoming.*;
 import com.zenith.network.server.handler.player.outgoing.ClientCommandsOutgoingHandler;
 import com.zenith.network.server.handler.player.postoutgoing.LoginPostHandler;

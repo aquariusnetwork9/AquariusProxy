@@ -1,10 +1,11 @@
-package com.zenith.network.server;
+package com.zenith.api.network.server;
 
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.zenith.Proxy;
 import com.zenith.api.event.player.PlayerConnectionRemovedEvent;
 import com.zenith.api.event.player.PlayerDisconnectedEvent;
 import com.zenith.api.event.player.SpectatorDisconnectedEvent;
+import com.zenith.api.network.PacketCodecRegistries;
 import com.zenith.cache.data.PlayerCache;
 import com.zenith.cache.data.ServerProfileCache;
 import com.zenith.cache.data.cookie.CookieCache;
@@ -14,7 +15,6 @@ import com.zenith.feature.ratelimiter.LoginRateLimiter;
 import com.zenith.feature.ratelimiter.PacketRateLimiter;
 import com.zenith.feature.spectator.SpectatorEntityRegistry;
 import com.zenith.feature.spectator.entity.SpectatorEntity;
-import com.zenith.network.registry.PacketCodecRegistries;
 import com.zenith.util.ComponentSerializer;
 import com.zenith.util.Wait;
 import io.netty.channel.ChannelException;

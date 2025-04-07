@@ -1,8 +1,8 @@
 package com.zenith.api.module;
 
 import com.github.rfresh2.EventConsumer;
-import com.zenith.network.registry.PacketCodecRegistries;
-import com.zenith.network.registry.PacketHandlerCodec;
+import com.zenith.api.network.PacketCodecRegistries;
+import com.zenith.api.network.PacketHandlerCodec;
 import lombok.Getter;
 
 import java.util.Collections;

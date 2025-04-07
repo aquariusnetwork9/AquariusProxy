@@ -1,8 +1,8 @@
 package com.zenith.network.client.handler.incoming;
 
+import com.zenith.api.network.PacketHandler;
+import com.zenith.api.network.client.ClientSession;
 import com.zenith.feature.api.sessionserver.SessionServerApi;
-import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.PacketHandler;
 import com.zenith.util.Config;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.ClientboundHelloPacket;

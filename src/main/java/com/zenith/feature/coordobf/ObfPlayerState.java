@@ -1,6 +1,6 @@
 package com.zenith.feature.coordobf;
 
-import com.zenith.network.server.ServerSession;
+import com.zenith.api.network.server.ServerSession;
 import com.zenith.util.math.MutableVec3d;
 import lombok.Data;
 import org.jspecify.annotations.NullMarked;

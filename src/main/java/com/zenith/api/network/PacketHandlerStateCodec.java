@@ -1,7 +1,7 @@
-package com.zenith.network.registry;
+package com.zenith.api.network;
 
-import com.zenith.network.client.ClientSession;
-import com.zenith.network.server.ServerSession;
+import com.zenith.api.network.client.ClientSession;
+import com.zenith.api.network.server.ServerSession;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import lombok.AccessLevel;

@@ -1,7 +1,7 @@
 package com.zenith.network;
 
+import com.zenith.api.network.server.ServerSession;
 import com.zenith.feature.api.sessionserver.SessionServerApi;
-import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.ClientboundGameProfilePacket;
 import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.ClientboundLoginCompressionPacket;

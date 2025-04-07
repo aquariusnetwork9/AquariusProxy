@@ -1,9 +1,9 @@
 package com.zenith.network.server.handler.spectator.incoming;
 
+import com.zenith.api.network.PacketHandler;
+import com.zenith.api.network.server.ServerSession;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.feature.spectator.SpectatorSync;
-import com.zenith.network.registry.PacketHandler;
-import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSetCameraPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundTeleportToEntityPacket;
 

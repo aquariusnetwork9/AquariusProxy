@@ -1,5 +1,6 @@
 package com.zenith.cache;
 
+import com.zenith.api.network.server.ServerSession;
 import com.zenith.cache.data.PlayerCache;
 import com.zenith.cache.data.ServerProfileCache;
 import com.zenith.cache.data.bossbar.BossBarCache;
@@ -14,7 +15,6 @@ import com.zenith.cache.data.scoreboard.ScoreboardCache;
 import com.zenith.cache.data.stats.StatisticsCache;
 import com.zenith.cache.data.tab.TabListCache;
 import com.zenith.cache.data.team.TeamCache;
-import com.zenith.network.server.ServerSession;
 import lombok.Getter;
 
 import java.util.Arrays;

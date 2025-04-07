@@ -1,6 +1,6 @@
-package com.zenith.network.registry;
+package com.zenith.api.network;
 
-import com.zenith.network.client.ClientSession;
+import com.zenith.api.network.client.ClientSession;
 import io.netty.channel.EventLoop;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 

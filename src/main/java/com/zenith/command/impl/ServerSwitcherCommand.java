@@ -4,8 +4,8 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.zenith.Proxy;
 import com.zenith.api.command.*;
+import com.zenith.api.network.server.ServerSession;
 import com.zenith.discord.Embed;
-import com.zenith.network.server.ServerSession;
 import com.zenith.util.Config.Server.Extra.ServerSwitcher.ServerSwitcherServer;
 
 import java.util.stream.Collectors;

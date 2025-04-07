@@ -1,9 +1,9 @@
 package com.zenith.feature.coordobf.handlers.inbound;
 
+import com.zenith.api.network.PacketHandler;
+import com.zenith.api.network.server.ServerSession;
 import com.zenith.feature.coordobf.CoordOffset;
 import com.zenith.module.impl.CoordObfuscator;
-import com.zenith.network.registry.PacketHandler;
-import com.zenith.network.server.ServerSession;
 import com.zenith.util.math.MathHelper;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundMovePlayerPosRotPacket;

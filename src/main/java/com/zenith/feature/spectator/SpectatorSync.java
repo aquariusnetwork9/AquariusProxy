@@ -1,13 +1,13 @@
 package com.zenith.feature.spectator;
 
 import com.zenith.Proxy;
+import com.zenith.api.network.server.ServerSession;
 import com.zenith.cache.CachedData;
 import com.zenith.cache.DataCache;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.feature.spectator.entity.mob.SpectatorEntityEnderDragon;
 import com.zenith.feature.spectator.entity.mob.SpectatorEntityPlayerHead;
-import com.zenith.network.server.ServerSession;
 import com.zenith.util.math.MathHelper;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.MetadataTypes;

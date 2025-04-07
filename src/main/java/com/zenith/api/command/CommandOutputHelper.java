@@ -1,9 +1,9 @@
 package com.zenith.api.command;
 
 import com.zenith.Proxy;
+import com.zenith.api.network.server.ServerSession;
 import com.zenith.discord.Embed;
 import com.zenith.feature.whitelist.PlayerList;
-import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import lombok.experimental.UtilityClass;
 import net.kyori.adventure.text.Component;

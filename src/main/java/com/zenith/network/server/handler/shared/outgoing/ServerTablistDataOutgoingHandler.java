@@ -1,8 +1,8 @@
 package com.zenith.network.server.handler.shared.outgoing;
 
 import com.zenith.Proxy;
-import com.zenith.network.registry.PacketHandler;
-import com.zenith.network.server.ServerSession;
+import com.zenith.api.network.PacketHandler;
+import com.zenith.api.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;

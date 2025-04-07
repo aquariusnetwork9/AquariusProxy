@@ -8,6 +8,7 @@ import com.zenith.api.event.client.ClientDisconnectEvent;
 import com.zenith.api.event.client.ClientOnlineEvent;
 import com.zenith.api.event.queue.QueueCompleteEvent;
 import com.zenith.api.event.queue.QueueStartEvent;
+import com.zenith.api.network.server.ServerSession;
 import com.zenith.feature.queue.Queue;
 import com.zenith.util.ComponentSerializer;
 import net.kyori.adventure.text.Component;
@@ -115,7 +116,7 @@ public class ZenithServerInfoBuilder {
             var result = new GameProfile[connections.length];
             for (int i = 0; i < connections.length; i++) {
                 var connection = connections[i];
-                result[i] = connection.profileCache.getProfile();
+                result[i] = connection.getProfileCache().getProfile();
             }
             return result;
         } catch (final Throwable e) {

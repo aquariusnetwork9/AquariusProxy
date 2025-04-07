@@ -1,7 +1,7 @@
 package com.zenith.api.command;
 
+import com.zenith.api.network.server.ServerSession;
 import com.zenith.discord.Embed;
-import com.zenith.network.server.ServerSession;
 import lombok.Data;
 import org.jspecify.annotations.Nullable;
 

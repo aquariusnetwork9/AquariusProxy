@@ -2,8 +2,8 @@ package com.zenith.api.module;
 
 import com.zenith.Proxy;
 import com.zenith.api.command.CommandOutputHelper;
+import com.zenith.api.network.client.ClientSession;
 import com.zenith.discord.Embed;
-import com.zenith.network.client.ClientSession;
 import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 

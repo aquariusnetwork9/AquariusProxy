@@ -1,10 +1,10 @@
 package com.zenith.network.client.handler.incoming;
 
+import com.zenith.api.network.ClientEventLoopPacketHandler;
+import com.zenith.api.network.client.ClientSession;
 import com.zenith.cache.CacheResetType;
 import com.zenith.feature.player.World;
 import com.zenith.feature.spectator.SpectatorSync;
-import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundRespawnPacket;
 import org.jspecify.annotations.NonNull;
 

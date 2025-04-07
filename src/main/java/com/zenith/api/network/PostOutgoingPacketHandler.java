@@ -1,4 +1,4 @@
-package com.zenith.network.registry;
+package com.zenith.api.network;
 
 import org.geysermc.mcprotocollib.network.Session;
 import org.geysermc.mcprotocollib.network.packet.Packet;

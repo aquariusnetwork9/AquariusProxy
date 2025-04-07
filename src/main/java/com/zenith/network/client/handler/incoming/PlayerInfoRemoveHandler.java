@@ -2,8 +2,8 @@ package com.zenith.network.client.handler.incoming;
 
 import com.zenith.api.event.module.ServerPlayerLogoutInVisualRangeEvent;
 import com.zenith.api.event.server.ServerPlayerDisconnectedEvent;
-import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.api.network.ClientEventLoopPacketHandler;
+import com.zenith.api.network.client.ClientSession;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundPlayerInfoRemovePacket;
 

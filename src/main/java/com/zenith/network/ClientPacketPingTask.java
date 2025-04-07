@@ -1,6 +1,6 @@
 package com.zenith.network;
 
-import com.zenith.network.client.ClientSession;
+import com.zenith.api.network.client.ClientSession;
 import com.zenith.util.Config;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.packet.status.serverbound.ServerboundPingRequestPacket;
