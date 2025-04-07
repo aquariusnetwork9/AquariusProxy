@@ -199,6 +199,9 @@ public class PluginManager {
     @SneakyThrows
     private PluginInfo readPluginInfo(URLClassLoader classLoader, Path path) {
         try (var stream = classLoader.getResourceAsStream("plugin.json")) {
+            if (stream == null) {
+                throw new RuntimeException("plugin.json not found in jar");
+            }
             return OBJECT_MAPPER.readValue(stream, PluginInfo.class);
         } catch (IOException e) {
             PLUGIN_LOG.error("Error reading plugin.json: {}", path, e);
