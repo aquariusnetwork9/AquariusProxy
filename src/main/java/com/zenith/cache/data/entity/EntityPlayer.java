@@ -1,6 +1,6 @@
 package com.zenith.cache.data.entity;
 
-import com.zenith.feature.world.PlayerSimulation;
+import com.zenith.feature.player.PlayerSimulation;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;

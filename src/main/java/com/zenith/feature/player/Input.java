@@ -1,4 +1,4 @@
-package com.zenith.feature.world;
+package com.zenith.feature.player;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;

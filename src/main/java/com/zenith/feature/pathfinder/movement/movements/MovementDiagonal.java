@@ -5,8 +5,8 @@ import com.zenith.feature.pathfinder.BlockStateInterface;
 import com.zenith.feature.pathfinder.MutableMoveResult;
 import com.zenith.feature.pathfinder.PathInput;
 import com.zenith.feature.pathfinder.movement.*;
-import com.zenith.feature.world.PlayerSimulation;
-import com.zenith.feature.world.World;
+import com.zenith.feature.player.PlayerSimulation;
+import com.zenith.feature.player.World;
 import com.zenith.mc.block.*;
 import com.zenith.util.math.MathHelper;
 

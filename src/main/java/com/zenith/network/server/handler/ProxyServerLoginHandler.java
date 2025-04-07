@@ -5,7 +5,7 @@ import com.zenith.cache.data.PlayerCache;
 import com.zenith.event.proxy.PlayerLoginEvent;
 import com.zenith.event.proxy.ProxyClientConnectedEvent;
 import com.zenith.event.proxy.ProxySpectatorConnectedEvent;
-import com.zenith.feature.world.World;
+import com.zenith.feature.player.World;
 import com.zenith.network.server.ServerSession;
 import com.zenith.network.server.ZenithServerInfoBuilder;
 import com.zenith.util.Maps;

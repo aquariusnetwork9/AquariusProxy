@@ -1,6 +1,6 @@
 package com.zenith.feature.coordobf.handlers.inbound;
 
-import com.zenith.feature.world.World;
+import com.zenith.feature.player.World;
 import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.module.impl.CoordObfuscator;
 import com.zenith.network.registry.PacketHandler;

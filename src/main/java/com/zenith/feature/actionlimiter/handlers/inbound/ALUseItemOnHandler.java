@@ -1,6 +1,6 @@
 package com.zenith.feature.actionlimiter.handlers.inbound;
 
-import com.zenith.feature.world.World;
+import com.zenith.feature.player.World;
 import com.zenith.mc.block.BlockRegistry;
 import com.zenith.network.registry.PacketHandler;
 import com.zenith.network.server.ServerSession;

@@ -1,4 +1,4 @@
-package com.zenith.feature.world;
+package com.zenith.feature.player;
 
 import com.zenith.Proxy;
 import com.zenith.cache.data.entity.EntityLiving;

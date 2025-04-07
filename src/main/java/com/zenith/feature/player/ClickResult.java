@@ -1,4 +1,4 @@
-package com.zenith.feature.world;
+package com.zenith.feature.player;
 
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.mc.block.Block;

@@ -1,6 +1,6 @@
 package com.zenith.feature.pathfinder;
 
-import com.zenith.feature.world.World;
+import com.zenith.feature.player.World;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockPos;
 

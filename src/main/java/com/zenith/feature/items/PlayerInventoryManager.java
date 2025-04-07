@@ -3,7 +3,7 @@ package com.zenith.feature.items;
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
 import com.zenith.event.module.ClientBotTick;
-import com.zenith.feature.world.InputRequest;
+import com.zenith.feature.player.InputRequest;
 import com.zenith.util.RequestFuture;
 import com.zenith.util.Timer;
 import com.zenith.util.Timers;

@@ -3,7 +3,7 @@ package com.zenith.feature.pathfinder.behavior;
 import com.zenith.cache.data.inventory.Container;
 import com.zenith.feature.items.ContainerClickAction;
 import com.zenith.feature.pathfinder.Baritone;
-import com.zenith.feature.world.PlayerSimulation;
+import com.zenith.feature.player.PlayerSimulation;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.item.ItemData;

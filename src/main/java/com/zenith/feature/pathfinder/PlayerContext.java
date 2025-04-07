@@ -1,10 +1,10 @@
 package com.zenith.feature.pathfinder;
 
 import com.zenith.cache.data.entity.EntityLiving;
-import com.zenith.feature.world.PlayerSimulation;
-import com.zenith.feature.world.Rotation;
-import com.zenith.feature.world.raycast.BlockRaycastResult;
-import com.zenith.feature.world.raycast.RaycastHelper;
+import com.zenith.feature.player.PlayerSimulation;
+import com.zenith.feature.player.Rotation;
+import com.zenith.feature.player.raycast.BlockRaycastResult;
+import com.zenith.feature.player.raycast.RaycastHelper;
 import com.zenith.mc.block.BlockPos;
 import org.cloudburstmc.math.vector.Vector3d;
 

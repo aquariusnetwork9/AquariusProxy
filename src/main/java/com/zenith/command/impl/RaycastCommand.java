@@ -6,9 +6,9 @@ import com.zenith.command.Command;
 import com.zenith.command.CommandUsage;
 import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
-import com.zenith.feature.world.PlayerSimulation;
-import com.zenith.feature.world.World;
-import com.zenith.feature.world.raycast.RaycastHelper;
+import com.zenith.feature.player.PlayerSimulation;
+import com.zenith.feature.player.World;
+import com.zenith.feature.player.raycast.RaycastHelper;
 
 public class RaycastCommand extends Command {
     @Override

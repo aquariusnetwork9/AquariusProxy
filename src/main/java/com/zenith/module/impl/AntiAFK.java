@@ -4,7 +4,7 @@ import com.github.rfresh2.EventConsumer;
 import com.google.common.collect.Iterators;
 import com.zenith.event.module.ClientBotTick;
 import com.zenith.event.proxy.DeathEvent;
-import com.zenith.feature.world.*;
+import com.zenith.feature.player.*;
 import com.zenith.mc.block.BlockPos;
 import com.zenith.module.Module;
 import com.zenith.util.Timer;

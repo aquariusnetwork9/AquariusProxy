@@ -1,7 +1,7 @@
 package com.zenith.database;
 
 import com.zenith.event.proxy.DatabaseTickEvent;
-import com.zenith.feature.world.World;
+import com.zenith.feature.player.World;
 import com.zenith.mc.dimension.DimensionRegistry;
 
 import java.time.Instant;

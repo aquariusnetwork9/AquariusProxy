@@ -7,8 +7,8 @@ import com.zenith.command.CommandUsage;
 import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
 import com.zenith.discord.Embed;
-import com.zenith.feature.world.InputRequest;
-import com.zenith.feature.world.PlayerSimulation;
+import com.zenith.feature.player.InputRequest;
+import com.zenith.feature.player.PlayerSimulation;
 
 import static com.mojang.brigadier.arguments.FloatArgumentType.floatArg;
 import static com.mojang.brigadier.arguments.FloatArgumentType.getFloat;

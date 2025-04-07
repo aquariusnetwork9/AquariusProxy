@@ -7,7 +7,7 @@ import com.zenith.cache.data.inventory.Container;
 import com.zenith.event.module.ClientBotTick;
 import com.zenith.event.module.EntityFishHookSpawnEvent;
 import com.zenith.event.module.SplashSoundEffectEvent;
-import com.zenith.feature.world.*;
+import com.zenith.feature.player.*;
 import com.zenith.mc.item.ItemRegistry;
 import com.zenith.util.math.MathHelper;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;

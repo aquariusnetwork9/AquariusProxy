@@ -7,7 +7,7 @@ import com.zenith.feature.pathfinder.movement.ActionCosts;
 import com.zenith.feature.pathfinder.movement.CalculationContext;
 import com.zenith.feature.pathfinder.movement.Moves;
 import com.zenith.feature.pathfinder.util.Favoring;
-import com.zenith.feature.world.World;
+import com.zenith.feature.player.World;
 import com.zenith.mc.block.BlockPos;
 
 import java.util.Optional;

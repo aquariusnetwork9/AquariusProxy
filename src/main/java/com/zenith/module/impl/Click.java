@@ -2,8 +2,8 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.event.module.ClientBotTick;
-import com.zenith.feature.world.Input;
-import com.zenith.feature.world.InputRequest;
+import com.zenith.feature.player.Input;
+import com.zenith.feature.player.InputRequest;
 import com.zenith.module.Module;
 import com.zenith.util.Timer;
 import com.zenith.util.Timers;

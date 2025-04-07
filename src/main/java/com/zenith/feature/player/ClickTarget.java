@@ -1,8 +1,8 @@
-package com.zenith.feature.world;
+package com.zenith.feature.player;
 
 import com.zenith.cache.data.entity.Entity;
-import com.zenith.feature.world.raycast.BlockOrEntityRaycastResult;
-import com.zenith.feature.world.raycast.RaycastHelper;
+import com.zenith.feature.player.raycast.BlockOrEntityRaycastResult;
+import com.zenith.feature.player.raycast.RaycastHelper;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;

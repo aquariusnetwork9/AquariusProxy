@@ -1,9 +1,9 @@
-package com.zenith.feature.world;
+package com.zenith.feature.player;
 
 import com.zenith.Proxy;
 import com.zenith.cache.data.inventory.Container;
-import com.zenith.feature.world.raycast.BlockRaycastResult;
-import com.zenith.feature.world.raycast.EntityRaycastResult;
+import com.zenith.feature.player.raycast.BlockRaycastResult;
+import com.zenith.feature.player.raycast.EntityRaycastResult;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.block.BlockTags;

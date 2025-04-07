@@ -1,8 +1,8 @@
 package com.zenith.feature.pathfinder;
 
 import com.zenith.feature.pathfinder.behavior.Behavior;
-import com.zenith.feature.world.ClickTarget;
-import com.zenith.feature.world.Input;
+import com.zenith.feature.player.ClickTarget;
+import com.zenith.feature.player.Input;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 import org.jspecify.annotations.Nullable;
 

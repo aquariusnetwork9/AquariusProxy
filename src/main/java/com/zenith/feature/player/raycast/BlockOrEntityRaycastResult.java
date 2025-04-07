@@ -1,4 +1,4 @@
-package com.zenith.feature.world.raycast;
+package com.zenith.feature.player.raycast;
 
 import org.jspecify.annotations.Nullable;
 

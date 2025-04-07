@@ -1,4 +1,4 @@
-package com.zenith.feature.world.raycast;
+package com.zenith.feature.player.raycast;
 
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockRegistry;

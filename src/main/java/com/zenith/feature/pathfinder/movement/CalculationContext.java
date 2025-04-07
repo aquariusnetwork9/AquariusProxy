@@ -5,7 +5,7 @@ import com.zenith.feature.pathfinder.BlockStateInterface;
 import com.zenith.feature.pathfinder.PrecomputedData;
 import com.zenith.feature.pathfinder.goals.Goal;
 import com.zenith.feature.pathfinder.util.ToolSet;
-import com.zenith.feature.world.World;
+import com.zenith.feature.player.World;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockPos;
 import org.jspecify.annotations.Nullable;

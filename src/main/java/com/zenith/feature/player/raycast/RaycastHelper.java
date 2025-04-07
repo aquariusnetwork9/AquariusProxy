@@ -1,9 +1,9 @@
-package com.zenith.feature.world.raycast;
+package com.zenith.feature.player.raycast;
 
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityPlayer;
-import com.zenith.feature.world.PlayerSimulation;
-import com.zenith.feature.world.World;
+import com.zenith.feature.player.PlayerSimulation;
+import com.zenith.feature.player.World;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.block.CollisionBox;

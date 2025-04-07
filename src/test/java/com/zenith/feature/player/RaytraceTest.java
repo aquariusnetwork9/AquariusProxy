@@ -1,4 +1,4 @@
-package com.zenith.feature.world;
+package com.zenith.feature.player;
 
 import com.zenith.mc.block.LocalizedCollisionBox;
 import org.junit.jupiter.api.Assertions;

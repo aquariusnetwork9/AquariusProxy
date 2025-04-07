@@ -1,6 +1,6 @@
 package com.zenith.mc.block;
 
-import com.zenith.feature.world.raycast.RayIntersection;
+import com.zenith.feature.player.raycast.RayIntersection;
 import org.jspecify.annotations.Nullable;
 
 /**

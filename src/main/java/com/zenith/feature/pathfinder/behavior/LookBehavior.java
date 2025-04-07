@@ -1,7 +1,7 @@
 package com.zenith.feature.pathfinder.behavior;
 
 import com.zenith.feature.pathfinder.Baritone;
-import com.zenith.feature.world.Rotation;
+import com.zenith.feature.player.Rotation;
 import org.jspecify.annotations.Nullable;
 
 public class LookBehavior extends Behavior {

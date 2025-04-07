@@ -12,7 +12,7 @@ import com.zenith.feature.pathfinder.goals.Goal;
 import com.zenith.feature.pathfinder.goals.GoalBlock;
 import com.zenith.feature.pathfinder.goals.GoalXZ;
 import com.zenith.feature.pathfinder.process.*;
-import com.zenith.feature.world.InputRequest;
+import com.zenith.feature.player.InputRequest;
 import com.zenith.mc.block.Block;
 import com.zenith.util.Timer;
 import com.zenith.util.Timers;

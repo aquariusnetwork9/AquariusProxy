@@ -2,7 +2,7 @@ package com.zenith.feature.pathfinder.util;
 
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.feature.pathfinder.BlockStateInterface;
-import com.zenith.feature.world.PlayerSimulation;
+import com.zenith.feature.player.PlayerSimulation;
 import com.zenith.mc.block.BlockPos;
 import com.zenith.mc.block.BlockRegistry;
 import org.cloudburstmc.math.vector.Vector3d;

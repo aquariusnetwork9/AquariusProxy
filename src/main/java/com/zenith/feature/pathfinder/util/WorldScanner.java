@@ -1,7 +1,7 @@
 package com.zenith.feature.pathfinder.util;
 
 import com.zenith.cache.data.chunk.Chunk;
-import com.zenith.feature.world.World;
+import com.zenith.feature.player.World;
 import com.zenith.mc.block.BlockPos;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.util.math.MathHelper;

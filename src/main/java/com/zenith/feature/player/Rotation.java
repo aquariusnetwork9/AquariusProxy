@@ -1,4 +1,4 @@
-package com.zenith.feature.world;
+package com.zenith.feature.player;
 
 public record Rotation(float yaw, float pitch) {
     /**

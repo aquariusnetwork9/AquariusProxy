@@ -1,7 +1,7 @@
 package com.zenith.feature.pathfinder.util;
 
 import com.zenith.cache.data.inventory.Container;
-import com.zenith.feature.world.PlayerSimulation;
+import com.zenith.feature.player.PlayerSimulation;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.enchantment.EnchantmentRegistry;
 import com.zenith.mc.item.ItemData;

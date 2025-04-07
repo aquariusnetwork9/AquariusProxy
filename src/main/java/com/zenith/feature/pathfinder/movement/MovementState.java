@@ -1,7 +1,7 @@
 package com.zenith.feature.pathfinder.movement;
 
 import com.zenith.feature.pathfinder.PathInput;
-import com.zenith.feature.world.Rotation;
+import com.zenith.feature.player.Rotation;
 import lombok.Data;
 import lombok.experimental.Accessors;
 import org.jspecify.annotations.Nullable;
