@@ -1,4 +1,4 @@
-package com.zenith.feature.items;
+package com.zenith.feature.inventory;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;

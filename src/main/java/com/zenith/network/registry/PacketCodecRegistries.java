@@ -68,8 +68,8 @@ import org.geysermc.mcprotocollib.protocol.packet.status.serverbound.Serverbound
 
 import static com.zenith.Globals.*;
 
-public final class ZenithHandlerCodec {
-    private ZenithHandlerCodec() {}
+public final class PacketCodecRegistries {
+    private PacketCodecRegistries() {}
     public static final CodecRegistry CLIENT_REGISTRY = new CodecRegistry("Client Handlers");
     public static final CodecRegistry SERVER_REGISTRY = new CodecRegistry("Server Handlers");
 

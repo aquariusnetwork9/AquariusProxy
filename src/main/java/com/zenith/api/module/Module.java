@@ -1,8 +1,8 @@
 package com.zenith.api.module;
 
 import com.github.rfresh2.EventConsumer;
+import com.zenith.network.registry.PacketCodecRegistries;
 import com.zenith.network.registry.PacketHandlerCodec;
-import com.zenith.network.registry.ZenithHandlerCodec;
 import lombok.Getter;
 
 import java.util.Collections;
@@ -28,11 +28,11 @@ public abstract class Module extends ModuleUtils {
                 enabled = true;
                 clientPacketHandlerCodec = registerClientPacketHandlerCodec();
                 if (clientPacketHandlerCodec != null) {
-                    ZenithHandlerCodec.CLIENT_REGISTRY.register(clientPacketHandlerCodec);
+                    PacketCodecRegistries.CLIENT_REGISTRY.register(clientPacketHandlerCodec);
                 }
                 serverPacketHandlerCodec = registerServerPacketHandlerCodec();
                 if (serverPacketHandlerCodec != null) {
-                    ZenithHandlerCodec.SERVER_REGISTRY.register(serverPacketHandlerCodec);
+                    PacketCodecRegistries.SERVER_REGISTRY.register(serverPacketHandlerCodec);
                 }
                 onEnable();
                 debug("Enabled");
@@ -49,10 +49,10 @@ public abstract class Module extends ModuleUtils {
                 enabled = false;
                 unsubscribeEvents();
                 if (clientPacketHandlerCodec != null) {
-                    ZenithHandlerCodec.CLIENT_REGISTRY.unregister(clientPacketHandlerCodec);
+                    PacketCodecRegistries.CLIENT_REGISTRY.unregister(clientPacketHandlerCodec);
                 }
                 if (serverPacketHandlerCodec != null) {
-                    ZenithHandlerCodec.SERVER_REGISTRY.unregister(serverPacketHandlerCodec);
+                    PacketCodecRegistries.SERVER_REGISTRY.unregister(serverPacketHandlerCodec);
                 }
                 onDisable();
                 debug("Disabled");

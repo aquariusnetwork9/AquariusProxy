@@ -12,7 +12,7 @@ import com.zenith.cache.DataCache;
 import com.zenith.command.CommandManager;
 import com.zenith.database.DatabaseManager;
 import com.zenith.discord.DiscordBot;
-import com.zenith.feature.items.PlayerInventoryManager;
+import com.zenith.feature.inventory.PlayerInventoryManager;
 import com.zenith.feature.player.Bot;
 import com.zenith.feature.player.InputManager;
 import com.zenith.feature.tps.TPSCalculator;

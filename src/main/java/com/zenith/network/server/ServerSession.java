@@ -14,7 +14,7 @@ import com.zenith.feature.ratelimiter.LoginRateLimiter;
 import com.zenith.feature.ratelimiter.PacketRateLimiter;
 import com.zenith.feature.spectator.SpectatorEntityRegistry;
 import com.zenith.feature.spectator.entity.SpectatorEntity;
-import com.zenith.network.registry.ZenithHandlerCodec;
+import com.zenith.network.registry.PacketCodecRegistries;
 import com.zenith.util.ComponentSerializer;
 import com.zenith.util.Wait;
 import io.netty.channel.ChannelException;
@@ -158,7 +158,7 @@ public class ServerSession extends TcpServerSession {
             }
             Packet p = packet;
             var state = getPacketProtocol().getInboundState(); // storing this before handlers might mutate it on the session
-            p = ZenithHandlerCodec.SERVER_REGISTRY.handleInbound(p, this);
+            p = PacketCodecRegistries.SERVER_REGISTRY.handleInbound(p, this);
             if (p != null && !isSpectator() && (state == ProtocolState.GAME || state == ProtocolState.CONFIGURATION)) {
                 if (state == ProtocolState.CONFIGURATION && !isConfigured()) return;
                 Proxy.getInstance().getClient().sendAsync(p);
@@ -171,7 +171,7 @@ public class ServerSession extends TcpServerSession {
     @Override
     public Packet callPacketSending(Packet packet) {
         try {
-            return ZenithHandlerCodec.SERVER_REGISTRY.handleOutgoing(packet, this);
+            return PacketCodecRegistries.SERVER_REGISTRY.handleOutgoing(packet, this);
         } catch (final Exception e) {
             SERVER_LOG.error("Failed handling packet sending: {}", packet.getClass().getSimpleName(), e);
         }
@@ -181,7 +181,7 @@ public class ServerSession extends TcpServerSession {
     @Override
     public void callPacketSent(Packet packet) {
         try {
-            ZenithHandlerCodec.SERVER_REGISTRY.handlePostOutgoing(packet, this);
+            PacketCodecRegistries.SERVER_REGISTRY.handlePostOutgoing(packet, this);
         } catch (final Exception e) {
             SERVER_LOG.error("Failed handling PostOutgoing packet: {}", packet.getClass().getSimpleName(), e);
         }

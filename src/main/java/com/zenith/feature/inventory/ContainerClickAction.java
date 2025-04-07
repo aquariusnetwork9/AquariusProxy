@@ -1,4 +1,4 @@
-package com.zenith.feature.items;
+package com.zenith.feature.inventory;
 
 import com.zenith.cache.data.inventory.Container;
 import com.zenith.mc.item.ItemRegistry;

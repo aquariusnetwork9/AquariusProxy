@@ -1,4 +1,4 @@
-package com.zenith.feature.items;
+package com.zenith.feature.inventory;
 
 import lombok.Data;
 import org.jspecify.annotations.Nullable;

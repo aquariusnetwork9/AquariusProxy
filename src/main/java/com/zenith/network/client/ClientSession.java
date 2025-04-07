@@ -5,7 +5,7 @@ import com.zenith.Proxy;
 import com.zenith.api.event.client.ClientConnectEvent;
 import com.zenith.api.event.client.ClientDisconnectEvent;
 import com.zenith.network.ClientPacketPingTask;
-import com.zenith.network.registry.ZenithHandlerCodec;
+import com.zenith.network.registry.PacketCodecRegistries;
 import com.zenith.util.ComponentSerializer;
 import com.zenith.util.Config;
 import io.netty.channel.DefaultEventLoop;
@@ -90,7 +90,7 @@ public class ClientSession extends TcpClientSession {
     public void callPacketReceived(Packet packet) {
         try {
             var state = this.getPacketProtocol().getInboundState();
-            final Packet p = ZenithHandlerCodec.CLIENT_REGISTRY.handleInbound(packet, this);
+            final Packet p = PacketCodecRegistries.CLIENT_REGISTRY.handleInbound(packet, this);
             if (p != null && (state == ProtocolState.GAME || state == ProtocolState.CONFIGURATION)) {
                 // sends on each connection's own event loop
                 var connections = Proxy.getInstance().getActiveConnections().getArray();
@@ -109,7 +109,7 @@ public class ClientSession extends TcpClientSession {
     @Override
     public Packet callPacketSending(Packet packet) {
         try {
-            return ZenithHandlerCodec.CLIENT_REGISTRY.handleOutgoing(packet, this);
+            return PacketCodecRegistries.CLIENT_REGISTRY.handleOutgoing(packet, this);
         } catch (Exception e) {
             CLIENT_LOG.error("Client Packet Sending Error", e);
             throw new RuntimeException(e);
@@ -119,7 +119,7 @@ public class ClientSession extends TcpClientSession {
     @Override
     public void callPacketSent(Packet packet) {
         try {
-            ZenithHandlerCodec.CLIENT_REGISTRY.handlePostOutgoing(packet, this);
+            PacketCodecRegistries.CLIENT_REGISTRY.handlePostOutgoing(packet, this);
         } catch (Exception e) {
             CLIENT_LOG.error("Client Packet Sent Error", e);
             throw new RuntimeException(e);

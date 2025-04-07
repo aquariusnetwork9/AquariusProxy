@@ -12,9 +12,9 @@ import com.zenith.feature.coordobf.handlers.outbound.*;
 import com.zenith.feature.player.World;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
+import com.zenith.network.registry.PacketCodecRegistries;
 import com.zenith.network.registry.PacketHandlerCodec;
 import com.zenith.network.registry.PacketHandlerStateCodec;
-import com.zenith.network.registry.ZenithHandlerCodec;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import com.zenith.util.Config.Client.Extra.CoordObfuscation.ObfuscationMode;
@@ -163,12 +163,12 @@ public class CoordObfuscator extends Module {
     @Override
     public void onEnable() {
         reconnectAllActiveConnections();
-        ZenithHandlerCodec.SERVER_REGISTRY.register(loginSlowDownPacketHandlerCodec);
+        PacketCodecRegistries.SERVER_REGISTRY.register(loginSlowDownPacketHandlerCodec);
     }
 
     @Override
     public void onDisable() {
-        ZenithHandlerCodec.SERVER_REGISTRY.unregister(loginSlowDownPacketHandlerCodec);
+        PacketCodecRegistries.SERVER_REGISTRY.unregister(loginSlowDownPacketHandlerCodec);
         reconnectAllActiveConnections();
         playerStateMap.clear();
     }

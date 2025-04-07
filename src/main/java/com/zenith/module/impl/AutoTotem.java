@@ -8,7 +8,7 @@ import com.zenith.api.event.module.NoTotemsEvent;
 import com.zenith.api.event.module.PlayerTotemPopAlertEvent;
 import com.zenith.api.event.module.TotemPopEvent;
 import com.zenith.cache.data.inventory.Container;
-import com.zenith.feature.items.ContainerClickAction;
+import com.zenith.feature.inventory.ContainerClickAction;
 import com.zenith.mc.item.ItemRegistry;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerActionType;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.MoveToHotbarAction;

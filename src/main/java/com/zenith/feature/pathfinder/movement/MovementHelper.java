@@ -1,6 +1,6 @@
 package com.zenith.feature.pathfinder.movement;
 
-import com.zenith.feature.items.ContainerClickAction;
+import com.zenith.feature.inventory.ContainerClickAction;
 import com.zenith.feature.pathfinder.*;
 import com.zenith.feature.pathfinder.movement.MovementState.MovementTarget;
 import com.zenith.feature.pathfinder.util.RotationUtils;
