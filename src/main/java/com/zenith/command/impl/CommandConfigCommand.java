@@ -113,7 +113,7 @@ public class CommandConfigCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("Discord Prefix", CONFIG.discord.prefix, false)
             .addField("Ingame Commands", toggleStr(CONFIG.inGameCommands.enable), false)

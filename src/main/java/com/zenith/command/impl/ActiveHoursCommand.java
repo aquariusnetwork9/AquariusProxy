@@ -153,7 +153,7 @@ public class ActiveHoursCommand extends Command {
     }
 
     @Override
-    public void postPopulate(Embed builder) {
+    public void defaultEmbed(Embed builder) {
         builder
             .addField("ActiveHours", toggleStr(CONFIG.client.extra.utility.actions.activeHours.enabled), false)
             .addField("Time Zone", CONFIG.client.extra.utility.actions.activeHours.timeZoneId, false)

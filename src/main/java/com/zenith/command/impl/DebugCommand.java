@@ -169,7 +169,7 @@ public class DebugCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("Packet Log", toggleStr(CONFIG.debug.packetLog.enabled), false)
             .addField("Client Packet Log", toggleStr(CONFIG.debug.packetLog.clientPacketLog.received), false)

@@ -98,7 +98,7 @@ public class ActionLimiterCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .title("Action Limiter")
             .addField("Action Limiter", toggleStr(CONFIG.client.extra.actionLimiter.enabled))

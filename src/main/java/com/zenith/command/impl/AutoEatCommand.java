@@ -75,7 +75,7 @@ public class AutoEatCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("AutoEat", toggleStr(CONFIG.client.extra.autoEat.enabled), false)
             .addField("Health Threshold", CONFIG.client.extra.autoEat.healthThreshold, false)

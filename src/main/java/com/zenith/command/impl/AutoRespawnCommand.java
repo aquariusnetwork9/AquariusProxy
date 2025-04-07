@@ -50,7 +50,7 @@ public class AutoRespawnCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("AutoRespawn", toggleStr(CONFIG.client.extra.autoRespawn.enabled), false)
             .addField("Delay (ms)", CONFIG.client.extra.autoRespawn.delayMillis, true)

@@ -62,7 +62,7 @@ public class IgnoreCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .description("**Ignore List**\n" + playerListToString(PLAYER_LISTS.getIgnoreList()))
             .primaryColor();

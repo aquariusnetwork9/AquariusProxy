@@ -144,7 +144,7 @@ public class CoordinateObfuscationCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed embed) {
+    public void defaultEmbed(final Embed embed) {
         embed
             .title("Coordinate Obfuscation")
             .addField("Coordinate Obfuscation", toggleStr(CONFIG.client.extra.coordObfuscation.enabled))

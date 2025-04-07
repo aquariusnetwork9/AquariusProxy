@@ -88,7 +88,7 @@ public class AutoTotemCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("Auto Totem", toggleStr(CONFIG.client.extra.autoTotem.enabled), false)
             .addField("In Game", toggleStr(CONFIG.client.extra.autoTotem.inGame), false)

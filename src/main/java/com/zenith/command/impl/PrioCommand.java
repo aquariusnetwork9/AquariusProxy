@@ -70,7 +70,7 @@ public class PrioCommand extends Command {
     }
 
     @Override
-    public void postPopulate(Embed builder) {
+    public void defaultEmbed(Embed builder) {
         builder
             .addField("Prio Status Mentions", toggleStr(CONFIG.discord.mentionRoleOnPrioUpdate), true)
             .addField("Prio Ban Mentions", toggleStr(CONFIG.discord.mentionRoleOnPrioBanUpdate), true)

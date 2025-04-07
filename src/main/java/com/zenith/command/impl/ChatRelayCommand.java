@@ -176,7 +176,7 @@ public class ChatRelayCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("Chat Relay", toggleStr(CONFIG.discord.chatRelay.enable), false)
             .addField("Channel", getChannelMention(CONFIG.discord.chatRelay.channelId), false)

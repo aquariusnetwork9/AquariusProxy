@@ -177,7 +177,7 @@ public class ClientConnectionCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed embed) {
+    public void defaultEmbed(final Embed embed) {
         embed
             .primaryColor()
             .addField("Auto Connect", toggleStr(CONFIG.client.autoConnect), false)

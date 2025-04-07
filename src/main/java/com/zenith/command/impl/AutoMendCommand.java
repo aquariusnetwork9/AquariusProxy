@@ -43,7 +43,7 @@ public class AutoMendCommand extends Command {
     }
 
     @Override
-    public void postPopulate(Embed embed) {
+    public void defaultEmbed(Embed embed) {
         embed
             .addField("Auto Mend", toggleStr(CONFIG.client.extra.autoMend.enabled), false)
             .primaryColor();

@@ -142,7 +142,7 @@ public class SpawnPatrolCommand extends Command {
     }
 
     @Override
-    public void postPopulate(Embed embed) {
+    public void defaultEmbed(Embed embed) {
         embed
             .addField("SpawnPatrol", toggleStr(CONFIG.client.extra.spawnPatrol.enabled), false)
             .addField("Goal", CONFIG.client.extra.spawnPatrol.goalX + ", " + CONFIG.client.extra.spawnPatrol.goalY + ", " + CONFIG.client.extra.spawnPatrol.goalZ, false)

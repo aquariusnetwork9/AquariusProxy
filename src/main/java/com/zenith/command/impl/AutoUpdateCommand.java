@@ -50,7 +50,7 @@ public class AutoUpdateCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("AutoUpdater", toggleStr(LAUNCH_CONFIG.auto_update), false)
             .primaryColor();

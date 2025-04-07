@@ -179,7 +179,7 @@ public class SpectatorCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("Spectators", toggleStr(CONFIG.server.spectator.allowSpectator), false)
             .addField("Chat", toggleStr(CONFIG.server.spectator.spectatorPublicChatEnabled), false)

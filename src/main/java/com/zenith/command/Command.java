@@ -167,7 +167,7 @@ public abstract class Command {
      * Override to populate the embed builder after every execution, including both success and error cases.
      * Don't include sensitive info, there is no permission validation.
      */
-    public void postPopulate(final Embed builder) {}
+    public void defaultEmbed(final Embed builder) {}
 
     public CaseInsensitiveLiteralArgumentBuilder<CommandContext> command(String literal) {
         return literal(literal)
@@ -193,7 +193,7 @@ public abstract class Command {
     }
 
     public void defaultSuccessHandler(CommandContext context) {
-        postPopulate(context.getEmbed());
+        defaultEmbed(context.getEmbed());
     }
 
     public void defaultErrorHandler(Map<CommandNode<CommandContext>, CommandSyntaxException> exceptions, CommandContext context) {
@@ -201,7 +201,7 @@ public abstract class Command {
             .findFirst()
             .ifPresent(exception -> context.getEmbed()
                 .addField("Error", exception.getMessage(), false));
-        postPopulate(context.getEmbed());
+        defaultEmbed(context.getEmbed());
         if (!context.getEmbed().isTitlePresent()) {
             context.getEmbed()
                 .title("Invalid command usage");
@@ -212,7 +212,7 @@ public abstract class Command {
     }
 
     public void defaultExecutionErrorHandler(CommandContext commandContext) {
-        postPopulate(commandContext.getEmbed());
+        defaultEmbed(commandContext.getEmbed());
         commandContext.getEmbed()
             .errorColor();
     }

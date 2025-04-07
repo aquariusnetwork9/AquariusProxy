@@ -69,7 +69,7 @@ public class ChatHistoryCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed embed) {
+    public void defaultEmbed(final Embed embed) {
         embed
             .addField("Chat History", toggleStr(CONFIG.server.extra.chatHistory.enable), false)
             .addField("Seconds", CONFIG.server.extra.chatHistory.seconds, false)

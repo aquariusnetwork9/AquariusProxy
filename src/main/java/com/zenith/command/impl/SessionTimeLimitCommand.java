@@ -49,7 +49,7 @@ public class SessionTimeLimitCommand extends Command {
     }
 
     @Override
-    public void postPopulate(Embed embed) {
+    public void defaultEmbed(Embed embed) {
         embed
             .addField("Limit", formatDuration(MODULE.get(SessionTimeLimit.class).getSessionTimeLimit()), false)
             .primaryColor();

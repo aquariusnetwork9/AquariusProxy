@@ -72,7 +72,7 @@ public class WanderCommand extends Command {
     }
 
     @Override
-    public void postPopulate(Embed embed) {
+    public void defaultEmbed(Embed embed) {
         embed
             .addField("Wander", toggleStr(CONFIG.client.extra.wander.enabled), false)
             .addField("Radius", CONFIG.client.extra.wander.radius, false)

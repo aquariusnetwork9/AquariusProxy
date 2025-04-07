@@ -189,7 +189,7 @@ public class AuthCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("Account Type", authTypeToString(CONFIG.authentication.accountType), false)
             .addField("Attempts", CONFIG.authentication.msaLoginAttemptsBeforeCacheWipe, false)

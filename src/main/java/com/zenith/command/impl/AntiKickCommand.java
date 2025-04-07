@@ -61,7 +61,7 @@ public class AntiKickCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .primaryColor()
             .addField("Enabled", toggleStrCaps(CONFIG.client.extra.antiKick.enabled), false)

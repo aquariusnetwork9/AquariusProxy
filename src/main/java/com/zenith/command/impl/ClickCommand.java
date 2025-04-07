@@ -189,7 +189,7 @@ public class ClickCommand extends Command {
     }
 
     @Override
-    public void postPopulate(Embed embed) {
+    public void defaultEmbed(Embed embed) {
         embed
             .addField("Click Hold", CONFIG.client.extra.click.holdLeftClick ? "Left" : CONFIG.client.extra.click.holdRightClick ? "Right" : "off", false)
             .addField("Click Hold Force Rotation", toggleStr(CONFIG.client.extra.click.hasRotation) + (

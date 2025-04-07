@@ -66,7 +66,7 @@ public class AntiLeakCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("AntiLeak", toggleStr(CONFIG.client.extra.antiLeak.enabled), false)
             .addField("RangeCheck", toggleStr(CONFIG.client.extra.antiLeak.rangeCheck), false)

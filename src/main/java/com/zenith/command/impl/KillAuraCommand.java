@@ -170,7 +170,7 @@ public class KillAuraCommand extends Command {
     }
 
     @Override
-    public void postPopulate(Embed builder) {
+    public void defaultEmbed(Embed builder) {
         builder
             .addField("KillAura", toggleStr(CONFIG.client.extra.killAura.enabled), false)
             .addField("Target Players", toggleStr(CONFIG.client.extra.killAura.targetPlayers), false)

@@ -99,7 +99,7 @@ public class ServerSwitcherCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed embed) {
+    public void defaultEmbed(final Embed embed) {
         var str = CONFIG.server.extra.serverSwitcher.servers.stream()
             .map(s -> s.name() + " -> " + s.address() + ":" + s.port())
             .collect(Collectors.joining("\n"));

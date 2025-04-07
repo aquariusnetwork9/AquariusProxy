@@ -78,7 +78,7 @@ public class ExtraChatCommand extends Command {
 
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("ExtraChat", toggleStr(CONFIG.client.extra.chat.enabled), false)
             .addField("Hide Chat", toggleStr(CONFIG.client.extra.chat.hideChat), false)

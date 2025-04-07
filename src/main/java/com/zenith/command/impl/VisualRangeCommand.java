@@ -195,7 +195,7 @@ public class VisualRangeCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("VisualRange", toggleStr(CONFIG.client.extra.visualRange.enabled), false)
             .addField("Enter Alerts", toggleStr(CONFIG.client.extra.visualRange.enterAlert), false)

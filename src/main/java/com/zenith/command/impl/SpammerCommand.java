@@ -144,7 +144,7 @@ public class SpammerCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         addListDescription(builder)
             .description("""
                  **WARNING:** This module can and will get you muted on 2b2t or other servers. Use at your own risk.

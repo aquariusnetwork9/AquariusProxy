@@ -43,7 +43,7 @@ public class AutoOmenCommand extends Command {
     }
 
     @Override
-    public void postPopulate(Embed embed) {
+    public void defaultEmbed(Embed embed) {
         embed
             .addField("AutoOmen", toggleStr(CONFIG.client.extra.autoOmen.enabled), false)
             .primaryColor();

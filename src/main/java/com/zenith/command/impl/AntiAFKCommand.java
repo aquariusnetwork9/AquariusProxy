@@ -143,7 +143,7 @@ public class AntiAFKCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed embedBuilder) {
+    public void defaultEmbed(final Embed embedBuilder) {
         embedBuilder
             .addField("AntiAFK", toggleStr(CONFIG.client.extra.antiafk.enabled), false)
             .addField("Rotate", toggleStr(CONFIG.client.extra.antiafk.actions.rotate)

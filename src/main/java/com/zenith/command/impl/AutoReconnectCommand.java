@@ -60,7 +60,7 @@ public class AutoReconnectCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("AutoReconnect", toggleStr(CONFIG.client.extra.autoReconnect.enabled), false)
             .addField("Delay", CONFIG.client.extra.autoReconnect.delaySeconds, true)

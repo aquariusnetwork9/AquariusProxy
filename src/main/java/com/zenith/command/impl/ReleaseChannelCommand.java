@@ -76,7 +76,7 @@ public class ReleaseChannelCommand extends Command {
     }
 
     @Override
-    public void postPopulate(Embed embed) {
+    public void defaultEmbed(Embed embed) {
         embed
             .addField("Current Release Channel", LAUNCH_CONFIG.release_channel, false);
     }

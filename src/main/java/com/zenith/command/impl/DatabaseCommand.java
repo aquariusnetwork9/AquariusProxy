@@ -145,7 +145,7 @@ public class DatabaseCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("Queue Wait", toggleStr(CONFIG.database.queueWaitEnabled), false)
             .addField("Queue Length", toggleStr(CONFIG.database.queueLengthEnabled), false)

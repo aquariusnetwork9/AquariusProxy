@@ -111,7 +111,7 @@ public class ThemeCommand extends Command {
     }
 
     @Override
-    public void postPopulate(Embed embed) {
+    public void defaultEmbed(Embed embed) {
         embed
             .primaryColor()
             .addField("Primary", CONFIG.theme.primary.name().toLowerCase(), false)

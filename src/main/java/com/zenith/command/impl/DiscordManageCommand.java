@@ -204,7 +204,7 @@ public class DiscordManageCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("Discord Bot", toggleStr(CONFIG.discord.enable) + " (" + DISCORD.getJdaStatus() + ")", false)
             .addField("Relay", toggleStr(CONFIG.discord.chatRelay.enable), false)

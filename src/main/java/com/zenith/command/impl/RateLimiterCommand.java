@@ -81,7 +81,7 @@ public class RateLimiterCommand extends Command {
     }
 
     @Override
-    public void postPopulate(Embed embed) {
+    public void defaultEmbed(Embed embed) {
         embed
             .addField("Login", toggleStr(CONFIG.server.loginRateLimiter.enabled))
             .addField("Login Rate Limit", CONFIG.server.loginRateLimiter.rateLimitSeconds + "s")

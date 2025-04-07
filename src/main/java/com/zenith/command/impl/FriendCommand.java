@@ -65,7 +65,7 @@ public class FriendCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .description("**Friend List**\n" + playerListToString(PLAYER_LISTS.getFriendsList()))
             .primaryColor();

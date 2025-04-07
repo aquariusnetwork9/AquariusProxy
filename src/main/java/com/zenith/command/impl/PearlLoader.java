@@ -104,7 +104,7 @@ public class PearlLoader extends Command {
     }
 
     @Override
-    public void postPopulate(Embed embed) {
+    public void defaultEmbed(Embed embed) {
         embed
             .description(pearlsList());
     }

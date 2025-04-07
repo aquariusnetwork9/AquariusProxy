@@ -83,7 +83,7 @@ public class QueueWarningCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("Queue Warning", toggleStr(CONFIG.client.extra.queueWarning.enabled), false)
             .description("**Warn Positions**\n" + getWarnListStr())

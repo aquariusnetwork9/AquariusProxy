@@ -64,7 +64,7 @@ public class AutoReplyCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("AutoReply", toggleStr(CONFIG.client.extra.autoReply.enabled), false)
             .addField("Cooldown Seconds", CONFIG.client.extra.autoReply.cooldownSeconds, false)

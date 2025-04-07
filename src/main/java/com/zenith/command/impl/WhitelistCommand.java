@@ -113,7 +113,7 @@ public class WhitelistCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .description(playerListToString(PLAYER_LISTS.getWhitelist()) + "\n**BlackList:**\n" + playerListToString(PLAYER_LISTS.getBlacklist()))
             .addField("Auto Add Zenith Account", toggleStr(CONFIG.server.extra.whitelist.autoAddClient), false)

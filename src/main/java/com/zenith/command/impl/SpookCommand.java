@@ -61,7 +61,7 @@ public class SpookCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("Spook", toggleStr(CONFIG.client.extra.spook.enabled), false)
             .addField("Mode", CONFIG.client.extra.spook.spookTargetingMode.toString().toLowerCase(), false)

@@ -83,7 +83,7 @@ public class UnsupportedCommand extends Command {
     }
 
     @Override
-    public void postPopulate(Embed builder) {
+    public void defaultEmbed(Embed builder) {
         builder
             .addField("Whitelist", toggleStr(CONFIG.server.extra.whitelist.enable))
             .addField("Spectator Whitelist", toggleStr(CONFIG.server.spectator.whitelistEnabled))

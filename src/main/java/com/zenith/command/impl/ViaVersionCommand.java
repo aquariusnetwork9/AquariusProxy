@@ -92,7 +92,7 @@ public class ViaVersionCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed embedBuilder) {
+    public void defaultEmbed(final Embed embedBuilder) {
         embedBuilder
             .addField("Zenith To Server ViaVersion", toggleStr(CONFIG.client.viaversion.enabled), false)
             .addField("Zenith To Server Disable On 2b2t", toggleStr(CONFIG.client.viaversion.disableOn2b2t), false)

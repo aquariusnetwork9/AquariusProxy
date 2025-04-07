@@ -65,7 +65,7 @@ public class StalkCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("Stalk", toggleStr(CONFIG.client.extra.stalk.enabled), false)
             .description("**Stalk List**\n" + playerListToString(PLAYER_LISTS.getStalkList()))
