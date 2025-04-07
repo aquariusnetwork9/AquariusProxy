@@ -9,8 +9,8 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.title.Clien
 
 import java.util.Optional;
 
-import static com.zenith.Shared.CLIENT_LOG;
-import static com.zenith.Shared.EVENT_BUS;
+import static com.zenith.Globals.CLIENT_LOG;
+import static com.zenith.Globals.EVENT_BUS;
 
 public class SetSubtitleTextHandler implements ClientEventLoopPacketHandler<ClientboundSetSubtitleTextPacket, ClientSession> {
     @Override

@@ -11,8 +11,8 @@ import com.zenith.discord.DiscordBot;
 import java.util.Comparator;
 import java.util.stream.Collectors;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.PLUGIN_MANAGER;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.PLUGIN_MANAGER;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 

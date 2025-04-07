@@ -16,8 +16,8 @@ import org.geysermc.mcprotocollib.protocol.data.game.item.component.ItemEnchantm
 
 import java.util.List;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.MODULE;
 
 public class ToolSet {
     private final Int2DoubleMap blockBreakSpeedCache = new Int2DoubleOpenHashMap();

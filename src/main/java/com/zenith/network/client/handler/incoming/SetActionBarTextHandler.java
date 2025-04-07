@@ -11,8 +11,8 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
-import static com.zenith.Shared.CLIENT_LOG;
-import static com.zenith.Shared.EVENT_BUS;
+import static com.zenith.Globals.CLIENT_LOG;
+import static com.zenith.Globals.EVENT_BUS;
 
 public class SetActionBarTextHandler implements ClientEventLoopPacketHandler<ClientboundSetActionBarTextPacket, ClientSession> {
     private Instant lastRestartEvent = Instant.EPOCH;

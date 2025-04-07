@@ -8,7 +8,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.Clientbound
 
 import java.util.OptionalInt;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class ClientCommandsOutgoingHandler implements PacketHandler<ClientboundCommandsPacket, ServerSession> {
     @Override

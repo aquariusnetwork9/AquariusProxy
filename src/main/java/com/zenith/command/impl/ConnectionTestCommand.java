@@ -11,7 +11,7 @@ import com.zenith.feature.api.mcsrvstatus.MCSrvStatusApi;
 
 import java.util.function.Supplier;
 
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;

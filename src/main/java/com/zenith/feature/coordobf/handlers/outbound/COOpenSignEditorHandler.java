@@ -5,7 +5,7 @@ import com.zenith.network.registry.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundOpenSignEditorPacket;
 
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.MODULE;
 
 public class COOpenSignEditorHandler implements PacketHandler<ClientboundOpenSignEditorPacket, ServerSession> {
     @Override

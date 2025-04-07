@@ -8,8 +8,8 @@ import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
 import com.zenith.module.impl.AutoReconnect;
 
-import static com.zenith.Shared.DISCORD_LOG;
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.DISCORD_LOG;
+import static com.zenith.Globals.MODULE;
 
 public class DisconnectCommand extends Command {
     @Override

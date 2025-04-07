@@ -4,7 +4,7 @@ import com.zenith.network.registry.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandPacket;
 
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 
 public class ALChatCommandHandler implements PacketHandler<ServerboundChatCommandPacket, ServerSession> {
     @Override

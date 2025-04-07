@@ -25,8 +25,8 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.Clientbound
 import java.util.EnumSet;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.word;
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.EXECUTOR;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.EXECUTOR;
 import static java.util.Arrays.asList;
 
 public class SkinCommand extends Command {

@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class ZenithServerInfoBuilder {
     public static final ZenithServerInfoBuilder INSTANCE = new ZenithServerInfoBuilder();

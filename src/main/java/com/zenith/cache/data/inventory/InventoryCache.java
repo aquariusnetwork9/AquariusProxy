@@ -10,7 +10,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.S
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundSetCreativeModeSlotPacket;
 import org.jspecify.annotations.Nullable;
 
-import static com.zenith.Shared.CACHE_LOG;
+import static com.zenith.Globals.CACHE_LOG;
 
 @Data
 public class InventoryCache {

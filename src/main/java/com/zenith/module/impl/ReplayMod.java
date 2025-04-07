@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class ReplayMod extends Module {
     private final Path replayDirectory = Paths.get("replays");

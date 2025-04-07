@@ -8,7 +8,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class TablistDatabase extends LockingDatabase {
     private static final Duration textInsertCooldownDuration = Duration.ofHours(6L);

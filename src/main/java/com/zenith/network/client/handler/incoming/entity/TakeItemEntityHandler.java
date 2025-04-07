@@ -5,7 +5,7 @@ import com.zenith.network.registry.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundTakeItemEntityPacket;
 import org.jspecify.annotations.NonNull;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 import static java.util.Objects.nonNull;
 
 public class TakeItemEntityHandler implements ClientEventLoopPacketHandler<ClientboundTakeItemEntityPacket, ClientSession> {

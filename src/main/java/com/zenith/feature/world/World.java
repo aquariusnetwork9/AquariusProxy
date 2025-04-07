@@ -19,7 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 @UtilityClass
 public class World {

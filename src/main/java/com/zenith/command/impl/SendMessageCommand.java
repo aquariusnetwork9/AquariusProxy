@@ -13,8 +13,8 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.Clientbound
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.EVENT_BUS;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.EVENT_BUS;
 
 public class SendMessageCommand extends Command {
     @Override

@@ -7,8 +7,8 @@ import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.ClientboundH
 import org.geysermc.mcprotocollib.protocol.packet.login.serverbound.ServerboundHelloPacket;
 import org.jspecify.annotations.NonNull;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.EXECUTOR;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.EXECUTOR;
 
 public class SHelloHandler implements PacketHandler<ServerboundHelloPacket, ServerSession> {
     @Override

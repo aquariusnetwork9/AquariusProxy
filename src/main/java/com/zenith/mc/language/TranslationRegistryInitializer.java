@@ -12,7 +12,7 @@ import java.text.MessageFormat;
 import java.util.Iterator;
 import java.util.Locale;
 
-import static com.zenith.Shared.OBJECT_MAPPER;
+import static com.zenith.Globals.OBJECT_MAPPER;
 
 @UtilityClass
 public class TranslationRegistryInitializer {

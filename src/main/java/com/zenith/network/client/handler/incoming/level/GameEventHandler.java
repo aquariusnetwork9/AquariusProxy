@@ -10,8 +10,8 @@ import org.geysermc.mcprotocollib.protocol.data.game.level.notify.ThunderStrengt
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundGameEventPacket;
 import org.jspecify.annotations.NonNull;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.EVENT_BUS;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.EVENT_BUS;
 
 public class GameEventHandler implements ClientEventLoopPacketHandler<ClientboundGameEventPacket, ClientSession> {
     @Override

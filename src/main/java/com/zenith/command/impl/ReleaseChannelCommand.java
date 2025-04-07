@@ -20,7 +20,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static java.util.Arrays.asList;
 

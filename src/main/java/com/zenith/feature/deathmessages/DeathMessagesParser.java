@@ -10,7 +10,7 @@ import java.io.InputStreamReader;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.feature.deathmessages.DeathMessageSchemaInstance.spaceSplit;
 
 public class DeathMessagesParser {

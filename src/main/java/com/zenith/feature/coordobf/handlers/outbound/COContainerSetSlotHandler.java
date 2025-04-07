@@ -6,7 +6,7 @@ import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerSetSlotPacket;
 
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.MODULE;
 
 public class COContainerSetSlotHandler implements PacketHandler<ClientboundContainerSetSlotPacket, ServerSession> {
     @Override

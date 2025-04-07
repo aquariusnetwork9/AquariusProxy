@@ -12,7 +12,7 @@ import com.zenith.util.MentionUtil;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;

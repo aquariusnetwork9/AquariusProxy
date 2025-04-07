@@ -15,7 +15,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class DeathsDatabase extends LiveDatabase {
     public DeathsDatabase(final QueryExecutor queryExecutor, final RedisClient redisClient) {

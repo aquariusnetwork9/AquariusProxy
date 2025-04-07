@@ -5,7 +5,7 @@ import com.zenith.network.registry.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundAcceptTeleportationPacket;
 
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.MODULE;
 
 public class COAcceptTeleportationHandler implements PacketHandler<ServerboundAcceptTeleportationPacket, ServerSession> {
     @Override

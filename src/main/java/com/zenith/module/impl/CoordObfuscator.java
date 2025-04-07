@@ -50,7 +50,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 // todo: delay player logins until teleport queue is empty, there's some race condition on dimension switch transfers where a tp is lost
 // todo: better way to determine if we should replace bedrock layer in a dimension. dimension registry is not guaranteed to be sync'd to server's dim registry

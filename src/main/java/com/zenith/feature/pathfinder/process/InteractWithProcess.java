@@ -17,7 +17,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.lang.ref.WeakReference;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class InteractWithProcess extends BaritoneProcessHelper {
 

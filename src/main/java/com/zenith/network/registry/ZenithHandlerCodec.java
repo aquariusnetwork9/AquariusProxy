@@ -66,7 +66,7 @@ import org.geysermc.mcprotocollib.protocol.packet.status.clientbound.Clientbound
 import org.geysermc.mcprotocollib.protocol.packet.status.serverbound.ServerboundPingRequestPacket;
 import org.geysermc.mcprotocollib.protocol.packet.status.serverbound.ServerboundStatusRequestPacket;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public final class ZenithHandlerCodec {
     private ZenithHandlerCodec() {}

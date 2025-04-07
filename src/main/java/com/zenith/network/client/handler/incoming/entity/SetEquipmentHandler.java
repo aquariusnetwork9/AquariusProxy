@@ -7,7 +7,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.Equipment;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundSetEquipmentPacket;
 import org.jspecify.annotations.NonNull;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class SetEquipmentHandler implements ClientEventLoopPacketHandler<ClientboundSetEquipmentPacket, ClientSession> {
     @Override

@@ -5,7 +5,7 @@ import com.zenith.network.registry.PacketHandler;
 import com.zenith.util.Config;
 import org.geysermc.mcprotocollib.protocol.packet.status.clientbound.ClientboundPongResponsePacket;
 
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 
 public class PongResponseHandler implements PacketHandler<ClientboundPongResponsePacket, ClientSession> {
     public static final PongResponseHandler INSTANCE = new PongResponseHandler();

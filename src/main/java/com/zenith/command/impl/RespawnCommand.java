@@ -11,7 +11,7 @@ import com.zenith.network.client.ClientSession;
 import org.geysermc.mcprotocollib.protocol.data.game.ClientCommand;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundClientCommandPacket;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 import static java.util.Objects.nonNull;
 
 public class RespawnCommand extends Command {

@@ -29,8 +29,8 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.*;
 import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.CONFIG;
 
 public class ActionLimiter extends Module {
     private final ReferenceSet<ServerSession> limitedConnections = new ReferenceOpenHashSet<>();

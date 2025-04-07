@@ -9,7 +9,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponen
 import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class AutoMend extends AbstractInventoryModule {
 

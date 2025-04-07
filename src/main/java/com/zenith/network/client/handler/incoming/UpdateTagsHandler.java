@@ -4,7 +4,7 @@ import com.zenith.network.client.ClientSession;
 import com.zenith.network.registry.PacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundUpdateTagsPacket;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class UpdateTagsHandler implements PacketHandler<ClientboundUpdateTagsPacket, ClientSession> {
     public static final UpdateTagsHandler INSTANCE = new UpdateTagsHandler();

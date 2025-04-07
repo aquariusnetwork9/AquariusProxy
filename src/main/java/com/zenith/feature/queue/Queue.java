@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class Queue {
     private static QueueStatus queueStatus = new QueueStatus(0, 0, 0);

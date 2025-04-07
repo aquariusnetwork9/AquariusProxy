@@ -20,7 +20,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import java.util.List;
 import java.util.function.Predicate;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static java.util.Arrays.asList;
 
 public class InventoryBehavior extends Behavior {

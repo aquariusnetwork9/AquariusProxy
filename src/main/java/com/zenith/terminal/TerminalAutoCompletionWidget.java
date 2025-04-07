@@ -7,7 +7,7 @@ import org.jline.widget.Widgets;
 
 import java.util.concurrent.locks.ReentrantLock;
 
-import static com.zenith.Shared.TERMINAL_LOG;
+import static com.zenith.Globals.TERMINAL_LOG;
 
 public class TerminalAutoCompletionWidget extends Widgets {
     private final Widget backwardDeleteOrig;

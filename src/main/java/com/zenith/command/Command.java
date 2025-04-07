@@ -18,7 +18,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Predicate;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public abstract class Command {
     public static <T> ZRequiredArgumentBuilder<CommandContext, T> argument(String name, ArgumentType<T> type) {

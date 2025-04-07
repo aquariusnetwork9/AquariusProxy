@@ -25,7 +25,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Supplier;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 import static java.util.Arrays.asList;
 import static org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode.SPECTATOR;
 

@@ -4,7 +4,7 @@ import com.zenith.network.client.ClientSession;
 import com.zenith.network.registry.PacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.configuration.clientbound.ClientboundRegistryDataPacket;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class CRegistryDataHandler implements PacketHandler<ClientboundRegistryDataPacket, ClientSession> {
     @Override

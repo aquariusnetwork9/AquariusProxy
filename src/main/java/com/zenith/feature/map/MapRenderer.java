@@ -12,8 +12,8 @@ import java.nio.file.Path;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
-import static com.zenith.Shared.DEFAULT_LOG;
-import static com.zenith.Shared.MAP_BLOCK_COLOR;
+import static com.zenith.Globals.DEFAULT_LOG;
+import static com.zenith.Globals.MAP_BLOCK_COLOR;
 
 public class MapRenderer {
     private static final Path mapsOutputPath = Path.of("maps");

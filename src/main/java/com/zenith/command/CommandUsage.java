@@ -9,8 +9,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.zenith.Shared.COMMAND;
-import static com.zenith.Shared.DEFAULT_LOG;
+import static com.zenith.Globals.COMMAND;
+import static com.zenith.Globals.DEFAULT_LOG;
 
 @Getter
 @Setter

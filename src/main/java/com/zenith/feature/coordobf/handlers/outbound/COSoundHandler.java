@@ -5,7 +5,7 @@ import com.zenith.network.registry.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundSoundPacket;
 
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.MODULE;
 
 public class COSoundHandler implements PacketHandler<ClientboundSoundPacket, ServerSession> {
     @Override

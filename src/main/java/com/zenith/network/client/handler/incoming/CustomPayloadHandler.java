@@ -6,7 +6,7 @@ import com.zenith.util.BrandSerializer;
 import net.kyori.adventure.key.Key;
 import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundCustomPayloadPacket;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class CustomPayloadHandler implements PacketHandler<ClientboundCustomPayloadPacket, ClientSession> {
     public static final CustomPayloadHandler INSTANCE = new CustomPayloadHandler();

@@ -9,8 +9,8 @@ import com.zenith.discord.Embed;
 import com.zenith.module.impl.Spook;
 import com.zenith.util.Config;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 

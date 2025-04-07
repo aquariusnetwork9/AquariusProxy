@@ -10,8 +10,8 @@ import org.geysermc.mcprotocollib.protocol.packet.login.serverbound.ServerboundK
 
 import javax.crypto.SecretKey;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.EXECUTOR;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.EXECUTOR;
 import static com.zenith.util.DisconnectMessages.AUTH_REQUIRED;
 
 public class CHelloHandler implements PacketHandler<ClientboundHelloPacket, ClientSession> {

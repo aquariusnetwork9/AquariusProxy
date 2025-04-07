@@ -12,7 +12,7 @@ import com.zenith.mc.block.BlockPos;
 
 import java.util.Optional;
 
-import static com.zenith.Shared.PATH_LOG;
+import static com.zenith.Globals.PATH_LOG;
 
 public class AStarPathFinder extends AbstractNodeCostSearch {
     private static final int MAX_MAP_SIZE = 1_000_000;

@@ -50,7 +50,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static java.util.Arrays.asList;
 
 public class DiscordBot {

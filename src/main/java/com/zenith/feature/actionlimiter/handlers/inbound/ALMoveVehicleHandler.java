@@ -5,7 +5,7 @@ import com.zenith.network.server.ServerSession;
 import com.zenith.util.math.MathHelper;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundMoveVehiclePacket;
 
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 
 public class ALMoveVehicleHandler implements PacketHandler<ServerboundMoveVehiclePacket, ServerSession> {
     @Override

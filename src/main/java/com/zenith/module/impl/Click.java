@@ -12,8 +12,8 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.INPUTS;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.INPUTS;
 
 public class Click extends Module {
 

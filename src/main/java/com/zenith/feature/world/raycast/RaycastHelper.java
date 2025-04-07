@@ -14,7 +14,7 @@ import org.cloudburstmc.math.vector.Vector3d;
 
 import java.util.List;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class RaycastHelper {
 

@@ -7,7 +7,7 @@ import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundUseItemPacket;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class COUseItemHandler implements PacketHandler<ServerboundUseItemPacket, ServerSession> {
     @Override

@@ -20,8 +20,8 @@ import lombok.Getter;
 import java.util.Arrays;
 import java.util.Collection;
 
-import static com.zenith.Shared.CACHE_LOG;
-import static com.zenith.Shared.SERVER_LOG;
+import static com.zenith.Globals.CACHE_LOG;
+import static com.zenith.Globals.SERVER_LOG;
 
 
 @Getter

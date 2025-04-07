@@ -5,7 +5,7 @@ import com.zenith.module.impl.AutoDisconnect;
 import lombok.Getter;
 import lombok.experimental.UtilityClass;
 
-import static com.zenith.Shared.DEFAULT_LOG;
+import static com.zenith.Globals.DEFAULT_LOG;
 import static com.zenith.util.DisconnectMessages.*;
 import static com.zenith.util.DisconnectReasonInfo.DisconnectCategory.*;
 

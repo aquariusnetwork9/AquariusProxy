@@ -8,8 +8,8 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.Serverbound
 
 import java.util.BitSet;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.EVENT_BUS;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.EVENT_BUS;
 
 public class OutgoingChatHandler implements PacketHandler<ServerboundChatPacket, ClientSession> {
     @Override

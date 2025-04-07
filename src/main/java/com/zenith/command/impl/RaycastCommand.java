@@ -10,7 +10,7 @@ import com.zenith.feature.world.World;
 import com.zenith.feature.world.raycast.RaycastHelper;
 import com.zenith.module.impl.PlayerSimulation;
 
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.MODULE;
 
 public class RaycastCommand extends Command {
     @Override

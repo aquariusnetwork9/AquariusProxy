@@ -6,7 +6,7 @@ import io.netty.util.concurrent.DefaultThreadFactory;
 import org.geysermc.mcprotocollib.network.Session;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 
-import static com.zenith.Shared.SERVER_LOG;
+import static com.zenith.Globals.SERVER_LOG;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 @FunctionalInterface

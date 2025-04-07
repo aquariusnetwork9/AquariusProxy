@@ -7,7 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public interface ClickTarget {
     default BlockOrEntityRaycastResult apply(double blockReachDistance, double entityInteractDistance) {

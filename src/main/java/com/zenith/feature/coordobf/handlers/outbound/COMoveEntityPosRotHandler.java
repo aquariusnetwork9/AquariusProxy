@@ -7,7 +7,7 @@ import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundMoveEntityPosRotPacket;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class COMoveEntityPosRotHandler implements PacketHandler<ClientboundMoveEntityPosRotPacket, ServerSession> {
     @Override

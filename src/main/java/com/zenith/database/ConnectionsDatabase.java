@@ -14,7 +14,7 @@ import java.time.ZoneOffset;
 import java.util.UUID;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class ConnectionsDatabase extends LiveDatabase {
     public ConnectionsDatabase(final QueryExecutor queryExecutor, final RedisClient redisClient) {

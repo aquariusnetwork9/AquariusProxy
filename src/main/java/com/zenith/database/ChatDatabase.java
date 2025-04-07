@@ -10,8 +10,8 @@ import java.time.ZoneOffset;
 import java.util.UUID;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.DATABASE_LOG;
-import static com.zenith.Shared.EVENT_BUS;
+import static com.zenith.Globals.DATABASE_LOG;
+import static com.zenith.Globals.EVENT_BUS;
 
 public class ChatDatabase extends LiveDatabase {
     public ChatDatabase(QueryExecutor queryExecutor, RedisClient redisClient) {

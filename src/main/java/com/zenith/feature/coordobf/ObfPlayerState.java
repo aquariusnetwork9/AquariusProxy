@@ -5,7 +5,7 @@ import com.zenith.util.math.MutableVec3d;
 import lombok.Data;
 import org.jspecify.annotations.NullMarked;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 @NullMarked
 @Data

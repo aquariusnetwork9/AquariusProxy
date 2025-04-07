@@ -18,7 +18,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.EXECUTOR;
+import static com.zenith.Globals.EXECUTOR;
 
 /**
  * On 2b2t, if we stop responding to KeepAlive packets we will get sent back to queue

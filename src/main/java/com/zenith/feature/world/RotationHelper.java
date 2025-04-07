@@ -4,8 +4,8 @@ import com.zenith.cache.data.entity.Entity;
 import com.zenith.mc.entity.EntityData;
 import org.cloudburstmc.math.vector.Vector2f;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.ENTITY_DATA;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.ENTITY_DATA;
 
 public final class RotationHelper {
     private RotationHelper() {}

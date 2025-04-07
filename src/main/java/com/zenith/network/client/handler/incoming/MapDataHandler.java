@@ -4,7 +4,7 @@ import com.zenith.network.client.ClientSession;
 import com.zenith.network.registry.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundMapItemDataPacket;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class MapDataHandler implements ClientEventLoopPacketHandler<ClientboundMapItemDataPacket, ClientSession> {
     @Override

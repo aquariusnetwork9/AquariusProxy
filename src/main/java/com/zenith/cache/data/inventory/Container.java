@@ -8,7 +8,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.zenith.Shared.CACHE_LOG;
+import static com.zenith.Globals.CACHE_LOG;
 
 @Data
 public class Container {

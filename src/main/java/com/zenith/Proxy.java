@@ -63,7 +63,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.util.Config.Authentication.AccountType.MSA;
 import static com.zenith.util.Config.Authentication.AccountType.OFFLINE;
 import static com.zenith.util.DisconnectMessages.*;

@@ -7,7 +7,7 @@ import com.zenith.mc.block.BlockRegistry;
 import com.zenith.module.impl.PlayerSimulation;
 import org.cloudburstmc.math.vector.Vector3d;
 
-import static com.zenith.Shared.BLOCK_DATA;
+import static com.zenith.Globals.BLOCK_DATA;
 
 public class VecUtils {
     public static Vector3d calculateBlockCenter(BlockPos pos) {

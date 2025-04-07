@@ -7,7 +7,7 @@ import com.zenith.mc.entity.EntityData;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.jspecify.annotations.Nullable;
 
-import static com.zenith.Shared.ENTITY_DATA;
+import static com.zenith.Globals.ENTITY_DATA;
 
 public record EntityRaycastResult(boolean hit, @Nullable RayIntersection intersection, @Nullable Entity entity) {
     public static EntityRaycastResult miss() {

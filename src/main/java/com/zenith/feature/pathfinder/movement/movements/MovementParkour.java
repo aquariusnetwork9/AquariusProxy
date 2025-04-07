@@ -12,7 +12,7 @@ import com.zenith.mc.block.*;
 import java.util.HashSet;
 import java.util.Set;
 
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 import static com.zenith.feature.pathfinder.movement.ActionCosts.*;
 
 public class MovementParkour extends Movement {

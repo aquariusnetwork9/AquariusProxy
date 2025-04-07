@@ -20,7 +20,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class AutoFish extends AbstractInventoryModule {
     private int fishHookEntityId = -1;

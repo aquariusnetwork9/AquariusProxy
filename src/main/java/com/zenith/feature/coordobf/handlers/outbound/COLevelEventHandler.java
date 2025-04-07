@@ -6,7 +6,7 @@ import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.data.game.level.event.LevelEventType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundLevelEventPacket;
 
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.MODULE;
 
 public class COLevelEventHandler implements PacketHandler<ClientboundLevelEventPacket, ServerSession> {
     @Override

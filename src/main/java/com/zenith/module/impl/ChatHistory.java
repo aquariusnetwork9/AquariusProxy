@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Queue;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 
 public class ChatHistory extends Module {
     private Queue<StoredChat> chatHistory = new CircularFifoQueue<>(CONFIG.server.extra.chatHistory.maxCount);

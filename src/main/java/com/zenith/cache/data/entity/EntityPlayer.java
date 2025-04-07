@@ -21,8 +21,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-import static com.zenith.Shared.MODULE;
-import static com.zenith.Shared.SERVER_LOG;
+import static com.zenith.Globals.MODULE;
+import static com.zenith.Globals.SERVER_LOG;
 
 
 @Data

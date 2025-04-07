@@ -38,7 +38,7 @@ import java.io.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
-public class Shared {
+public class Globals {
     public static final Gson GSON = new GsonBuilder()
         .disableHtmlEscaping()
         .setPrettyPrinting()
@@ -149,7 +149,7 @@ public class Shared {
     }
 
     private static @Nullable String readResourceTxt(final String name) {
-        try (InputStream in = Shared.class.getClassLoader().getResourceAsStream(name)) {
+        try (InputStream in = Globals.class.getClassLoader().getResourceAsStream(name)) {
             if (in == null) return null;
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
                 return reader.readLine();
@@ -159,12 +159,12 @@ public class Shared {
         }
     }
     public static void saveConfigAsync() {
-        Thread.ofVirtual().name("Async Config Save").start(Shared::saveConfig);
+        Thread.ofVirtual().name("Async Config Save").start(Globals::saveConfig);
     }
 
     public static synchronized void saveConfig() {
         saveConfig(CONFIG_FILE, CONFIG);
-        PLUGIN_MANAGER.saveConfigs(Shared::saveConfig);
+        PLUGIN_MANAGER.saveConfigs(Globals::saveConfig);
     }
     public static synchronized void saveLaunchConfig() {
         saveConfig(LAUNCH_CONFIG_FILE, LAUNCH_CONFIG);

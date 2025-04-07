@@ -11,7 +11,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.Clien
 
 import java.util.List;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class COSectionBlocksUpdateHandler implements PacketHandler<ClientboundSectionBlocksUpdatePacket, ServerSession> {
     @Override

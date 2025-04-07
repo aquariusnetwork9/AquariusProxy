@@ -22,7 +22,7 @@ import org.cloudburstmc.math.vector.Vector3i;
 
 import java.util.*;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.feature.pathfinder.movement.MovementStatus.*;
 
 public class PathExecutor {

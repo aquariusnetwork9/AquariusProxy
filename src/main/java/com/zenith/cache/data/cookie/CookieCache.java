@@ -17,8 +17,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.SERVER_LOG;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.SERVER_LOG;
 import static java.util.Arrays.asList;
 
 // todo: generify this to support both ClientSession and ServerConnection caches?

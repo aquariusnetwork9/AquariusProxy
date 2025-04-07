@@ -12,8 +12,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.DISCORD_LOG;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.DISCORD_LOG;
 
 /**
  * Mutable data class for discord embeds

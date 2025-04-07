@@ -17,7 +17,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.EnumSet;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode.SPECTATOR;
 
 public class LoginSpectatorPostHandler implements PostOutgoingPacketHandler<ClientboundLoginPacket, ServerSession> {

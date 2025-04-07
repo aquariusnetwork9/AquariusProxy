@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.zenith.Shared.SERVER_LOG;
+import static com.zenith.Globals.SERVER_LOG;
 import static java.util.Objects.isNull;
 
 public final class SpectatorEntityRegistry {

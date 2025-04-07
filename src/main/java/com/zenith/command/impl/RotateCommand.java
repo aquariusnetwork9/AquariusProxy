@@ -12,8 +12,8 @@ import com.zenith.module.impl.PlayerSimulation;
 
 import static com.mojang.brigadier.arguments.FloatArgumentType.floatArg;
 import static com.mojang.brigadier.arguments.FloatArgumentType.getFloat;
-import static com.zenith.Shared.INPUTS;
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.INPUTS;
+import static com.zenith.Globals.MODULE;
 
 public class RotateCommand extends Command {
     private static final int MOVE_PRIORITY = 1000000;

@@ -6,7 +6,7 @@ import com.zenith.command.CommandUsage;
 import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
 
-import static com.zenith.Shared.LAUNCH_CONFIG;
+import static com.zenith.Globals.LAUNCH_CONFIG;
 
 public class LicenseCommand extends Command {
     @Override

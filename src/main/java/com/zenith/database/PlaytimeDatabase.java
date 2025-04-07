@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class PlaytimeDatabase extends LockingDatabase {
     private final Map<GameProfile, List<ConnectionEvent>> connectionEvents = new ConcurrentHashMap<>();

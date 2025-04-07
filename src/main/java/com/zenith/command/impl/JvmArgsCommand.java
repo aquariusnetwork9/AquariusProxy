@@ -10,8 +10,8 @@ import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
-import static com.zenith.Shared.LAUNCH_CONFIG;
-import static com.zenith.Shared.saveLaunchConfig;
+import static com.zenith.Globals.LAUNCH_CONFIG;
+import static com.zenith.Globals.saveLaunchConfig;
 import static com.zenith.discord.DiscordBot.escape;
 
 public class JvmArgsCommand extends Command {

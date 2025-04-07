@@ -8,8 +8,8 @@ import com.zenith.network.registry.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundUpdateMobEffectPacket;
 import org.jspecify.annotations.NonNull;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.CLIENT_LOG;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.CLIENT_LOG;
 
 public class UpdateMobEffectHandler implements ClientEventLoopPacketHandler<ClientboundUpdateMobEffectPacket, ClientSession> {
     @Override

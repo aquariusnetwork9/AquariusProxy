@@ -5,7 +5,7 @@ import com.zenith.network.registry.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundPlayerActionPacket;
 
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.MODULE;
 
 public class COPlayerActionHandler implements PacketHandler<ServerboundPlayerActionPacket, ServerSession> {
     @Override

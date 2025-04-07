@@ -5,7 +5,7 @@ import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandNode;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundCommandsPacket;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class ClientCommandsSpectatorOutgoingHandler implements PacketHandler<ClientboundCommandsPacket, ServerSession> {
     @Override

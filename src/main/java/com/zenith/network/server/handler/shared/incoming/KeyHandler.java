@@ -9,7 +9,7 @@ import javax.crypto.SecretKey;
 import java.security.PrivateKey;
 import java.util.Arrays;
 
-import static com.zenith.Shared.EXECUTOR;
+import static com.zenith.Globals.EXECUTOR;
 
 public class KeyHandler implements PacketHandler<ServerboundKeyPacket, ServerSession> {
 

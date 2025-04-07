@@ -39,7 +39,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.command.impl.StatusCommand.getCoordinates;
 import static com.zenith.discord.DiscordBot.*;
 import static com.zenith.util.math.MathHelper.formatDuration;

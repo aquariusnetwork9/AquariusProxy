@@ -8,7 +8,7 @@ import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
 import com.zenith.event.proxy.UpdateStartEvent;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class UpdateCommand extends Command {
     @Override

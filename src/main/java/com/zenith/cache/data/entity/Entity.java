@@ -27,7 +27,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
-import static com.zenith.Shared.ENTITY_DATA;
+import static com.zenith.Globals.ENTITY_DATA;
 
 
 @Data

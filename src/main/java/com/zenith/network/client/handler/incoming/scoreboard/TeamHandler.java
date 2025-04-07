@@ -7,7 +7,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.Collections;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class TeamHandler implements ClientEventLoopPacketHandler<ClientboundSetPlayerTeamPacket, ClientSession> {
     @Override

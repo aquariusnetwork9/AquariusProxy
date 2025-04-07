@@ -10,7 +10,7 @@ import org.redisson.config.Config;
 
 import java.time.Instant;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static java.util.Objects.isNull;
 
 @Getter

@@ -13,8 +13,8 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.zenith.Shared.DEFAULT_LOG;
-import static com.zenith.Shared.OBJECT_MAPPER;
+import static com.zenith.Globals.DEFAULT_LOG;
+import static com.zenith.Globals.OBJECT_MAPPER;
 
 public class FileIOApi extends Api {
     public static final FileIOApi INSTANCE = new FileIOApi();

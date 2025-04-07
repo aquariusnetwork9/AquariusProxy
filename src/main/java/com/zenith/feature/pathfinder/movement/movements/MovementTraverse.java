@@ -18,7 +18,7 @@ import org.cloudburstmc.math.vector.Vector3d;
 
 import java.util.Set;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.feature.pathfinder.movement.ActionCosts.*;
 
 public class MovementTraverse extends Movement {

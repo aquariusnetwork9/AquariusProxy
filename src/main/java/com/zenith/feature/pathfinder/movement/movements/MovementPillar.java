@@ -17,7 +17,7 @@ import org.cloudburstmc.math.vector.Vector3d;
 
 import java.util.Set;
 
-import static com.zenith.Shared.BLOCK_DATA;
+import static com.zenith.Globals.BLOCK_DATA;
 import static com.zenith.feature.pathfinder.movement.ActionCosts.*;
 
 public class MovementPillar extends Movement {

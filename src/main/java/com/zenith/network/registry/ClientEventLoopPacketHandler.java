@@ -6,7 +6,7 @@ import org.geysermc.mcprotocollib.network.packet.Packet;
 
 import java.util.concurrent.RejectedExecutionException;
 
-import static com.zenith.Shared.CLIENT_LOG;
+import static com.zenith.Globals.CLIENT_LOG;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 @FunctionalInterface

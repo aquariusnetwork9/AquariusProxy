@@ -14,7 +14,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.spaw
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 import static java.util.Arrays.asList;
 
 /**

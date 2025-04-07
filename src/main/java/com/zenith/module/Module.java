@@ -13,7 +13,7 @@ import org.geysermc.mcprotocollib.network.packet.Packet;
 import java.util.Collections;
 import java.util.List;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 /**
  * Module system base class.

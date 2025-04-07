@@ -8,7 +8,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.Clie
 
 import java.util.List;
 
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.MODULE;
 
 public class COSetEquipmentHandler implements PacketHandler<ClientboundSetEquipmentPacket, ServerSession> {
     @Override

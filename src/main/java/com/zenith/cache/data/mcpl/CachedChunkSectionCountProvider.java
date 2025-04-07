@@ -4,8 +4,8 @@ import com.zenith.mc.dimension.DimensionData;
 import org.geysermc.mcprotocollib.protocol.ChunkSectionCountProvider;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerSpawnInfo;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.CACHE_LOG;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.CACHE_LOG;
 
 /**
  * A local cache run on the packet event loop for ClientboundLevelChunkWithLight packet deserialization.

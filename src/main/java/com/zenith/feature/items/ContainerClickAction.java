@@ -13,8 +13,8 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.S
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundSetCarriedItemPacket;
 import org.jspecify.annotations.Nullable;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.CLIENT_LOG;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.CLIENT_LOG;
 
 public record ContainerClickAction(int slotId, ContainerActionType actionType, ContainerAction param) {
     public @Nullable MinecraftPacket toPacket() {

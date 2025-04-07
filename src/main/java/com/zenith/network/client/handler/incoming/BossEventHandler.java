@@ -6,7 +6,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.BossBarAction;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundBossEventPacket;
 import org.jspecify.annotations.NonNull;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class BossEventHandler implements ClientEventLoopPacketHandler<ClientboundBossEventPacket, ClientSession> {
     @Override

@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.util.math.MathHelper.formatDuration;
 
 public class TabListDataHandler implements ClientEventLoopPacketHandler<ClientboundTabListPacket, ClientSession> {

@@ -8,7 +8,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.HashMap;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class UpdateAdvancementsHandler implements ClientEventLoopPacketHandler<ClientboundUpdateAdvancementsPacket, ClientSession> {
     @Override

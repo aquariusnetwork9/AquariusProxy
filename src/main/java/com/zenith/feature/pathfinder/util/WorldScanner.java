@@ -12,7 +12,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.chunk.palette.Palette;
 import java.util.*;
 import java.util.stream.IntStream;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class WorldScanner {
     public static List<BlockPos> scanCurrentViewDistance(BlockOptionalMetaLookup filter) {

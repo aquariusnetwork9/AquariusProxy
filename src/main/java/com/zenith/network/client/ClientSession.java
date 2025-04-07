@@ -29,7 +29,7 @@ import org.geysermc.mcprotocollib.protocol.packet.login.serverbound.ServerboundH
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.via.ZenithViaInitializer.VIA_USER;
 import static java.util.Objects.isNull;
 

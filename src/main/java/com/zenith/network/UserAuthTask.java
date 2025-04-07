@@ -10,7 +10,7 @@ import javax.crypto.SecretKey;
 import java.util.Optional;
 import java.util.UUID;
 
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 
 public class UserAuthTask implements Runnable {
     private final ServerSession session;

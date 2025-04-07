@@ -10,7 +10,7 @@ import org.slf4j.Logger;
 import java.util.EnumMap;
 import java.util.function.Supplier;
 
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 
 public class PacketLogPacketHandlerCodec extends PacketHandlerCodec {
     private final Supplier<PacketLogConfig> configSupplier;

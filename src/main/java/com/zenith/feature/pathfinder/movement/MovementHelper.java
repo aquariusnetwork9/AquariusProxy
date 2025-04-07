@@ -18,7 +18,7 @@ import org.cloudburstmc.math.vector.Vector3i;
 
 import java.util.Optional;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.feature.pathfinder.Ternary.*;
 import static com.zenith.feature.pathfinder.movement.ActionCosts.COST_INF;
 import static com.zenith.feature.pathfinder.movement.Movement.HORIZONTALS_BUT_ALSO_DOWN_____SO_EVERY_DIRECTION_EXCEPT_UP;

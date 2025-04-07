@@ -12,7 +12,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
-import static com.zenith.Shared.CACHE_LOG;
+import static com.zenith.Globals.CACHE_LOG;
 
 @Data
 public class ChatTypeRegistry {

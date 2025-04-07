@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class ActiveHours extends Module {
     public static final String ACTIVE_HOURS_DISCONNECT_PREFIX = "[Active Hours] ";

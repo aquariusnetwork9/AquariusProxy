@@ -5,7 +5,7 @@ import com.zenith.network.client.ClientSession;
 import com.zenith.network.registry.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundMovePlayerPosRotPacket;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class PostOutgoingPlayerPositionRotationHandler implements ClientEventLoopPacketHandler<ServerboundMovePlayerPosRotPacket, ClientSession> {
     @Override

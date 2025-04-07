@@ -14,7 +14,7 @@ import org.jspecify.annotations.NonNull;
 import java.util.Optional;
 import java.util.UUID;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class SGameProfileOutgoingHandler implements PacketHandler<ClientboundGameProfilePacket, ServerSession> {
     // can be anything really, just needs to be unique and not taken by a real player seen in-game

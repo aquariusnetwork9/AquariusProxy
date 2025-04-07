@@ -16,7 +16,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.Serv
 import java.util.Collections;
 import java.util.List;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class PlayerInventoryManager {
     private static final InventoryActionRequest DEFAULT_ACTION_REQUEST = new InventoryActionRequest(null, Collections.emptyList(), Integer.MIN_VALUE);

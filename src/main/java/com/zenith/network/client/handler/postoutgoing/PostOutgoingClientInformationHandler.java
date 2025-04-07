@@ -4,7 +4,7 @@ import com.zenith.network.client.ClientSession;
 import com.zenith.network.registry.PostOutgoingPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.common.serverbound.ServerboundClientInformationPacket;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class PostOutgoingClientInformationHandler implements PostOutgoingPacketHandler<ServerboundClientInformationPacket, ClientSession> {
     public static final PostOutgoingClientInformationHandler INSTANCE = new PostOutgoingClientInformationHandler();

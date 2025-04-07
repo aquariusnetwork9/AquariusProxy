@@ -31,8 +31,8 @@ import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.SERVER_LOG;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.SERVER_LOG;
 
 /**
  * Important to deep copy all objects that are offset by this class

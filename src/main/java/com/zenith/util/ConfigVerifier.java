@@ -2,7 +2,7 @@ package com.zenith.util;
 
 import java.lang.reflect.Field;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 // Verifies that all fields in the loaded configs are not null
 // gson will deserialize invalid json values to null

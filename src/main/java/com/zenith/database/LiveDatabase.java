@@ -8,7 +8,7 @@ import java.time.Instant;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public abstract class LiveDatabase extends LockingDatabase {
 

@@ -18,7 +18,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
-import static com.zenith.Shared.OBJECT_MAPPER;
+import static com.zenith.Globals.OBJECT_MAPPER;
 
 public class BlockDataManager {
     private final Int2ObjectOpenHashMap<Block> blockStateIdToBlock;

@@ -18,7 +18,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class Spook extends Module {
     private final Timer searchTimer = Timers.tickTimer();

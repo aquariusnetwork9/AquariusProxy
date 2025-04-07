@@ -5,7 +5,7 @@ import com.zenith.feature.pathfinder.PathingCommand;
 import com.zenith.feature.pathfinder.PathingCommandType;
 import com.zenith.feature.pathfinder.goals.Goal;
 
-import static com.zenith.Shared.PATH_LOG;
+import static com.zenith.Globals.PATH_LOG;
 
 /**
  * As set by ExampleBaritoneControl or something idk

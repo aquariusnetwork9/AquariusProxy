@@ -8,8 +8,8 @@ import org.geysermc.mcprotocollib.protocol.data.status.ServerStatusInfo;
 import org.geysermc.mcprotocollib.protocol.packet.status.clientbound.ClientboundStatusResponsePacket;
 import org.geysermc.mcprotocollib.protocol.packet.status.serverbound.ServerboundStatusRequestPacket;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.SERVER_LOG;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.SERVER_LOG;
 
 public class StatusRequestHandler implements PacketHandler<ServerboundStatusRequestPacket, ServerSession> {
     @Override

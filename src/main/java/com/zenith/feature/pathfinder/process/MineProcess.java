@@ -16,7 +16,7 @@ import com.zenith.mc.block.BlockRegistry;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.feature.pathfinder.movement.ActionCosts.COST_INF;
 
 public final class MineProcess extends BaritoneProcessHelper implements IBaritoneProcess {

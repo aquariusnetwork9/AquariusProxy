@@ -12,8 +12,8 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.Clien
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.PATH_LOG;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.PATH_LOG;
 
 public class IngamePathRenderer {
     private final Timer renderPathTimer = Timers.tickTimer();

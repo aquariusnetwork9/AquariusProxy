@@ -23,8 +23,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.INVENTORY;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.INVENTORY;
 
 public class InventoryCommand extends Command {
     private static final int INV_ACTION_PRIORITY = 1000000;

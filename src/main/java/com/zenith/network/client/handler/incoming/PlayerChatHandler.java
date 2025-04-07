@@ -11,7 +11,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.Clientbound
 
 import java.util.Optional;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class PlayerChatHandler implements PacketHandler<ClientboundPlayerChatPacket, ClientSession> {
 

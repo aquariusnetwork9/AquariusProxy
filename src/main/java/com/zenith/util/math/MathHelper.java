@@ -5,7 +5,7 @@ import org.cloudburstmc.math.vector.Vector3d;
 
 import java.time.Duration;
 
-import static com.zenith.Shared.DEFAULT_LOG;
+import static com.zenith.Globals.DEFAULT_LOG;
 
 @UtilityClass
 public class MathHelper {

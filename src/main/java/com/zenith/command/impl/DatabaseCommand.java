@@ -7,8 +7,8 @@ import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
 import com.zenith.discord.Embed;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.DATABASE;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.DATABASE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 

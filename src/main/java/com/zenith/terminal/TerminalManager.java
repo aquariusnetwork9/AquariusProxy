@@ -14,7 +14,7 @@ import org.jline.terminal.impl.DumbTerminal;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class TerminalManager {
     private LineReader lineReader;

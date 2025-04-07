@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Set;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class KillAura extends AbstractInventoryModule {
 

@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Locale;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static java.util.Arrays.asList;
 
 public class AutoArmor extends Module {

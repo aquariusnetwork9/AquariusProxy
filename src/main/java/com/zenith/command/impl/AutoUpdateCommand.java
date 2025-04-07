@@ -9,8 +9,8 @@ import com.zenith.command.brigadier.CommandContext;
 import com.zenith.discord.Embed;
 import com.zenith.feature.autoupdater.AutoUpdater;
 
-import static com.zenith.Shared.LAUNCH_CONFIG;
-import static com.zenith.Shared.saveLaunchConfig;
+import static com.zenith.Globals.LAUNCH_CONFIG;
+import static com.zenith.Globals.saveLaunchConfig;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 

@@ -15,7 +15,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static java.util.Arrays.asList;
 
 public class LoginHandler implements PacketHandler<ClientboundLoginPacket, ClientSession> {

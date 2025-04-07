@@ -8,7 +8,7 @@ import com.viaversion.viaversion.api.protocol.version.VersionProvider;
 import com.zenith.Proxy;
 import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class ZenithViaLoader extends VLLoader {
 

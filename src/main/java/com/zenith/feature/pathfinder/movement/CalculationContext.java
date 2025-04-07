@@ -10,8 +10,8 @@ import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockPos;
 import org.jspecify.annotations.Nullable;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.CONFIG;
 import static com.zenith.feature.pathfinder.movement.ActionCosts.COST_INF;
 
 public class CalculationContext {

@@ -13,7 +13,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.string;
-import static com.zenith.Shared.COMMAND;
+import static com.zenith.Globals.COMMAND;
 
 public class HelpCommand extends Command {
     @Override

@@ -15,7 +15,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public final class GetToBlockProcess extends BaritoneProcessHelper {
 

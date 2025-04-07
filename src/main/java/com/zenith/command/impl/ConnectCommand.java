@@ -7,7 +7,7 @@ import com.zenith.command.CommandUsage;
 import com.zenith.command.brigadier.CommandCategory;
 import com.zenith.command.brigadier.CommandContext;
 
-import static com.zenith.Shared.EXECUTOR;
+import static com.zenith.Globals.EXECUTOR;
 
 public class ConnectCommand extends Command {
     @Override

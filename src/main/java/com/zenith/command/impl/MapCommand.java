@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class MapCommand extends Command {
     @Override

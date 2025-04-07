@@ -13,8 +13,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.CLIENT_LOG;
-import static com.zenith.Shared.EVENT_BUS;
+import static com.zenith.Globals.CLIENT_LOG;
+import static com.zenith.Globals.EVENT_BUS;
 import static java.util.Objects.nonNull;
 
 public class ClientTickManager {

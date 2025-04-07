@@ -15,7 +15,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class AutoOmen extends AbstractInventoryModule {
     private int delay = 0;

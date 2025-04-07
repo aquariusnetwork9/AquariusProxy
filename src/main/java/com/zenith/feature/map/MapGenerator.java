@@ -10,7 +10,7 @@ import lombok.SneakyThrows;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.BitStorage;
 import org.jspecify.annotations.NonNull;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.cache.data.chunk.Chunk.chunkPosToLong;
 
 public class MapGenerator {

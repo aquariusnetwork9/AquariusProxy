@@ -15,7 +15,7 @@ import java.util.Set;
 import java.util.concurrent.Future;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.util.DisconnectMessages.*;
 
 public class AutoReconnect extends Module {

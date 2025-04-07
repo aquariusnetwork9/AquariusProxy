@@ -7,7 +7,7 @@ import org.postgresql.ds.PGSimpleDataSource;
 import java.sql.Connection;
 import java.time.Duration;
 
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 
 public final class ConnectionPool {
 

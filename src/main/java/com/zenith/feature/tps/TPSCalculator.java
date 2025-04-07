@@ -5,7 +5,7 @@ import com.zenith.event.proxy.ConnectEvent;
 
 import java.util.Arrays;
 
-import static com.zenith.Shared.EVENT_BUS;
+import static com.zenith.Globals.EVENT_BUS;
 
 public class TPSCalculator {
 

@@ -10,7 +10,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.Objects;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntryAction.*;
 
 public class PlayerInfoUpdateHandler implements ClientEventLoopPacketHandler<ClientboundPlayerInfoUpdatePacket, ClientSession> {

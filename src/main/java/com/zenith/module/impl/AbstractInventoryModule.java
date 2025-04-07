@@ -15,8 +15,8 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.INVENTORY;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.INVENTORY;
 import static java.util.Objects.nonNull;
 
 /**

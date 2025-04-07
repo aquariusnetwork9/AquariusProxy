@@ -7,7 +7,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.Serve
 
 import java.util.Optional;
 
-import static com.zenith.Shared.SERVER_LOG;
+import static com.zenith.Globals.SERVER_LOG;
 
 public class SAcceptTeleportHandler implements PacketHandler<ServerboundAcceptTeleportationPacket, ServerSession> {
     @Override

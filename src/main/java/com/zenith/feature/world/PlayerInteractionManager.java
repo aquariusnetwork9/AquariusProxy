@@ -35,8 +35,8 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 
-import static com.zenith.Shared.BLOCK_DATA;
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.BLOCK_DATA;
+import static com.zenith.Globals.CACHE;
 
 @Getter
 public class PlayerInteractionManager {

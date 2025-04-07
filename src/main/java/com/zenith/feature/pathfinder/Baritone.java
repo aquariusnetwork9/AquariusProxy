@@ -27,7 +27,7 @@ import java.util.concurrent.Executors;
 import java.util.function.Predicate;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 /**
  *

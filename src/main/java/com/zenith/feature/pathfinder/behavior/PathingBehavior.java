@@ -27,8 +27,8 @@ import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.PATH_LOG;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.PATH_LOG;
 
 @Getter
 public class PathingBehavior extends Behavior {

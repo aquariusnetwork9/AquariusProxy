@@ -1,6 +1,6 @@
 package com.zenith.util;
 
-import com.zenith.Shared;
+import com.zenith.Globals;
 
 import java.io.IOException;
 
@@ -16,7 +16,7 @@ public class WebBrowserHelper {
             }
             // not even gonna try to support linux lol
         } catch (Exception e) {
-            Shared.DEFAULT_LOG.debug("Failed to open url in browser", e);
+            Globals.DEFAULT_LOG.debug("Failed to open url in browser", e);
         }
     }
 

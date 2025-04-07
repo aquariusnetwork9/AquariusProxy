@@ -8,7 +8,7 @@ import com.zenith.module.Module;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public record InstancedPluginAPI(
     ZenithProxyPlugin pluginInstance,

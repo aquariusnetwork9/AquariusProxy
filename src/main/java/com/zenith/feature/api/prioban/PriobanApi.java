@@ -9,7 +9,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
-import static com.zenith.Shared.DEFAULT_LOG;
+import static com.zenith.Globals.DEFAULT_LOG;
 
 public class PriobanApi extends Api {
     public static final PriobanApi INSTANCE = new PriobanApi();

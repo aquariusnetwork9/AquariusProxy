@@ -8,7 +8,7 @@ import org.redisson.api.RedissonClient;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-import static com.zenith.Shared.OBJECT_MAPPER;
+import static com.zenith.Globals.OBJECT_MAPPER;
 
 public class LiveChatTest {
 

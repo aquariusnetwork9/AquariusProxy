@@ -8,7 +8,7 @@ import com.zenith.command.brigadier.CommandContext;
 import com.zenith.discord.Embed;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.string;
-import static com.zenith.Shared.PLAYER_LISTS;
+import static com.zenith.Globals.PLAYER_LISTS;
 import static com.zenith.command.util.CommandOutputHelper.playerListToString;
 import static com.zenith.discord.DiscordBot.escape;
 

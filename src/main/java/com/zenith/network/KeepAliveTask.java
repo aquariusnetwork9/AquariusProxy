@@ -6,7 +6,7 @@ import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.Clientbound
 
 import java.util.concurrent.TimeUnit;
 
-import static com.zenith.Shared.EXECUTOR;
+import static com.zenith.Globals.EXECUTOR;
 
 public class KeepAliveTask implements Runnable {
     private final ServerSession session;

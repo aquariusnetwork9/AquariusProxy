@@ -16,7 +16,7 @@ import org.jspecify.annotations.Nullable;
 import java.lang.ref.WeakReference;
 import java.util.function.Predicate;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 /**
  * Follow an entity or set of entities

@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.geysermc.mcprotocollib.network.event.server.*;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 
 @RequiredArgsConstructor

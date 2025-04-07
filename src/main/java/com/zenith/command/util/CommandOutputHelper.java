@@ -12,8 +12,8 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.Clientbound
 
 import java.util.List;
 
-import static com.zenith.Shared.DISCORD;
-import static com.zenith.Shared.TERMINAL_LOG;
+import static com.zenith.Globals.DISCORD;
+import static com.zenith.Globals.TERMINAL_LOG;
 
 @UtilityClass
 public class CommandOutputHelper {

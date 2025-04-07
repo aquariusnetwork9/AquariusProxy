@@ -8,7 +8,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.Clien
 
 import java.util.stream.Collectors;
 
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.MODULE;
 
 public class COChunksBiomesHandler implements PacketHandler<ClientboundChunksBiomesPacket, ServerSession> {
     @Override

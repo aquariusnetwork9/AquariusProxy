@@ -6,7 +6,7 @@ import com.zenith.network.server.ServerSession;
 import org.cloudburstmc.math.vector.Vector3d;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundDamageEventPacket;
 
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.MODULE;
 
 public class CODamageEventHandler implements PacketHandler<ClientboundDamageEventPacket, ServerSession> {
     @Override

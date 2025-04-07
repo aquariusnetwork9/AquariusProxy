@@ -9,8 +9,8 @@ import com.zenith.module.Module;
 import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.EVENT_BUS;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.EVENT_BUS;
 
 public class QueueWarning extends Module {
     @Override

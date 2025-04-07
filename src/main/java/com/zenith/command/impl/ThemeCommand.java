@@ -10,7 +10,7 @@ import com.zenith.util.ConfigColor;
 
 import java.util.Arrays;
 
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 
 public class ThemeCommand extends Command {

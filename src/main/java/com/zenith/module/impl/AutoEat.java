@@ -17,7 +17,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class AutoEat extends AbstractInventoryModule {
     private int delay = 0;

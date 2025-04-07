@@ -11,8 +11,8 @@ import org.cloudburstmc.math.vector.Vector3d;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.MODULE;
 
 public final class PlayerContext {
     public static final PlayerContext INSTANCE = new PlayerContext();

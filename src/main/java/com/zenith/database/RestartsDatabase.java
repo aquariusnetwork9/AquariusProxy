@@ -7,8 +7,8 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
-import static com.zenith.Shared.DATABASE_LOG;
-import static com.zenith.Shared.EVENT_BUS;
+import static com.zenith.Globals.DATABASE_LOG;
+import static com.zenith.Globals.EVENT_BUS;
 
 public class RestartsDatabase extends LockingDatabase {
 
