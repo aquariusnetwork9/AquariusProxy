@@ -53,6 +53,10 @@ public class PluginManager {
             .forEach(config -> saveFunction.accept(config.file(), config.instance()));
     }
 
+    public List<ConfigInstance> getAllPluginConfigs() {
+        return new ArrayList<>(pluginConfigurations.values());
+    }
+
     public record ConfigInstance(Object instance, Class<?> clazz, File file) { }
 
     public void initialize() {

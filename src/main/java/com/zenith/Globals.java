@@ -226,8 +226,8 @@ public class Globals {
             TranslationRegistryInitializer.registerAllTranslations();
             CONFIG = loadConfig();
             LAUNCH_CONFIG = loadLaunchConfig();
-            ConfigVerifier.verifyConfigs();
             PLUGIN_MANAGER = new PluginManager();
+            ConfigVerifier.verifyConfigs();
             PLAYER_LISTS.init(); // must be init after config
             BOT = new Bot();
         } catch (final Throwable e) {
