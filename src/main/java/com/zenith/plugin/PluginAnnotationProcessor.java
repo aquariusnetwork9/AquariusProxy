@@ -22,7 +22,7 @@ import java.util.Objects;
 import java.util.Set;
 
 @AutoService(Processor.class)
-@SupportedAnnotationTypes({"com.zenith.api.Plugin"})
+@SupportedAnnotationTypes({"com.zenith.api.plugin.Plugin"})
 public class PluginAnnotationProcessor extends AbstractProcessor {
 
     private ProcessingEnvironment environment;
