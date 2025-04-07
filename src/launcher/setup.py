@@ -4,6 +4,8 @@ import re
 
 import requests
 
+from jdk_install import get_java_executable, JavaInstallType
+from launch_config import read_launch_config_file
 from launch_platform import validate_linux_system
 from utils import critical_error
 
@@ -258,3 +260,80 @@ def verify_discord_bot_token(token, verbose=False):
     except Exception as e:
         print("ERROR: Verifying discord bot", e)
         return False
+
+
+def setup_unattended(config):
+    # check if launch_config.json exists
+    if read_launch_config_file() is None:
+        print("Creating unattended launch_config.json")
+        if validate_linux_system(config):
+            release_channel = "linux.1.21.0"
+        else:
+            release_channel = "java.1.21.0"
+            java_exec = get_java_executable(install_type=JavaInstallType.AUTO_INSTALL)
+            if java_exec is None:
+                critical_error("Java not found and auto install failed")
+        config.release_channel = release_channel
+        config.write_launch_config()
+    if not os.path.exists("config.json"):
+        print("Creating unattended config.json")
+        config = {}
+        # some env vars have default values
+        port = os.getenv("ZENITH_PORT", 25565)
+        ip = os.getenv("ZENITH_IP", "localhost")
+        if os.getenv("ZENITH_DISCORD_DISABLED") is not None:
+            # idk how exactly you plan to do anything after this but ok
+            discord_bot = False
+        else:
+            discord_bot = True
+            discord_bot_token = os.getenv("ZENITH_DISCORD_TOKEN")
+            if discord_bot_token is None:
+                critical_error("ZENITH_DISCORD_TOKEN env variable must be set in unattended mode")
+            if not verify_discord_bot_token(discord_bot_token, verbose=True):
+                critical_error("Invalid Discord bot token")
+            discord_channel_id = os.getenv("ZENITH_DISCORD_CHANNEL_ID")
+            if discord_channel_id is None:
+                critical_error("ZENITH_DISCORD_CHANNEL_ID env variable must be set in unattended mode")
+            discord_channel_id = int(discord_channel_id)
+            if discord_channel_id < 1000000000 or discord_channel_id > 9999999999999999999:
+                critical_error("Invalid Discord channel ID")
+            discord_admin_role_id = os.getenv("ZENITH_DISCORD_ROLE_ID")
+            if discord_admin_role_id is None:
+                critical_error("ZENITH_DISCORD_ROLE_ID env variable must be set in unattended mode")
+            discord_admin_role_id = int(discord_admin_role_id)
+            if discord_admin_role_id < 1000000000 or discord_admin_role_id > 9999999999999999999:
+                critical_error("Invalid Discord role ID")
+            if os.getenv("ZENITH_DISCORD_CHAT_RELAY_CHANNEL") is None:
+                chat_relay = False
+            else:
+                chat_relay = True
+                discord_chat_relay_channel = os.getenv("ZENITH_DISCORD_CHAT_RELAY_CHANNEL")
+                if discord_chat_relay_channel is None:
+                    critical_error("ZENITH_DISCORD_CHAT_RELAY_CHANNEL env variable must be set in unattended mode")
+                discord_chat_relay_channel = int(discord_chat_relay_channel)
+                if discord_chat_relay_channel < 1000000000 or discord_chat_relay_channel > 9999999999999999999:
+                    critical_error("Invalid Discord chat relay channel ID")
+
+        config["server"] = {
+            "bind": {
+                "port": port,
+            },
+            "proxyIP": ip,
+        }
+        if discord_bot:
+            config["discord"] = {
+                "enable": True,
+                "token": discord_bot_token,
+                "channelId": discord_channel_id,
+                "accountOwnerRoleId": discord_admin_role_id,
+            }
+            if chat_relay:
+                config["discord"]["chatRelay"] = {
+                    "enable": True,
+                    "channelId": discord_chat_relay_channel
+                }
+        with open("config.json", "w") as f:
+            f.write(json.dumps(config, indent=2))
+            print("config.json written successfully!")
+        print("")
+        print("Unattended Setup complete!")

@@ -1,10 +1,12 @@
 import os
 import re
 import subprocess
+from enum import Enum
 
 import jdk
 
 import launch_platform
+from utils import critical_error
 
 _USER_DIR = os.path.expanduser("~")
 _JDK_DIR = os.path.join(_USER_DIR, ".jdk")
@@ -94,11 +96,23 @@ def java_install_prompt():
             print("Invalid input. Enter y or n")
 
 
-def get_java_executable(min_version=21):
+class JavaInstallType(Enum):
+    USER_PROMPT = 1
+    AUTO_INSTALL = 2
+    NO_INSTALL = 3
+
+
+def get_java_executable(min_version=21, install_type=JavaInstallType.USER_PROMPT):
     java_path = locate_java(min_version)
     if not java_path:
-        java_install_prompt()
-        java_path = locate_java(min_version)
+        if install_type == JavaInstallType.USER_PROMPT:
+            java_install_prompt()
+            java_path = locate_java(min_version)
+        elif install_type == JavaInstallType.AUTO_INSTALL:
+            install_java()
+            java_path = locate_java(min_version)
+        elif install_type == JavaInstallType.NO_INSTALL:
+            critical_error("Java not found and both auto install and user prompt disabled.")
         if not java_path:
             print("Failed to install Java.")
             return None
