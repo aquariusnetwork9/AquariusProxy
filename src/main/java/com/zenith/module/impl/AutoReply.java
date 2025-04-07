@@ -4,8 +4,8 @@ import com.github.rfresh2.EventConsumer;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.zenith.Proxy;
-import com.zenith.event.proxy.chat.WhisperChatEvent;
-import com.zenith.module.Module;
+import com.zenith.api.event.chat.WhisperChatEvent;
+import com.zenith.api.module.Module;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 
 import java.time.Duration;

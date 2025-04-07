@@ -1,6 +1,6 @@
 package com.zenith.network.client.handler.incoming.level;
 
-import com.zenith.event.module.WeatherChangeEvent;
+import com.zenith.api.event.module.WeatherChangeEvent;
 import com.zenith.network.client.ClientSession;
 import com.zenith.network.registry.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;

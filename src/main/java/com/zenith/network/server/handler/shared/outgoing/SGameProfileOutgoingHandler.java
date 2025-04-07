@@ -1,7 +1,7 @@
 package com.zenith.network.server.handler.shared.outgoing;
 
 import com.zenith.Proxy;
-import com.zenith.event.proxy.NonWhitelistedPlayerConnectedEvent;
+import com.zenith.api.event.player.NonWhitelistedPlayerConnectedEvent;
 import com.zenith.feature.api.sessionserver.SessionServerApi;
 import com.zenith.network.registry.PacketHandler;
 import com.zenith.network.server.ServerSession;

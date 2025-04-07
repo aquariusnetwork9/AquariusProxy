@@ -2,14 +2,14 @@ package com.zenith.network.server;
 
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.zenith.Proxy;
+import com.zenith.api.event.player.PlayerConnectionRemovedEvent;
+import com.zenith.api.event.player.PlayerDisconnectedEvent;
+import com.zenith.api.event.player.SpectatorDisconnectedEvent;
 import com.zenith.cache.data.PlayerCache;
 import com.zenith.cache.data.ServerProfileCache;
 import com.zenith.cache.data.cookie.CookieCache;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityCache;
-import com.zenith.event.proxy.ProxyClientDisconnectedEvent;
-import com.zenith.event.proxy.ProxySpectatorDisconnectedEvent;
-import com.zenith.event.proxy.ServerConnectionRemovedEvent;
 import com.zenith.feature.ratelimiter.LoginRateLimiter;
 import com.zenith.feature.ratelimiter.PacketRateLimiter;
 import com.zenith.feature.spectator.SpectatorEntityRegistry;
@@ -207,7 +207,7 @@ public class ServerSession extends TcpServerSession {
     public void callDisconnected(Component reason, Throwable cause) {
         Proxy.getInstance().getCurrentPlayer().compareAndSet(this, null);
         Proxy.getInstance().getActiveConnections().remove(this);
-        EVENT_BUS.post(new ServerConnectionRemovedEvent(this));
+        EVENT_BUS.post(new PlayerConnectionRemovedEvent(this));
         if (!this.isPlayer && cause != null && !(cause instanceof DecoderException || cause instanceof IOException || cause instanceof ChannelException)) {
             // any scanners or TCP connections established result in a lot of these coming in even when they are not actually speaking mc protocol
             SERVER_LOG.debug("Connection disconnected: {}", getRemoteAddress(), cause);
@@ -223,10 +223,10 @@ public class ServerSession extends TcpServerSession {
                                 reasonStr,
                                 cause);
                 try {
-                    EVENT_BUS.post(new ProxyClientDisconnectedEvent(reasonStr, profileCache.getProfile()));
+                    EVENT_BUS.post(new PlayerDisconnectedEvent(reasonStr, profileCache.getProfile()));
                 } catch (final Throwable e) {
                     SERVER_LOG.info("Could not get game profile of disconnecting player");
-                    EVENT_BUS.post(new ProxyClientDisconnectedEvent(reasonStr));
+                    EVENT_BUS.post(new PlayerDisconnectedEvent(reasonStr));
                 }
                 Proxy.getInstance().getSpectatorConnections().forEach(s -> {
                     s.sendAsyncAlert("<red>" + Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getName).orElse("?") + " disconnected from controlling player");
@@ -244,7 +244,7 @@ public class ServerSession extends TcpServerSession {
                     connection.send(new ClientboundRemoveEntitiesPacket(new int[]{this.spectatorEntityId}));
                     connection.sendAsyncAlert("<red>" + Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getName).orElse("?") + " disconnected from spectator");
                 }
-                EVENT_BUS.postAsync(new ProxySpectatorDisconnectedEvent(profileCache.getProfile()));
+                EVENT_BUS.postAsync(new SpectatorDisconnectedEvent(profileCache.getProfile()));
             }
         }
         ServerSession serverConnection = Proxy.getInstance().getCurrentPlayer().get();

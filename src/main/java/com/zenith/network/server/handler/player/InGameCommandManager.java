@@ -1,8 +1,8 @@
 package com.zenith.network.server.handler.player;
 
-import com.zenith.command.brigadier.CommandContext;
-import com.zenith.command.brigadier.CommandSource;
-import com.zenith.command.util.CommandOutputHelper;
+import com.zenith.api.command.CommandContext;
+import com.zenith.api.command.CommandOutputHelper;
+import com.zenith.api.command.CommandSource;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;

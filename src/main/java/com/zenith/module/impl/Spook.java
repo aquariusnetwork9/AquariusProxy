@@ -1,15 +1,15 @@
 package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
+import com.zenith.api.event.client.ClientBotTick;
+import com.zenith.api.event.client.ClientDisconnectEvent;
+import com.zenith.api.event.module.ServerPlayerInVisualRangeEvent;
+import com.zenith.api.event.module.ServerPlayerLeftVisualRangeEvent;
+import com.zenith.api.module.Module;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityPlayer;
-import com.zenith.event.module.ClientBotTick;
-import com.zenith.event.proxy.DisconnectEvent;
-import com.zenith.event.proxy.NewPlayerInVisualRangeEvent;
-import com.zenith.event.proxy.PlayerLeftVisualRangeEvent;
 import com.zenith.feature.player.InputRequest;
 import com.zenith.feature.player.RotationHelper;
-import com.zenith.module.Module;
 import com.zenith.util.Timer;
 import com.zenith.util.Timers;
 import com.zenith.util.math.MathHelper;
@@ -32,9 +32,9 @@ public class Spook extends Module {
     public List<EventConsumer<?>> registerEvents() {
         return List.of(
             of(ClientBotTick.class, this::handleClientTickEvent),
-            of(DisconnectEvent.class, this::handleDisconnectEvent),
-            of(NewPlayerInVisualRangeEvent.class, this::handleNewPlayerInVisualRangeEvent),
-            of(PlayerLeftVisualRangeEvent.class, this::handlePlayerLeftVisualRangeEvent)
+            of(ClientDisconnectEvent.class, this::handleDisconnectEvent),
+            of(ServerPlayerInVisualRangeEvent.class, this::handleNewPlayerInVisualRangeEvent),
+            of(ServerPlayerLeftVisualRangeEvent.class, this::handlePlayerLeftVisualRangeEvent)
         );
     }
 
@@ -65,19 +65,19 @@ public class Spook extends Module {
     }
 
 
-    private void handleNewPlayerInVisualRangeEvent(NewPlayerInVisualRangeEvent event) {
+    private void handleNewPlayerInVisualRangeEvent(ServerPlayerInVisualRangeEvent event) {
         synchronized (this.playerTargetStack) {
             this.playerTargetStack.push(event.playerEntity().getEntityId());
         }
     }
 
-    private void handlePlayerLeftVisualRangeEvent(PlayerLeftVisualRangeEvent event) {
+    private void handlePlayerLeftVisualRangeEvent(ServerPlayerLeftVisualRangeEvent event) {
         synchronized (this.playerTargetStack) {
             this.playerTargetStack.rem(event.playerEntity().getEntityId());
         }
     }
 
-    private void handleDisconnectEvent(DisconnectEvent event) {
+    private void handleDisconnectEvent(ClientDisconnectEvent event) {
         synchronized (this.playerTargetStack) {
             this.playerTargetStack.clear();
         }

@@ -1,9 +1,10 @@
 package com.zenith.module.impl;
 
 import com.zenith.Proxy;
+import com.zenith.api.event.player.PlayerConnectionRemovedEvent;
+import com.zenith.api.event.player.PlayerLoginEvent;
+import com.zenith.api.module.Module;
 import com.zenith.cache.data.PlayerCache;
-import com.zenith.event.proxy.PlayerLoginEvent;
-import com.zenith.event.proxy.ServerConnectionRemovedEvent;
 import com.zenith.feature.coordobf.CoordOffset;
 import com.zenith.feature.coordobf.ObfPlayerState;
 import com.zenith.feature.coordobf.handlers.inbound.*;
@@ -11,7 +12,6 @@ import com.zenith.feature.coordobf.handlers.outbound.*;
 import com.zenith.feature.player.World;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
-import com.zenith.module.Module;
 import com.zenith.network.registry.PacketHandlerCodec;
 import com.zenith.network.registry.PacketHandlerStateCodec;
 import com.zenith.network.registry.ZenithHandlerCodec;
@@ -67,8 +67,8 @@ public class CoordObfuscator extends Module {
     public void subscribeEvents() {
         EVENT_BUS.subscribe(
             this,
-            of(ServerConnectionRemovedEvent.class, this::onServerConnectionRemoved),
-            of(PlayerLoginEvent.class, this::onPlayerLoginEvent)
+            of(PlayerConnectionRemovedEvent.class, this::onServerConnectionRemoved),
+            of(PlayerLoginEvent.Pre.class, this::onPlayerLoginEvent)
         );
     }
 
@@ -187,35 +187,35 @@ public class CoordObfuscator extends Module {
         return getPlayerState(session).getCoordOffset();
     }
 
-    public void onPlayerLoginEvent(final PlayerLoginEvent event) {
+    public void onPlayerLoginEvent(final PlayerLoginEvent.Pre event) {
         try {
             if (!Proxy.getInstance().isConnected()) {
-                disconnect(event.serverConnection(), "Disconnected");
+                disconnect(event.session(), "Disconnected");
                 return;
             }
             if (Proxy.getInstance().getClient().isInQueue() || !Proxy.getInstance().getClient().isOnline()) {
-                info("Disconnecting {} as we are in queue", event.serverConnection().getProfileCache().getProfile().getName());
-                disconnect(event.serverConnection(), "Queueing");
+                info("Disconnecting {} as we are in queue", event.session().getProfileCache().getProfile().getName());
+                disconnect(event.session(), "Queueing");
                 return;
             }
-            awaitNextClientTick(event.serverConnection());
-            if (event.serverConnection().isDisconnected()) return;
+            awaitNextClientTick(event.session());
+            if (event.session().isDisconnected()) return;
             if (CACHE.getPlayerCache().isRespawning()) {
-                info("Reconnecting {} due to respawn in progress", event.serverConnection().getProfileCache().getProfile().getName());
-                reconnect(event.serverConnection());
+                info("Reconnecting {} due to respawn in progress", event.session().getProfileCache().getProfile().getName());
+                reconnect(event.session());
                 return;
             }
             if (Proxy.getInstance().getClient().isInQueue()) {
-                info("Disconnecting {} as we are in queue", event.serverConnection().getProfileCache().getProfile().getName());
-                disconnect(event.serverConnection(), "Queueing");
+                info("Disconnecting {} as we are in queue", event.session().getProfileCache().getProfile().getName());
+                disconnect(event.session(), "Queueing");
                 return;
             }
             if (CACHE.getChunkCache().getCache().size() < 24) {
-                info("Reconnecting {} due to chunk cache not being populated", event.serverConnection().getProfileCache().getProfile().getName());
-                reconnect(event.serverConnection());
+                info("Reconnecting {} due to chunk cache not being populated", event.session().getProfileCache().getProfile().getName());
+                reconnect(event.session());
                 return;
             }
-            ServerSession serverConnection = event.serverConnection();
+            ServerSession serverConnection = event.session();
             var profile = serverConnection.getProfileCache().getProfile();
             var proxyProfile = CACHE.getProfileCache().getProfile();
             if (CONFIG.client.extra.coordObfuscation.exemptProxyAccount && profile != null && proxyProfile != null && profile.getId().equals(proxyProfile.getId())) {
@@ -225,16 +225,16 @@ public class CoordObfuscator extends Module {
             var state = new ObfPlayerState(serverConnection);
             playerStateMap.put(serverConnection, state);
             var playerPos = state.getPlayerPos();
-            var coordOffset = generateOffset(event.serverConnection(), playerPos.getX(), playerPos.getZ());
+            var coordOffset = generateOffset(event.session(), playerPos.getX(), playerPos.getZ());
             state.setCoordOffset(coordOffset);
             info("Offset for {}: {}, {}", profile.getName(), coordOffset.x(), coordOffset.z());
         } catch (final Exception e) {
             error("Failed to generate coord offset", e);
-            disconnect(event.serverConnection(), "bye");
+            disconnect(event.session(), "bye");
         }
     }
 
-    public void onServerConnectionRemoved(final ServerConnectionRemovedEvent event) {
+    public void onServerConnectionRemoved(final PlayerConnectionRemovedEvent event) {
         playerStateMap.remove(event.serverConnection());
     }
 

@@ -1,12 +1,12 @@
 package com.zenith.network.client;
 
 import com.zenith.Proxy;
-import com.zenith.event.module.ClientBotTick;
-import com.zenith.event.module.ClientTickEvent;
-import com.zenith.event.proxy.DisconnectEvent;
-import com.zenith.event.proxy.PlayerOnlineEvent;
-import com.zenith.event.proxy.ProxyClientConnectedEvent;
-import com.zenith.event.proxy.ProxyClientDisconnectedEvent;
+import com.zenith.api.event.client.ClientBotTick;
+import com.zenith.api.event.client.ClientDisconnectEvent;
+import com.zenith.api.event.client.ClientOnlineEvent;
+import com.zenith.api.event.client.ClientTickEvent;
+import com.zenith.api.event.player.PlayerConnectedEvent;
+import com.zenith.api.event.player.PlayerDisconnectedEvent;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -24,14 +24,14 @@ public class ClientTickManager {
     public ClientTickManager() {
         EVENT_BUS.subscribe(
             this,
-            of(PlayerOnlineEvent.class, this::handlePlayerOnlineEvent),
-            of(ProxyClientConnectedEvent.class, this::handleProxyClientConnectedEvent),
-            of(ProxyClientDisconnectedEvent.class, this::handleProxyClientDisconnectedEvent),
-            of(DisconnectEvent.class, this::handleDisconnectEvent)
+            of(ClientOnlineEvent.class, this::handlePlayerOnlineEvent),
+            of(PlayerConnectedEvent.class, this::handleProxyClientConnectedEvent),
+            of(PlayerDisconnectedEvent.class, this::handleProxyClientDisconnectedEvent),
+            of(ClientDisconnectEvent.class, this::handleDisconnectEvent)
         );
     }
 
-    public void handlePlayerOnlineEvent(final PlayerOnlineEvent event) {
+    public void handlePlayerOnlineEvent(final ClientOnlineEvent event) {
         Proxy.getInstance().getClient().executeInEventLoop(() -> {
             if (!Proxy.getInstance().hasActivePlayer()) {
                 startBotTicks();
@@ -39,17 +39,17 @@ public class ClientTickManager {
         });
     }
 
-    public void handleDisconnectEvent(final DisconnectEvent event) {
+    public void handleDisconnectEvent(final ClientDisconnectEvent event) {
         stopBotTicks();
     }
 
-    public void handleProxyClientConnectedEvent(final ProxyClientConnectedEvent event) {
+    public void handleProxyClientConnectedEvent(final PlayerConnectedEvent event) {
         Proxy.getInstance().getClient().executeInEventLoop(() -> {
             stopBotTicks();
         });
     }
 
-    public void handleProxyClientDisconnectedEvent(final ProxyClientDisconnectedEvent event) {
+    public void handleProxyClientDisconnectedEvent(final PlayerDisconnectedEvent event) {
         Proxy.getInstance().getClient().executeInEventLoop(() -> {
             if (nonNull(Proxy.getInstance().getClient()) && Proxy.getInstance().getClient().isOnline()) {
                 startBotTicks();

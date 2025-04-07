@@ -2,12 +2,8 @@ package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
+import com.zenith.api.command.*;
 import com.zenith.cache.data.inventory.Container;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
-import com.zenith.command.util.CommandOutputHelper;
 import com.zenith.discord.Embed;
 import com.zenith.feature.items.ContainerClickAction;
 import com.zenith.mc.item.ItemRegistry;

@@ -2,8 +2,8 @@ package com.zenith.network.client;
 
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.zenith.Proxy;
-import com.zenith.event.proxy.ConnectEvent;
-import com.zenith.event.proxy.DisconnectEvent;
+import com.zenith.api.event.client.ClientConnectEvent;
+import com.zenith.api.event.client.ClientDisconnectEvent;
 import com.zenith.network.ClientPacketPingTask;
 import com.zenith.network.registry.ZenithHandlerCodec;
 import com.zenith.util.ComponentSerializer;
@@ -140,7 +140,7 @@ public class ClientSession extends TcpClientSession {
         send(new ClientIntentionPacket(getPacketProtocol().getCodec().getProtocolVersion(), getHost(), getPort(), HandshakeIntent.LOGIN));
         switchOutboundState(ProtocolState.LOGIN);
         updateClientProtocolVersion();
-        EVENT_BUS.postAsync(new ConnectEvent());
+        EVENT_BUS.postAsync(new ClientConnectEvent());
         send(new ServerboundHelloPacket(profile.getName(), profile.getId()));
         if (CONFIG.client.ping.mode == Config.Client.Ping.Mode.PACKET) EXECUTOR.execute(new ClientPacketPingTask(this));
     }
@@ -189,7 +189,7 @@ public class ClientSession extends TcpClientSession {
         var onlineDurationWithQueueSkip = Duration.ofSeconds(Proxy.getInstance().getOnlineTimeSecondsWithQueueSkip());
         // stop processing packets before we reset the client cache to avoid race conditions
         getClientEventLoop().shutdownGracefully(0L, 15L, TimeUnit.SECONDS).awaitUninterruptibly();
-        EVENT_BUS.post(new DisconnectEvent(reasonStr, onlineDuration, onlineDurationWithQueueSkip, Proxy.getInstance().isInQueue(), Proxy.getInstance().getQueuePosition()));
+        EVENT_BUS.post(new ClientDisconnectEvent(reasonStr, onlineDuration, onlineDurationWithQueueSkip, Proxy.getInstance().isInQueue(), Proxy.getInstance().getQueuePosition()));
     }
 
     public ProtocolVersion getProtocolVersion() {

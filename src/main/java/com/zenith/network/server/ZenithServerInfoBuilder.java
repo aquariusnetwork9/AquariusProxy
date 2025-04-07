@@ -3,7 +3,11 @@ package com.zenith.network.server;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.zenith.Proxy;
-import com.zenith.event.proxy.*;
+import com.zenith.api.event.client.ClientConnectEvent;
+import com.zenith.api.event.client.ClientDisconnectEvent;
+import com.zenith.api.event.client.ClientOnlineEvent;
+import com.zenith.api.event.queue.QueueCompleteEvent;
+import com.zenith.api.event.queue.QueueStartEvent;
 import com.zenith.feature.queue.Queue;
 import com.zenith.util.ComponentSerializer;
 import net.kyori.adventure.text.Component;
@@ -35,11 +39,11 @@ public class ZenithServerInfoBuilder {
     private ZenithServerInfoBuilder() {
         EVENT_BUS.subscribe(
             this,
-            of(ConnectEvent.class, e -> infoCache.invalidateAll()),
-            of(StartQueueEvent.class, e -> infoCache.invalidateAll()),
+            of(ClientConnectEvent.class, e -> infoCache.invalidateAll()),
+            of(QueueStartEvent.class, e -> infoCache.invalidateAll()),
             of(QueueCompleteEvent.class, e -> infoCache.invalidateAll()),
-            of(PlayerOnlineEvent.class, e -> infoCache.invalidateAll()),
-            of(DisconnectEvent.class, e -> infoCache.invalidateAll())
+            of(ClientOnlineEvent.class, e -> infoCache.invalidateAll()),
+            of(ClientDisconnectEvent.class, e -> infoCache.invalidateAll())
         );
     }
 

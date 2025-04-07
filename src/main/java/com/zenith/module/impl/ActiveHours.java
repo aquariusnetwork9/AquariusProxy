@@ -1,9 +1,9 @@
 package com.zenith.module.impl;
 
 import com.zenith.Proxy;
-import com.zenith.event.proxy.ActiveHoursConnectEvent;
+import com.zenith.api.event.module.ActiveHoursConnectEvent;
+import com.zenith.api.module.Module;
 import com.zenith.feature.queue.Queue;
-import com.zenith.module.Module;
 import org.jspecify.annotations.Nullable;
 
 import java.time.*;

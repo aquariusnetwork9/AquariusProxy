@@ -1,10 +1,15 @@
 package com.zenith;
 
 import ch.qos.logback.classic.LoggerContext;
+import com.zenith.api.event.client.*;
+import com.zenith.api.event.message.PrivateMessageSendEvent;
+import com.zenith.api.event.queue.QueueCompleteEvent;
+import com.zenith.api.event.queue.QueuePositionUpdateEvent;
+import com.zenith.api.event.queue.QueueSkipEvent;
+import com.zenith.api.event.queue.QueueStartEvent;
 import com.zenith.cache.CacheResetType;
 import com.zenith.discord.Embed;
 import com.zenith.discord.NotificationEventListener;
-import com.zenith.event.proxy.*;
 import com.zenith.feature.api.crafthead.CraftheadApi;
 import com.zenith.feature.api.mcsrvstatus.MCSrvStatusApi;
 import com.zenith.feature.api.minotar.MinotarApi;
@@ -106,13 +111,13 @@ public class Proxy {
     public void initEventHandlers() {
         EVENT_BUS.subscribe(
             this,
-            of(DisconnectEvent.class, this::handleDisconnectEvent),
-            of(ConnectEvent.class, this::handleConnectEvent),
-            of(StartQueueEvent.class, this::handleStartQueueEvent),
+            of(ClientDisconnectEvent.class, this::handleDisconnectEvent),
+            of(ClientConnectEvent.class, this::handleConnectEvent),
+            of(QueueStartEvent.class, this::handleStartQueueEvent),
             of(QueuePositionUpdateEvent.class, this::handleQueuePositionUpdateEvent),
             of(QueueCompleteEvent.class, this::handleQueueCompleteEvent),
             of(QueueSkipEvent.class, this::handleQueueSkipEvent),
-            of(PlayerOnlineEvent.class, this::handlePlayerOnlineEvent),
+            of(ClientOnlineEvent.class, this::handlePlayerOnlineEvent),
             of(PrioStatusEvent.class, this::handlePrioStatusEvent),
             of(PrivateMessageSendEvent.class, this::handlePrivateMessageSendEvent)
         );
@@ -378,16 +383,16 @@ public class Proxy {
         this.connectTime = Instant.now();
         final MinecraftProtocol minecraftProtocol;
         try {
-            EVENT_BUS.postAsync(new StartConnectEvent());
+            EVENT_BUS.postAsync(new ClientStartConnectEvent());
             minecraftProtocol = this.logIn();
         } catch (final Exception e) {
-            EVENT_BUS.post(new ProxyLoginFailedEvent());
+            EVENT_BUS.post(new ClientLoginFailedEvent());
             var connections = getActiveConnections().getArray();
             for (int i = 0; i < connections.length; i++) {
                 var connection = connections[i];
                 connection.disconnect("Login failed");
             }
-            EXECUTOR.schedule(() -> EVENT_BUS.post(new DisconnectEvent(LOGIN_FAILED)), 1L, TimeUnit.SECONDS);
+            EXECUTOR.schedule(() -> EVENT_BUS.post(new ClientDisconnectEvent(LOGIN_FAILED)), 1L, TimeUnit.SECONDS);
             return;
         }
         CLIENT_LOG.info("Connecting to {}:{}...", address, port);
@@ -658,7 +663,7 @@ public class Proxy {
         return Queue.getEtaStringFromSeconds(getOnlineTimeSecondsWithQueueSkip());
     }
 
-    public void handleDisconnectEvent(DisconnectEvent event) {
+    public void handleDisconnectEvent(ClientDisconnectEvent event) {
         CACHE.reset(CacheResetType.FULL);
         this.disconnectTime = Instant.now();
         this.prevOnlineSeconds = inQueue
@@ -670,12 +675,12 @@ public class Proxy {
         TPS.reset();
     }
 
-    public void handleConnectEvent(ConnectEvent event) {
+    public void handleConnectEvent(ClientConnectEvent event) {
         this.connectTime = Instant.now();
         if (isOn2b2t()) EXECUTOR.execute(Queue::updateQueueStatusNow);
     }
 
-    public void handleStartQueueEvent(StartQueueEvent event) {
+    public void handleStartQueueEvent(QueueStartEvent event) {
         this.inQueue = true;
         this.queuePosition = 0;
         if (event.wasOnline()) this.connectTime = Instant.now();
@@ -694,7 +699,7 @@ public class Proxy {
         this.didQueueSkip = true;
     }
 
-    public void handlePlayerOnlineEvent(PlayerOnlineEvent event) {
+    public void handlePlayerOnlineEvent(ClientOnlineEvent event) {
         if (this.isPrio.isEmpty())
             // assume we are prio if we skipped queuing
             EVENT_BUS.postAsync(new PrioStatusEvent(true));

@@ -1,13 +1,13 @@
 package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
-import com.zenith.event.proxy.DisconnectEvent;
-import com.zenith.event.proxy.ProxyClientLoggedInEvent;
-import com.zenith.event.proxy.ProxySpectatorLoggedInEvent;
-import com.zenith.event.proxy.chat.PublicChatEvent;
-import com.zenith.event.proxy.chat.SystemChatEvent;
-import com.zenith.event.proxy.chat.WhisperChatEvent;
-import com.zenith.module.Module;
+import com.zenith.api.event.chat.PublicChatEvent;
+import com.zenith.api.event.chat.SystemChatEvent;
+import com.zenith.api.event.chat.WhisperChatEvent;
+import com.zenith.api.event.client.ClientDisconnectEvent;
+import com.zenith.api.event.player.PlayerLoginEvent;
+import com.zenith.api.event.player.SpectatorLoggedInEvent;
+import com.zenith.api.module.Module;
 import com.zenith.util.CircularFifoQueue;
 import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
@@ -29,9 +29,9 @@ public class ChatHistory extends Module {
             of(PublicChatEvent.class, this::handlePublicChat),
             of(WhisperChatEvent.class, this::handleWhisperChat),
             of(SystemChatEvent.class, this::handleSystemChat),
-            of(ProxyClientLoggedInEvent.class, this::handleClientLoggedIn),
-            of(ProxySpectatorLoggedInEvent.class, this::handleSpectatorLoggedIn),
-            of(DisconnectEvent.class, this::handleDisconnect)
+            of(PlayerLoginEvent.Post.class, this::handleClientLoggedIn),
+            of(SpectatorLoggedInEvent.class, this::handleSpectatorLoggedIn),
+            of(ClientDisconnectEvent.class, this::handleDisconnect)
         );
     }
 
@@ -58,20 +58,20 @@ public class ChatHistory extends Module {
         chatHistory.add(new StoredChat(event.component(), Instant.now()));
     }
 
-    private void handleClientLoggedIn(ProxyClientLoggedInEvent event) {
+    private void handleClientLoggedIn(PlayerLoginEvent.Post event) {
         removeOldChats();
         var session = event.session();
         chatHistory.forEach(chat -> session.sendAsync(new ClientboundSystemChatPacket(chat.message(), false)));
     }
 
-    private void handleSpectatorLoggedIn(ProxySpectatorLoggedInEvent event) {
+    private void handleSpectatorLoggedIn(SpectatorLoggedInEvent event) {
         if (!CONFIG.server.extra.chatHistory.spectators) return;
         removeOldChats();
         var session = event.session();
         chatHistory.forEach(chat -> session.sendAsync(new ClientboundSystemChatPacket(chat.message(), false)));
     }
 
-    private void handleDisconnect(DisconnectEvent event) {
+    private void handleDisconnect(ClientDisconnectEvent event) {
         chatHistory.clear();
     }
 

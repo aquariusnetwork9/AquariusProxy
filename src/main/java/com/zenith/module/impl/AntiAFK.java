@@ -2,11 +2,11 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.google.common.collect.Iterators;
-import com.zenith.event.module.ClientBotTick;
-import com.zenith.event.proxy.DeathEvent;
+import com.zenith.api.event.client.ClientBotTick;
+import com.zenith.api.event.client.ClientDeathEvent;
+import com.zenith.api.module.Module;
 import com.zenith.feature.player.*;
 import com.zenith.mc.block.BlockPos;
-import com.zenith.module.Module;
 import com.zenith.util.Timer;
 import com.zenith.util.Timers;
 import com.zenith.util.math.MathHelper;
@@ -44,7 +44,7 @@ public class AntiAFK extends Module {
             of(ClientBotTick.class, this::handleClientTickEvent),
             of(ClientBotTick.Starting.class, this::handleClientBotTickStarting),
             of(ClientBotTick.Stopped.class, this::handleClientBotTickStopped),
-            of(DeathEvent.class, this::handleDeathEvent)
+            of(ClientDeathEvent.class, this::handleDeathEvent)
         );
     }
 
@@ -82,7 +82,7 @@ public class AntiAFK extends Module {
                           .build());
     }
 
-    public void handleDeathEvent(final DeathEvent event) {
+    public void handleDeathEvent(final ClientDeathEvent event) {
         synchronized (this) {
             reset();
         }

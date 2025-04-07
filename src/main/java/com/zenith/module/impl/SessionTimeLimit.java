@@ -2,9 +2,9 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
-import com.zenith.event.module.ClientTickEvent;
+import com.zenith.api.event.client.ClientTickEvent;
+import com.zenith.api.module.Module;
 import com.zenith.feature.api.vcapi.VcApi;
-import com.zenith.module.Module;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import lombok.Getter;

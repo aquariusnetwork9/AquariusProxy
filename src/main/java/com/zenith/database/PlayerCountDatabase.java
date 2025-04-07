@@ -1,6 +1,6 @@
 package com.zenith.database;
 
-import com.zenith.event.proxy.DatabaseTickEvent;
+import com.zenith.api.event.db.DatabaseTickEvent;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;

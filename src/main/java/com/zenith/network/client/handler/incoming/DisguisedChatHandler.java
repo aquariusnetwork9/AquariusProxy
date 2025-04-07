@@ -1,8 +1,8 @@
 package com.zenith.network.client.handler.incoming;
 
+import com.zenith.api.event.chat.PublicChatEvent;
+import com.zenith.api.event.chat.WhisperChatEvent;
 import com.zenith.cache.data.chat.ChatType;
-import com.zenith.event.proxy.chat.PublicChatEvent;
-import com.zenith.event.proxy.chat.WhisperChatEvent;
 import com.zenith.network.client.ClientSession;
 import com.zenith.network.registry.PacketHandler;
 import com.zenith.util.ComponentSerializer;

@@ -1,12 +1,12 @@
 package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
+import com.zenith.api.event.client.ClientBotTick;
+import com.zenith.api.event.module.EntityFishHookSpawnEvent;
+import com.zenith.api.event.module.SplashSoundEffectEvent;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityStandard;
 import com.zenith.cache.data.inventory.Container;
-import com.zenith.event.module.ClientBotTick;
-import com.zenith.event.module.EntityFishHookSpawnEvent;
-import com.zenith.event.module.SplashSoundEffectEvent;
 import com.zenith.feature.player.*;
 import com.zenith.mc.item.ItemRegistry;
 import com.zenith.util.math.MathHelper;

@@ -1,7 +1,7 @@
 package com.zenith.network.server.handler.spectator.postoutgoing;
 
 import com.zenith.Proxy;
-import com.zenith.event.proxy.ProxySpectatorLoggedInEvent;
+import com.zenith.api.event.player.SpectatorLoggedInEvent;
 import com.zenith.feature.spectator.SpectatorSync;
 import com.zenith.network.registry.PostOutgoingPacketHandler;
 import com.zenith.network.server.ServerSession;
@@ -43,7 +43,7 @@ public class LoginSpectatorPostHandler implements PostOutgoingPacketHandler<Clie
                 null
             )}
         ));
-        EVENT_BUS.postAsync(new ProxySpectatorLoggedInEvent(session));
+        EVENT_BUS.postAsync(new SpectatorLoggedInEvent(session));
         SpectatorSync.initSpectator(session, () -> CACHE.getAllDataSpectator(session.getSpectatorPlayerCache()));
         //send cached data
         var connections = Proxy.getInstance().getActiveConnections().getArray();

@@ -1,10 +1,10 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.api.command.Command;
+import com.zenith.api.command.CommandCategory;
+import com.zenith.api.command.CommandContext;
+import com.zenith.api.command.CommandUsage;
 import com.zenith.discord.Embed;
 import com.zenith.module.impl.AntiLeak;
 

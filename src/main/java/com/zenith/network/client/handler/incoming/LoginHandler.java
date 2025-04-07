@@ -1,8 +1,8 @@
 package com.zenith.network.client.handler.incoming;
 
 import com.zenith.Proxy;
+import com.zenith.api.event.client.ClientOnlineEvent;
 import com.zenith.cache.CacheResetType;
-import com.zenith.event.proxy.PlayerOnlineEvent;
 import com.zenith.network.client.ClientSession;
 import com.zenith.network.registry.PacketHandler;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.HandPreference;
@@ -81,7 +81,7 @@ public class LoginHandler implements PacketHandler<ClientboundLoginPacket, Clien
         if (!Proxy.getInstance().isOn2b2t()) {
             if (!session.isOnline()) {
                 session.setOnline(true);
-                EVENT_BUS.post(new PlayerOnlineEvent());
+                EVENT_BUS.post(new ClientOnlineEvent());
             }
         }
         return packet;

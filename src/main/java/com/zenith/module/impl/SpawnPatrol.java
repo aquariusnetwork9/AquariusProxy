@@ -1,16 +1,17 @@
 package com.zenith.module.impl;
 
 import com.zenith.Proxy;
+import com.zenith.api.event.chat.DeathMessageChatEvent;
+import com.zenith.api.event.client.ClientBotTick;
+import com.zenith.api.event.client.ClientDeathEvent;
+import com.zenith.api.event.module.ServerPlayerAttackedUsEvent;
+import com.zenith.api.event.module.SpawnPatrolTargetAcquiredEvent;
+import com.zenith.api.event.module.SpawnPatrolTargetKilledEvent;
+import com.zenith.api.module.Module;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.cache.data.inventory.Container;
-import com.zenith.event.module.ClientBotTick;
-import com.zenith.event.module.SpawnPatrolTargetAcquiredEvent;
-import com.zenith.event.module.SpawnPatrolTargetKilledEvent;
-import com.zenith.event.proxy.DeathEvent;
-import com.zenith.event.proxy.PlayerAttackedUsEvent;
-import com.zenith.event.proxy.chat.DeathMessageChatEvent;
 import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.feature.pathfinder.goals.Goal;
 import com.zenith.feature.pathfinder.goals.GoalNear;
@@ -21,7 +22,6 @@ import com.zenith.feature.player.World;
 import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
-import com.zenith.module.Module;
 import com.zenith.util.Timer;
 import com.zenith.util.Timers;
 import com.zenith.util.math.MathHelper;
@@ -57,12 +57,12 @@ public class SpawnPatrol extends Module {
             of(ClientBotTick.class, this::handleBotTick),
             of(ClientBotTick.Starting.class, this::handleBotTickStarting),
             of(DeathMessageChatEvent.class, this::handleDeathMessage),
-            of(PlayerAttackedUsEvent.class, this::handlePlayerAttackedUs),
-            of(DeathEvent.class, this::handleDeathEvent)
+            of(ServerPlayerAttackedUsEvent.class, this::handlePlayerAttackedUs),
+            of(ClientDeathEvent.class, this::handleDeathEvent)
         );
     }
 
-    private void handleDeathEvent(DeathEvent event) {
+    private void handleDeathEvent(ClientDeathEvent event) {
         lastDeath = System.currentTimeMillis();
     }
 
@@ -201,7 +201,7 @@ public class SpawnPatrol extends Module {
         }
     }
 
-    private void handlePlayerAttackedUs(PlayerAttackedUsEvent event) {
+    private void handlePlayerAttackedUs(ServerPlayerAttackedUsEvent event) {
         if (!CONFIG.client.extra.spawnPatrol.stickyTargeting || !CONFIG.client.extra.spawnPatrol.targetAttackers) return;
         int currentTargetId = targetEntityId;
         EntityPlayer newTarget = event.attacker();

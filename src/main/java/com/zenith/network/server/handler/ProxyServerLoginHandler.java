@@ -1,10 +1,10 @@
 package com.zenith.network.server.handler;
 
 import com.zenith.Proxy;
+import com.zenith.api.event.player.PlayerConnectedEvent;
+import com.zenith.api.event.player.PlayerLoginEvent;
+import com.zenith.api.event.player.SpectatorConnectedEvent;
 import com.zenith.cache.data.PlayerCache;
-import com.zenith.event.proxy.PlayerLoginEvent;
-import com.zenith.event.proxy.ProxyClientConnectedEvent;
-import com.zenith.event.proxy.ProxySpectatorConnectedEvent;
 import com.zenith.feature.player.World;
 import com.zenith.network.server.ServerSession;
 import com.zenith.network.server.ZenithServerInfoBuilder;
@@ -61,10 +61,10 @@ public class ProxyServerLoginHandler {
         // avoid race condition if player disconnects sometime during our wait
         if (!connection.isConnected()) return;
         connection.setPlayer(true);
-        EVENT_BUS.post(new PlayerLoginEvent(connection));
+        EVENT_BUS.post(new PlayerLoginEvent.Pre(connection));
         if (!connection.isConnected()) return;
         if (connection.isSpectator()) {
-            EVENT_BUS.post(new ProxySpectatorConnectedEvent(connection, clientGameProfile));
+            EVENT_BUS.post(new SpectatorConnectedEvent(connection, clientGameProfile));
             connection.send(new ClientboundLoginPacket(
                 connection.getSpectatorSelfEntityId(),
                 CACHE.getPlayerCache().isHardcore(),
@@ -89,7 +89,7 @@ public class ProxyServerLoginHandler {
                 false
             ));
         } else {
-            EVENT_BUS.post(new ProxyClientConnectedEvent(connection, clientGameProfile));
+            EVENT_BUS.post(new PlayerConnectedEvent(connection, clientGameProfile));
             connection.send(new ClientboundLoginPacket(
                 CACHE.getPlayerCache().getEntityId(),
                 CACHE.getPlayerCache().isHardcore(),

@@ -1,11 +1,11 @@
 package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
+import com.zenith.api.event.client.ClientBotTick;
+import com.zenith.api.module.Module;
 import com.zenith.cache.data.inventory.Container;
-import com.zenith.event.module.ClientBotTick;
 import com.zenith.mc.item.ItemData;
 import com.zenith.mc.item.ItemRegistry;
-import com.zenith.module.Module;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.jspecify.annotations.Nullable;

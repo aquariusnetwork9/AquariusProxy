@@ -1,7 +1,7 @@
 package com.zenith.network.client;
 
 import com.google.gson.JsonObject;
-import com.zenith.event.proxy.MsaDeviceCodeLoginEvent;
+import com.zenith.api.event.client.MsaDeviceCodeLoginEvent;
 import com.zenith.util.WebBrowserHelper;
 import com.zenith.util.math.MathHelper;
 import lombok.Getter;

@@ -1,9 +1,9 @@
 package com.zenith.module.impl;
 
 import com.google.common.collect.Lists;
+import com.zenith.api.module.Module;
 import com.zenith.cache.data.inventory.Container;
 import com.zenith.feature.items.ContainerClickAction;
-import com.zenith.module.Module;
 import lombok.Getter;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;

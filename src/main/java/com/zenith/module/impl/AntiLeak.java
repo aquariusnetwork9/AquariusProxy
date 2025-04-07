@@ -1,8 +1,8 @@
 package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
-import com.zenith.event.module.OutboundChatEvent;
-import com.zenith.module.Module;
+import com.zenith.api.event.module.OutboundChatEvent;
+import com.zenith.api.module.Module;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
 

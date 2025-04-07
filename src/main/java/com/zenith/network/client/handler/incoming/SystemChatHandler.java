@@ -1,12 +1,12 @@
 package com.zenith.network.client.handler.incoming;
 
 import com.zenith.Proxy;
-import com.zenith.event.proxy.QueueSkipEvent;
-import com.zenith.event.proxy.SelfDeathMessageEvent;
-import com.zenith.event.proxy.chat.DeathMessageChatEvent;
-import com.zenith.event.proxy.chat.PublicChatEvent;
-import com.zenith.event.proxy.chat.SystemChatEvent;
-import com.zenith.event.proxy.chat.WhisperChatEvent;
+import com.zenith.api.event.chat.DeathMessageChatEvent;
+import com.zenith.api.event.chat.PublicChatEvent;
+import com.zenith.api.event.chat.SystemChatEvent;
+import com.zenith.api.event.chat.WhisperChatEvent;
+import com.zenith.api.event.queue.QueueSkipEvent;
+import com.zenith.api.event.server.ClientDeathMessageEvent;
 import com.zenith.feature.deathmessages.DeathMessageParseResult;
 import com.zenith.feature.deathmessages.DeathMessagesParser;
 import com.zenith.network.client.ClientSession;
@@ -93,7 +93,7 @@ public class SystemChatHandler implements ClientEventLoopPacketHandler<Clientbou
             deathMessage = deathMessagesHelper.parse(component, messageString);
             if (deathMessage.isPresent()) {
                 if (deathMessage.get().victim().equals(CACHE.getProfileCache().getProfile().getName())) {
-                    EVENT_BUS.postAsync(new SelfDeathMessageEvent(messageString));
+                    EVENT_BUS.postAsync(new ClientDeathMessageEvent(messageString));
                 }
             } else {
                 CLIENT_LOG.warn("Failed to parse death message: {}", messageString);

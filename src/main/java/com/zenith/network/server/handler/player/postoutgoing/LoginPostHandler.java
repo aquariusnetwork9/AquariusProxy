@@ -3,8 +3,8 @@ package com.zenith.network.server.handler.player.postoutgoing;
 import com.viaversion.vialoader.netty.VLPipeline;
 import com.viaversion.viaversion.api.Via;
 import com.zenith.Proxy;
+import com.zenith.api.event.player.PlayerLoginEvent;
 import com.zenith.cache.DataCache;
-import com.zenith.event.proxy.ProxyClientLoggedInEvent;
 import com.zenith.network.registry.PostOutgoingPacketHandler;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
@@ -28,7 +28,7 @@ public class LoginPostHandler implements PostOutgoingPacketHandler<ClientboundLo
             return; // servers can send multiple login packets during world or skin switches
         checkDisableServerVia(session);
         session.setLoggedIn(); // allows server packets to start being sent to player
-        EVENT_BUS.postAsync(new ProxyClientLoggedInEvent(session));
+        EVENT_BUS.postAsync(new PlayerLoginEvent.Post(session));
         DataCache.sendCacheData(CACHE.getAllData(), session);
         session.initializeTeam();
         session.syncTeamMembers();

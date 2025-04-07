@@ -2,9 +2,9 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
-import com.zenith.event.proxy.DisconnectEvent;
-import com.zenith.event.proxy.StartQueueEvent;
-import com.zenith.module.Module;
+import com.zenith.api.event.client.ClientDisconnectEvent;
+import com.zenith.api.event.queue.QueueStartEvent;
+import com.zenith.api.module.Module;
 import com.zenith.network.registry.PacketHandlerCodec;
 import com.zenith.network.registry.PacketHandlerStateCodec;
 import com.zenith.util.Timer;
@@ -38,8 +38,8 @@ public class Requeue extends Module {
     @Override
     public List<EventConsumer<?>> registerEvents() {
         return List.of(
-            of(StartQueueEvent.class, e -> disable()),
-            of(DisconnectEvent.class, e -> disable())
+            of(QueueStartEvent.class, e -> disable()),
+            of(ClientDisconnectEvent.class, e -> disable())
         );
     }
 

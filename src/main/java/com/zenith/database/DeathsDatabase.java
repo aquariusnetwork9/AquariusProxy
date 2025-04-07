@@ -1,8 +1,8 @@
 package com.zenith.database;
 
 import com.zenith.Proxy;
+import com.zenith.api.event.chat.DeathMessageChatEvent;
 import com.zenith.database.dto.records.DeathsRecord;
-import com.zenith.event.proxy.chat.DeathMessageChatEvent;
 import com.zenith.feature.api.ProfileData;
 import com.zenith.feature.deathmessages.DeathMessageParseResult;
 import com.zenith.feature.deathmessages.Killer;

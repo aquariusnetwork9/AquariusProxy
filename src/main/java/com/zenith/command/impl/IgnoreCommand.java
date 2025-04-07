@@ -1,15 +1,15 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.api.command.Command;
+import com.zenith.api.command.CommandCategory;
+import com.zenith.api.command.CommandContext;
+import com.zenith.api.command.CommandUsage;
 import com.zenith.discord.Embed;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.string;
 import static com.zenith.Globals.PLAYER_LISTS;
-import static com.zenith.command.util.CommandOutputHelper.playerListToString;
+import static com.zenith.api.command.CommandOutputHelper.playerListToString;
 import static com.zenith.discord.DiscordBot.escape;
 
 public class IgnoreCommand extends Command {

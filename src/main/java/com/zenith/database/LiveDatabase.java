@@ -1,6 +1,6 @@
 package com.zenith.database;
 
-import com.zenith.event.proxy.RedisRestartEvent;
+import com.zenith.api.event.db.RedisRestartEvent;
 import org.jdbi.v3.core.HandleConsumer;
 import org.redisson.api.RBoundedBlockingQueue;
 

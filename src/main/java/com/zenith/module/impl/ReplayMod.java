@@ -1,17 +1,17 @@
 package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
-import com.zenith.event.module.ClientTickEvent;
-import com.zenith.event.module.PlayerHealthChangedEvent;
-import com.zenith.event.module.ReplayStartedEvent;
-import com.zenith.event.module.ReplayStoppedEvent;
-import com.zenith.event.proxy.ConnectEvent;
-import com.zenith.event.proxy.DisconnectEvent;
-import com.zenith.event.proxy.ProxyClientConnectedEvent;
-import com.zenith.event.proxy.ProxyClientDisconnectedEvent;
+import com.zenith.api.event.client.ClientConnectEvent;
+import com.zenith.api.event.client.ClientDisconnectEvent;
+import com.zenith.api.event.client.ClientTickEvent;
+import com.zenith.api.event.module.PlayerHealthChangedEvent;
+import com.zenith.api.event.module.ReplayStartedEvent;
+import com.zenith.api.event.module.ReplayStoppedEvent;
+import com.zenith.api.event.player.PlayerConnectedEvent;
+import com.zenith.api.event.player.PlayerDisconnectedEvent;
+import com.zenith.api.module.Module;
 import com.zenith.feature.replay.ReplayModPacketHandlerCodec;
 import com.zenith.feature.replay.ReplayRecording;
-import com.zenith.module.Module;
 import com.zenith.network.registry.PacketHandlerCodec;
 import com.zenith.util.Config.Client.Extra.ReplayMod.AutoRecordMode;
 import org.geysermc.mcprotocollib.network.Session;
@@ -43,9 +43,9 @@ public class ReplayMod extends Module {
     @Override
     public List<EventConsumer<?>> registerEvents() {
         return List.of(
-            of(DisconnectEvent.class, this::onDisconnectEvent),
+            of(ClientDisconnectEvent.class, this::onDisconnectEvent),
             of(ClientTickEvent.class, this::onClientTick),
-            of(ProxyClientDisconnectedEvent.class, this::handleProxyClientDisconnectedEvent)
+            of(PlayerDisconnectedEvent.class, this::handleProxyClientDisconnectedEvent)
         );
     }
 
@@ -122,7 +122,7 @@ public class ReplayMod extends Module {
         }
     }
 
-    public void onDisconnectEvent(final DisconnectEvent event) {
+    public void onDisconnectEvent(final ClientDisconnectEvent event) {
         disable();
     }
 
@@ -161,7 +161,7 @@ public class ReplayMod extends Module {
         cancelDelayedRecordingStop();
     }
 
-    public void handleProxyClientDisconnectedEvent(final ProxyClientDisconnectedEvent event) {
+    public void handleProxyClientDisconnectedEvent(final PlayerDisconnectedEvent event) {
         if (CONFIG.client.extra.replayMod.autoRecordMode == AutoRecordMode.PLAYER_CONNECTED) {
             info("Stopping recording due to player disconnect");
             disable();
@@ -181,13 +181,13 @@ public class ReplayMod extends Module {
         public void subscribeEvents() {
             EVENT_BUS.subscribe(
                 this,
-                of(ProxyClientConnectedEvent.class, this::handleProxyClientConnectedEvent),
-                of(ConnectEvent.class, this::handleConnectEvent),
+                of(PlayerConnectedEvent.class, this::handleProxyClientConnectedEvent),
+                of(ClientConnectEvent.class, this::handleConnectEvent),
                 of(PlayerHealthChangedEvent.class, this::handleHealthChangeEvent)
             );
         }
 
-        public void handleProxyClientConnectedEvent(final ProxyClientConnectedEvent event) {
+        public void handleProxyClientConnectedEvent(final PlayerConnectedEvent event) {
             if (instance.isEnabled()) return;
             if (CONFIG.client.extra.replayMod.autoRecordMode == AutoRecordMode.PLAYER_CONNECTED) {
                 instance.info("Starting recording because player connected");
@@ -195,7 +195,7 @@ public class ReplayMod extends Module {
             }
         }
 
-        public void handleConnectEvent(ConnectEvent event) {
+        public void handleConnectEvent(ClientConnectEvent event) {
             if (instance.isEnabled()) return;
             if (CONFIG.client.extra.replayMod.autoRecordMode == AutoRecordMode.PROXY_CONNECTED) {
                 instance.info("Starting recording because proxy connected");

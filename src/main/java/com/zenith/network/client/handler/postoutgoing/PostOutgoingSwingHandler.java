@@ -1,6 +1,6 @@
 package com.zenith.network.client.handler.postoutgoing;
 
-import com.zenith.event.module.ClientSwingEvent;
+import com.zenith.api.event.module.ClientSwingEvent;
 import com.zenith.feature.spectator.SpectatorSync;
 import com.zenith.network.client.ClientSession;
 import com.zenith.network.registry.ClientEventLoopPacketHandler;

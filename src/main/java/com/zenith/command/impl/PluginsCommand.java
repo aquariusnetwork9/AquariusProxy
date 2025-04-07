@@ -1,11 +1,11 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.api.PluginInfo;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.api.command.Command;
+import com.zenith.api.command.CommandCategory;
+import com.zenith.api.command.CommandContext;
+import com.zenith.api.command.CommandUsage;
+import com.zenith.api.plugin.PluginInfo;
 import com.zenith.discord.DiscordBot;
 
 import java.util.Comparator;

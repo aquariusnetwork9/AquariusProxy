@@ -1,10 +1,10 @@
 package com.zenith.network.client.handler.incoming.spawn;
 
+import com.zenith.api.event.module.EntityFishHookSpawnEvent;
+import com.zenith.api.event.module.ServerPlayerInVisualRangeEvent;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.cache.data.entity.EntityStandard;
-import com.zenith.event.module.EntityFishHookSpawnEvent;
-import com.zenith.event.proxy.NewPlayerInVisualRangeEvent;
 import com.zenith.feature.whitelist.PlayerListsManager;
 import com.zenith.network.client.ClientSession;
 import com.zenith.network.registry.ClientEventLoopPacketHandler;
@@ -67,7 +67,7 @@ public class AddEntityHandler implements ClientEventLoopPacketHandler<Clientboun
                            PlayerListsManager.getProfileFromUUID(packet.getUuid())
                                .map(entry -> new PlayerListEntry(entry.name(), entry.uuid()))
                                .orElseGet(() -> new PlayerListEntry("", packet.getUuid())));
-        EVENT_BUS.postAsync(new NewPlayerInVisualRangeEvent(playerEntry, entity));
+        EVENT_BUS.postAsync(new ServerPlayerInVisualRangeEvent(playerEntry, entity));
         return true;
     }
 }

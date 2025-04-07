@@ -2,12 +2,26 @@ package com.zenith.discord;
 
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.zenith.Proxy;
-import com.zenith.event.module.*;
-import com.zenith.event.proxy.*;
-import com.zenith.event.proxy.chat.DeathMessageChatEvent;
-import com.zenith.event.proxy.chat.PublicChatEvent;
-import com.zenith.event.proxy.chat.SystemChatEvent;
-import com.zenith.event.proxy.chat.WhisperChatEvent;
+import com.zenith.api.event.chat.DeathMessageChatEvent;
+import com.zenith.api.event.chat.PublicChatEvent;
+import com.zenith.api.event.chat.SystemChatEvent;
+import com.zenith.api.event.chat.WhisperChatEvent;
+import com.zenith.api.event.client.*;
+import com.zenith.api.event.message.DiscordMessageSentEvent;
+import com.zenith.api.event.message.PrivateMessageSendEvent;
+import com.zenith.api.event.module.*;
+import com.zenith.api.event.player.*;
+import com.zenith.api.event.plugin.PluginLoadFailureEvent;
+import com.zenith.api.event.plugin.PluginLoadedEvent;
+import com.zenith.api.event.queue.QueueCompleteEvent;
+import com.zenith.api.event.queue.QueuePositionUpdateEvent;
+import com.zenith.api.event.queue.QueueStartEvent;
+import com.zenith.api.event.server.ClientDeathMessageEvent;
+import com.zenith.api.event.server.ServerPlayerConnectedEvent;
+import com.zenith.api.event.server.ServerPlayerDisconnectedEvent;
+import com.zenith.api.event.server.ServerRestartingEvent;
+import com.zenith.api.event.update.UpdateAvailableEvent;
+import com.zenith.api.event.update.UpdateStartEvent;
 import com.zenith.feature.api.fileio.FileIOApi;
 import com.zenith.feature.deathmessages.DeathMessageParseResult;
 import com.zenith.feature.deathmessages.KillerType;
@@ -53,26 +67,26 @@ public class NotificationEventListener {
         if (EVENT_BUS.isSubscribed(this)) throw new RuntimeException("Event handlers already initialized");
         EVENT_BUS.subscribe(
             this,
-            of(ConnectEvent.class, this::handleConnectEvent),
-            of(PlayerOnlineEvent.class, this::handlePlayerOnlineEvent),
-            of(DisconnectEvent.class, this::handleDisconnectEvent),
+            of(ClientConnectEvent.class, this::handleConnectEvent),
+            of(ClientOnlineEvent.class, this::handlePlayerOnlineEvent),
+            of(ClientDisconnectEvent.class, this::handleDisconnectEvent),
             of(QueuePositionUpdateEvent.class, this::handleQueuePositionUpdateEvent),
             of(QueueWarningEvent.class, this::handleQueueWarning),
             of(AutoEatOutOfFoodEvent.class, this::handleAutoEatOutOfFoodEvent),
             of(QueueCompleteEvent.class, this::handleQueueCompleteEvent),
-            of(StartQueueEvent.class, this::handleStartQueueEvent),
-            of(DeathEvent.class, this::handleDeathEvent),
-            of(SelfDeathMessageEvent.class, this::handleSelfDeathMessageEvent),
+            of(QueueStartEvent.class, this::handleStartQueueEvent),
+            of(ClientDeathEvent.class, this::handleDeathEvent),
+            of(ClientDeathMessageEvent.class, this::handleSelfDeathMessageEvent),
             of(HealthAutoDisconnectEvent.class, this::handleHealthAutoDisconnectEvent),
-            of(ProxyClientConnectedEvent.class, this::handleProxyClientConnectedEvent),
-            of(ProxyClientConnectedEvent.class, this::handleProxyClientConnectedEventCheck2b2tMCVersionMatch),
-            of(ProxySpectatorConnectedEvent.class, this::handleProxySpectatorConnectedEvent),
-            of(ProxyClientDisconnectedEvent.class, this::handleProxyClientDisconnectedEvent),
+            of(PlayerConnectedEvent.class, this::handleProxyClientConnectedEvent),
+            of(PlayerConnectedEvent.class, this::handleProxyClientConnectedEventCheck2b2tMCVersionMatch),
+            of(SpectatorConnectedEvent.class, this::handleProxySpectatorConnectedEvent),
+            of(PlayerDisconnectedEvent.class, this::handleProxyClientDisconnectedEvent),
             of(VisualRangeEnterEvent.class, this::handleVisualRangeEnterEvent),
             of(VisualRangeLeaveEvent.class, this::handleVisualRangeLeaveEvent),
             of(VisualRangeLogoutEvent.class, this::handleVisualRangeLogoutEvent),
             of(NonWhitelistedPlayerConnectedEvent.class, this::handleNonWhitelistedPlayerConnectedEvent),
-            of(ProxySpectatorDisconnectedEvent.class, this::handleProxySpectatorDisconnectedEvent),
+            of(SpectatorDisconnectedEvent.class, this::handleProxySpectatorDisconnectedEvent),
             of(ActiveHoursConnectEvent.class, this::handleActiveHoursConnectEvent),
             of(DeathMessageChatEvent.class, this::handleDeathMessageChatEventKillMessage),
             of(DeathMessageChatEvent.class, this::handleDeathMessageChatEventChatRelay),
@@ -86,8 +100,8 @@ public class NotificationEventListener {
             of(DiscordMessageSentEvent.class, this::handleDiscordMessageSentEvent),
             of(UpdateStartEvent.class, this::handleUpdateStartEvent),
             of(ServerRestartingEvent.class, this::handleServerRestartingEvent),
-            of(ProxyLoginFailedEvent.class, this::handleProxyLoginFailedEvent),
-            of(StartConnectEvent.class, this::handleStartConnectEvent),
+            of(ClientLoginFailedEvent.class, this::handleProxyLoginFailedEvent),
+            of(ClientStartConnectEvent.class, this::handleStartConnectEvent),
             of(PrioStatusUpdateEvent.class, this::handlePrioStatusUpdateEvent),
             of(PrioBanStatusUpdateEvent.class, this::handlePrioBanStatusUpdateEvent),
             of(AutoReconnectEvent.class, this::handleAutoReconnectEvent),
@@ -128,7 +142,7 @@ public class NotificationEventListener {
         sendEmbedMessage(embed);
     }
 
-    public void handleConnectEvent(ConnectEvent event) {
+    public void handleConnectEvent(ClientConnectEvent event) {
         var embed = Embed.builder()
             .title("Connected")
             .inQueueColor()
@@ -142,7 +156,7 @@ public class NotificationEventListener {
         updatePresence();
     }
 
-    public void handlePlayerOnlineEvent(PlayerOnlineEvent event) {
+    public void handlePlayerOnlineEvent(ClientOnlineEvent event) {
         var embedBuilder = Embed.builder()
             .title("Online")
             .successColor();
@@ -155,7 +169,7 @@ public class NotificationEventListener {
         }
     }
 
-    public void handleDisconnectEvent(DisconnectEvent event) {
+    public void handleDisconnectEvent(ClientDisconnectEvent event) {
         var category = DisconnectReasonInfo.getDisconnectCategory(event.reason());
         var embed = Embed.builder()
             .title("Disconnected")
@@ -237,7 +251,7 @@ public class NotificationEventListener {
         updatePresence();
     }
 
-    public void handleStartQueueEvent(StartQueueEvent event) {
+    public void handleStartQueueEvent(QueueStartEvent event) {
         var embed = Embed.builder()
             .title("Started Queuing")
             .inQueueColor()
@@ -256,7 +270,7 @@ public class NotificationEventListener {
         updatePresence();
     }
 
-    public void handleDeathEvent(DeathEvent event) {
+    public void handleDeathEvent(ClientDeathEvent event) {
         var embed = Embed.builder()
             .title("Player Death")
             .errorColor()
@@ -269,7 +283,7 @@ public class NotificationEventListener {
         }
     }
 
-    public void handleSelfDeathMessageEvent(SelfDeathMessageEvent event) {
+    public void handleSelfDeathMessageEvent(ClientDeathMessageEvent event) {
         sendEmbedMessage(Embed.builder()
                              .title("Death Message")
                              .errorColor()
@@ -288,7 +302,7 @@ public class NotificationEventListener {
         }
     }
 
-    public void handleProxyClientConnectedEvent(ProxyClientConnectedEvent event) {
+    public void handleProxyClientConnectedEvent(PlayerConnectedEvent event) {
         if (!CONFIG.discord.clientConnectionMessages) return;
         var embed = Embed.builder()
             .title("Client Connected")
@@ -303,7 +317,7 @@ public class NotificationEventListener {
         }
     }
 
-    public void handleProxyClientConnectedEventCheck2b2tMCVersionMatch(ProxyClientConnectedEvent event) {
+    public void handleProxyClientConnectedEventCheck2b2tMCVersionMatch(PlayerConnectedEvent event) {
         if (!CONFIG.discord.mcVersionMismatchWarning) return;
         if (!Proxy.getInstance().isOn2b2t() || !Proxy.getInstance().isConnected()) return;
         var client = Proxy.getInstance().getClient();
@@ -336,7 +350,7 @@ public class NotificationEventListener {
         }
     }
 
-    public void handleProxySpectatorConnectedEvent(ProxySpectatorConnectedEvent event) {
+    public void handleProxySpectatorConnectedEvent(SpectatorConnectedEvent event) {
         if (!CONFIG.discord.clientConnectionMessages) return;
         var embed = Embed.builder()
             .title("Spectator Connected")
@@ -351,7 +365,7 @@ public class NotificationEventListener {
         }
     }
 
-    public void handleProxyClientDisconnectedEvent(ProxyClientDisconnectedEvent event) {
+    public void handleProxyClientDisconnectedEvent(PlayerDisconnectedEvent event) {
         if (!CONFIG.discord.clientConnectionMessages) return;
         var embed = Embed.builder()
             .title("Client Disconnected")
@@ -513,7 +527,7 @@ public class NotificationEventListener {
         }
     }
 
-    public void handleProxySpectatorDisconnectedEvent(ProxySpectatorDisconnectedEvent event) {
+    public void handleProxySpectatorDisconnectedEvent(SpectatorDisconnectedEvent event) {
         if (!CONFIG.discord.clientConnectionMessages) return;
         var embed = Embed.builder()
             .title("Spectator Disconnected")
@@ -787,7 +801,7 @@ public class NotificationEventListener {
         }
     }
 
-    public void handleProxyLoginFailedEvent(ProxyLoginFailedEvent event) {
+    public void handleProxyLoginFailedEvent(ClientLoginFailedEvent event) {
         var embed = Embed.builder()
             .title("Login Failed")
             .errorColor()
@@ -799,7 +813,7 @@ public class NotificationEventListener {
         }
     }
 
-    public void handleStartConnectEvent(StartConnectEvent event) {
+    public void handleStartConnectEvent(ClientStartConnectEvent event) {
         sendEmbedMessage(Embed.builder()
                              .title("Connecting...")
                              .inQueueColor());

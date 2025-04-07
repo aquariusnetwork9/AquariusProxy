@@ -24,7 +24,7 @@ import com.zenith.mc.language.TranslationRegistryInitializer;
 import com.zenith.mc.map.MapBlockColorManager;
 import com.zenith.module.ModuleManager;
 import com.zenith.network.server.handler.player.InGameCommandManager;
-import com.zenith.plugins.PluginManager;
+import com.zenith.plugin.PluginManager;
 import com.zenith.terminal.TerminalManager;
 import com.zenith.util.Config;
 import com.zenith.util.ConfigVerifier;

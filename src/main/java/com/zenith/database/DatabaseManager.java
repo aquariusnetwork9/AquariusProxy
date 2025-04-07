@@ -1,7 +1,7 @@
 package com.zenith.database;
 
 import com.zenith.Proxy;
-import com.zenith.event.proxy.DatabaseTickEvent;
+import com.zenith.api.event.db.DatabaseTickEvent;
 import lombok.Getter;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.postgres.PostgresPlugin;

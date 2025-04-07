@@ -1,10 +1,10 @@
 package com.zenith.network.client.handler.incoming;
 
 import com.zenith.Proxy;
-import com.zenith.event.proxy.PlayerOnlineEvent;
-import com.zenith.event.proxy.PrioStatusEvent;
-import com.zenith.event.proxy.QueueCompleteEvent;
-import com.zenith.event.proxy.StartQueueEvent;
+import com.zenith.api.event.client.ClientOnlineEvent;
+import com.zenith.api.event.client.PrioStatusEvent;
+import com.zenith.api.event.queue.QueueCompleteEvent;
+import com.zenith.api.event.queue.QueueStartEvent;
 import com.zenith.network.client.ClientSession;
 import com.zenith.network.registry.ClientEventLoopPacketHandler;
 import com.zenith.util.ComponentSerializer;
@@ -39,7 +39,7 @@ public class TabListDataHandler implements ClientEventLoopPacketHandler<Clientbo
         } else {
             if (!session.isOnline()) {
                 session.setOnline(true);
-                EVENT_BUS.post(new PlayerOnlineEvent());
+                EVENT_BUS.post(new ClientOnlineEvent());
             }
         }
         return true;
@@ -63,7 +63,7 @@ public class TabListDataHandler implements ClientEventLoopPacketHandler<Clientbo
                     wasOnlineDuration = Duration.ofSeconds(Proxy.getInstance().getOnlineTimeSeconds());
                     CLIENT_LOG.info("Detected that the client was kicked to queue. Was online for {}", formatDuration(wasOnlineDuration));
                 }
-                EVENT_BUS.postAsync(new StartQueueEvent(wasOnline, wasOnlineDuration));
+                EVENT_BUS.postAsync(new QueueStartEvent(wasOnline, wasOnlineDuration));
                 queueDuration = Optional.empty();
             }
             session.setInQueue(true);
@@ -77,7 +77,7 @@ public class TabListDataHandler implements ClientEventLoopPacketHandler<Clientbo
         } else if (!session.isOnline()) {
             if (headerContentLineBreakSplit.length == 1 && headerContentLineBreakSplit[0].isEmpty()) return; // can occur right after game profile packet received
             session.setOnline(true);
-            EVENT_BUS.postAsync(new PlayerOnlineEvent(queueDuration));
+            EVENT_BUS.postAsync(new ClientOnlineEvent(queueDuration));
             queueDuration = Optional.empty();
         }
     }

@@ -1,6 +1,6 @@
 package com.zenith.database;
 
-import com.zenith.event.proxy.DatabaseTickEvent;
+import com.zenith.api.event.db.DatabaseTickEvent;
 import com.zenith.feature.player.World;
 import com.zenith.mc.dimension.DimensionRegistry;
 

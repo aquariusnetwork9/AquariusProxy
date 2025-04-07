@@ -1,6 +1,6 @@
 package com.zenith.network.server;
 
-import com.zenith.event.proxy.ServerConnectionAddedEvent;
+import com.zenith.api.event.player.PlayerConnectionAddedEvent;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.geysermc.mcprotocollib.network.event.server.*;
@@ -33,7 +33,7 @@ public class ProxyServerListener implements ServerListener {
             connection.setReadTimeout(CONFIG.server.extra.timeout.seconds);
         else
             connection.setReadTimeout(0);
-        EVENT_BUS.post(new ServerConnectionAddedEvent(connection));
+        EVENT_BUS.post(new PlayerConnectionAddedEvent(connection));
     }
 
     @Override

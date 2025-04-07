@@ -2,10 +2,10 @@ package com.zenith.discord;
 
 import com.github.rfresh2.SimpleEventBus;
 import com.zenith.Proxy;
-import com.zenith.command.brigadier.CommandContext;
-import com.zenith.command.brigadier.DiscordCommandContext;
-import com.zenith.command.util.CommandOutputHelper;
-import com.zenith.event.proxy.DiscordMessageSentEvent;
+import com.zenith.api.command.CommandContext;
+import com.zenith.api.command.CommandOutputHelper;
+import com.zenith.api.command.DiscordCommandContext;
+import com.zenith.api.event.message.DiscordMessageSentEvent;
 import com.zenith.feature.autoupdater.AutoUpdater;
 import com.zenith.feature.queue.Queue;
 import com.zenith.module.impl.AutoReconnect;

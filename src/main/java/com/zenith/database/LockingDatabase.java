@@ -2,7 +2,7 @@ package com.zenith.database;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.zenith.Proxy;
-import com.zenith.event.proxy.RedisRestartEvent;
+import com.zenith.api.event.db.RedisRestartEvent;
 import com.zenith.util.Wait;
 import org.jdbi.v3.core.HandleConsumer;
 import org.jspecify.annotations.Nullable;

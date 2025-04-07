@@ -2,13 +2,9 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
-import com.zenith.event.module.PlayerHealthChangedEvent;
-import com.zenith.event.module.WeatherChangeEvent;
-import com.zenith.event.proxy.HealthAutoDisconnectEvent;
-import com.zenith.event.proxy.NewPlayerInVisualRangeEvent;
-import com.zenith.event.proxy.ProxyClientDisconnectedEvent;
-import com.zenith.event.proxy.TotemPopEvent;
-import com.zenith.module.Module;
+import com.zenith.api.event.module.*;
+import com.zenith.api.event.player.PlayerDisconnectedEvent;
+import com.zenith.api.module.Module;
 
 import java.util.List;
 
@@ -28,8 +24,8 @@ public class AutoDisconnect extends Module {
         return List.of(
             of(PlayerHealthChangedEvent.class, this::handleLowPlayerHealthEvent),
             of(WeatherChangeEvent.class, this::handleWeatherChangeEvent),
-            of(ProxyClientDisconnectedEvent.class, this::handleProxyClientDisconnectedEvent),
-            of(NewPlayerInVisualRangeEvent.class, this::handleNewPlayerInVisualRangeEvent),
+            of(PlayerDisconnectedEvent.class, this::handleProxyClientDisconnectedEvent),
+            of(ServerPlayerInVisualRangeEvent.class, this::handleNewPlayerInVisualRangeEvent),
             of(TotemPopEvent.class, this::handleTotemPopEvent)
         );
     }
@@ -61,7 +57,7 @@ public class AutoDisconnect extends Module {
         }
     }
 
-    public void handleProxyClientDisconnectedEvent(ProxyClientDisconnectedEvent event) {
+    public void handleProxyClientDisconnectedEvent(PlayerDisconnectedEvent event) {
         if (!CONFIG.client.extra.utility.actions.autoDisconnect.autoClientDisconnect) return;
         var connection = Proxy.getInstance().getActivePlayer();
         if (nonNull(connection) && connection.getProfileCache().getProfile().equals(event.clientGameProfile())) {
@@ -70,7 +66,7 @@ public class AutoDisconnect extends Module {
         }
     }
 
-    public void handleNewPlayerInVisualRangeEvent(NewPlayerInVisualRangeEvent event) {
+    public void handleNewPlayerInVisualRangeEvent(ServerPlayerInVisualRangeEvent event) {
         if (!CONFIG.client.extra.utility.actions.autoDisconnect.onUnknownPlayerInVisualRange) return;
         var playerUUID = event.playerEntity().getUuid();
         if (PLAYER_LISTS.getFriendsList().contains(playerUUID)

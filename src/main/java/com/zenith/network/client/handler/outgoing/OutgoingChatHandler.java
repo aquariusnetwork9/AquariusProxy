@@ -1,6 +1,6 @@
 package com.zenith.network.client.handler.outgoing;
 
-import com.zenith.event.module.OutboundChatEvent;
+import com.zenith.api.event.module.OutboundChatEvent;
 import com.zenith.network.client.ClientSession;
 import com.zenith.network.registry.PacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandPacket;

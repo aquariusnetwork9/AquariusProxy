@@ -1,8 +1,13 @@
 package com.zenith.database;
 
 import com.zenith.Proxy;
+import com.zenith.api.event.client.ClientConnectEvent;
+import com.zenith.api.event.client.ClientDisconnectEvent;
+import com.zenith.api.event.client.ClientOnlineEvent;
+import com.zenith.api.event.db.DatabaseTickEvent;
+import com.zenith.api.event.server.ServerPlayerConnectedEvent;
+import com.zenith.api.event.server.ServerPlayerDisconnectedEvent;
 import com.zenith.database.dto.enums.Connectiontype;
-import com.zenith.event.proxy.*;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 
 import java.time.Instant;
@@ -64,9 +69,9 @@ public class PlaytimeDatabase extends LockingDatabase {
             of(DatabaseTickEvent.class, this::handleDatabaseTick),
             of(ServerPlayerConnectedEvent.class, this::handleServerPlayerConnectedEvent),
             of(ServerPlayerDisconnectedEvent.class, this::handleServerPlayerDisconnectedEvent),
-            of(PlayerOnlineEvent.class, (e) -> resetConnectionEvents()),
-            of(ConnectEvent.class, (e) -> resetConnectionEvents()),
-            of(DisconnectEvent.class, (e) -> resetConnectionEvents())
+            of(ClientOnlineEvent.class, (e) -> resetConnectionEvents()),
+            of(ClientConnectEvent.class, (e) -> resetConnectionEvents()),
+            of(ClientDisconnectEvent.class, (e) -> resetConnectionEvents())
         );
     }
 

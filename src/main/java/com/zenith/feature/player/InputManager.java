@@ -1,6 +1,6 @@
 package com.zenith.feature.player;
 
-import com.zenith.event.module.ClientBotTick;
+import com.zenith.api.event.client.ClientBotTick;
 import org.jspecify.annotations.NonNull;
 
 import static com.github.rfresh2.EventConsumer.of;

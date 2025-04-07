@@ -2,13 +2,13 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
-import com.zenith.event.proxy.ServerPlayerConnectedEvent;
-import com.zenith.event.proxy.ServerPlayerDisconnectedEvent;
+import com.zenith.api.event.server.ServerPlayerConnectedEvent;
+import com.zenith.api.event.server.ServerPlayerDisconnectedEvent;
+import com.zenith.api.module.Module;
 import com.zenith.feature.extrachat.ECChatCommandIncomingHandler;
 import com.zenith.feature.extrachat.ECPlayerChatOutgoingHandler;
 import com.zenith.feature.extrachat.ECSignedChatCommandIncomingHandler;
 import com.zenith.feature.extrachat.ECSystemChatOutgoingHandler;
-import com.zenith.module.Module;
 import com.zenith.network.registry.PacketHandlerCodec;
 import com.zenith.network.registry.PacketHandlerStateCodec;
 import com.zenith.util.ComponentSerializer;

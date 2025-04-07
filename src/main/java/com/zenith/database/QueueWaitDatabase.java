@@ -1,9 +1,9 @@
 package com.zenith.database;
 
-import com.zenith.event.proxy.QueueCompleteEvent;
-import com.zenith.event.proxy.QueuePositionUpdateEvent;
-import com.zenith.event.proxy.ServerRestartingEvent;
-import com.zenith.event.proxy.StartQueueEvent;
+import com.zenith.api.event.queue.QueueCompleteEvent;
+import com.zenith.api.event.queue.QueuePositionUpdateEvent;
+import com.zenith.api.event.queue.QueueStartEvent;
+import com.zenith.api.event.server.ServerRestartingEvent;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -32,7 +32,7 @@ public class QueueWaitDatabase extends Database {
     public void subscribeEvents() {
         EVENT_BUS.subscribe(this,
                             of(ServerRestartingEvent.class, this::handleServerRestart),
-                            of(StartQueueEvent.class, this::handleStartQueue),
+                            of(QueueStartEvent.class, this::handleStartQueue),
                             of(QueuePositionUpdateEvent.class, this::handleQueuePosition),
                             of(QueueCompleteEvent.class, this::handleQueueComplete)
         );
@@ -42,7 +42,7 @@ public class QueueWaitDatabase extends Database {
         lastServerRestart = Instant.now();
     }
 
-    public void handleStartQueue(final StartQueueEvent event) {
+    public void handleStartQueue(final QueueStartEvent event) {
         shouldUpdateQueueLen.set(true);
         initialQueueLen = null;
         initialQueueTime = null;

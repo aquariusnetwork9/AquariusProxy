@@ -1,8 +1,8 @@
 package com.zenith.database;
 
 import com.zenith.Proxy;
+import com.zenith.api.event.chat.PublicChatEvent;
 import com.zenith.database.dto.records.ChatsRecord;
-import com.zenith.event.proxy.chat.PublicChatEvent;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;

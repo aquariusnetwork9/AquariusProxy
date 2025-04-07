@@ -1,11 +1,11 @@
 package com.zenith.database;
 
 import com.zenith.Proxy;
+import com.zenith.api.event.client.ClientDisconnectEvent;
+import com.zenith.api.event.server.ServerPlayerConnectedEvent;
+import com.zenith.api.event.server.ServerPlayerDisconnectedEvent;
 import com.zenith.database.dto.enums.Connectiontype;
 import com.zenith.database.dto.records.ConnectionsRecord;
-import com.zenith.event.proxy.DisconnectEvent;
-import com.zenith.event.proxy.ServerPlayerConnectedEvent;
-import com.zenith.event.proxy.ServerPlayerDisconnectedEvent;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -27,7 +27,7 @@ public class ConnectionsDatabase extends LiveDatabase {
             this,
             of(ServerPlayerConnectedEvent.class, this::handleServerPlayerConnectedEvent),
             of(ServerPlayerDisconnectedEvent.class, this::handleServerPlayerDisconnectedEvent),
-            of(DisconnectEvent.class, 10, this::handleDisconnectEvent) // higher priority before cache is reset
+            of(ClientDisconnectEvent.class, 10, this::handleDisconnectEvent) // higher priority before cache is reset
         );
     }
 
@@ -63,7 +63,7 @@ public class ConnectionsDatabase extends LiveDatabase {
         writeConnection(Connectiontype.LEAVE, event.playerEntry().getName(), event.playerEntry().getProfileId(), Instant.now().atOffset(ZoneOffset.UTC));
     }
 
-    public void handleDisconnectEvent(DisconnectEvent event) {
+    public void handleDisconnectEvent(ClientDisconnectEvent event) {
         if (!Proxy.getInstance().isOn2b2t()
             || event.wasInQueue()
             || event.onlineDuration().toMinutes() < 15) return;

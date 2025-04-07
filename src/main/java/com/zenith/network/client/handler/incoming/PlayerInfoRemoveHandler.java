@@ -1,7 +1,7 @@
 package com.zenith.network.client.handler.incoming;
 
-import com.zenith.event.proxy.PlayerLogoutInVisualRangeEvent;
-import com.zenith.event.proxy.ServerPlayerDisconnectedEvent;
+import com.zenith.api.event.module.ServerPlayerLogoutInVisualRangeEvent;
+import com.zenith.api.event.server.ServerPlayerDisconnectedEvent;
 import com.zenith.network.client.ClientSession;
 import com.zenith.network.registry.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
@@ -25,7 +25,7 @@ public class PlayerInfoRemoveHandler implements ClientEventLoopPacketHandler<Cli
                 EVENT_BUS.postAsync(new ServerPlayerDisconnectedEvent(e));
                 CACHE.getEntityCache().getRecentlyRemovedPlayer(e.getProfileId())
                     .filter(entityPlayer -> !entityPlayer.isSelfPlayer())
-                    .ifPresent(entityPlayer -> EVENT_BUS.postAsync(new PlayerLogoutInVisualRangeEvent(e, entityPlayer)));
+                    .ifPresent(entityPlayer -> EVENT_BUS.postAsync(new ServerPlayerLogoutInVisualRangeEvent(e, entityPlayer)));
             });
         }
         return true;

@@ -1,5 +1,6 @@
 package com.zenith.module;
 
+import com.zenith.api.module.Module;
 import com.zenith.module.impl.*;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;

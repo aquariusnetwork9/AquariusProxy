@@ -1,6 +1,6 @@
 package com.zenith.util;
 
-import com.zenith.event.module.ClientTickEvent;
+import com.zenith.api.event.client.ClientTickEvent;
 import lombok.Getter;
 
 import static com.github.rfresh2.EventConsumer.of;

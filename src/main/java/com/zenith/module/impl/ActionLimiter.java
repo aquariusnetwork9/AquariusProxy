@@ -1,13 +1,13 @@
 package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
-import com.zenith.event.proxy.PlayerLoginEvent;
-import com.zenith.event.proxy.ServerConnectionRemovedEvent;
+import com.zenith.api.event.player.PlayerConnectionRemovedEvent;
+import com.zenith.api.event.player.PlayerLoginEvent;
+import com.zenith.api.module.Module;
 import com.zenith.feature.actionlimiter.handlers.inbound.*;
 import com.zenith.feature.actionlimiter.handlers.outbound.ALCMoveVehicleHandler;
 import com.zenith.feature.actionlimiter.handlers.outbound.ALLoginHandler;
 import com.zenith.feature.actionlimiter.handlers.outbound.ALPlayerPositionHandler;
-import com.zenith.module.Module;
 import com.zenith.network.registry.PacketHandlerCodec;
 import com.zenith.network.registry.PacketHandlerStateCodec;
 import com.zenith.network.server.ServerSession;
@@ -66,8 +66,8 @@ public class ActionLimiter extends Module {
     @Override
     public List<EventConsumer<?>> registerEvents() {
         return List.of(
-            of(PlayerLoginEvent.class, this::onPlayerLoginEvent),
-            of(ServerConnectionRemovedEvent.class, this::onServerConnectionRemoved)
+            of(PlayerLoginEvent.Pre.class, this::onPlayerLoginEvent),
+            of(PlayerConnectionRemovedEvent.class, this::onServerConnectionRemoved)
         );
     }
 
@@ -76,8 +76,8 @@ public class ActionLimiter extends Module {
         return CONFIG.client.extra.actionLimiter.enabled;
     }
 
-    public void onPlayerLoginEvent(final PlayerLoginEvent event) {
-        ServerSession serverConnection = event.serverConnection();
+    public void onPlayerLoginEvent(final PlayerLoginEvent.Pre event) {
+        ServerSession serverConnection = event.session();
         var profile = serverConnection.getProfileCache().getProfile();
         var proxyProfile = CACHE.getProfileCache().getProfile();
         if (profile != null && proxyProfile != null && profile.getId().equals(proxyProfile.getId()))
@@ -85,7 +85,7 @@ public class ActionLimiter extends Module {
         limitedConnections.add(serverConnection);
     }
 
-    public void onServerConnectionRemoved(final ServerConnectionRemovedEvent event) {
+    public void onServerConnectionRemoved(final PlayerConnectionRemovedEvent event) {
         limitedConnections.remove(event.serverConnection());
     }
 

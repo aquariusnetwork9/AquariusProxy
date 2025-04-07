@@ -2,8 +2,8 @@ package com.zenith.network.server.handler.spectator.incoming;
 
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.zenith.Proxy;
+import com.zenith.api.event.message.PrivateMessageSendEvent;
 import com.zenith.cache.data.entity.Entity;
-import com.zenith.event.proxy.PrivateMessageSendEvent;
 import com.zenith.feature.spectator.SpectatorEntityRegistry;
 import com.zenith.feature.spectator.SpectatorSync;
 import com.zenith.network.registry.PacketHandler;
