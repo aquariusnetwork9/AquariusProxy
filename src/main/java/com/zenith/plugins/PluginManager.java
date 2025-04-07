@@ -154,7 +154,7 @@ public class PluginManager {
                 } catch (IOException ignored) { }
             }
             PLUGIN_LOG.error("Error loading plugin: {}", jarPath, e);
-            EVENT_BUS.postAsync(new PluginLoadFailureEvent(id, jarPath, e.getMessage()));
+            EVENT_BUS.postAsync(new PluginLoadFailureEvent(id, jarPath, e));
         }
     }
 
@@ -180,7 +180,7 @@ public class PluginManager {
             } catch (final Throwable e) {
                 PLUGIN_LOG.error("Exception in plugin onLoad: {}", jarPath, e);
                 pluginInstances.remove(pluginInstance.getId());
-                throw new RuntimeException("Exception in plugin onLoad: + " + e.getMessage(), e);
+                throw new RuntimeException("Exception in plugin onLoad: " + e.getMessage(), e);
             }
             EVENT_BUS.postAsync(new PluginLoadedEvent(pluginInfo));
         } catch (Throwable e) {
@@ -188,7 +188,7 @@ public class PluginManager {
                 pluginInstance.getClassLoader().close();
             } catch (IOException ignored) { }
             PLUGIN_LOG.error("Error loading plugin: {}", pluginInstance, e);
-            EVENT_BUS.postAsync(new PluginLoadFailureEvent(pluginInstance.getId(), pluginInstance.getJarPath(), e.getMessage()));
+            EVENT_BUS.postAsync(new PluginLoadFailureEvent(pluginInstance.getId(), pluginInstance.getJarPath(), e));
         }
     }
 
