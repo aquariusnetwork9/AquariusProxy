@@ -31,9 +31,8 @@ import com.zenith.util.ConfigVerifier;
 import com.zenith.util.LaunchConfig;
 import com.zenith.util.Wait;
 import com.zenith.via.ZenithViaInitializer;
+import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
 import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.concurrent.Executors;
@@ -47,18 +46,18 @@ public class Globals {
     public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
         .registerModule(new JavaTimeModule());
-    public static final Logger DEFAULT_LOG = LoggerFactory.getLogger("Proxy");
-    public static final Logger AUTH_LOG = LoggerFactory.getLogger("Auth");
-    public static final Logger CACHE_LOG = LoggerFactory.getLogger("Cache");
-    public static final Logger CLIENT_LOG = LoggerFactory.getLogger("Client");
-    public static final Logger CHAT_LOG = LoggerFactory.getLogger("Chat");
-    public static final Logger MODULE_LOG = LoggerFactory.getLogger("Module");
-    public static final Logger SERVER_LOG = LoggerFactory.getLogger("Server");
-    public static final Logger DISCORD_LOG = LoggerFactory.getLogger("Discord");
-    public static final Logger DATABASE_LOG = LoggerFactory.getLogger("Database");
-    public static final Logger TERMINAL_LOG = LoggerFactory.getLogger("Terminal");
-    public static final Logger PLUGIN_LOG = LoggerFactory.getLogger("Plugin");
-    public static final Logger PATH_LOG = LoggerFactory.getLogger("Pathfinder");
+    public static final ComponentLogger DEFAULT_LOG = ComponentLogger.logger("Proxy");
+    public static final ComponentLogger AUTH_LOG = ComponentLogger.logger("Auth");
+    public static final ComponentLogger CACHE_LOG = ComponentLogger.logger("Cache");
+    public static final ComponentLogger CLIENT_LOG = ComponentLogger.logger("Client");
+    public static final ComponentLogger CHAT_LOG = ComponentLogger.logger("Chat");
+    public static final ComponentLogger MODULE_LOG = ComponentLogger.logger("Module");
+    public static final ComponentLogger SERVER_LOG = ComponentLogger.logger("Server");
+    public static final ComponentLogger DISCORD_LOG = ComponentLogger.logger("Discord");
+    public static final ComponentLogger DATABASE_LOG = ComponentLogger.logger("Database");
+    public static final ComponentLogger TERMINAL_LOG = ComponentLogger.logger("Terminal");
+    public static final ComponentLogger PLUGIN_LOG = ComponentLogger.logger("Plugin");
+    public static final ComponentLogger PATH_LOG = ComponentLogger.logger("Pathfinder");
     public static final File CONFIG_FILE = new File("config.json");
     public static final File LAUNCH_CONFIG_FILE = new File("launch_config.json");
     public static final Config CONFIG;

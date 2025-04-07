@@ -204,6 +204,15 @@
       ]
     },
     {
+      "type": "ch.qos.logback.classic.encoder.PatternLayoutEncoder",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "ch.qos.logback.classic.filter.ThresholdFilter",
       "methods": [
         {
@@ -2057,42 +2066,6 @@
       ]
     },
     {
-      "type": "com.zenith.terminal.logback.MCTextFormatANSIConverter",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.zenith.terminal.logback.MCTextFormatANSIEncoder",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.zenith.terminal.logback.MCTextFormatConverter",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.zenith.terminal.logback.MCTextFormatEncoder",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
       "type": "com.zenith.terminal.logback.PrintOnlyErrorLogbackStatusListener",
       "methods": [
         {
@@ -2118,6 +2091,9 @@
           "parameterTypes": []
         }
       ]
+    },
+    {
+      "type": "com.zenith.terminal.logback.ZenithComponentLoggerProvider"
     },
     {
       "type": "com.zenith.util.Config",

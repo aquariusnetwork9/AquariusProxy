@@ -27,7 +27,7 @@ public class DisguisedChatHandler implements PacketHandler<ClientboundDisguisedC
                 null,
                 packet.getTargetName());
             if (CONFIG.client.extra.logChatMessages) {
-                CLIENT_LOG.info("{}", ComponentSerializer.serializeJson(chatComponent));
+                CHAT_LOG.info(chatComponent);
             }
             boolean isWhisper = false;
             Optional<PlayerListEntry> whisperTarget = Optional.empty();

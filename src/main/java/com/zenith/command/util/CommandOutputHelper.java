@@ -65,7 +65,7 @@ public class CommandOutputHelper {
     public void logEmbedOutputToTerminal(final Embed embed) {
         if (!embed.isTitlePresent()) return;
         var component = ComponentSerializer.deserializeEmbed(embed);
-        TERMINAL_LOG.info(ComponentSerializer.serializeJson(component));
+        TERMINAL_LOG.info(component);
     }
 
     public String unescape(String s) {

@@ -32,9 +32,14 @@ public class SystemChatHandler implements ClientEventLoopPacketHandler<Clientbou
     public boolean applyAsync(@NonNull ClientboundSystemChatPacket packet, @NonNull ClientSession session) {
         try {
             if (CONFIG.client.extra.logChatMessages) {
-                String serializedChat = ComponentSerializer.serializeJson(packet.getContent());
-                if (Proxy.getInstance().isInQueue()) serializedChat = serializedChat.replace("\\n\\n", "");
-                CHAT_LOG.info(serializedChat);
+                var component = packet.getContent();
+                if (Proxy.getInstance().isInQueue()) {
+                    component = component.replaceText(b -> b
+                        .matchLiteral("\n\n")
+                        .replacement("")
+                    );
+                }
+                CHAT_LOG.info(component);
             }
             final Component component = packet.getContent();
             final String messageString = ComponentSerializer.serializePlain(component);

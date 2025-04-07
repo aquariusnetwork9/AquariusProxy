@@ -5,8 +5,8 @@ import com.zenith.api.PluginInfo;
 import com.zenith.api.ZenithProxyPlugin;
 import com.zenith.command.Command;
 import com.zenith.module.Module;
+import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static com.zenith.Globals.*;
 
@@ -34,7 +34,7 @@ public record InstancedPluginAPI(
 
     @Override
     public Logger getLogger() {
-        return LoggerFactory.getLogger("Plugin." + pluginInfo.id());
+        return ComponentLogger.logger("Plugin." + pluginInfo.id());
     }
 
     @Override

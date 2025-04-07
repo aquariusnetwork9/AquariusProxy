@@ -18,7 +18,6 @@ import com.zenith.network.client.ClientSession;
 import com.zenith.network.server.LanBroadcaster;
 import com.zenith.network.server.ProxyServerListener;
 import com.zenith.network.server.ServerSession;
-import com.zenith.util.ComponentSerializer;
 import com.zenith.util.FastArrayList;
 import com.zenith.util.Wait;
 import com.zenith.via.ZenithClientChannelInitializer;
@@ -719,7 +718,7 @@ public class Proxy {
 
     public void handlePrivateMessageSendEvent(PrivateMessageSendEvent event) {
         if (!isConnected()) return;
-        CHAT_LOG.info("{}", ComponentSerializer.serializeJson(event.getContents()));
+        CHAT_LOG.info(event.getContents());
         var connections = getActiveConnections().getArray();
         for (int i = 0; i < connections.length; i++) {
             var connection = connections[i];

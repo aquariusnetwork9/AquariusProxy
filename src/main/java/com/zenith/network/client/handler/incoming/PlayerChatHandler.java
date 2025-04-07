@@ -26,7 +26,7 @@ public class PlayerChatHandler implements PacketHandler<ClientboundPlayerChatPac
                 packet.getUnsignedContent(),
                 packet.getTargetName());
             if (CONFIG.client.extra.logChatMessages) {
-                CLIENT_LOG.info("{}", ComponentSerializer.serializeJson(chatComponent));
+                CLIENT_LOG.info(chatComponent);
             }
             boolean isWhisper = false;
             Optional<PlayerListEntry> whisperTarget = Optional.empty();

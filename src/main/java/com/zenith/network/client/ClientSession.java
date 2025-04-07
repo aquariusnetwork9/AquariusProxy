@@ -184,7 +184,7 @@ public class ClientSession extends TcpClientSession {
             CLIENT_LOG.warn("Unable to parse disconnect reason: {}", reason, e);
             reasonStr = isNull(reason) ? "Disconnected" : ComponentSerializer.serializeJson(reason);
         }
-        CLIENT_LOG.info("Disconnected: {}", reasonStr);
+        CLIENT_LOG.info("Disconnected: {}", reason != null ? reason : reasonStr);
         var onlineDuration = Duration.ofSeconds(Proxy.getInstance().getOnlineTimeSeconds());
         var onlineDurationWithQueueSkip = Duration.ofSeconds(Proxy.getInstance().getOnlineTimeSecondsWithQueueSkip());
         // stop processing packets before we reset the client cache to avoid race conditions
