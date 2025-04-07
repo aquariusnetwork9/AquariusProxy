@@ -981,9 +981,11 @@ public class NotificationEventListener {
      * Convenience proxy methods
      */
     public void sendEmbedMessage(Embed embed) {
+        embed.timestamp(Instant.now());
         DISCORD.sendEmbedMessage(embed);
     }
     public void sendEmbedMessage(String message, Embed embed) {
+        embed.timestamp(Instant.now());
         DISCORD.sendEmbedMessage(message, embed);
     }
     public void sendMessage(final String message) {
@@ -999,9 +1001,11 @@ public class NotificationEventListener {
         DISCORD.sendRelayMessage(message);
     }
     void sendEmbedMessageWithButtons(String message, Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> mapper, Duration timeout) {
+        embed.timestamp(Instant.now());
         DISCORD.sendEmbedMessageWithButtons(message, embed, buttons, mapper, timeout);
     }
     void sendEmbedMessageWithButtons(Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> mapper, Duration timeout) {
+        embed.timestamp(Instant.now());
         DISCORD.sendEmbedMessageWithButtons(embed, buttons, mapper, timeout);
     }
     public void updatePresence(final OnlineStatus onlineStatus, final Activity activity) {
@@ -1011,6 +1015,7 @@ public class NotificationEventListener {
         DISCORD.updatePresence();
     }
     public void sendEmbedMessageWithFileAttachment(Embed embed) {
+        embed.timestamp(Instant.now());
         DISCORD.sendEmbedMessageWithFileAttachment(embed);
     }
 }
