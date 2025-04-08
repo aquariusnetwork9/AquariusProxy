@@ -850,6 +850,8 @@ public final class Bot extends ModuleUtils {
                 || entityType == EntityType.TRADER_LLAMA
                 || entityType == EntityType.ZOMBIE_HORSE
             ) {
+                // todo: cache passenger data in entity cache
+                //  we should be store both its has passengers, and if it is a passenger to which other entity
                 boolean hasPassenger = CACHE.getEntityCache().getEntities().values().stream()
                     .anyMatch(e -> e.isInVehicle() && e.getVehicleId() == entityLiving.getEntityId());
                 if (hasPassenger) continue;
@@ -1094,7 +1096,7 @@ public final class Bot extends ModuleUtils {
         int queuedTeleport = CACHE.getPlayerCache().getTeleportQueue().dequeueInt();
         warn("Detected teleport desync, resyncing. queuedTeleport: {}, queueSize: {}", queuedTeleport, CACHE.getPlayerCache().getTeleportQueue().size());
         sendClientPacketAwait(new ServerboundAcceptTeleportationPacket(queuedTeleport));
-        sendClientPacketAwait(new ServerboundMovePlayerPosRotPacket(onGround, x, y, z, yaw, pitch));
+        sendClientPacketAwait(new ServerboundMovePlayerPosRotPacket(false, x, y, z, yaw, pitch));
         return true;
     }
 
