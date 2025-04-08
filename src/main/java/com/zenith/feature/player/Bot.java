@@ -237,8 +237,8 @@ public final class Bot extends ModuleUtils {
 
         interactionTick();
 
-        this.yaw = requestedYaw;
-        this.pitch = requestedPitch;
+        this.yaw = this.requestedYaw;
+        this.pitch = this.requestedPitch;
 
         if (Math.abs(velocity.getX()) < 0.003) velocity.setX(0);
         if (Math.abs(velocity.getY()) < 0.003) velocity.setY(0);
@@ -593,7 +593,7 @@ public final class Bot extends ModuleUtils {
         velocity.multiply(velocityMultiplier, 1.0, velocityMultiplier);
     }
 
-    protected boolean isHorizontalCollisionMinor() {
+    private boolean isHorizontalCollisionMinor() {
         float yawRads = yaw * (float) (Math.PI / 180.0);
         double sinYaw = Math.sin(yawRads);
         double cosYaw = Math.cos(yawRads);
@@ -758,7 +758,7 @@ public final class Bot extends ModuleUtils {
             && !World.isSpaceEmpty(playerCollisionBox.move(0.0, -this.stepHeight, 0.0));
     }
 
-    protected void adjustMovementForSneaking(MutableVec3d movement) {
+    private void adjustMovementForSneaking(MutableVec3d movement) {
         if (!this.isFlying
             && movement.getY() <= 0.0
             && isSneaking
@@ -971,8 +971,8 @@ public final class Bot extends ModuleUtils {
         this.x = this.lastX = CACHE.getPlayerCache().getX();
         this.y = this.lastY = CACHE.getPlayerCache().getY();
         this.z = this.lastZ = CACHE.getPlayerCache().getZ();
-        this.yaw = this.lastYaw = CACHE.getPlayerCache().getYaw();
-        this.pitch = this.lastPitch = CACHE.getPlayerCache().getPitch();
+        this.yaw = this.lastYaw = this.requestedYaw = CACHE.getPlayerCache().getYaw();
+        this.pitch = this.lastPitch = this.requestedPitch = CACHE.getPlayerCache().getPitch();
         this.onGround = true; // todo: cache
         this.lastOnGround = true;
         this.velocity.set(0, 0, 0);
@@ -1100,6 +1100,7 @@ public final class Bot extends ModuleUtils {
 
     public void updateAttributes() {
         this.speed = getAttributeValue(AttributeType.Builtin.GENERIC_MOVEMENT_SPEED, 0.10000000149011612f);
+        applySprintingSpeedAttributeModifier();
         this.movementEfficiency = getAttributeValue(AttributeType.Builtin.GENERIC_MOVEMENT_EFFICIENCY, 0.0f);
         this.waterMovementEfficiency = getAttributeValue(AttributeType.Builtin.GENERIC_WATER_MOVEMENT_EFFICIENCY, 0.0f);
         this.stepHeight = getAttributeValue(AttributeType.Builtin.GENERIC_STEP_HEIGHT, 0.6f);

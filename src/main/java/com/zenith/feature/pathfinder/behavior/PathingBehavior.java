@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.zenith.Globals.CONFIG;
 import static com.zenith.Globals.PATH_LOG;
+import static java.util.Objects.requireNonNullElse;
 
 @Getter
 public class PathingBehavior extends Behavior {
@@ -135,7 +136,7 @@ public class PathingBehavior extends Behavior {
             if (current.failed() || current.finished()) {
                 current = null;
                 if (goal == null || goal.isInGoal(ctx.playerFeet())) {
-                    PATH_LOG.info("All done. At {}", goal);
+                    PATH_LOG.info("All done. At {}", requireNonNullElse(goal, "goal"));
                     queuePathEvent(PathEvent.AT_GOAL);
                     next = null;
 //                    if (Baritone.settings().disconnectOnArrival.value) {
