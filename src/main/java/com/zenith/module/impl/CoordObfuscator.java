@@ -25,6 +25,7 @@ import com.zenith.util.math.MutableVec3d;
 import lombok.Getter;
 import lombok.Setter;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PositionElement;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundRespawnPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.*;
@@ -363,8 +364,17 @@ public class CoordObfuscator extends Module {
         }
     }
 
-    public void onServerTeleport(final ServerSession session, final double x, final double y, final double z, final int teleportId) {
+    public void onServerTeleport(final ServerSession session, double x, double y, double z, final int teleportId, final List<PositionElement> relative) {
         if (teleportId == session.getSpawnTeleportId() && !session.isSpawned()) return;
+        if (relative.contains(PositionElement.X)) {
+            x += preTeleportClientPos.getX();
+        }
+        if (relative.contains(PositionElement.Y)) {
+            y += preTeleportClientPos.getY();
+        }
+        if (relative.contains(PositionElement.Z)) {
+            z += preTeleportClientPos.getZ();
+        }
         setServerTeleportPos(session, x, y, z, teleportId);
         if (session.isRespawning()) {
             info("Reconnecting {} due to teleport during respawn", session.getProfileCache().getProfile().getName());

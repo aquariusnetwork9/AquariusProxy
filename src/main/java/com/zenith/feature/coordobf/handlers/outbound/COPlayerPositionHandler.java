@@ -3,6 +3,7 @@ package com.zenith.feature.coordobf.handlers.outbound;
 import com.zenith.api.network.PacketHandler;
 import com.zenith.api.network.server.ServerSession;
 import com.zenith.module.impl.CoordObfuscator;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PositionElement;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
 
 import static com.zenith.Globals.MODULE;
@@ -11,11 +12,15 @@ public class COPlayerPositionHandler implements PacketHandler<ClientboundPlayerP
     @Override
     public ClientboundPlayerPositionPacket apply(final ClientboundPlayerPositionPacket packet, final ServerSession session) {
         CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
-        coordObf.onServerTeleport(session, packet.getX(), packet.getY(), packet.getZ(), packet.getTeleportId());
+        coordObf.onServerTeleport(session, packet.getX(), packet.getY(), packet.getZ(), packet.getTeleportId(), packet.getRelative());
         return new ClientboundPlayerPositionPacket(
-            coordObf.getCoordOffset(session).offsetX(packet.getX()),
+            packet.getRelative().contains(PositionElement.X)
+                ? packet.getX()
+                : coordObf.getCoordOffset(session).offsetX(packet.getX()),
             packet.getY(),
-            coordObf.getCoordOffset(session).offsetZ(packet.getZ()),
+            packet.getRelative().contains(PositionElement.Z)
+                ? packet.getZ()
+                : coordObf.getCoordOffset(session).offsetZ(packet.getZ()),
             packet.getYaw(),
             packet.getPitch(),
             packet.getTeleportId(),
