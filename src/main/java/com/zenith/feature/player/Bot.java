@@ -1,5 +1,6 @@
 package com.zenith.feature.player;
 
+import com.google.common.collect.Lists;
 import com.zenith.Proxy;
 import com.zenith.api.event.client.ClientBotTick;
 import com.zenith.api.module.ModuleUtils;
@@ -84,6 +85,9 @@ public final class Bot extends ModuleUtils {
     private boolean horizontalCollisionMinor = false;
     @Getter private boolean verticalCollision = false;
     @Getter private final PlayerInteractionManager interactions = new PlayerInteractionManager();
+    // todo: local attribute cache
+    private static final Attribute DEFAULT_SPEED_ATTRIBUTE = new Attribute(AttributeType.Builtin.GENERIC_MOVEMENT_SPEED, 0.10000000149011612f);
+    private Attribute speedAttribute = DEFAULT_SPEED_ATTRIBUTE;
 
     public Bot() {
         EVENT_BUS.subscribe(
@@ -360,10 +364,7 @@ public final class Bot extends ModuleUtils {
     // but not in time for us to apply it on the first tick
     // the vanilla client also applies this attribute locally ahead of time
     private void applySprintingSpeedAttributeModifier() {
-        Attribute speedAttribute = CACHE.getPlayerCache()
-            .getThePlayer()
-            .getAttributes()
-            .get(AttributeType.Builtin.GENERIC_MOVEMENT_SPEED);
+        getLocalAttributeValue(speedAttribute, 0.10000000149011612f);
         if (speedAttribute == null) return;
         List<AttributeModifier> modifiers = speedAttribute.getModifiers();
         if (isSprinting) {
@@ -373,12 +374,12 @@ public final class Bot extends ModuleUtils {
                 }
             }
             modifiers.add(SPRINT_ATTRIBUTE_MODIFIER);
-            this.speed = getAttributeValue(AttributeType.Builtin.GENERIC_MOVEMENT_SPEED, 0.10000000149011612f);
+            this.speed = getLocalAttributeValue(speedAttribute, 0.10000000149011612f);
         } else {
             for (AttributeModifier modifier : modifiers) {
                 if (SPRINT_ATTRIBUTE_ID.equals(modifier.getId())) {
                     modifiers.remove(modifier);
-                    this.speed = getAttributeValue(AttributeType.Builtin.GENERIC_MOVEMENT_SPEED, 0.10000000149011612f);
+                    this.speed = getLocalAttributeValue(speedAttribute, 0.10000000149011612f);
                     return;
                 }
             }
@@ -1101,7 +1102,8 @@ public final class Bot extends ModuleUtils {
     }
 
     public void updateAttributes() {
-        this.speed = getAttributeValue(AttributeType.Builtin.GENERIC_MOVEMENT_SPEED, 0.10000000149011612f);
+        this.speedAttribute = getClonedAttribute(AttributeType.Builtin.GENERIC_MOVEMENT_SPEED, DEFAULT_SPEED_ATTRIBUTE);
+        this.speed = getLocalAttributeValue(speedAttribute, 0.10000000149011612f);
         applySprintingSpeedAttributeModifier();
         this.movementEfficiency = getAttributeValue(AttributeType.Builtin.GENERIC_MOVEMENT_EFFICIENCY, 0.0f);
         this.waterMovementEfficiency = getAttributeValue(AttributeType.Builtin.GENERIC_WATER_MOVEMENT_EFFICIENCY, 0.0f);
@@ -1132,6 +1134,35 @@ public final class Bot extends ModuleUtils {
             }
         }
         return (float) v2;
+    }
+
+    // todo: better solution for local attribute cache
+    public float getLocalAttributeValue(final Attribute attribute, float defaultValue) {
+        if (attribute == null) return defaultValue;
+        double v1 = attribute.getValue();
+        for (AttributeModifier modifier : attribute.getModifiers()) {
+            if (modifier.getOperation() == ModifierOperation.ADD) {
+                v1 += modifier.getAmount();
+            }
+        }
+        double v2 = v1;
+        for (AttributeModifier modifier : attribute.getModifiers()) {
+            if (modifier.getOperation() == ModifierOperation.ADD_MULTIPLIED_BASE) {
+                v2 += v1 * modifier.getAmount();
+            }
+        }
+        for (AttributeModifier modifier : attribute.getModifiers()) {
+            if (modifier.getOperation() == ModifierOperation.ADD_MULTIPLIED_TOTAL) {
+                v2 *= 1.0 + modifier.getAmount();
+            }
+        }
+        return (float) v2;
+    }
+
+    public Attribute getClonedAttribute(final AttributeType attributeType, final Attribute defaultAttribute) {
+        var attribute = CACHE.getPlayerCache().getThePlayer().getAttributes().get(attributeType);
+        if (attribute == null) return defaultAttribute;
+        return new Attribute(attribute.getType(), attribute.getValue(), Lists.newArrayList(attribute.getModifiers()));
     }
 
     public double getEyeY() {
