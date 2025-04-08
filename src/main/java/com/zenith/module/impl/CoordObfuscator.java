@@ -60,6 +60,7 @@ public class CoordObfuscator extends Module {
     private final Map<ServerSession, ObfPlayerState> playerStateMap = new ConcurrentHashMap<>();
     @Getter
     private final MutableVec3d serverTeleportPos = new MutableVec3d(0.0, 0.0, 0.0);
+    private int preTeleportId = Integer.MIN_VALUE;
     private final MutableVec3d preTeleportClientPos = new MutableVec3d(0.0, 0.0, 0.0);
     @Getter @Setter
     private boolean nextPlayerMovePacketIsTeleport = false;
@@ -141,6 +142,7 @@ public class CoordObfuscator extends Module {
                     // subject to race conditions, as cache update is done on the client event loop
                     PlayerCache cache = CACHE.getPlayerCache();
                     preTeleportClientPos.set(cache.getX(), cache.getY(), cache.getZ());
+                    preTeleportId = packet.getTeleportId();
                     return packet;
                 })
                 .build())
@@ -365,7 +367,15 @@ public class CoordObfuscator extends Module {
     }
 
     public void onServerTeleport(final ServerSession session, double x, double y, double z, final int teleportId, final List<PositionElement> relative) {
+        // todo: find any cases where zenith is sending the teleport after the session is spawned
         if (teleportId == session.getSpawnTeleportId() && !session.isSpawned()) return;
+        // spectator position resync see SpectatorSync$syncSpectatorPositionToEntity
+        if (teleportId == session.getSpawnTeleportId() && session.isSpectator() && session.isAllowSpectatorServerPlayerPosRotate()) return;
+        if (preTeleportId != teleportId) {
+            warn("Unexpected teleport id {} != {} for {}", teleportId, preTeleportId, session.getProfileCache().getProfile().getName());
+            reconnect(session);
+            return;
+        }
         if (relative.contains(PositionElement.X)) {
             x += preTeleportClientPos.getX();
         }
