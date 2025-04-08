@@ -22,9 +22,9 @@ public class Chunk {
     final List<BlockEntityInfo> blockEntities;
     LightUpdateData lightUpdateData;
 
-    static final MNBT EMPTY_HEIGHT_MAP = generateEmptyHeightMap();
+    public static final MNBT EMPTY_HEIGHT_MAP = generateEmptyHeightMap();
 
-    static MNBT generateEmptyHeightMap() {
+    public static MNBT generateEmptyHeightMap() {
         var tag = new CompoundTag();
         return MNBTIO.write(tag, false);
     }

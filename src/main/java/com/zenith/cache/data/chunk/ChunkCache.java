@@ -321,7 +321,7 @@ public class ChunkCache implements CachedData {
         }
     }
 
-    private LightUpdateData createFullBrightLightData(LightUpdateData lightData, int sectionCount) {
+    public LightUpdateData createFullBrightLightData(LightUpdateData lightData, int sectionCount) {
         var sectionPlusAboveBelowCount = sectionCount + 2;
         var skylightMaskSet = new BitSet(sectionPlusAboveBelowCount);
         skylightMaskSet.set(0, sectionPlusAboveBelowCount);

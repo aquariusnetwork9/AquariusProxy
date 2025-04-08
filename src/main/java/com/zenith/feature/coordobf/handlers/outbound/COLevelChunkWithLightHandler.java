@@ -2,12 +2,13 @@ package com.zenith.feature.coordobf.handlers.outbound;
 
 import com.zenith.api.network.PacketHandler;
 import com.zenith.api.network.server.ServerSession;
+import com.zenith.cache.data.chunk.Chunk;
 import com.zenith.feature.coordobf.CoordOffset;
 import com.zenith.module.impl.CoordObfuscator;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.ChunkSection;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundLevelChunkWithLightPacket;
 
-import static com.zenith.Globals.MODULE;
+import static com.zenith.Globals.*;
 
 public class COLevelChunkWithLightHandler implements PacketHandler<ClientboundLevelChunkWithLightPacket, ServerSession> {
     @Override
@@ -27,9 +28,9 @@ public class COLevelChunkWithLightHandler implements PacketHandler<ClientboundLe
             coordOffset.offsetChunkX(packet.getX()),
             coordOffset.offsetChunkZ(packet.getZ()),
             sections,
-            packet.getHeightMaps(),
+            CONFIG.client.extra.coordObfuscation.obfuscateChunkHeightmap ? Chunk.EMPTY_HEIGHT_MAP : packet.getHeightMaps(),
             coordOffset.offsetBlockEntityInfos(packet.getBlockEntities()),
-            packet.getLightData()
+            CONFIG.client.extra.coordObfuscation.obfuscateChunkLighting ? CACHE.getChunkCache().createFullBrightLightData(packet.getLightData(), sections.length) : packet.getLightData()
         );
     }
 }
