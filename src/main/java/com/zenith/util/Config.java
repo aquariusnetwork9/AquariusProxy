@@ -470,6 +470,7 @@ public final class Config {
                 public int constantOffsetMinSpawnDistance = 100000; // min distance to spawn the actual coords are before player is disconnected
                 public int atLocationX = 0;
                 public int atLocationZ = 0;
+                public int delayPlayerLoginsAfterTpMs = 1000;
                 public enum ObfuscationMode {
                     RANDOM_OFFSET,
                     CONSTANT_OFFSET,

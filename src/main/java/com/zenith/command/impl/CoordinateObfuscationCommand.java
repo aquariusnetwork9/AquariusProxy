@@ -67,13 +67,16 @@ public class CoordinateObfuscationCommand extends Command {
                 if (b && CONFIG.client.extra.coordObfuscation.validateSetup) {
                     var result = MODULE.get(CoordObfuscator.class).validateSetup();
                     if (!result.valid()) {
-                        var description = String.join("\n", result.invalidReasons());
-                        if (description.length() > 4000) {
-                            description = description.substring(0, 4000) + "...";
+                        StringBuilder description = new StringBuilder();
+                        for (var reason : result.invalidReasons()) {
+                            if (description.length() + reason.length() > 4000) {
+                                break;
+                            }
+                            description.append(reason).append("\n");
                         }
                         c.getSource().getEmbed()
                             .title("Validation Error")
-                            .description(description)
+                            .description(description.toString())
                             .errorColor();
                         return ERROR;
                     }

@@ -10,6 +10,7 @@ import com.zenith.cache.CacheResetType;
 import com.zenith.cache.CachedData;
 import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.dimension.DimensionData;
+import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.util.BrandSerializer;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -515,6 +516,10 @@ public class ChunkCache implements CachedData {
             CACHE_LOG.error("Respawn packet tried updating dimension to unregistered dimension: {}", info.getDimension());
             CACHE_LOG.error("Things are going to break...");
         } else {
+            var vanillaRegistryDim = DimensionRegistry.REGISTRY.get(newDim.id());
+            if (vanillaRegistryDim == null || !vanillaRegistryDim.name().equals(newDim.name())) {
+                CACHE_LOG.warn("Server is switching us to a non-vanilla dimension: {} {}", newDim.id(), newDim.name());
+            }
             this.currentDimension = newDim;
             this.worldName = Key.key("minecraft", currentDimension.name());
         }

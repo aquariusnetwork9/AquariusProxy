@@ -79,6 +79,10 @@ public class CoordObfuscator extends Module {
         return CONFIG.client.extra.coordObfuscation.enabled;
     }
 
+    public boolean shouldObfuscateSession(ServerSession session) {
+        return playerStateMap.containsKey(session);
+    }
+
     @Override
     public PacketHandlerCodec registerServerPacketHandlerCodec() {
         return PacketHandlerCodec.serverBuilder()
@@ -132,6 +136,7 @@ public class CoordObfuscator extends Module {
             .build();
     }
 
+    @Override
     public PacketHandlerCodec registerClientPacketHandlerCodec() {
         return PacketHandlerCodec.clientBuilder()
             .setId("coord-obf-client")
@@ -148,13 +153,13 @@ public class CoordObfuscator extends Module {
                 .build())
             .build();
     }
-    AtomicLong awaitLoginsUntil = new AtomicLong(0);
-    PacketHandlerCodec loginSlowDownPacketHandlerCodec = PacketHandlerCodec.serverBuilder()
+    final AtomicLong awaitLoginsUntil = new AtomicLong(0);
+    final PacketHandlerCodec loginSlowDownPacketHandlerCodec = PacketHandlerCodec.serverBuilder()
         .setId("coord-obf-rate-limit")
         .setPriority(Integer.MAX_VALUE-1)
         .state(ProtocolState.LOGIN, PacketHandlerStateCodec.serverBuilder()
             .registerInbound(ServerboundLoginAcknowledgedPacket.class, (packet, session) -> {
-                if(Wait.waitUntil(() -> awaitLoginsUntil.get() < System.currentTimeMillis(), 5)) {
+                if(Wait.waitUntil(() -> awaitLoginsUntil.get() < System.currentTimeMillis() || session.isDisconnected(), 5)) {
                     return packet;
                 }
                 session.disconnect("[Coord Obfuscation] Login took too long");
@@ -213,20 +218,20 @@ public class CoordObfuscator extends Module {
                 disconnect(event.session(), "Queueing");
                 return;
             }
-            if (CACHE.getChunkCache().getCache().size() < 24) {
+            if (CACHE.getChunkCache().getCache().size() < 12) {
                 info("Reconnecting {} due to chunk cache not being populated", event.session().getProfileCache().getProfile().getName());
                 reconnect(event.session());
                 return;
             }
-            ServerSession serverConnection = event.session();
-            var profile = serverConnection.getProfileCache().getProfile();
+            var session = event.session();
+            var profile = session.getProfileCache().getProfile();
             var proxyProfile = CACHE.getProfileCache().getProfile();
             if (CONFIG.client.extra.coordObfuscation.exemptProxyAccount && profile != null && proxyProfile != null && profile.getId().equals(proxyProfile.getId())) {
                 info("Exempted proxy account session with no offset: {}", profile.getName());
                 return;
             }
-            var state = new ObfPlayerState(serverConnection);
-            playerStateMap.put(serverConnection, state);
+            var state = new ObfPlayerState(session);
+            playerStateMap.put(session, state);
             var playerPos = state.getPlayerPos();
             var coordOffset = generateOffset(event.session(), playerPos.getX(), playerPos.getZ());
             state.setCoordOffset(coordOffset);
@@ -411,7 +416,7 @@ public class CoordObfuscator extends Module {
     }
 
     public void reconnect(ServerSession session) {
-        awaitLoginsUntil.set(System.currentTimeMillis() + 1000);
+        delayIncomingLogins();
         if (session.isSpectator()) {
             session.transferToSpectator();
         } else {
@@ -434,12 +439,13 @@ public class CoordObfuscator extends Module {
         }
     }
 
-    public boolean shouldObfuscateSession(ServerSession session) {
-        return playerStateMap.containsKey(session);
+    public void disconnect(ServerSession session, String reason) {
+        delayIncomingLogins();
+        session.disconnect(ComponentSerializer.minimessage("<red>[Coordinate Obfuscation]</red> <gray>" + reason));
     }
 
-    public void disconnect(ServerSession session, String reason) {
-        session.disconnect(ComponentSerializer.minimessage("<red>[Coordinate Obfuscation]</red> <gray>" + reason));
+    public void delayIncomingLogins() {
+        awaitLoginsUntil.set(System.currentTimeMillis() + CONFIG.client.extra.coordObfuscation.delayPlayerLoginsAfterTpMs);
     }
 
     public record ValidationResult(boolean valid, List<String> invalidReasons) {}
