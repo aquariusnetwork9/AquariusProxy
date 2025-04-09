@@ -386,7 +386,7 @@ public class CoordObfuscator extends Module {
             z += preTeleportClientPos.getZ();
         }
         setServerTeleportPos(session, x, y, z, teleportId);
-        if (session.isRespawning()) {
+        if (getPlayerState(session).isRespawning()) {
             info("Reconnecting {} due to teleport during respawn", session.getProfileCache().getProfile().getName());
             reconnect(session);
 //            var futureOffset = generateOffset(session, x, z);
@@ -420,7 +420,7 @@ public class CoordObfuscator extends Module {
     }
 
     public void onRespawn(final ServerSession session, final int dimension) {
-        session.setRespawning(true);
+        getPlayerState(session).setRespawning(true);
         // todo: could be possible to avoid a reconnect here
         //  needs more testing
         reconnect(session);

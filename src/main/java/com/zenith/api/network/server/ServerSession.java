@@ -46,6 +46,7 @@ import java.io.IOException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
@@ -67,6 +68,7 @@ public class ServerSession extends TcpServerSession {
             throw new IllegalStateException("Failed to generate server key pair.", e);
         }
     }
+    private static final SecureRandom random = new SecureRandom();
 
     private final byte[] challenge = new byte[4];
     private String username = "";
@@ -111,7 +113,10 @@ public class ServerSession extends TcpServerSession {
     protected ServerProfileCache profileCache = new ServerProfileCache();
     protected ServerProfileCache spectatorFakeProfileCache = new ServerProfileCache();
     protected PlayerCache spectatorPlayerCache = new PlayerCache(new EntityCache());
-    protected SpectatorEntity spectatorEntity;
+    protected SpectatorEntity spectatorEntity = SpectatorEntityRegistry.getSpectatorEntityWithDefault(CONFIG.server.spectator.spectatorEntity);
+    private final long connectionTimeEpochMs = Instant.now().toEpochMilli();
+    @Getter(lazy = true) private final PacketRateLimiter packetRateLimiter = new PacketRateLimiter();
+    public static final LoginRateLimiter LOGIN_RATE_LIMITER = new LoginRateLimiter();
 
     /**
      * Team data
@@ -123,10 +128,6 @@ public class ServerSession extends TcpServerSession {
     private static final Component suffix = Component.text("");
     private static final boolean friendlyFire = false;
     private static final boolean seeFriendlyInvisibles = false;
-    protected boolean respawning = false;
-    private final long connectionTimeEpochMs = Instant.now().toEpochMilli();
-    @Getter(lazy = true) private final PacketRateLimiter packetRateLimiter = new PacketRateLimiter();
-    public static final LoginRateLimiter LOGIN_RATE_LIMITER = new LoginRateLimiter();
 
     public KeyPair getKeyPair() {
         return KEY_PAIR;
@@ -138,8 +139,7 @@ public class ServerSession extends TcpServerSession {
 
     public ServerSession(final String host, final int port, final MinecraftProtocol protocol, final TcpServer server) {
         super(host, port, protocol, server);
-        ThreadLocalRandom.current().nextBytes(this.challenge);
-        initSpectatorEntity();
+        random.nextBytes(this.challenge);
     }
 
     public EventLoop getEventLoop() {
@@ -328,10 +328,6 @@ public class ServerSession extends TcpServerSession {
 
     public boolean hasCameraTarget() {
         return cameraTarget != null;
-    }
-
-    public void initSpectatorEntity() {
-        this.spectatorEntity = SpectatorEntityRegistry.getSpectatorEntityWithDefault(CONFIG.server.spectator.spectatorEntity);
     }
 
     // todo: might rework this to handle respawns in some central place

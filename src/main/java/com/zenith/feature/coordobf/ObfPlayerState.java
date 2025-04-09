@@ -15,4 +15,5 @@ public class ObfPlayerState {
     // this position shouldn't be trusted as its entirely controlled by players, but is useful for tracking their relative movement
     private final MutableVec3d playerPos = new MutableVec3d(CACHE.getPlayerCache().getX(), CACHE.getPlayerCache().getY(), CACHE.getPlayerCache().getZ());
     private CoordOffset coordOffset = new CoordOffset(0, 0);
+    private boolean respawning = false;
 }
