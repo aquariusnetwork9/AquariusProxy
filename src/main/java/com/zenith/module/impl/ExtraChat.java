@@ -44,10 +44,10 @@ public class ExtraChat extends Module {
             .setId("extra-chat")
             .setPriority(-1)
             .state(ProtocolState.GAME, PacketHandlerStateCodec.serverBuilder()
-                .registerOutbound(ClientboundSystemChatPacket.class, new ECSystemChatOutgoingHandler())
-                .registerOutbound(ClientboundPlayerChatPacket.class, new ECPlayerChatOutgoingHandler())
-                .registerInbound(ServerboundChatCommandPacket.class, new ECChatCommandIncomingHandler())
-                .registerInbound(ServerboundChatCommandSignedPacket.class, new ECSignedChatCommandIncomingHandler())
+                .outbound(ClientboundSystemChatPacket.class, new ECSystemChatOutgoingHandler())
+                .outbound(ClientboundPlayerChatPacket.class, new ECPlayerChatOutgoingHandler())
+                .inbound(ServerboundChatCommandPacket.class, new ECChatCommandIncomingHandler())
+                .inbound(ServerboundChatCommandSignedPacket.class, new ECSignedChatCommandIncomingHandler())
                 .build())
             .build();
     }

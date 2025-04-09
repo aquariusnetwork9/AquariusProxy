@@ -49,7 +49,7 @@ public class Requeue extends Module {
             .setId("requeue")
             .setPriority(10)
             .state(ProtocolState.GAME, PacketHandlerStateCodec.clientBuilder()
-                .registerOutbound(ServerboundKeepAlivePacket.class, (packet, session) -> null)
+                .outbound(ServerboundKeepAlivePacket.class, (packet, session) -> null)
                 .build())
             .build();
     }

@@ -72,27 +72,27 @@ public class PacketHandlerStateCodec<S extends Session> {
         // If set to false, cancels any inbound packet type with no handler registered
         protected boolean allowUnhandledInbound = true;
 
-        public <P extends Packet> PacketHandlerStateCodec.Builder<S> registerInbound(@NonNull Class<P> packetClass, @NonNull PacketHandler<P, S> handler) {
+        public <P extends Packet> PacketHandlerStateCodec.Builder<S> inbound(@NonNull Class<P> packetClass, @NonNull PacketHandler<P, S> handler) {
             this.inboundHandlers.put(packetClass, handler);
             return this;
         }
 
-        public <P extends Packet> PacketHandlerStateCodec.Builder<S> registerOutbound(@NonNull Class<P> packetClass, @NonNull PacketHandler<P, S> handler) {
+        public <P extends Packet> PacketHandlerStateCodec.Builder<S> outbound(@NonNull Class<P> packetClass, @NonNull PacketHandler<P, S> handler) {
             this.outboundHandlers.put(packetClass, handler);
             return this;
         }
 
-        public <P extends Packet> PacketHandlerStateCodec.Builder<S> registerPostOutbound(@NonNull Class<P> packetClass, @NonNull PostOutgoingPacketHandler<P, S> handler) {
+        public <P extends Packet> PacketHandlerStateCodec.Builder<S> postOutbound(@NonNull Class<P> packetClass, @NonNull PostOutgoingPacketHandler<P, S> handler) {
             this.postOutboundHandlers.put(packetClass, handler);
             return this;
         }
 
-        public <P extends Packet> PacketHandlerStateCodec.Builder<S> registerPostOutbound(@NonNull Class<P> packetClass, @NonNull AsyncPacketHandler<P, S> handler) {
+        public <P extends Packet> PacketHandlerStateCodec.Builder<S> postOutbound(@NonNull Class<P> packetClass, @NonNull AsyncPacketHandler<P, S> handler) {
             this.postOutboundHandlers.put(packetClass, handler);
             return this;
         }
 
-        public <P extends Packet> PacketHandlerStateCodec.Builder<S> registerPostOutbound(@NonNull Class<P> packetClass, @NonNull ClientEventLoopPacketHandler<P, ClientSession> handler) {
+        public <P extends Packet> PacketHandlerStateCodec.Builder<S> postOutbound(@NonNull Class<P> packetClass, @NonNull ClientEventLoopPacketHandler<P, ClientSession> handler) {
             this.postOutboundHandlers.put(packetClass, (PacketHandler<P, S>) handler);
             return this;
         }
