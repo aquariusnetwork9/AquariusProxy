@@ -191,7 +191,7 @@ Current limits are documented in [a discord channel](https://discord.com/channel
 
 I highly recommend using [Intellij](https://www.jetbrains.com/idea/) for building and running local development instances.
 
-Gradle will automatically install the required Java version for compiling (currently Java 23)
+Gradle will automatically install the required Java version for compiling (currently Java 24)
 
 Most useful gradle tasks:
 * `run` - Builds and runs a local dev instance

@@ -13,7 +13,7 @@ group = "com.zenith"
 version = "1.21.0"
 
 val javaReleaseVersion = 21
-val javaVersion = JavaLanguageVersion.of(23)
+val javaVersion = JavaLanguageVersion.of(24)
 val javaLauncherProvider = javaToolchains.launcherFor { languageVersion = javaVersion }
 java {
     toolchain { languageVersion = javaVersion }
@@ -164,7 +164,7 @@ tasks {
         workingDir = layout.projectDirectory.dir("run").asFile
         classpath = sourceSets.main.get().runtimeClasspath
         mainClass.set("com.zenith.Proxy")
-        jvmArgs = listOf("-Xmx300m", "-XX:+UseG1GC")
+        jvmArgs = listOf("-Xmx300m", "-XX:+UseG1GC", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseCompactObjectHeaders")
         standardInput = System.`in`
         environment("ZENITH_DEV", "true")
         outputs.upToDateWhen { false }
@@ -268,6 +268,8 @@ graalvmNative {
                 "-H:DeadlockWatchdogInterval=30",
                 "-H:IncludeLocales=en",
                 "-H:+CompactingOldGen",
+                "-H:+TrackPrimitiveValues",
+                "-H:+UsePredicates",
 //                "--emit build-report",
                 "-R:MaxHeapSize=200m",
                 "-march=x86-64-v3",
