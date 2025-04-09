@@ -18,7 +18,7 @@ public class COChunksBiomesHandler implements PacketHandler<ClientboundChunksBio
             .map(biomeData -> new ChunkBiomeData(
                 coordObf.getCoordOffset(session).offsetChunkX(biomeData.getX()),
                 coordObf.getCoordOffset(session).offsetChunkZ(biomeData.getZ()),
-                biomeData.getPalettes()
+                coordObf.getCoordOffset(session).obfuscateBiomePalettes(biomeData.getPalettes())
             ))
             .collect(Collectors.toList()));
     }

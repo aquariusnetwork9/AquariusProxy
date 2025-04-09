@@ -8,13 +8,15 @@ import com.viaversion.nbt.tag.ListTag;
 import com.viaversion.nbt.tag.Tag;
 import com.zenith.feature.player.World;
 import com.zenith.mc.block.BlockRegistry;
-import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.mc.item.ItemRegistry;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ReferenceSet;
 import org.cloudburstmc.math.vector.Vector3i;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.ChunkSection;
+import org.geysermc.mcprotocollib.protocol.data.game.chunk.DataPalette;
+import org.geysermc.mcprotocollib.protocol.data.game.chunk.palette.PaletteType;
+import org.geysermc.mcprotocollib.protocol.data.game.chunk.palette.SingletonPalette;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponent;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentType;
@@ -25,9 +27,9 @@ import org.geysermc.mcprotocollib.protocol.data.game.level.particle.ItemParticle
 import org.geysermc.mcprotocollib.protocol.data.game.level.particle.Particle;
 import org.geysermc.mcprotocollib.protocol.data.game.level.particle.VibrationParticleData;
 import org.geysermc.mcprotocollib.protocol.data.game.level.particle.positionsource.BlockPositionSource;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundLevelChunkWithLightPacket;
 
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -189,41 +191,57 @@ public record CoordOffset(
         return itemStack;
     }
 
-    public boolean shouldAddBedrockLayerToChunkData() {
-        DimensionData currentDimension = World.getCurrentDimension();
-        return CONFIG.client.extra.coordObfuscation.obfuscateBedrock && currentDimension != DimensionRegistry.THE_END;
-    }
-    // all of this is terribly inefficient with memory copies but seems unavoidable if we apply this at the packet handler
-    public ChunkSection[] addBedrockLayerToChunkData(final ClientboundLevelChunkWithLightPacket p) {
+    public ChunkSection[] obfuscateChunkSections(final ChunkSection[] originalSections) {
         var currentDimension = World.getCurrentDimension();
-        // generally this will always be true unless we're serving chunks from cache
-        // deep copy sections so we don't stomp on other sessions being sent this packet
-        var sections = p.getSections();
+        var shouldAddBedrockLayer = CONFIG.client.extra.coordObfuscation.obfuscateBedrock
+            && (currentDimension.id() == DimensionRegistry.OVERWORLD.id() || currentDimension.id() == DimensionRegistry.THE_NETHER.id());
+        var shouldReplaceBiomes = CONFIG.client.extra.coordObfuscation.obfuscateBiomes;
 
-        // set all blocks to bedrock within minY and minY + 5
-        var bottomSection = new ChunkSection(sections[0]);
-        sections[0] = bottomSection;
-        for (int x = 0; x < 16; x++) {
-            for (int z = 0; z < 16; z++) {
-                for (int y = 0; y < 5; y++) {
-                    bottomSection.setBlock(x, y, z, BlockRegistry.BEDROCK.minStateId());
-                }
-            }
-        }
-        if (currentDimension.id() == DimensionRegistry.THE_NETHER.id()) {
-            // set nether ceiling layers to bedrock
-            ChunkSection topSection = new ChunkSection(sections[7]);
-            sections[7] = topSection;
-            for (int x = 0; x < 16; x++) {
-                for (int z = 0; z < 16; z++) {
-                    for (int y = 11; y < 16; y++) {
-                        topSection.setBlock(x, y, z, BlockRegistry.BEDROCK.minStateId());
+        if (!shouldAddBedrockLayer && !shouldReplaceBiomes) return originalSections;
+
+        var nether = currentDimension.id() == DimensionRegistry.THE_NETHER.id();
+        // not a deep copy of the sections, only a shallow copy of the array
+        var sections = Arrays.copyOf(originalSections, originalSections.length);
+        for (int i = 0; i < sections.length; i++) {
+            var bedrockInThisSection = shouldAddBedrockLayer && (i == 0 || (nether && i == 7));
+            if (bedrockInThisSection || shouldReplaceBiomes) {
+                var newSection = new ChunkSection(sections[i]);
+                if (bedrockInThisSection) {
+                    if (i == 0) {
+                        for (int x = 0; x < 16; x++) {
+                            for (int z = 0; z < 16; z++) {
+                                for (int y = 0; y < 5; y++) {
+                                    newSection.setBlock(x, y, z, BlockRegistry.BEDROCK.minStateId());
+                                }
+                            }
+                        }
+                    } else if (nether && i == 7) {
+                        for (int x = 0; x < 16; x++) {
+                            for (int z = 0; z < 16; z++) {
+                                for (int y = 11; y < 16; y++) {
+                                    newSection.setBlock(x, y, z, BlockRegistry.BEDROCK.minStateId());
+                                }
+                            }
+                        }
                     }
                 }
+                if (shouldReplaceBiomes) {
+                    newSection.setBiomeData(defaultBiomePalette);
+                }
+                sections[i] = newSection;
             }
         }
         return sections;
     }
+
+    public DataPalette[] obfuscateBiomePalettes(final DataPalette[] originalPalettes) {
+        if (!CONFIG.client.extra.coordObfuscation.obfuscateBiomes) return originalPalettes;
+        var palettes = new DataPalette[originalPalettes.length];
+        Arrays.fill(palettes, defaultBiomePalette);
+        return palettes;
+    }
+
+    static DataPalette defaultBiomePalette = new DataPalette(new SingletonPalette(39), null, PaletteType.BIOME);
 
     public Particle offsetParticle(Particle particle) {
         if (particle == null) return particle;

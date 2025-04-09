@@ -54,6 +54,8 @@ public class CoordinateObfuscationCommand extends Command {
                 "constantOffsetNetherTranslate on/off",
                 "constantOffsetMinSpawnDistance <blocks>",
                 "atLocation <x> <z>",
+                "obfuscateBedrock on/off",
+                "obfuscateBiomes on/off",
                 "validateSetup on/off"
             )
             .build();
@@ -88,61 +90,50 @@ public class CoordinateObfuscationCommand extends Command {
             .then(literal("mode")
                       .then(literal("constant").executes(c -> {
                           CONFIG.client.extra.coordObfuscation.mode = ObfuscationMode.CONSTANT_OFFSET;
-                          return OK;
                       }))
                       .then(literal("random").executes(c -> {
                           CONFIG.client.extra.coordObfuscation.mode = ObfuscationMode.RANDOM_OFFSET;
-                          return OK;
                       }))
                       .then(literal("atLocation").executes(c -> {
                           CONFIG.client.extra.coordObfuscation.mode = ObfuscationMode.AT_LOCATION;
-                          return OK;
                       })))
             .then(literal("regenOnTpMinDistance").then(argument("blocks", integer(64)).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin = c.getArgument("blocks", Integer.class);
-                return OK;
             })))
             .then(literal("randomBound").then(argument("randomBound", integer(0, 1000000)).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.randomBound = c.getArgument("randomBound", Integer.class);
-                return OK;
             })))
             .then(literal("randomMinOffset").then(argument("minOffset", integer(0, 30000000)).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.randomMinOffset = c.getArgument("minOffset", Integer.class);
-                return OK;
             })))
             .then(literal("randomMinSpawnDistance").then(argument("minSpawnDistance", integer(0, 30000000)).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.randomMinSpawnDistance = c.getArgument("minSpawnDistance", Integer.class);
-                return OK;
             })))
             .then(literal("constantOffset").then(argument("xOffset", integer(-30000000, 30000000)).then(argument("zOffset", integer(-30000000, 30000000)).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.constantOffsetX = c.getArgument("xOffset", Integer.class);
                 CONFIG.client.extra.coordObfuscation.constantOffsetZ = c.getArgument("zOffset", Integer.class);
-                return OK;
             }))))
             .then(literal("constantOffsetNetherTranslate").then(argument("toggleArg", toggle()).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.constantOffsetNetherTranslate = getToggle(c, "toggleArg");
-                return OK;
             })))
             .then(literal("constantOffsetMinSpawnDistance").then(argument("chunks", integer(0, 30000000)).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.constantOffsetMinSpawnDistance = getInteger(c, "chunks");
-                return OK;
             })))
             .then(literal("atLocation").then(argument("x", integer(-30000000, 30000000)).then(argument("z", integer(-30000000, 30000000)).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.atLocationX = c.getArgument("x", Integer.class);
                 CONFIG.client.extra.coordObfuscation.atLocationZ = c.getArgument("z", Integer.class);
-                return OK;
             }))))
+            .then(literal("obfuscateBedrock").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.coordObfuscation.obfuscateBedrock = getToggle(c, "toggle");
+            })))
+            .then(literal("obfuscateBiomes").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.coordObfuscation.obfuscateBiomes = getToggle(c, "toggle");
+            })))
             .then(literal("validateSetup").then(argument("toggleArg", toggle()).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.validateSetup = getToggle(c, "toggleArg");
-                c.getSource().getEmbed()
-                    .addField("Validate Setup", toggleStr(CONFIG.client.extra.coordObfuscation.validateSetup), false);
-                return OK;
             })))
             .then(literal("exemptProxyAccount").then(argument("toggleArg", toggle()).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.exemptProxyAccount = getToggle(c, "toggleArg");
-                c.getSource().getEmbed()
-                    .addField("Exempt Proxy Account", toggleStr(CONFIG.client.extra.coordObfuscation.exemptProxyAccount), false);
-                return OK;
             })));
     }
 
@@ -161,6 +152,8 @@ public class CoordinateObfuscationCommand extends Command {
             .addField("Constant Offset Nether Translate", toggleStr(CONFIG.client.extra.coordObfuscation.constantOffsetNetherTranslate))
             .addField("Constant Offset Minimum Spawn Distance", CONFIG.client.extra.coordObfuscation.constantOffsetMinSpawnDistance)
             .addField("At Location", CONFIG.client.extra.coordObfuscation.atLocationX + ", " + CONFIG.client.extra.coordObfuscation.atLocationZ)
+            .addField("Obfuscate Bedrock", toggleStr(CONFIG.client.extra.coordObfuscation.obfuscateBedrock))
+            .addField("Obfuscate Biomes", toggleStr(CONFIG.client.extra.coordObfuscation.obfuscateBiomes))
             .primaryColor();
         MODULE.get(CoordObfuscator.class).onConfigChange();
     }
