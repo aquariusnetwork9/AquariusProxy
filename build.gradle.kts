@@ -277,6 +277,7 @@ graalvmNative {
                 "-J-XX:MaxRAMPercentage=90",
                 "--install-exit-handlers",
 //                "--enable-monitoring=jfr"
+                "--enable-native-access=ALL-UNNAMED",
                 "--initialize-at-run-time=sun.net.dns.ResolverConfigurationImpl", // fix for windows builds, exception when doing srv lookups with netty
             )
             val pgoPath = System.getenv("GRAALVM_PGO_PATH")
