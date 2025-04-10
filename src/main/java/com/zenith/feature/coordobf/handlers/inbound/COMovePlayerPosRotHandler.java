@@ -48,14 +48,14 @@ public class COMovePlayerPosRotHandler implements PacketHandler<ServerboundMoveP
         }
         double reverseOffsetX = coordObf.getCoordOffset(session).reverseOffsetX(packet.getX());
         double reverseOffsetZ = coordObf.getCoordOffset(session).reverseOffsetZ(packet.getZ());
-        var serverTp = state.getServerTeleport();
+        var serverTp = state.getServerTeleports().peek();
         if (serverTp != null && !session.isSpectator()) {
             if (MathHelper.isInRange(reverseOffsetX, serverTp.x(), CoordOffset.EPSILON * 2)
                 && packet.getY() == serverTp.y()
                 && MathHelper.isInRange(reverseOffsetZ, serverTp.z(), CoordOffset.EPSILON * 2)
             ) {
                 coordObf.info("[{}] Accepting server teleport {}", session.getName(), serverTp.id());
-                state.setServerTeleport(null);
+                state.getServerTeleports().poll();
                 return new ServerboundMovePlayerPosRotPacket(
                     false,
                     serverTp.x(),

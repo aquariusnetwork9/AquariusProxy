@@ -235,6 +235,11 @@ public class CoordObfuscator extends Module {
                 reconnect(event.session());
                 return;
             }
+            if (!CACHE.getPlayerCache().getTeleportQueue().isEmpty()) {
+                info("Reconnecting {} due to teleport queue not being empty", event.session().getName());
+                reconnect(event.session());
+                return;
+            }
             var session = event.session();
             var profile = session.getProfileCache().getProfile();
             var proxyProfile = CACHE.getProfileCache().getProfile();
@@ -345,7 +350,7 @@ public class CoordObfuscator extends Module {
 
     public void setServerTeleportPos(final ServerSession session, final double x, final double y, final double z, final int teleportId) {
         if (session.isSpectator()) return; // ignore for spectators
-        getPlayerState(session).setServerTeleport(new ObfPlayerState.ServerTeleport(x, y, z, teleportId));
+        getPlayerState(session).getServerTeleports().add(new ObfPlayerState.ServerTeleport(x, y, z, teleportId));
     }
 
     public void awaitNextClientTick(ServerSession session) {
