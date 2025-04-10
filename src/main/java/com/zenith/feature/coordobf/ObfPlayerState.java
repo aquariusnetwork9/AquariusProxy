@@ -4,6 +4,7 @@ import com.zenith.api.network.server.ServerSession;
 import com.zenith.util.math.MutableVec3d;
 import lombok.Data;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import static com.zenith.Globals.CACHE;
 
@@ -16,4 +17,8 @@ public class ObfPlayerState {
     private final MutableVec3d playerPos = new MutableVec3d(CACHE.getPlayerCache().getX(), CACHE.getPlayerCache().getY(), CACHE.getPlayerCache().getZ());
     private CoordOffset coordOffset = new CoordOffset(0, 0);
     private boolean respawning = false;
+    private boolean isInGame = false; // player has accepted the join game packet and spawned at correct position
+    private @Nullable ServerTeleport serverTeleport = null;
+
+    public record ServerTeleport(double x, double y, double z, int id) {}
 }

@@ -21,8 +21,6 @@ import com.zenith.util.TickTimerManager;
 import com.zenith.util.Wait;
 import com.zenith.util.math.MathHelper;
 import com.zenith.util.math.MutableVec3d;
-import lombok.Getter;
-import lombok.Setter;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PositionElement;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
@@ -57,12 +55,8 @@ import static com.zenith.Globals.*;
 public class CoordObfuscator extends Module {
     private final Random random = new SecureRandom();
     private final Map<ServerSession, ObfPlayerState> playerStateMap = new ConcurrentHashMap<>();
-    @Getter
-    private final MutableVec3d serverTeleportPos = new MutableVec3d(0.0, 0.0, 0.0);
     private int preTeleportId = Integer.MIN_VALUE;
     private final MutableVec3d preTeleportClientPos = new MutableVec3d(0.0, 0.0, 0.0);
-    @Getter @Setter
-    private boolean nextPlayerMovePacketIsTeleport = false;
 
     @Override
     public void subscribeEvents() {
@@ -330,15 +324,9 @@ public class CoordObfuscator extends Module {
         pos.setZ(z);
     }
 
-    public void setPlayerAcceptTeleport(final ServerSession session, final int id) {
-        if (session.isSpectator()) return; // ignore for spectators
-        // next player move packet needs to align with server's coords exactly
-        this.setNextPlayerMovePacketIsTeleport(true);
-    }
-
     public void setServerTeleportPos(final ServerSession session, final double x, final double y, final double z, final int teleportId) {
         if (session.isSpectator()) return; // ignore for spectators
-        this.serverTeleportPos.set(x, y, z);
+        getPlayerState(session).setServerTeleport(new ObfPlayerState.ServerTeleport(x, y, z, teleportId));
     }
 
     public void awaitNextClientTick(ServerSession session) {

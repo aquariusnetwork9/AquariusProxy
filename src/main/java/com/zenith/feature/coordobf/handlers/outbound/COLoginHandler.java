@@ -15,7 +15,7 @@ public class COLoginHandler implements PacketHandler<ClientboundLoginPacket, Ser
     @Override
     public ClientboundLoginPacket apply(final ClientboundLoginPacket packet, final ServerSession session) {
         var coordObf = MODULE.get(CoordObfuscator.class);
-        if (session.isInGame()) {
+        if (coordObf.getPlayerState(session).isInGame()) {
             // i.e. velocity world switching
             coordObf.disconnect(session, "World switching");
             return null;

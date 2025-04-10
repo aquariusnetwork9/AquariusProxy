@@ -90,7 +90,6 @@ public class ServerSession extends TcpServerSession {
     protected boolean whitelistChecked = false;
     protected boolean isPlayer = false;
     protected boolean isLoggedIn = false;
-    protected boolean isInGame = false; // player has accepted the join game packet and spawned at correct position
     protected boolean isSpectator = false;
     // we have performed the configuration phase at zenith
     // any subsequent configurations should pass through to client
