@@ -28,6 +28,7 @@ import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PositionElement;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundRespawnPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundStartConfigurationPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.*;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerLookAtPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
@@ -36,7 +37,6 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.spaw
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerSetContentPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerSetSlotPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.*;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundConfigurationAcknowledgedPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundAcceptTeleportationPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundMoveVehiclePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundSignUpdatePacket;
@@ -99,7 +99,6 @@ public class CoordObfuscator extends Module {
             .setPriority(Integer.MAX_VALUE-1) // 1 less than packet logger
             .setActivePredicate(this::shouldObfuscateSession)
             .state(ProtocolState.GAME, PacketHandlerStateCodec.serverBuilder()
-                .inbound(ServerboundConfigurationAcknowledgedPacket.class, new COConfigurationAckHandler())
                 .inbound(ServerboundAcceptTeleportationPacket.class, new COAcceptTeleportationHandler())
                 .inbound(ServerboundMoveVehiclePacket.class, new COSMoveVehicleHandler())
                 .inbound(ServerboundPlayerActionPacket.class, new COPlayerActionHandler())
@@ -108,6 +107,7 @@ public class CoordObfuscator extends Module {
                 .inbound(ServerboundSignUpdatePacket.class, new COSignUpdateHandler())
                 .inbound(ServerboundUseItemPacket.class, new COUseItemHandler())
                 .inbound(ServerboundUseItemOnPacket.class, new COUseItemOnHandler())
+                .outbound(ClientboundStartConfigurationPacket.class, new COCStartConfigurationHandler())
                 .outbound(ClientboundAddEntityPacket.class, new COAddEntityHandler())
                 .outbound(ClientboundAddExperienceOrbPacket.class, new COAddExperienceOrbHandler())
                 .outbound(ClientboundBlockDestructionPacket.class, new COBlockDestructionHandler())
