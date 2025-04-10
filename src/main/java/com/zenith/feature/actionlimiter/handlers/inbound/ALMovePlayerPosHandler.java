@@ -10,7 +10,7 @@ import static com.zenith.Globals.CONFIG;
 public class ALMovePlayerPosHandler implements PacketHandler<ServerboundMovePlayerPosPacket, ServerSession> {
     @Override
     public ServerboundMovePlayerPosPacket apply(final ServerboundMovePlayerPosPacket packet, final ServerSession session) {
-        if (CONFIG.client.extra.actionLimiter.allowMovement)
+        if (CONFIG.client.extra.actionLimiter.allowMovement  || !session.isSpawned())
             return packet;
         if (packet.getY() <= CONFIG.client.extra.actionLimiter.movementMinY) {
             session.disconnect("ActionLimiter: Movement not allowed");
