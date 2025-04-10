@@ -71,9 +71,10 @@ public class ServerSession extends TcpServerSession {
     private static final SecureRandom random = new SecureRandom();
 
     private final byte[] challenge = new byte[4];
-    private String username = "";
+    private String username = "?";
     // as requested by the player during login. may not be the same as what mojang api returns
-    private @Nullable UUID loginProfileUUID;
+    private final UUID defaultUUID = UUID.randomUUID();
+    private UUID loginProfileUUID = defaultUUID;
     private int protocolVersionId; // as reported by the client when they connected
     private String connectingServerAddress; // as reported by the client when they connected
     private int connectingServerPort; // as reported by the client when they connected
@@ -217,8 +218,8 @@ public class ServerSession extends TcpServerSession {
             final String reasonStr = ComponentSerializer.serializePlain(reason);
             if (!isSpectator()) {
                 SERVER_LOG.info("Player disconnected: UUID: {}, Username: {}, Address: {}, Reason {}",
-                                Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getId).orElse(null),
-                                Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getName).orElse(null),
+                                getUUID(),
+                                getName(),
                                 getRemoteAddress(),
                                 reasonStr,
                                 cause);
@@ -229,12 +230,12 @@ public class ServerSession extends TcpServerSession {
                     EVENT_BUS.post(new PlayerDisconnectedEvent(reasonStr));
                 }
                 Proxy.getInstance().getSpectatorConnections().forEach(s -> {
-                    s.sendAsyncAlert("<red>" + Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getName).orElse("?") + " disconnected from controlling player");
+                    s.sendAsyncAlert("<red>" + getName() + " disconnected from controlling player");
                 });
             } else {
                 SERVER_LOG.info("Spectator disconnected: UUID: {}, Username: {}, Address: {}, Reason {}",
-                                Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getId).orElse(null),
-                                Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getName).orElse(null),
+                                getUUID(),
+                                getName(),
                                 getRemoteAddress(),
                                 reasonStr,
                                 cause);
@@ -242,7 +243,7 @@ public class ServerSession extends TcpServerSession {
                 for (int i = 0; i < connections.length; i++) {
                     var connection = connections[i];
                     connection.send(new ClientboundRemoveEntitiesPacket(new int[]{this.spectatorEntityId}));
-                    connection.sendAsyncAlert("<red>" + Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getName).orElse("?") + " disconnected from spectator");
+                    connection.sendAsyncAlert("<red>" + getName() + " disconnected from spectator");
                 }
                 EVENT_BUS.postAsync(new SpectatorDisconnectedEvent(profileCache.getProfile()));
             }
@@ -361,7 +362,7 @@ public class ServerSession extends TcpServerSession {
             .map(ServerSession::getSpectatorEntityUUID)
             .map(UUID::toString)
             .collect(Collectors.toCollection(ArrayList::new));
-        if (!teamMembers.isEmpty()) teamMembers.add(profileCache.getProfile().getName());
+        if (!teamMembers.isEmpty()) teamMembers.add(getName());
         final List<String> toRemove = currentTeamMembers.stream()
             .filter(member -> !teamMembers.contains(member))
             .toList();
@@ -383,7 +384,7 @@ public class ServerSession extends TcpServerSession {
             ));
         }
         this.currentTeamMembers = teamMembers;
-        SERVER_LOG.debug("Synced Team members: {} for {}", currentTeamMembers, this.profileCache.getProfile().getName());
+        SERVER_LOG.debug("Synced Team members: {} for {}", currentTeamMembers, getName());
     }
 
     public String getMCVersion() {
@@ -392,6 +393,14 @@ public class ServerSession extends TcpServerSession {
 
     public ProtocolVersion getProtocolVersion() {
         return ProtocolVersion.getProtocol(protocolVersionId);
+    }
+
+    public String getName() {
+        return Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getName).orElse(username);
+    }
+
+    public UUID getUUID() {
+        return Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getId).orElse(loginProfileUUID);
     }
 
     public boolean canTransfer() {

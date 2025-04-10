@@ -23,7 +23,7 @@ public class ServerChatSpectatorHandler implements PacketHandler<ServerboundChat
         if (CONFIG.inGameCommands.enable) {
             EXECUTOR.execute(() -> {
                 if (IN_GAME_COMMAND.isCommandPrefixed(packet.getMessage())) {
-                    TERMINAL_LOG.info("{} executed spectator command: {}", session.getProfileCache().getProfile().getName(), packet.getMessage());
+                    TERMINAL_LOG.info("{} executed spectator command: {}", session.getName(), packet.getMessage());
                     if (CONFIG.server.spectator.fullCommandsEnabled && (!CONFIG.server.spectator.fullCommandsRequireRegularWhitelist || PLAYER_LISTS.getWhitelist().contains(session.getProfileCache().getProfile()))) {
                         final String fullCommandAndArgs = packet.getMessage().substring(CONFIG.inGameCommands.prefix.length()).trim(); // cut off the prefix
                         IN_GAME_COMMAND.handleInGameCommandSpectator(fullCommandAndArgs, session, true);
@@ -31,11 +31,11 @@ public class ServerChatSpectatorHandler implements PacketHandler<ServerboundChat
                         try {
                             handleCommandInput(packet.getMessage(), session);
                         } catch (Exception e) {
-                            SERVER_LOG.error("Failed to handle spectator command: {} from: {}", packet.getMessage(), session.getProfileCache().getProfile(), e);
+                            SERVER_LOG.error("Failed to handle spectator command: {} from: {}", packet.getMessage(), session.getName(), e);
                         }
                     }
                 } else {
-                    EVENT_BUS.postAsync(new PrivateMessageSendEvent(session.getProfileCache().getProfile().getId(), session.getProfileCache().getProfile().getName(), packet.getMessage()));
+                    EVENT_BUS.postAsync(new PrivateMessageSendEvent(session.getUUID(), session.getName(), packet.getMessage()));
                 }
             });
         }

@@ -12,7 +12,7 @@ public class StartConfigurationSpectatorOutgoingHandler implements PacketHandler
     public ClientboundStartConfigurationPacket apply(final ClientboundStartConfigurationPacket packet, final ServerSession session) {
         if (session.isConfigured()) {
             if (session.canTransfer()) {
-                SERVER_LOG.info("Reconnecting spectator: {} because client is switching servers", session.getProfileCache().getProfile().getName());
+                SERVER_LOG.info("Reconnecting spectator: {} because client is switching servers", session.getName());
                 session.transferToSpectator(CONFIG.server.getProxyAddressForTransfer(), CONFIG.server.getProxyPortForTransfer());
             } else {
                 session.disconnect("Client is switching servers");

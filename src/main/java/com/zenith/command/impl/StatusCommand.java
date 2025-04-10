@@ -54,7 +54,7 @@ public class StatusCommand extends Command {
     private String getCurrentClientUserName() {
         ServerSession currentConnection = Proxy.getInstance().getCurrentPlayer().get();
         if (nonNull(currentConnection)) {
-            return currentConnection.getProfileCache().getProfile().getName() + " [" + currentConnection.getPing() + "ms]";
+            return currentConnection.getName() + " [" + currentConnection.getPing() + "ms]";
         } else {
             return "None";
         }
@@ -62,7 +62,7 @@ public class StatusCommand extends Command {
 
     private List<String> getSpectatorUserNames() {
         return Proxy.getInstance().getSpectatorConnections().stream()
-                .map(connection -> connection.getProfileCache().getProfile().getName() + " [" + connection.getPing() + "ms]")
+                .map(connection -> connection.getName() + " [" + connection.getPing() + "ms]")
                 .collect(Collectors.toList());
     }
 

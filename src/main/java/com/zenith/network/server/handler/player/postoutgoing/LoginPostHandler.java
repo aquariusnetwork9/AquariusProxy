@@ -66,7 +66,7 @@ public class LoginPostHandler implements PostOutgoingPacketHandler<ClientboundLo
                 && channel.hasAttr(ZenithViaInitializer.VIA_USER)
                 && channel.pipeline().get(VLPipeline.VIA_CODEC_NAME) != null
             ) {
-                SERVER_LOG.debug("Disabling ViaVersion for player: {}", session.getProfileCache().getProfile().getName());
+                SERVER_LOG.debug("Disabling ViaVersion for player: {}", session.getName());
                 try {
                     var viaUser = channel.attr(ZenithViaInitializer.VIA_USER).get();
                     // remove via codec from channel pipeline
@@ -74,7 +74,7 @@ public class LoginPostHandler implements PostOutgoingPacketHandler<ClientboundLo
                     // dispose via connection state
                     Via.getManager().getConnectionManager().onDisconnect(viaUser);
                 } catch (final Throwable e) {
-                    SERVER_LOG.error("Error disabling ViaVersion for player: {}", session.getProfileCache().getProfile().getName(), e);
+                    SERVER_LOG.error("Error disabling ViaVersion for player: {}", session.getName(), e);
                 }
             }
         }

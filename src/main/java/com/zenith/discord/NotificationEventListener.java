@@ -757,7 +757,7 @@ public class NotificationEventListener {
                     var connections = Proxy.getInstance().getActiveConnections().getArray();
                     for (int i = 0; i < connections.length; i++) {
                         var connection = connections[i];
-                        var name = connection.getProfileCache().getProfile().getName();
+                        var name = connection.getName();
                         if (sender.equals(name)) {
                             sendPrivateMessage(event.message(), event.event());
                             pm = true;

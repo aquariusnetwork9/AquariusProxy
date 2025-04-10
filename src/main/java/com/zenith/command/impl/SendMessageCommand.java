@@ -38,8 +38,8 @@ public class SendMessageCommand extends Command {
                           if (c.getSource().getSource() == CommandSource.IN_GAME_PLAYER) {
                               var session = Proxy.getInstance().getCurrentPlayer().get();
                               if (session == null) return ERROR;
-                              var senderName = session.getProfileCache().getProfile().getName();
-                              var senderUUID = session.getProfileCache().getProfile().getId();
+                              var senderName = session.getName();
+                              var senderUUID = session.getUUID();
                               EVENT_BUS.postAsync(new PrivateMessageSendEvent(senderUUID, senderName, message));
                               c.getSource().setSensitiveInput(true);
                               c.getSource().setNoOutput(true);

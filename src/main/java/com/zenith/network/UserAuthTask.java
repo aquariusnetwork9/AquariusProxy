@@ -42,7 +42,7 @@ public class UserAuthTask implements Runnable {
                 return;
             }
             // blindly trusting the player's requested UUID if present
-            final var uuid = session.getLoginProfileUUID() == null
+            final var uuid = session.getLoginProfileUUID() == session.getDefaultUUID()
                 ? UUID.nameUUIDFromBytes(("OfflinePlayer:" + session.getUsername()).getBytes())
                 : session.getLoginProfileUUID();
             profile = new GameProfile(uuid, session.getUsername());

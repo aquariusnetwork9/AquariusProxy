@@ -183,7 +183,7 @@ public class CoordObfuscator extends Module {
     public ObfPlayerState getPlayerState(ServerSession session) {
         var state = playerStateMap.get(session);
         if (state == null) {
-            if (!session.isDisconnected()) error("Tried to get player state for {} but it was null", session.getProfileCache().getProfile().getName(), new Exception(""));
+            if (!session.isDisconnected()) error("Tried to get player state for {} but it was null", session.getName(), new Exception(""));
             disconnect(session, "Invalid state");
             return new ObfPlayerState(session);
         }
@@ -201,24 +201,24 @@ public class CoordObfuscator extends Module {
                 return;
             }
             if (Proxy.getInstance().getClient().isInQueue() || !Proxy.getInstance().getClient().isOnline()) {
-                info("Disconnecting {} as we are in queue", event.session().getProfileCache().getProfile().getName());
+                info("Disconnecting {} as we are in queue", event.session().getName());
                 disconnect(event.session(), "Queueing");
                 return;
             }
             awaitNextClientTick(event.session());
             if (event.session().isDisconnected()) return;
             if (CACHE.getPlayerCache().isRespawning()) {
-                info("Reconnecting {} due to respawn in progress", event.session().getProfileCache().getProfile().getName());
+                info("Reconnecting {} due to respawn in progress", event.session().getName());
                 reconnect(event.session());
                 return;
             }
             if (Proxy.getInstance().getClient().isInQueue()) {
-                info("Disconnecting {} as we are in queue", event.session().getProfileCache().getProfile().getName());
+                info("Disconnecting {} as we are in queue", event.session().getName());
                 disconnect(event.session(), "Queueing");
                 return;
             }
             if (CACHE.getChunkCache().getCache().size() < 12) {
-                info("Reconnecting {} due to chunk cache not being populated", event.session().getProfileCache().getProfile().getName());
+                info("Reconnecting {} due to chunk cache not being populated", event.session().getName());
                 reconnect(event.session());
                 return;
             }
@@ -281,7 +281,7 @@ public class CoordObfuscator extends Module {
 
     private CoordOffset generateConstantOffset(final ServerSession session, final double playerX, final double playerZ) {
         if (MathHelper.distance2d(0, 0, playerX, playerZ) < CONFIG.client.extra.coordObfuscation.constantOffsetMinSpawnDistance) {
-            info("Disconnecting {} as we are to too close to spawn", session.getProfileCache().getProfile().getName());
+            info("Disconnecting {} as we are to too close to spawn", session.getName());
             disconnect(session, "bye");
             return new CoordOffset(random.nextInt(12345, 999999), random.nextInt(12345, 999999));
         }
@@ -315,13 +315,13 @@ public class CoordObfuscator extends Module {
         MutableVec3d pos = state.getPlayerPos();
         if (!session.isSpectator()) {
             if (MathHelper.distance2d(x, z, pos.getX(), pos.getZ()) > CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin) {
-                info("Reconnecting {} due to long distance movement", session.getProfileCache().getProfile().getName());
+                info("Reconnecting {} due to long distance movement", session.getName());
                 reconnect(session);
                 return;
             }
             var playerMoveDist = MathHelper.distance2d(x, z, CACHE.getPlayerCache().getX(), CACHE.getPlayerCache().getZ());
             if (playerMoveDist > CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin) {
-                info("Reconnecting {} due to long distance movement", session.getProfileCache().getProfile().getName());
+                info("Reconnecting {} due to long distance movement", session.getName());
                 reconnect(session);
                 return;
             }
@@ -376,7 +376,7 @@ public class CoordObfuscator extends Module {
         // spectator position resync see SpectatorSync$syncSpectatorPositionToEntity
         if (teleportId == session.getSpawnTeleportId() && session.isSpectator() && session.isAllowSpectatorServerPlayerPosRotate()) return;
         if (preTeleportId != teleportId) {
-            warn("Unexpected teleport id {} != {} for {}", teleportId, preTeleportId, session.getProfileCache().getProfile().getName());
+            warn("Unexpected teleport id {} != {} for {}", teleportId, preTeleportId, session.getName());
             reconnect(session);
             return;
         }
@@ -391,7 +391,7 @@ public class CoordObfuscator extends Module {
         }
         setServerTeleportPos(session, x, y, z, teleportId);
         if (getPlayerState(session).isRespawning()) {
-            info("Reconnecting {} due to teleport during respawn", session.getProfileCache().getProfile().getName());
+            info("Reconnecting {} due to teleport during respawn", session.getName());
             reconnect(session);
 //            var futureOffset = generateOffset(session, x, z);
 //            info("Regenerated offset due to respawn teleport: {} {}", futureOffset.x(), futureOffset.z());
@@ -401,14 +401,14 @@ public class CoordObfuscator extends Module {
         }
 
         if (MathHelper.distance2d(x, z, preTeleportClientPos.getX(), preTeleportClientPos.getZ()) >= CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin) {
-            info("Reconnecting {} due to long distance teleport using preTeleportPos calc", session.getProfileCache().getProfile().getName());
+            info("Reconnecting {} due to long distance teleport using preTeleportPos calc", session.getName());
             reconnect(session);
             return;
         }
         // it is possible for controlling players to manipulate the player cache position temporarily
         // but chunk cache should be not be able to be manipulated
         if (MathHelper.distance2d(x / 16, z / 16, CACHE.getChunkCache().getCenterX(), CACHE.getChunkCache().getCenterZ()) >= CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin / 16.0) {
-            info("Reconnecting {} due to long distance teleport using chunk center calc", session.getProfileCache().getProfile().getName());
+            info("Reconnecting {} due to long distance teleport using chunk center calc", session.getName());
             reconnect(session);
             return;
         }
