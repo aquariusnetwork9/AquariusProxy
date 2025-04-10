@@ -134,6 +134,9 @@ public class CoordinateObfuscationCommand extends Command {
             })))
             .then(literal("exemptProxyAccount").then(argument("toggleArg", toggle()).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.exemptProxyAccount = getToggle(c, "toggleArg");
+            })))
+            .then(literal("debugPacketLog").then(argument("toggleArg", toggle()).executes(c -> {
+                CONFIG.client.extra.coordObfuscation.debugPacketLog = getToggle(c, "toggleArg");
             })));
     }
 

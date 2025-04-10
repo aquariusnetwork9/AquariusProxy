@@ -472,6 +472,7 @@ public final class Config {
                 public int atLocationX = 0;
                 public int atLocationZ = 0;
                 public int delayPlayerLoginsAfterTpMs = 1000;
+                public boolean debugPacketLog = false;
                 public enum ObfuscationMode {
                     RANDOM_OFFSET,
                     CONSTANT_OFFSET,

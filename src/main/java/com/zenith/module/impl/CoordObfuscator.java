@@ -7,6 +7,7 @@ import com.zenith.api.module.Module;
 import com.zenith.api.network.PacketCodecRegistries;
 import com.zenith.api.network.PacketHandlerCodec;
 import com.zenith.api.network.PacketHandlerStateCodec;
+import com.zenith.api.network.PacketLogPacketHandlerCodec;
 import com.zenith.api.network.server.ServerSession;
 import com.zenith.cache.data.PlayerCache;
 import com.zenith.feature.coordobf.CoordOffset;
@@ -16,11 +17,13 @@ import com.zenith.feature.coordobf.handlers.outbound.*;
 import com.zenith.feature.player.World;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
+import com.zenith.util.Config;
 import com.zenith.util.Config.Client.Extra.CoordObfuscation.ObfuscationMode;
 import com.zenith.util.TickTimerManager;
 import com.zenith.util.Wait;
 import com.zenith.util.math.MathHelper;
 import com.zenith.util.math.MutableVec3d;
+import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PositionElement;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
@@ -50,13 +53,25 @@ import java.util.concurrent.atomic.AtomicLong;
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Globals.*;
 
-// todo: delay player logins until teleport queue is empty, there's some race condition on dimension switch transfers where a tp is lost
-// todo: better way to determine if we should replace bedrock layer in a dimension. dimension registry is not guaranteed to be sync'd to server's dim registry
 public class CoordObfuscator extends Module {
     private final Random random = new SecureRandom();
     private final Map<ServerSession, ObfPlayerState> playerStateMap = new ConcurrentHashMap<>();
     private int preTeleportId = Integer.MIN_VALUE;
     private final MutableVec3d preTeleportClientPos = new MutableVec3d(0.0, 0.0, 0.0);
+
+    private final Config.Debug.PacketLog.PacketLogConfig packetLogConfig = new Config.Debug.PacketLog.PacketLogConfig();
+    private final PacketHandlerCodec beforeOffsetPacketLogger = new PacketLogPacketHandlerCodec(
+        Integer.MAX_VALUE-2,
+        "coord-obf-before-offset",
+        s -> CONFIG.debug.packetLog.enabled && CONFIG.client.extra.coordObfuscation.debugPacketLog,
+        ComponentLogger.logger("Module.CoordObf"),
+        () -> packetLogConfig
+    );
+
+    public CoordObfuscator() {
+        packetLogConfig.preSent = true;
+        packetLogConfig.preSentBody = true;
+    }
 
     @Override
     public void subscribeEvents() {
@@ -165,6 +180,7 @@ public class CoordObfuscator extends Module {
     public void onEnable() {
         reconnectAllActiveConnections();
         PacketCodecRegistries.SERVER_REGISTRY.register(loginSlowDownPacketHandlerCodec);
+        PacketCodecRegistries.SERVER_REGISTRY.register(beforeOffsetPacketLogger);
     }
 
     @Override
@@ -172,6 +188,7 @@ public class CoordObfuscator extends Module {
         PacketCodecRegistries.SERVER_REGISTRY.unregister(loginSlowDownPacketHandlerCodec);
         reconnectAllActiveConnections();
         playerStateMap.clear();
+        PacketCodecRegistries.SERVER_REGISTRY.unregister(beforeOffsetPacketLogger);
     }
 
     public ObfPlayerState getPlayerState(ServerSession session) {

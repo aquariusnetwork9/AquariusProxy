@@ -8,6 +8,7 @@ import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 
 import java.util.EnumMap;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import static com.zenith.Globals.CONFIG;
@@ -17,13 +18,32 @@ public class PacketLogPacketHandlerCodec extends PacketHandlerCodec {
     private final Logger logger;
 
     public PacketLogPacketHandlerCodec(
+        final int priority,
+        final String id,
+        Predicate<Session> enabledPredicate,
+        final Logger logger,
+        Supplier<PacketLogConfig> configSupplier
+    ) {
+        super(priority, id, new EnumMap<>(ProtocolState.class), enabledPredicate);
+        this.logger = logger;
+        this.configSupplier = configSupplier;
+    }
+
+    public PacketLogPacketHandlerCodec(
+        final int priority,
         final String id,
         final Logger logger,
         Supplier<PacketLogConfig> configSupplier
     ) {
-        super(Integer.MAX_VALUE, id, new EnumMap<>(ProtocolState.class), (session) -> CONFIG.debug.packetLog.enabled);
-        this.logger = logger;
-        this.configSupplier = configSupplier;
+        this(priority, id, (session) -> CONFIG.debug.packetLog.enabled, logger, configSupplier);
+    }
+
+    public PacketLogPacketHandlerCodec(
+        final String id,
+        final Logger logger,
+        Supplier<PacketLogConfig> configSupplier
+    ) {
+        this(Integer.MAX_VALUE, id, logger, configSupplier);
     }
 
     private void log(String message, Object... args) {
