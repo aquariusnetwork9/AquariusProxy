@@ -499,6 +499,7 @@ public final class Config {
                 public boolean allowInteract = true;
                 public boolean allowChat = true; // outbound chats
                 public boolean allowServerCommands = true; // includes whispers
+                public boolean exemptProxyAccount = false;
             }
         }
 

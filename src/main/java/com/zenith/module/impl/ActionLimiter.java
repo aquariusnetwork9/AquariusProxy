@@ -11,6 +11,7 @@ import com.zenith.feature.actionlimiter.handlers.inbound.*;
 import com.zenith.feature.actionlimiter.handlers.outbound.ALCMoveVehicleHandler;
 import com.zenith.feature.actionlimiter.handlers.outbound.ALLoginHandler;
 import com.zenith.feature.actionlimiter.handlers.outbound.ALPlayerPositionHandler;
+import com.zenith.util.math.MathHelper;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ReferenceSet;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
@@ -42,7 +43,6 @@ public class ActionLimiter extends Module {
             .setPriority(1000)
             .setActivePredicate(this::shouldLimit)
             .state(ProtocolState.GAME, PacketHandlerStateCodec.serverBuilder()
-                // todo: handle chunk and entity spawn packets to refuse sending if they are beyond home coords
                 .inbound(ServerboundChatCommandPacket.class, new ALChatCommandHandler())
                 .inbound(ServerboundChatCommandSignedPacket.class, new ALSignedChatCommandHandler())
                 .inbound(ServerboundChatPacket.class, new ALChatHandler())
@@ -77,12 +77,33 @@ public class ActionLimiter extends Module {
     }
 
     public void onPlayerLoginEvent(final PlayerLoginEvent.Pre event) {
-        ServerSession serverConnection = event.session();
-        var profile = serverConnection.getProfileCache().getProfile();
-        var proxyProfile = CACHE.getProfileCache().getProfile();
-        if (profile != null && proxyProfile != null && profile.getId().equals(proxyProfile.getId()))
-            return;
-        limitedConnections.add(serverConnection);
+        ServerSession session = event.session();
+        if (CONFIG.client.extra.actionLimiter.exemptProxyAccount) {
+            var profile = session.getProfileCache().getProfile();
+            var proxyProfile = CACHE.getProfileCache().getProfile();
+            if (profile != null && proxyProfile != null && profile.getId().equals(proxyProfile.getId())) {
+                // exempt by not adding to limited connection set
+            } else {
+                limitedConnections.add(session);
+            }
+        } else {
+            limitedConnections.add(session);
+        }
+        if (!CONFIG.client.extra.actionLimiter.allowMovement) {
+            if (CACHE.getPlayerCache().getY() <= CONFIG.client.extra.actionLimiter.movementMinY) {
+                info("Below home min Y");
+                disconnect(session, "Movement not allowed");
+            } else if (MathHelper.distance2d(
+                CONFIG.client.extra.actionLimiter.movementHomeX,
+                CONFIG.client.extra.actionLimiter.movementHomeZ,
+                CACHE.getPlayerCache().getX(),
+                CACHE.getPlayerCache().getZ()
+            ) > CONFIG.client.extra.actionLimiter.movementDistance
+            ) {
+                info("Too far from home");
+                disconnect(session, "Movement not allowed");
+            }
+        }
     }
 
     public void onServerConnectionRemoved(final PlayerConnectionRemovedEvent event) {

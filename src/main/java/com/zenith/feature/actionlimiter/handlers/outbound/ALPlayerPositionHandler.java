@@ -28,7 +28,7 @@ public class ALPlayerPositionHandler implements PacketHandler<ClientboundPlayerP
                 ? packet.getZ() + CACHE.getPlayerCache().getZ()
                 : packet.getZ()
             ) > CONFIG.client.extra.actionLimiter.movementDistance
-        ) {
+            ) {
             session.disconnect("ActionLimiter: Movement not allowed");
             return null;
         }

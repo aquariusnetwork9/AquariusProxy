@@ -16,7 +16,6 @@ import com.zenith.feature.coordobf.handlers.outbound.*;
 import com.zenith.feature.player.World;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
-import com.zenith.util.ComponentSerializer;
 import com.zenith.util.Config.Client.Extra.CoordObfuscation.ObfuscationMode;
 import com.zenith.util.TickTimerManager;
 import com.zenith.util.Wait;
@@ -439,9 +438,10 @@ public class CoordObfuscator extends Module {
         }
     }
 
+    @Override
     public void disconnect(ServerSession session, String reason) {
         delayIncomingLogins();
-        session.disconnect(ComponentSerializer.minimessage("<red>[Coordinate Obfuscation]</red> <gray>" + reason));
+        super.disconnect(session, reason);
     }
 
     public void delayIncomingLogins() {

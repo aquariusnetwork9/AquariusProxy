@@ -3,7 +3,9 @@ package com.zenith.api.module;
 import com.zenith.Proxy;
 import com.zenith.api.command.CommandOutputHelper;
 import com.zenith.api.network.client.ClientSession;
+import com.zenith.api.network.server.ServerSession;
 import com.zenith.discord.Embed;
+import com.zenith.util.ComponentSerializer;
 import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 
@@ -121,5 +123,9 @@ public abstract class ModuleUtils {
     public void discordAndIngameNotification(Embed embed) {
         discordNotification(embed);
         CommandOutputHelper.logEmbedOutputToInGameAllConnectedPlayers(embed);
+    }
+
+    public void disconnect(ServerSession session, String reason) {
+        session.disconnect(ComponentSerializer.minimessage("<red>" + moduleLogPrefix + "</red> <gray>" + reason));
     }
 }

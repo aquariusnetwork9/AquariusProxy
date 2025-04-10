@@ -16,7 +16,7 @@ public class COLightUpdateHandler implements PacketHandler<ClientboundLightUpdat
         return new ClientboundLightUpdatePacket(
             coordObf.getCoordOffset(session).offsetChunkX(packet.getX()),
             coordObf.getCoordOffset(session).offsetChunkZ(packet.getZ()),
-            packet.getLightData()
+            packet.getLightData() // not obfuscated because we cancelled the packet already
         );
     }
 }
