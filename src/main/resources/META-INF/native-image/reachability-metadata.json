@@ -103,6 +103,12 @@
       "type": "[Lcom.zaxxer.hikari.util.ConcurrentBag$IConcurrentBagEntry;"
     },
     {
+      "type": "[Lcom.zenith.api.network.PacketHandlerCodec;"
+    },
+    {
+      "type": "[Lcom.zenith.api.network.server.ServerSession;"
+    },
+    {
       "type": "[Lcom.zenith.feature.queue.mcping.rawData.Extra;"
     },
     {
@@ -2046,6 +2052,24 @@
     },
     {
       "type": "com.zenith.network.server.ServerSession"
+    },
+    {
+      "type": "com.zenith.terminal.logback.AnsiStripConverter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.zenith.terminal.logback.AnsiStripEncoder",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "com.zenith.terminal.logback.DebugLogConfigurationFilter",
