@@ -101,6 +101,11 @@ public class Proxy {
         SLF4JBridgeHandler.install();
         if (System.getProperty("io.netty.leakDetection.level") == null)
             ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.DISABLED);
+        if (System.getProperty("io.netty.allocator.type") == null)
+            // new adaptive alloc in netty 4.2 is causing out of memory errors with graalvm and 200M heap size
+            // there could be some netty config props that could help
+            // but for now revert back to pooled type used in netty 4.1
+            System.setProperty("io.netty.allocator.type", "pooled");
         if (System.getProperty("reactor.schedulers.defaultPoolSize") == null)
             System.setProperty("reactor.schedulers.defaultPoolSize", "1");
         if (System.getProperty("reactor.schedulers.defaultBoundedElasticOnVirtualThreads") == null)

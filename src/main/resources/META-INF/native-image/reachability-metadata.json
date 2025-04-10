@@ -1456,6 +1456,12 @@
       ]
     },
     {
+      "type": "com.zenith.api.network.client.ClientSession"
+    },
+    {
+      "type": "com.zenith.api.network.server.ServerSession"
+    },
+    {
       "type": "com.zenith.database.dto.enums.Connectiontype",
       "allDeclaredFields": true
     },
