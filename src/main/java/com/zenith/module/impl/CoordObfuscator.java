@@ -36,6 +36,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.spaw
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerSetContentPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerSetSlotPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.*;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundConfigurationAcknowledgedPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundAcceptTeleportationPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundMoveVehiclePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundSignUpdatePacket;
@@ -98,6 +99,7 @@ public class CoordObfuscator extends Module {
             .setPriority(Integer.MAX_VALUE-1) // 1 less than packet logger
             .setActivePredicate(this::shouldObfuscateSession)
             .state(ProtocolState.GAME, PacketHandlerStateCodec.serverBuilder()
+                .inbound(ServerboundConfigurationAcknowledgedPacket.class, new COConfigurationAckHandler())
                 .inbound(ServerboundAcceptTeleportationPacket.class, new COAcceptTeleportationHandler())
                 .inbound(ServerboundMoveVehiclePacket.class, new COSMoveVehicleHandler())
                 .inbound(ServerboundPlayerActionPacket.class, new COPlayerActionHandler())
