@@ -2,7 +2,7 @@ package com.zenith.api.plugin;
 
 import com.zenith.api.command.Command;
 import com.zenith.api.module.Module;
-import org.slf4j.Logger;
+import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
 
 public interface PluginAPI {
     /**
@@ -29,7 +29,7 @@ public interface PluginAPI {
     /**
      * Gets a logger configured for the plugin instance.
      */
-    Logger getLogger();
+    ComponentLogger getLogger();
 
     /**
      * Gets the {@link PluginInfo} for the plugin instance.
