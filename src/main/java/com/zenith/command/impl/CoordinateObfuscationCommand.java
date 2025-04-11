@@ -45,17 +45,18 @@ public class CoordinateObfuscationCommand extends Command {
                 """)
             .usageLines(
                 "on/off",
-                "mode <mode>",
+                "mode <random/constant/atLocation>",
                 "regenOnTpMinDistance <blocks>",
                 "randomBound <chunks>",
                 "randomMinOffset <blocks>",
                 "randomMinSpawnDistance <blocks>",
-                "constantOffset <x blocks> <z blocks>",
+                "constantOffset <x> <z>",
                 "constantOffsetNetherTranslate on/off",
                 "constantOffsetMinSpawnDistance <blocks>",
                 "atLocation <x> <z>",
                 "obfuscateBedrock on/off",
                 "obfuscateBiomes on/off",
+                "obfuscateLighting on/off",
                 "validateSetup on/off"
             )
             .build();
