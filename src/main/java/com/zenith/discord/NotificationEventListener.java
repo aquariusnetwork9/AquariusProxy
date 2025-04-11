@@ -1,6 +1,5 @@
 package com.zenith.discord;
 
-import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.zenith.Proxy;
 import com.zenith.api.event.chat.DeathMessageChatEvent;
 import com.zenith.api.event.chat.PublicChatEvent;
@@ -38,7 +37,6 @@ import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.utils.Color;
-import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 
@@ -335,18 +333,10 @@ public class NotificationEventListener {
                      It is recommended to use the same MC version as the ZenithProxy client.
                      
                      Otherwise you may experience issues with 2b2t's anti-cheat, which changes its checks based on client MC version.
+                     
+                     To configure ZenithProxy's client ViaVersion: `via zenithToServer version <version>`
                      """.formatted(playerProtocolVersion.getName(), clientProtocolVersion.getName()))
                 .errorColor();
-            var nativeZenithProtocolVersion = ProtocolVersion.getProtocol(MinecraftCodec.CODEC.getProtocolVersion());
-            if (nativeZenithProtocolVersion.equalTo(ProtocolVersion.v1_21) && playerProtocolVersion.equalTo(ProtocolVersion.v1_21_4)) {
-                embed.description(embed.description() + """
-                     Switch ZenithProxy to the 1.21.4 channel: `channel set <java/linux> 1.21.4`
-                     """);
-            } else {
-                embed.description(embed.description() + """
-                     To configure ZenithProxy's client ViaVersion: `via zenithToServer version <version>`
-                     """);
-            }
             sendEmbedMessage(embed);
         }
     }
