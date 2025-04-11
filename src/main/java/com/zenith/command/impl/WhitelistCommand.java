@@ -29,6 +29,8 @@ public class WhitelistCommand extends Command {
             Whitelisted players are allowed to both control the account in-game and spectate.
             
             `autoAddZenithAccount` will add the MC account you have logged in Zenith with to the whitelist.
+            
+            Blacklist is only used and shown if the whitelist or spectator whitelist is disabled (see the `unsupported` command`)
             """)
             .usageLines(
                 "add/del <player>",
@@ -36,7 +38,6 @@ public class WhitelistCommand extends Command {
                 "clear",
                 "autoAddZenithAccount on/off",
                 "blacklist add/del <player>",
-                "blacklist list",
                 "blacklist clear"
             )
             .aliases("wl")
@@ -99,10 +100,6 @@ public class WhitelistCommand extends Command {
                           Proxy.getInstance().kickNonWhitelistedPlayers();
                           return 1;
                       })))
-                      .then(literal("list").executes(c -> {
-                          c.getSource().getEmbed()
-                              .title("Blacklist List");
-                      }))
                       .then(literal("clear").executes(c -> {
                           PLAYER_LISTS.getBlacklist().clear();
                           c.getSource().getEmbed()
@@ -114,8 +111,12 @@ public class WhitelistCommand extends Command {
 
     @Override
     public void defaultEmbed(final Embed builder) {
+        var listStr = "**Whitelist**\n" + playerListToString(PLAYER_LISTS.getWhitelist());
+        if (!CONFIG.server.extra.whitelist.enable || !CONFIG.server.spectator.whitelistEnabled) {
+            listStr += "\n**BlackList:**\n" + playerListToString(PLAYER_LISTS.getBlacklist());
+        }
         builder
-            .description(playerListToString(PLAYER_LISTS.getWhitelist()) + "\n**BlackList:**\n" + playerListToString(PLAYER_LISTS.getBlacklist()))
+            .description(listStr)
             .addField("Auto Add Zenith Account", toggleStr(CONFIG.server.extra.whitelist.autoAddClient), false)
             .primaryColor();
     }

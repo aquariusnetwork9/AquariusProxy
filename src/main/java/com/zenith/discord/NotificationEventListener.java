@@ -86,6 +86,7 @@ public class NotificationEventListener {
             of(VisualRangeLeaveEvent.class, this::handleVisualRangeLeaveEvent),
             of(VisualRangeLogoutEvent.class, this::handleVisualRangeLogoutEvent),
             of(NonWhitelistedPlayerConnectedEvent.class, this::handleNonWhitelistedPlayerConnectedEvent),
+            of(BlacklistedPlayerConnectedEvent.class, this::handleBlacklistedPlayerConnectedEvent),
             of(SpectatorDisconnectedEvent.class, this::handleProxySpectatorDisconnectedEvent),
             of(ActiveHoursConnectEvent.class, this::handleActiveHoursConnectEvent),
             of(DeathMessageChatEvent.class, this::handleDeathMessageChatEventKillMessage),
@@ -524,6 +525,26 @@ public class NotificationEventListener {
             } else {
                 sendEmbedMessage(embed);
             }
+        }
+    }
+
+    private void handleBlacklistedPlayerConnectedEvent(BlacklistedPlayerConnectedEvent event) {
+        var embed = Embed.builder()
+            .title("Blacklisted Player Disconnected")
+            .errorColor();
+        if (nonNull(event.remoteAddress()) && CONFIG.discord.showNonWhitelistLoginIP) {
+            embed = embed.addField("IP", escape(event.remoteAddress().toString()), false);
+        }
+        if (nonNull(event.gameProfile()) && nonNull(event.gameProfile().getId()) && nonNull(event.gameProfile().getName())) {
+            embed
+                .addField("Username", escape(event.gameProfile().getName()), false)
+                .addField("Player UUID", ("[" + event.gameProfile().getId().toString() + "](https://namemc.com/profile/" + event.gameProfile().getId().toString() + ")"), true)
+                .thumbnail(Proxy.getInstance().getPlayerBodyURL(event.gameProfile().getId()).toString());
+        }
+        if (CONFIG.discord.mentionOnNonWhitelistedClientConnected) {
+            sendEmbedMessage(notificationMention(), embed);
+        } else {
+            sendEmbedMessage(embed);
         }
     }
 

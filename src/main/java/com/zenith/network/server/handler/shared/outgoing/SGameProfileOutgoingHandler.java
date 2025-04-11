@@ -1,6 +1,7 @@
 package com.zenith.network.server.handler.shared.outgoing;
 
 import com.zenith.Proxy;
+import com.zenith.api.event.player.BlacklistedPlayerConnectedEvent;
 import com.zenith.api.event.player.NonWhitelistedPlayerConnectedEvent;
 import com.zenith.api.network.PacketHandler;
 import com.zenith.api.network.server.ServerSession;
@@ -30,11 +31,16 @@ public class SGameProfileOutgoingHandler implements PacketHandler<ClientboundGam
                 session.disconnect("Failed to Login");
                 return null;
             }
-            if (PLAYER_LISTS.getBlacklist().contains(clientGameProfile)) {
-                session.disconnect(CONFIG.server.extra.whitelist.kickmsg);
-                SERVER_LOG.warn("Blacklisted! Username: {} UUID: {} [{}] MC: {} tried to connect!", clientGameProfile.getName(), clientGameProfile.getIdAsString(), session.getMCVersion(), session.getRemoteAddress());
-                return null;
+
+            if (!CONFIG.server.extra.whitelist.enable || !CONFIG.server.spectator.whitelistEnabled) {
+                if (PLAYER_LISTS.getBlacklist().contains(clientGameProfile)) {
+                    session.disconnect(CONFIG.server.extra.whitelist.kickmsg);
+                    SERVER_LOG.warn("Blacklisted connect attempted. Username: {} UUID: {} [{}] MC: {}", clientGameProfile.getName(), clientGameProfile.getIdAsString(), session.getMCVersion(), session.getRemoteAddress());
+                    EVENT_BUS.postAsync(new BlacklistedPlayerConnectedEvent(clientGameProfile, session.getRemoteAddress()));
+                    return null;
+                }
             }
+
             // this has some bearing on authorization
             // can be set by cookie. or forcefully set if they're only on spectator whitelist
             // true: only spectator -> also set by authorization, overrides any cookie state
@@ -58,7 +64,7 @@ public class SGameProfileOutgoingHandler implements PacketHandler<ClientboundGam
                 } else {
                     session.disconnect(CONFIG.server.extra.whitelist.kickmsg);
                     SERVER_LOG.warn("Username: {} UUID: {} [{}] MC: {} tried to connect!", clientGameProfile.getName(), clientGameProfile.getIdAsString(), session.getMCVersion(), session.getRemoteAddress());
-                    EVENT_BUS.post(new NonWhitelistedPlayerConnectedEvent(clientGameProfile, session.getRemoteAddress()));
+                    EVENT_BUS.postAsync(new NonWhitelistedPlayerConnectedEvent(clientGameProfile, session.getRemoteAddress()));
                     return null;
                 }
             }
