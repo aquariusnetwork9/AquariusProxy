@@ -45,10 +45,11 @@ public class PathfinderCommand extends Command {
                 "stop",
                 "follow",
                 "follow <playerName>",
+                "thisway <blocks>",
                 "getTo <block>",
                 "mine <block>",
-                "click left <x> <y> <z>",
-                "click right <x> <y> <z>",
+                "click <left/right> <x> <y> <z>",
+                "click <left/right> entity <type>",
                 "status",
                 "settings"
             )
@@ -138,7 +139,7 @@ public class PathfinderCommand extends Command {
                     .primaryColor();
                 return OK;
             })))
-            .then(literal("getto").then(argument("block", wordWithChars()).executes(c -> {
+            .then(literal("getTo").then(argument("block", wordWithChars()).executes(c -> {
                 String blockName = getString(c, "block");
                 Block block = BlockRegistry.REGISTRY.get(blockName);
                 if (block == null) {

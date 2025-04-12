@@ -159,7 +159,7 @@ public final class Config {
                 public boolean traverseCentering = false;
                 public double blockBreakAdditionalCost = 2;
                 public int maxFallHeightNoWater = 3;
-                public boolean allowLongFall = true;
+                public boolean allowLongFall = false;
                 public double longFallCostLogMultiplier = 50;
                 public double longFallCostAddCost = 100;
                 public int followRadius = 2;
