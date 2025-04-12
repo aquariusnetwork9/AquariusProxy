@@ -38,6 +38,10 @@ public class PluginManager {
         return pluginInstances.values().stream().map(PluginInstance::getPluginInfo).collect(Collectors.toList());
     }
 
+    public List<PluginInstance> getPluginInstances() {
+        return new ArrayList<>(pluginInstances.values());
+    }
+
     public String getId(final ZenithProxyPlugin pluginInstance) {
         return pluginInstances.values().stream()
             .filter(i -> i.getPluginInstance() == pluginInstance)
