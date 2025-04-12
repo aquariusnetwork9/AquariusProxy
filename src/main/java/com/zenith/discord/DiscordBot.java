@@ -395,7 +395,12 @@ public class DiscordBot {
         return embed;
     }
 
+    public void defaultEmbedDecoration(Embed embed) {
+        if (embed.timestamp() == null) embed.timestamp(Instant.now());
+    }
+
     public void sendEmbedMessage(Embed embed) {
+        defaultEmbedDecoration(embed);
         if (isRunning()) {
             mainChannel.sendMessage(
                     new MessageCreateBuilder()
@@ -407,6 +412,7 @@ public class DiscordBot {
     }
 
     public void sendEmbedMessage(String message, Embed embed) {
+        defaultEmbedDecoration(embed);
         if (isRunning()) {
             mainChannel.sendMessage(
                 new MessageCreateBuilder()
@@ -420,6 +426,7 @@ public class DiscordBot {
     }
 
     public void sendRelayEmbedMessage(Embed embed) {
+        defaultEmbedDecoration(embed);
         if (isRunning() && CONFIG.discord.chatRelay.enable) {
             relayChannel.sendMessage(
                 new MessageCreateBuilder()
@@ -430,6 +437,7 @@ public class DiscordBot {
     }
 
     public void sendRelayEmbedMessage(String message, Embed embed) {
+        defaultEmbedDecoration(embed);
         if (isRunning() && CONFIG.discord.chatRelay.enable) {
             relayChannel.sendMessage(
                 new MessageCreateBuilder()
@@ -462,6 +470,7 @@ public class DiscordBot {
     }
 
     public void sendEmbedMessageWithButtons(String message, Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> mapper, Duration timeout) {
+        defaultEmbedDecoration(embed);
         if (isRunning()) {
             mainChannel.sendMessage(
                 new MessageCreateBuilder()
@@ -481,6 +490,7 @@ public class DiscordBot {
     }
 
     public void sendEmbedMessageWithButtons(Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> mapper, Duration timeout) {
+        defaultEmbedDecoration(embed);
         if (isRunning()) {
             mainChannel.sendMessage(
                 new MessageCreateBuilder()

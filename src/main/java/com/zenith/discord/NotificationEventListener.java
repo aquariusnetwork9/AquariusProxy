@@ -591,8 +591,7 @@ public class NotificationEventListener {
             var embed = Embed.builder()
                 .description(escape(message))
                 .footer("\u200b", avatarURL)
-                .color(Color.MAGENTA)
-                .timestamp(Instant.now());
+                .color(Color.MAGENTA);
             if (ping.isEmpty()) {
                 sendRelayEmbedMessage(embed);
             } else {
@@ -613,8 +612,7 @@ public class NotificationEventListener {
             var embed = Embed.builder()
                 .description(escape(message))
                 .footer("\u200b", avatarURL)
-                .color(Color.MOON_YELLOW)
-                .timestamp(Instant.now());
+                .color(Color.MOON_YELLOW);
             sendRelayEmbedMessage(embed);
         } catch (final Throwable e) {
             DISCORD_LOG.error("Error processing SystemChatEvent", e);
@@ -655,8 +653,7 @@ public class NotificationEventListener {
             var embed = Embed.builder()
                 .description(escape(message))
                 .footer("\u200b", avatarURL)
-                .color(color)
-                .timestamp(Instant.now());
+                .color(color);
             if (ping.isEmpty()) {
                 sendRelayEmbedMessage(embed);
             } else {
@@ -698,8 +695,7 @@ public class NotificationEventListener {
             var embed = Embed.builder()
                 .description(escape(message))
                 .footer("\u200b", avatarURL)
-                .color(Color.RUBY)
-                .timestamp(Instant.now());
+                .color(Color.RUBY);
             sendRelayEmbedMessage(embed);
         } catch (final Throwable e) {
             DISCORD_LOG.error("Error processing DeathMessageChatEvent", e);
@@ -713,8 +709,7 @@ public class NotificationEventListener {
         sendRelayEmbedMessage(Embed.builder()
                                   .description(escape("**" + event.playerEntry().getName() + "** connected"))
                                   .successColor()
-                                  .footer("\u200b", Proxy.getInstance().getPlayerHeadURL(event.playerEntry().getProfileId()).toString())
-                                  .timestamp(Instant.now()));
+                                  .footer("\u200b", Proxy.getInstance().getPlayerHeadURL(event.playerEntry().getProfileId()).toString()));
     }
 
     public void handleServerPlayerConnectedEventStalk(ServerPlayerConnectedEvent event) {
@@ -733,8 +728,7 @@ public class NotificationEventListener {
         sendRelayEmbedMessage(Embed.builder()
                                   .description(escape("**" + event.playerEntry().getName() + "** disconnected"))
                                   .errorColor()
-                                  .footer("\u200b", Proxy.getInstance().getPlayerHeadURL(event.playerEntry().getProfileId()).toString())
-                                  .timestamp(Instant.now()));
+                                  .footer("\u200b", Proxy.getInstance().getPlayerHeadURL(event.playerEntry().getProfileId()).toString()));
     }
 
     public void handleServerPlayerDisconnectedEventStalk(ServerPlayerDisconnectedEvent event) {
@@ -969,8 +963,7 @@ public class NotificationEventListener {
     public void handlePrivateMessageSendEvent(final PrivateMessageSendEvent event) {
         var embed = Embed.builder()
             .description(escape("**" + event.getSenderName() + "**: " + event.getStringContents()))
-            .color(PRIVATE_MESSAGE_EMBED_COLOR)
-            .timestamp(Instant.now());
+            .color(PRIVATE_MESSAGE_EMBED_COLOR);
         if (event.getSenderUUID() != null) {
             embed.footer("Private Message", Proxy.getInstance().getPlayerHeadURL(event.getSenderUUID()).toString());
         } else {
@@ -1006,11 +999,9 @@ public class NotificationEventListener {
      * Convenience proxy methods
      */
     public void sendEmbedMessage(Embed embed) {
-        embed.timestamp(Instant.now());
         DISCORD.sendEmbedMessage(embed);
     }
     public void sendEmbedMessage(String message, Embed embed) {
-        embed.timestamp(Instant.now());
         DISCORD.sendEmbedMessage(message, embed);
     }
     public void sendMessage(final String message) {
@@ -1026,11 +1017,9 @@ public class NotificationEventListener {
         DISCORD.sendRelayMessage(message);
     }
     void sendEmbedMessageWithButtons(String message, Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> mapper, Duration timeout) {
-        embed.timestamp(Instant.now());
         DISCORD.sendEmbedMessageWithButtons(message, embed, buttons, mapper, timeout);
     }
     void sendEmbedMessageWithButtons(Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> mapper, Duration timeout) {
-        embed.timestamp(Instant.now());
         DISCORD.sendEmbedMessageWithButtons(embed, buttons, mapper, timeout);
     }
     public void updatePresence(final OnlineStatus onlineStatus, final Activity activity) {
@@ -1040,7 +1029,6 @@ public class NotificationEventListener {
         DISCORD.updatePresence();
     }
     public void sendEmbedMessageWithFileAttachment(Embed embed) {
-        embed.timestamp(Instant.now());
         DISCORD.sendEmbedMessageWithFileAttachment(embed);
     }
 }
