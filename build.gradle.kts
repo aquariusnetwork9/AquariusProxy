@@ -314,10 +314,18 @@ publishing {
         }
     }
     publications {
-        create<MavenPublication>("maven") {
+        create<MavenPublication>("snapshot") {
             groupId = "com.zenith"
             artifactId = "ZenithProxy"
-            version = project.version.toString() + "-SNAPSHOT"
+            version = "${project.version}-SNAPSHOT"
+            val javaComponent = components["java"] as AdhocComponentWithVariants
+            javaComponent.withVariantsFromConfiguration(configurations["shadowRuntimeElements"]) { skip() }
+            from(javaComponent)
+        }
+        create<MavenPublication>("release") {
+            groupId = "com.zenith"
+            artifactId = "ZenithProxy"
+            version = System.getenv("ZENITH_RELEASE_TAG") ?: "0.0.0+${project.version}"
             val javaComponent = components["java"] as AdhocComponentWithVariants
             javaComponent.withVariantsFromConfiguration(configurations["shadowRuntimeElements"]) { skip() }
             from(javaComponent)
