@@ -43,7 +43,8 @@ public class ActionLimiterCommand extends Command {
                 "allowUseItem on/off",
                 "allowBookSigning on/off",
                 "allowChat on/off",
-                "allowServerCommands on/off"
+                "allowServerCommands on/off",
+                "allowRespawn on/off"
             )
             .aliases(
                 "al"
@@ -94,6 +95,9 @@ public class ActionLimiterCommand extends Command {
             })))
             .then(literal("allowServerCommands").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.actionLimiter.allowServerCommands = getToggle(c, "toggle");
+            })))
+            .then(literal("allowRespawn").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.actionLimiter.allowRespawn = getToggle(c, "toggle");
             })));
     }
 
@@ -114,6 +118,7 @@ public class ActionLimiterCommand extends Command {
             .addField("Allow Book Signing", toggleStr(CONFIG.client.extra.actionLimiter.allowBookSigning))
             .addField("Allow Chat", toggleStr(CONFIG.client.extra.actionLimiter.allowChat))
             .addField("Allow Server Commands", toggleStr(CONFIG.client.extra.actionLimiter.allowServerCommands))
+            .addField("Allow Respawn", toggleStr(CONFIG.client.extra.actionLimiter.allowRespawn))
             .primaryColor();
     }
 }
