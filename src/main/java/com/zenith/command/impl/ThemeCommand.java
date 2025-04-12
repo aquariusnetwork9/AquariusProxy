@@ -6,7 +6,7 @@ import com.zenith.command.api.CommandCategory;
 import com.zenith.command.api.CommandContext;
 import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
-import com.zenith.util.ConfigColor;
+import com.zenith.util.config.ConfigColor;
 
 import java.util.Arrays;
 

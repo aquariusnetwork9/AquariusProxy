@@ -7,7 +7,7 @@ import com.zenith.command.api.CommandCategory;
 import com.zenith.command.api.CommandContext;
 import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
-import com.zenith.util.Config;
+import com.zenith.util.config.Config;
 import org.geysermc.mcprotocollib.network.ProxyInfo;
 
 import java.util.Arrays;

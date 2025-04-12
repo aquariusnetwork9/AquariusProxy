@@ -1,4 +1,4 @@
-package com.zenith.util;
+package com.zenith.util.config;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

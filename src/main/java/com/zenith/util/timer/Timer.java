@@ -1,4 +1,4 @@
-package com.zenith.util;
+package com.zenith.util.timer;
 
 public interface Timer {
     // reset the last timer tick time to the current time

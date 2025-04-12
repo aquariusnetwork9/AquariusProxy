@@ -9,7 +9,7 @@ import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import com.zenith.feature.player.Input;
 import com.zenith.feature.player.InputRequest;
-import com.zenith.util.Config.Client.Extra.Click.HoldRightClickMode;
+import com.zenith.util.config.Config.Client.Extra.Click.HoldRightClickMode;
 
 import static com.mojang.brigadier.arguments.FloatArgumentType.floatArg;
 import static com.mojang.brigadier.arguments.FloatArgumentType.getFloat;

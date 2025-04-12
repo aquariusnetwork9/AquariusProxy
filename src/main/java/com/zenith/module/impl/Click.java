@@ -5,8 +5,8 @@ import com.zenith.event.client.ClientBotTick;
 import com.zenith.feature.player.Input;
 import com.zenith.feature.player.InputRequest;
 import com.zenith.module.api.Module;
-import com.zenith.util.Timer;
-import com.zenith.util.Timers;
+import com.zenith.util.timer.Timer;
+import com.zenith.util.timer.Timers;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 
 import java.util.List;

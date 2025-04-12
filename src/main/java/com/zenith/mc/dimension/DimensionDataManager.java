@@ -1,6 +1,6 @@
 package com.zenith.mc.dimension;
 
-import com.zenith.util.Maps;
+import com.zenith.util.struct.Maps;
 
 import java.util.Collection;
 import java.util.Map;

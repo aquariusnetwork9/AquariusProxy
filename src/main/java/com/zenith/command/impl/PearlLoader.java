@@ -7,7 +7,7 @@ import com.zenith.command.api.CommandContext;
 import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import com.zenith.feature.pathfinder.Baritone;
-import com.zenith.util.Config.Client.Extra.PearlLoader.Pearl;
+import com.zenith.util.config.Config.Client.Extra.PearlLoader.Pearl;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;

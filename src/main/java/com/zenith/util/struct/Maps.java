@@ -1,4 +1,4 @@
-package com.zenith.util;
+package com.zenith.util.struct;
 
 import lombok.experimental.UtilityClass;
 

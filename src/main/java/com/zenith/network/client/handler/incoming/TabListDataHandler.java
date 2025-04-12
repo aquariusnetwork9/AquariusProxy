@@ -8,7 +8,7 @@ import com.zenith.event.queue.QueueStartEvent;
 import com.zenith.network.client.ClientSession;
 import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import com.zenith.util.ComponentSerializer;
-import com.zenith.util.Config;
+import com.zenith.util.config.Config;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundTabListPacket;
 import org.jspecify.annotations.NonNull;
 

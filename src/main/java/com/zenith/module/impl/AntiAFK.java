@@ -7,9 +7,9 @@ import com.zenith.event.client.ClientDeathEvent;
 import com.zenith.feature.player.*;
 import com.zenith.mc.block.BlockPos;
 import com.zenith.module.api.Module;
-import com.zenith.util.Timer;
-import com.zenith.util.Timers;
 import com.zenith.util.math.MathHelper;
+import com.zenith.util.timer.Timer;
+import com.zenith.util.timer.Timers;
 
 import java.util.Iterator;
 import java.util.List;

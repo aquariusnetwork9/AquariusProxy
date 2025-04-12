@@ -1,4 +1,4 @@
-package com.zenith.terminal.logback;
+package com.zenith.terminal;
 
 import com.google.auto.service.AutoService;
 import com.zenith.util.ComponentSerializer;

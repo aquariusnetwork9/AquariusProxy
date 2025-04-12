@@ -1,4 +1,4 @@
-package com.zenith.util;
+package com.zenith.util.config;
 
 import com.google.common.collect.Lists;
 import com.google.gson.annotations.SerializedName;

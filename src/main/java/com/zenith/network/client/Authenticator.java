@@ -33,7 +33,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import static com.zenith.Globals.*;
-import static com.zenith.util.Config.Authentication.AccountType.OFFLINE;
+import static com.zenith.util.config.Config.Authentication.AccountType.OFFLINE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 @Getter

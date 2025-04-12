@@ -1,6 +1,6 @@
 package com.zenith.mc;
 
-import com.zenith.util.Maps;
+import com.zenith.util.struct.Maps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import lombok.Getter;

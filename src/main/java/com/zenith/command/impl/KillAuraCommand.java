@@ -7,7 +7,7 @@ import com.zenith.command.api.CommandContext;
 import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import com.zenith.module.impl.KillAura;
-import com.zenith.util.Config;
+import com.zenith.util.config.Config;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 
 import java.util.stream.Collectors;

@@ -7,7 +7,7 @@ import com.zenith.command.api.CommandContext;
 import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import com.zenith.module.impl.Spook;
-import com.zenith.util.Config;
+import com.zenith.util.config.Config;
 
 import static com.zenith.Globals.CONFIG;
 import static com.zenith.Globals.MODULE;

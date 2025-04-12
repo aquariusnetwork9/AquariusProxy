@@ -1,6 +1,6 @@
 package com.zenith.network.codec;
 
-import com.zenith.util.SortedFastArrayList;
+import com.zenith.util.struct.SortedFastArrayList;
 import lombok.Data;
 import org.geysermc.mcprotocollib.network.Session;
 import org.geysermc.mcprotocollib.network.packet.Packet;

@@ -6,7 +6,7 @@ import com.zenith.Proxy;
 import com.zenith.command.api.*;
 import com.zenith.discord.Embed;
 import com.zenith.network.server.ServerSession;
-import com.zenith.util.Config.Server.Extra.ServerSwitcher.ServerSwitcherServer;
+import com.zenith.util.config.Config.Server.Extra.ServerSwitcher.ServerSwitcherServer;
 
 import java.util.stream.Collectors;
 

@@ -1,7 +1,7 @@
 package com.zenith.feature.autoupdater;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.zenith.util.Pair;
+import com.zenith.util.struct.Pair;
 
 import java.net.URI;
 import java.net.http.HttpClient;

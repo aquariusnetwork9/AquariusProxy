@@ -1,4 +1,6 @@
-package com.zenith.util;
+package com.zenith.util.config;
+
+import com.zenith.util.Wait;
 
 import java.lang.reflect.Field;
 

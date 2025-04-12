@@ -1,4 +1,4 @@
-package com.zenith.util;
+package com.zenith.util.timer;
 
 import com.zenith.event.client.ClientTickEvent;
 import lombok.Getter;

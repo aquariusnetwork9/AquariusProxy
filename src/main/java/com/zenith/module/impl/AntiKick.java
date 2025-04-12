@@ -7,9 +7,9 @@ import com.zenith.event.module.ClientSwingEvent;
 import com.zenith.event.module.EntityFishHookSpawnEvent;
 import com.zenith.event.player.PlayerConnectedEvent;
 import com.zenith.module.api.Module;
-import com.zenith.util.Timer;
-import com.zenith.util.Timers;
 import com.zenith.util.math.MathHelper;
+import com.zenith.util.timer.Timer;
+import com.zenith.util.timer.Timers;
 
 import java.time.Duration;
 import java.time.Instant;

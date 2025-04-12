@@ -1,7 +1,7 @@
 package com.zenith.feature.ratelimiter;
 
-import com.zenith.util.Timer;
-import com.zenith.util.Timers;
+import com.zenith.util.timer.Timer;
+import com.zenith.util.timer.Timers;
 import lombok.Getter;
 import lombok.Setter;
 

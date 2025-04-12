@@ -11,7 +11,7 @@ import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChar
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 import static com.zenith.discord.DiscordBot.escape;
-import static com.zenith.util.Config.Authentication.AccountType.OFFLINE;
+import static com.zenith.util.config.Config.Authentication.AccountType.OFFLINE;
 
 public class UnsupportedCommand extends Command {
     @Override

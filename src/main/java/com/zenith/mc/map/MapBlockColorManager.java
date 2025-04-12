@@ -5,7 +5,7 @@ import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.node.IntNode;
 import com.zenith.feature.map.Brightness;
 import com.zenith.util.Color;
-import com.zenith.util.Maps;
+import com.zenith.util.struct.Maps;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 

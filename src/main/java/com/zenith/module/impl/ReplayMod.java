@@ -13,7 +13,7 @@ import com.zenith.feature.replay.ReplayModPacketHandlerCodec;
 import com.zenith.feature.replay.ReplayRecording;
 import com.zenith.module.api.Module;
 import com.zenith.network.codec.PacketHandlerCodec;
-import com.zenith.util.Config.Client.Extra.ReplayMod.AutoRecordMode;
+import com.zenith.util.config.Config.Client.Extra.ReplayMod.AutoRecordMode;
 import org.geysermc.mcprotocollib.network.Session;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.codec.MinecraftPacket;

@@ -1014,6 +1014,9 @@
       "type": "com.sun.management.internal.OperatingSystemImpl"
     },
     {
+      "type": "com.sun.management.internal.VirtualThreadSchedulerImpls$VirtualThreadSchedulerImpl"
+    },
+    {
       "type": "com.sun.org.apache.xerces.internal.jaxp.SAXParserFactoryImpl",
       "methods": [
         {
@@ -2048,6 +2051,9 @@
       "type": "com.zenith.network.server.ServerSession"
     },
     {
+      "type": "com.zenith.terminal.ZenithComponentLoggerProvider"
+    },
+    {
       "type": "com.zenith.terminal.logback.AnsiStripConverter",
       "methods": [
         {
@@ -2111,10 +2117,7 @@
       ]
     },
     {
-      "type": "com.zenith.terminal.logback.ZenithComponentLoggerProvider"
-    },
-    {
-      "type": "com.zenith.util.Config",
+      "type": "com.zenith.util.config.Config",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2124,7 +2127,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Authentication",
+      "type": "com.zenith.util.config.Config$Authentication",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2134,11 +2137,11 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Authentication$AccountType",
+      "type": "com.zenith.util.config.Config$Authentication$AccountType",
       "allDeclaredFields": true
     },
     {
-      "type": "com.zenith.util.Config$AutoUpdater",
+      "type": "com.zenith.util.config.Config$AutoUpdater",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2148,7 +2151,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client",
+      "type": "com.zenith.util.config.Config$Client",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2158,7 +2161,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$ChatSigning",
+      "type": "com.zenith.util.config.Config$Client$ChatSigning",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2168,7 +2171,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$ClientTimeout",
+      "type": "com.zenith.util.config.Config$Client$ClientTimeout",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2178,7 +2181,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$ClientViaVersion",
+      "type": "com.zenith.util.config.Config$Client$ClientViaVersion",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2188,7 +2191,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$ConnectionProxy",
+      "type": "com.zenith.util.config.Config$Client$ConnectionProxy",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2198,7 +2201,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra",
+      "type": "com.zenith.util.config.Config$Client$Extra",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2208,7 +2211,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$ActionLimiter",
+      "type": "com.zenith.util.config.Config$Client$Extra$ActionLimiter",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2218,7 +2221,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$AntiAFK",
+      "type": "com.zenith.util.config.Config$Client$Extra$AntiAFK",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2228,7 +2231,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$AntiAFK$Actions",
+      "type": "com.zenith.util.config.Config$Client$Extra$AntiAFK$Actions",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2238,7 +2241,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$AntiKick",
+      "type": "com.zenith.util.config.Config$Client$Extra$AntiKick",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2248,7 +2251,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$AntiLeak",
+      "type": "com.zenith.util.config.Config$Client$Extra$AntiLeak",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2258,7 +2261,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$AutoArmor",
+      "type": "com.zenith.util.config.Config$Client$Extra$AutoArmor",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2268,7 +2271,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$AutoDig",
+      "type": "com.zenith.util.config.Config$Client$Extra$AutoDig",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2278,7 +2281,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$AutoEat",
+      "type": "com.zenith.util.config.Config$Client$Extra$AutoEat",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2288,7 +2291,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$AutoFish",
+      "type": "com.zenith.util.config.Config$Client$Extra$AutoFish",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2298,7 +2301,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$AutoMend",
+      "type": "com.zenith.util.config.Config$Client$Extra$AutoMend",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2308,7 +2311,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$AutoOmen",
+      "type": "com.zenith.util.config.Config$Client$Extra$AutoOmen",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2318,7 +2321,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$AutoReconnect",
+      "type": "com.zenith.util.config.Config$Client$Extra$AutoReconnect",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2328,7 +2331,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$AutoReply",
+      "type": "com.zenith.util.config.Config$Client$Extra$AutoReply",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2338,7 +2341,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$AutoRespawn",
+      "type": "com.zenith.util.config.Config$Client$Extra$AutoRespawn",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2348,7 +2351,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$AutoTotem",
+      "type": "com.zenith.util.config.Config$Client$Extra$AutoTotem",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2358,7 +2361,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$Chat",
+      "type": "com.zenith.util.config.Config$Client$Extra$Chat",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2368,7 +2371,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$ChatControl",
+      "type": "com.zenith.util.config.Config$Client$Extra$ChatControl",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2378,7 +2381,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$Click",
+      "type": "com.zenith.util.config.Config$Client$Extra$Click",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2388,11 +2391,11 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$Click$HoldRightClickMode",
+      "type": "com.zenith.util.config.Config$Client$Extra$Click$HoldRightClickMode",
       "allDeclaredFields": true
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$CoordObfuscation",
+      "type": "com.zenith.util.config.Config$Client$Extra$CoordObfuscation",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2402,11 +2405,11 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$CoordObfuscation$ObfuscationMode",
+      "type": "com.zenith.util.config.Config$Client$Extra$CoordObfuscation$ObfuscationMode",
       "allDeclaredFields": true
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$KillAura",
+      "type": "com.zenith.util.config.Config$Client$Extra$KillAura",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2416,11 +2419,11 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$KillAura$Priority",
+      "type": "com.zenith.util.config.Config$Client$Extra$KillAura$Priority",
       "allDeclaredFields": true
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$Pathfinder",
+      "type": "com.zenith.util.config.Config$Client$Extra$Pathfinder",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2430,7 +2433,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$PearlLoader",
+      "type": "com.zenith.util.config.Config$Client$Extra$PearlLoader",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2440,7 +2443,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$PearlLoader$Pearl",
+      "type": "com.zenith.util.config.Config$Client$Extra$PearlLoader$Pearl",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2471,7 +2474,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$QueueWarning",
+      "type": "com.zenith.util.config.Config$Client$Extra$QueueWarning",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2481,7 +2484,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$ReplayMod",
+      "type": "com.zenith.util.config.Config$Client$Extra$ReplayMod",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2491,11 +2494,11 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$ReplayMod$AutoRecordMode",
+      "type": "com.zenith.util.config.Config$Client$Extra$ReplayMod$AutoRecordMode",
       "allDeclaredFields": true
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$SessionTimeLimit",
+      "type": "com.zenith.util.config.Config$Client$Extra$SessionTimeLimit",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2505,7 +2508,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$Spammer",
+      "type": "com.zenith.util.config.Config$Client$Extra$Spammer",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2515,7 +2518,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$SpawnPatrol",
+      "type": "com.zenith.util.config.Config$Client$Extra$SpawnPatrol",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2525,7 +2528,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$Spook",
+      "type": "com.zenith.util.config.Config$Client$Extra$Spook",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2535,11 +2538,11 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$Spook$TargetingMode",
+      "type": "com.zenith.util.config.Config$Client$Extra$Spook$TargetingMode",
       "allDeclaredFields": true
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$Stalk",
+      "type": "com.zenith.util.config.Config$Client$Extra$Stalk",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2549,7 +2552,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$Utility",
+      "type": "com.zenith.util.config.Config$Client$Extra$Utility",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2559,7 +2562,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$Utility$Actions",
+      "type": "com.zenith.util.config.Config$Client$Extra$Utility$Actions",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2569,7 +2572,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$Utility$ActiveHours",
+      "type": "com.zenith.util.config.Config$Client$Extra$Utility$ActiveHours",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2579,7 +2582,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$Utility$ActiveHours$ActiveTime",
+      "type": "com.zenith.util.config.Config$Client$Extra$Utility$ActiveHours$ActiveTime",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2589,7 +2592,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$Utility$AutoDisconnect",
+      "type": "com.zenith.util.config.Config$Client$Extra$Utility$AutoDisconnect",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2599,7 +2602,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$VisualRange",
+      "type": "com.zenith.util.config.Config$Client$Extra$VisualRange",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2609,11 +2612,11 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$VisualRange$ReplayRecordingMode",
+      "type": "com.zenith.util.config.Config$Client$Extra$VisualRange$ReplayRecordingMode",
       "allDeclaredFields": true
     },
     {
-      "type": "com.zenith.util.Config$Client$Extra$Wander",
+      "type": "com.zenith.util.config.Config$Client$Extra$Wander",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2623,7 +2626,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Ping",
+      "type": "com.zenith.util.config.Config$Client$Ping",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2633,11 +2636,11 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$Ping$Mode",
+      "type": "com.zenith.util.config.Config$Client$Ping$Mode",
       "allDeclaredFields": true
     },
     {
-      "type": "com.zenith.util.Config$Client$Server",
+      "type": "com.zenith.util.config.Config$Client$Server",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2647,7 +2650,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Client$ViaVersion",
+      "type": "com.zenith.util.config.Config$Client$ViaVersion",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2657,7 +2660,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Colors",
+      "type": "com.zenith.util.config.Config$Colors",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2667,7 +2670,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Database",
+      "type": "com.zenith.util.config.Config$Database",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2677,7 +2680,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Database$Lock",
+      "type": "com.zenith.util.config.Config$Database$Lock",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2687,7 +2690,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Debug",
+      "type": "com.zenith.util.config.Config$Debug",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2697,7 +2700,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Debug$Packet",
+      "type": "com.zenith.util.config.Config$Debug$Packet",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2707,7 +2710,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Debug$PacketLog",
+      "type": "com.zenith.util.config.Config$Debug$PacketLog",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2717,7 +2720,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Debug$PacketLog$PacketLogConfig",
+      "type": "com.zenith.util.config.Config$Debug$PacketLog$PacketLogConfig",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2727,7 +2730,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Debug$Server",
+      "type": "com.zenith.util.config.Config$Debug$Server",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2737,7 +2740,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Debug$Server$Cache",
+      "type": "com.zenith.util.config.Config$Debug$Server$Cache",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2747,7 +2750,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Discord",
+      "type": "com.zenith.util.config.Config$Discord",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2757,7 +2760,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Discord$ChatRelay",
+      "type": "com.zenith.util.config.Config$Discord$ChatRelay",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2767,7 +2770,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Discord$ConnectionProxy",
+      "type": "com.zenith.util.config.Config$Discord$ConnectionProxy",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2777,11 +2780,11 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Discord$ConnectionProxy$ConnectionProxyType",
+      "type": "com.zenith.util.config.Config$Discord$ConnectionProxy$ConnectionProxyType",
       "allDeclaredFields": true
     },
     {
-      "type": "com.zenith.util.Config$InGameCommands",
+      "type": "com.zenith.util.config.Config$InGameCommands",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2791,7 +2794,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$InteractiveTerminal",
+      "type": "com.zenith.util.config.Config$InteractiveTerminal",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2801,7 +2804,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Plugins",
+      "type": "com.zenith.util.config.Config$Plugins",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2811,7 +2814,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Server",
+      "type": "com.zenith.util.config.Config$Server",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2821,7 +2824,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Server$Bind",
+      "type": "com.zenith.util.config.Config$Server$Bind",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2831,7 +2834,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Server$Extra",
+      "type": "com.zenith.util.config.Config$Server$Extra",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2841,7 +2844,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Server$Extra$ChatHistory",
+      "type": "com.zenith.util.config.Config$Server$Extra$ChatHistory",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2851,7 +2854,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Server$Extra$ESP",
+      "type": "com.zenith.util.config.Config$Server$Extra$ESP",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2861,7 +2864,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Server$Extra$ServerSwitcher",
+      "type": "com.zenith.util.config.Config$Server$Extra$ServerSwitcher",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2871,7 +2874,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Server$Extra$ServerSwitcher$ServerSwitcherServer",
+      "type": "com.zenith.util.config.Config$Server$Extra$ServerSwitcher$ServerSwitcherServer",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2897,7 +2900,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Server$Extra$ServerTimeout",
+      "type": "com.zenith.util.config.Config$Server$Extra$ServerTimeout",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2907,7 +2910,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Server$Extra$Timeout",
+      "type": "com.zenith.util.config.Config$Server$Extra$Timeout",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2917,7 +2920,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Server$Extra$Whitelist",
+      "type": "com.zenith.util.config.Config$Server$Extra$Whitelist",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2927,7 +2930,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Server$LoginRateLimiter",
+      "type": "com.zenith.util.config.Config$Server$LoginRateLimiter",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2937,7 +2940,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Server$PacketRateLimiter",
+      "type": "com.zenith.util.config.Config$Server$PacketRateLimiter",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2947,7 +2950,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Server$Ping",
+      "type": "com.zenith.util.config.Config$Server$Ping",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2957,7 +2960,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Server$PlaytimeLimiter",
+      "type": "com.zenith.util.config.Config$Server$PlaytimeLimiter",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2967,7 +2970,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Server$RateLimiter",
+      "type": "com.zenith.util.config.Config$Server$RateLimiter",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2977,7 +2980,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Server$ServerViaVersion",
+      "type": "com.zenith.util.config.Config$Server$ServerViaVersion",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2987,7 +2990,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Server$Spectator",
+      "type": "com.zenith.util.config.Config$Server$Spectator",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -2997,7 +3000,7 @@
       ]
     },
     {
-      "type": "com.zenith.util.Config$Theme",
+      "type": "com.zenith.util.config.Config$Theme",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -3007,11 +3010,11 @@
       ]
     },
     {
-      "type": "com.zenith.util.ConfigColor",
+      "type": "com.zenith.util.config.ConfigColor",
       "allDeclaredFields": true
     },
     {
-      "type": "com.zenith.util.LaunchConfig",
+      "type": "com.zenith.util.config.LaunchConfig",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -4645,6 +4648,9 @@
           "parameterTypes": []
         }
       ]
+    },
+    {
+      "type": "jdk.management.VirtualThreadSchedulerMXBean"
     },
     {
       "type": "jdk.management.jfr.ConfigurationInfo"
@@ -7297,6 +7303,16 @@
             "java.lang.String",
             "java.lang.String",
             "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "boolean",
+            "java.util.List"
+          ]
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": [
             "java.lang.String",
             "java.lang.String",
             "java.lang.String",

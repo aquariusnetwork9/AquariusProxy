@@ -1,4 +1,4 @@
-package com.zenith.util;
+package com.zenith.util.config;
 
 import net.dv8tion.jda.api.utils.Color;
 

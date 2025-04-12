@@ -4,7 +4,7 @@ import com.zenith.Proxy;
 import com.zenith.event.server.ServerPlayerConnectedEvent;
 import com.zenith.network.client.ClientSession;
 import com.zenith.network.codec.ClientEventLoopPacketHandler;
-import com.zenith.util.Config;
+import com.zenith.util.config.Config;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundPlayerInfoUpdatePacket;
 import org.jspecify.annotations.NonNull;
 

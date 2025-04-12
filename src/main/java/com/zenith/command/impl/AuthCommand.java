@@ -4,7 +4,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
 import com.zenith.command.api.*;
 import com.zenith.discord.Embed;
-import com.zenith.util.Config;
+import com.zenith.util.config.Config;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.zenith.Globals.CONFIG;

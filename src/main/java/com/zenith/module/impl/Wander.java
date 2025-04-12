@@ -5,9 +5,9 @@ import com.zenith.event.client.ClientBotTick;
 import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.feature.pathfinder.goals.GoalXZ;
 import com.zenith.module.api.Module;
-import com.zenith.util.Timer;
-import com.zenith.util.Timers;
 import com.zenith.util.math.MathHelper;
+import com.zenith.util.timer.Timer;
+import com.zenith.util.timer.Timers;
 import lombok.Getter;
 
 import java.util.List;

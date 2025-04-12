@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package com.zenith.util;
+package com.zenith.util.struct;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;

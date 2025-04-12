@@ -10,9 +10,9 @@ import com.zenith.event.module.ServerPlayerLeftVisualRangeEvent;
 import com.zenith.feature.player.InputRequest;
 import com.zenith.feature.player.RotationHelper;
 import com.zenith.module.api.Module;
-import com.zenith.util.Timer;
-import com.zenith.util.Timers;
 import com.zenith.util.math.MathHelper;
+import com.zenith.util.timer.Timer;
+import com.zenith.util.timer.Timers;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 import java.util.List;

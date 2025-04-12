@@ -1,4 +1,4 @@
-package com.zenith.util;
+package com.zenith.util.timer;
 
 public final class Timers {
     private Timers() {}

@@ -7,7 +7,7 @@ import com.zenith.command.api.CommandContext;
 import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import com.zenith.module.impl.ReplayMod;
-import com.zenith.util.Config.Client.Extra.ReplayMod.AutoRecordMode;
+import com.zenith.util.config.Config.Client.Extra.ReplayMod.AutoRecordMode;
 
 import java.util.Arrays;
 

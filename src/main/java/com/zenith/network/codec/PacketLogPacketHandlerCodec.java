@@ -1,6 +1,6 @@
 package com.zenith.network.codec;
 
-import com.zenith.util.Config.Debug.PacketLog.PacketLogConfig;
+import com.zenith.util.config.Config.Debug.PacketLog.PacketLogConfig;
 import org.geysermc.mcprotocollib.network.Session;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;

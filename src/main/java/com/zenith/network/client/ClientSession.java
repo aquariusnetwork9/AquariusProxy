@@ -7,7 +7,7 @@ import com.zenith.event.client.ClientDisconnectEvent;
 import com.zenith.network.ClientPacketPingTask;
 import com.zenith.network.codec.PacketCodecRegistries;
 import com.zenith.util.ComponentSerializer;
-import com.zenith.util.Config;
+import com.zenith.util.config.Config;
 import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.DefaultThreadFactory;

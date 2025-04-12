@@ -23,8 +23,8 @@ import com.zenith.network.client.ClientSession;
 import com.zenith.network.server.LanBroadcaster;
 import com.zenith.network.server.ProxyServerListener;
 import com.zenith.network.server.ServerSession;
-import com.zenith.util.FastArrayList;
 import com.zenith.util.Wait;
+import com.zenith.util.struct.FastArrayList;
 import com.zenith.via.ZenithClientChannelInitializer;
 import com.zenith.via.ZenithServerChannelInitializer;
 import io.netty.util.ResourceLeakDetector;
@@ -68,9 +68,9 @@ import java.util.stream.Stream;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Globals.*;
-import static com.zenith.util.Config.Authentication.AccountType.MSA;
-import static com.zenith.util.Config.Authentication.AccountType.OFFLINE;
 import static com.zenith.util.DisconnectMessages.*;
+import static com.zenith.util.config.Config.Authentication.AccountType.MSA;
+import static com.zenith.util.config.Config.Authentication.AccountType.OFFLINE;
 import static java.util.Objects.nonNull;
 
 

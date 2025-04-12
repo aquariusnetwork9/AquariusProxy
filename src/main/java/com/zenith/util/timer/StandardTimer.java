@@ -1,4 +1,4 @@
-package com.zenith.util;
+package com.zenith.util.timer;
 
 public class StandardTimer implements Timer {
     private long time = System.currentTimeMillis();

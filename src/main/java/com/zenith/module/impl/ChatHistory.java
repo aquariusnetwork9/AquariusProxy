@@ -8,7 +8,7 @@ import com.zenith.event.client.ClientDisconnectEvent;
 import com.zenith.event.player.PlayerLoginEvent;
 import com.zenith.event.player.SpectatorLoggedInEvent;
 import com.zenith.module.api.Module;
-import com.zenith.util.CircularFifoQueue;
+import com.zenith.util.struct.CircularFifoQueue;
 import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 

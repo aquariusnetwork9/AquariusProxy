@@ -1,4 +1,4 @@
-package com.zenith.util;
+package com.zenith.util.timer;
 
 public class SyncedTickTimer implements Timer {
     private long time = 0;
