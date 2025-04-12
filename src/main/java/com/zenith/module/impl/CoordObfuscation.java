@@ -22,7 +22,6 @@ import com.zenith.util.config.Config;
 import com.zenith.util.config.Config.Client.Extra.CoordObfuscation.ObfuscationMode;
 import com.zenith.util.math.MathHelper;
 import com.zenith.util.math.MutableVec3d;
-import com.zenith.util.timer.TickTimerManager;
 import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PositionElement;
@@ -41,7 +40,6 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.Serve
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundMoveVehiclePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundSignUpdatePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.*;
-import org.geysermc.mcprotocollib.protocol.packet.login.serverbound.ServerboundLoginAcknowledgedPacket;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -49,6 +47,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.github.rfresh2.EventConsumer.of;
@@ -164,30 +163,15 @@ public class CoordObfuscation extends Module {
             .build();
     }
     final AtomicLong awaitLoginsUntil = new AtomicLong(0);
-    final PacketHandlerCodec loginSlowDownPacketHandlerCodec = PacketHandlerCodec.serverBuilder()
-        .setId("coord-obf-rate-limit")
-        .setPriority(Integer.MAX_VALUE-1)
-        .state(ProtocolState.LOGIN, PacketHandlerStateCodec.serverBuilder()
-            .inbound(ServerboundLoginAcknowledgedPacket.class, (packet, session) -> {
-                if(Wait.waitUntil(() -> awaitLoginsUntil.get() < System.currentTimeMillis() || session.isDisconnected(), 5)) {
-                    return packet;
-                }
-                session.disconnect("[Coord Obfuscation] Login took too long");
-                return packet;
-            })
-            .build())
-        .build();
 
     @Override
     public void onEnable() {
         reconnectAllActiveConnections();
-        PacketCodecRegistries.SERVER_REGISTRY.register(loginSlowDownPacketHandlerCodec);
         PacketCodecRegistries.SERVER_REGISTRY.register(beforeOffsetPacketLogger);
     }
 
     @Override
     public void onDisable() {
-        PacketCodecRegistries.SERVER_REGISTRY.unregister(loginSlowDownPacketHandlerCodec);
         reconnectAllActiveConnections();
         playerStateMap.clear();
         PacketCodecRegistries.SERVER_REGISTRY.unregister(beforeOffsetPacketLogger);
@@ -208,54 +192,59 @@ public class CoordObfuscation extends Module {
     }
 
     public void onPlayerLoginEvent(final PlayerLoginEvent.Pre event) {
+        ServerSession session = event.session();
         try {
+            if(!Wait.waitUntil(() -> awaitLoginsUntil.get() < System.currentTimeMillis() || session.isDisconnected(), 5)) {
+                disconnect(session, "Login took too long");
+                return;
+            }
+            if (session.isDisconnected()) return;
             if (!Proxy.getInstance().isConnected()) {
-                disconnect(event.session(), "Disconnected");
+                disconnect(session, "Disconnected");
                 return;
             }
-            if (Proxy.getInstance().getClient().isInQueue() || !Proxy.getInstance().getClient().isOnline()) {
-                info("Disconnecting {} as we are in queue", event.session().getName());
-                disconnect(event.session(), "Queueing");
+            var client = Proxy.getInstance().getClient();
+            if (client == null) {
+                disconnect(session, "Disconnected");
                 return;
             }
-            awaitNextClientTick(event.session());
-            if (event.session().isDisconnected()) return;
-            if (CACHE.getPlayerCache().isRespawning()) {
-                info("Reconnecting {} due to respawn in progress", event.session().getName());
-                reconnect(event.session());
-                return;
-            }
-            if (Proxy.getInstance().getClient().isInQueue()) {
-                info("Disconnecting {} as we are in queue", event.session().getName());
-                disconnect(event.session(), "Queueing");
-                return;
-            }
-            if (CACHE.getChunkCache().getCache().size() < 12) {
-                info("Reconnecting {} due to chunk cache not being populated", event.session().getName());
-                reconnect(event.session());
-                return;
-            }
-            if (!CACHE.getPlayerCache().getTeleportQueue().isEmpty()) {
-                info("Reconnecting {} due to teleport queue not being empty", event.session().getName());
-                reconnect(event.session());
-                return;
-            }
-            var session = event.session();
-            var profile = session.getProfileCache().getProfile();
-            var proxyProfile = CACHE.getProfileCache().getProfile();
-            if (CONFIG.client.extra.coordObfuscation.exemptProxyAccount && profile != null && proxyProfile != null && profile.getId().equals(proxyProfile.getId())) {
-                info("Exempted proxy account session with no offset: {}", profile.getName());
-                return;
-            }
-            var state = new ObfPlayerState(session);
-            playerStateMap.put(session, state);
-            var playerPos = state.getPlayerPos();
-            var coordOffset = generateOffset(event.session(), playerPos.getX(), playerPos.getZ());
-            state.setCoordOffset(coordOffset);
-            info("Offset for {}: {}, {}", profile.getName(), coordOffset.x(), coordOffset.z());
+            client.getClientEventLoop().submit(() -> {
+                if (client.isInQueue() || !client.isOnline()) {
+                    info("Disconnecting {} as we are in queue", session.getName());
+                    disconnect(session, "Queueing");
+                    return;
+                }
+                if (CACHE.getPlayerCache().isRespawning()) {
+                    info("Reconnecting {} due to respawn in progress", session.getName());
+                    reconnect(session);
+                    return;
+                }
+                if (CACHE.getChunkCache().getCache().size() < 12) {
+                    info("Reconnecting {} due to chunk cache not being populated", session.getName());
+                    reconnect(session);
+                    return;
+                }
+                if (!CACHE.getPlayerCache().getTeleportQueue().isEmpty()) {
+                    info("Reconnecting {} due to teleport queue not being empty", session.getName());
+                    reconnect(session);
+                    return;
+                }
+                var profile = session.getProfileCache().getProfile();
+                var proxyProfile = CACHE.getProfileCache().getProfile();
+                if (CONFIG.client.extra.coordObfuscation.exemptProxyAccount && profile != null && proxyProfile != null && profile.getId().equals(proxyProfile.getId())) {
+                    info("Exempted proxy account session with no offset: {}", profile.getName());
+                    return;
+                }
+                var state = new ObfPlayerState(session);
+                playerStateMap.put(session, state);
+                var playerPos = state.getPlayerPos();
+                var coordOffset = generateOffset(session, playerPos.getX(), playerPos.getZ());
+                state.setCoordOffset(coordOffset);
+                info("Offset for {}: {}, {}", profile.getName(), coordOffset.x(), coordOffset.z());
+            }).get(10L, TimeUnit.SECONDS);
         } catch (final Exception e) {
             error("Failed to generate coord offset", e);
-            disconnect(event.session(), "bye");
+            disconnect(session, "bye");
         }
     }
 
@@ -351,35 +340,6 @@ public class CoordObfuscation extends Module {
     public void setServerTeleportPos(final ServerSession session, final double x, final double y, final double z, final int teleportId) {
         if (session.isSpectator()) return; // ignore for spectators
         getPlayerState(session).getServerTeleports().add(new ObfPlayerState.ServerTeleport(x, y, z, teleportId));
-    }
-
-    public void awaitNextClientTick(ServerSession session) {
-        try {
-            var client = Proxy.getInstance().getClient();
-            if (client.isDisconnected()) throw new RuntimeException("Client is disconnected");
-            if (client.getClientEventLoop().inEventLoop()) {
-                throw new RuntimeException("Cannot await next client tick from client tick event loop");
-            }
-            var tickTime = TickTimerManager.INSTANCE.getTickTime();
-            var clientEventLoop = client.getClientEventLoop();
-            while (true) {
-                // await any remaining tasks in the event loop
-                if (clientEventLoop.isShuttingDown()) {
-                    throw new RuntimeException("Client event loop is shutting down");
-                }
-                if (!client.isOnline()) { // client does not tick unless its online (not in queue)
-                    throw new RuntimeException("Client is not online");
-                }
-                clientEventLoop.submit(() -> {}).get();
-                if (TickTimerManager.INSTANCE.getTickTime() - tickTime > 1)
-                    break;
-                Wait.waitMs(50);
-            }
-
-        } catch (Exception e) {
-            error("Failed to await next client tick", e);
-            disconnect(session, "bye");
-        }
     }
 
     public void onServerTeleport(final ServerSession session, double x, double y, double z, final int teleportId, final List<PositionElement> relative) {
