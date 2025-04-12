@@ -1,9 +1,9 @@
 package com.zenith.feature.coordobf.handlers.outbound;
 
-import com.zenith.api.network.PacketHandler;
-import com.zenith.api.network.server.ServerSession;
 import com.zenith.cache.data.chunk.Chunk;
-import com.zenith.module.impl.CoordObfuscator;
+import com.zenith.module.impl.CoordObfuscation;
+import com.zenith.network.codec.PacketHandler;
+import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundLevelChunkWithLightPacket;
 
 import static com.zenith.Globals.*;
@@ -11,7 +11,7 @@ import static com.zenith.Globals.*;
 public class COLevelChunkWithLightHandler implements PacketHandler<ClientboundLevelChunkWithLightPacket, ServerSession> {
     @Override
     public ClientboundLevelChunkWithLightPacket apply(final ClientboundLevelChunkWithLightPacket packet, final ServerSession session) {
-        CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
+        CoordObfuscation coordObf = MODULE.get(CoordObfuscation.class);
         var coordOffset = coordObf.getCoordOffset(session);
         return new ClientboundLevelChunkWithLightPacket(
             coordOffset.offsetChunkX(packet.getX()),

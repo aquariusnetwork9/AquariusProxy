@@ -1,10 +1,10 @@
 package com.zenith.feature.coordobf.handlers.outbound;
 
-import com.zenith.api.network.PacketHandler;
-import com.zenith.api.network.server.ServerSession;
 import com.zenith.feature.player.World;
 import com.zenith.mc.dimension.DimensionRegistry;
-import com.zenith.module.impl.CoordObfuscator;
+import com.zenith.module.impl.CoordObfuscation;
+import com.zenith.network.codec.PacketHandler;
+import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundBlockDestructionPacket;
 
 import static com.zenith.Globals.CONFIG;
@@ -25,7 +25,7 @@ public class COBlockDestructionHandler implements PacketHandler<ClientboundBlock
                 }
             }
         }
-        CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
+        CoordObfuscation coordObf = MODULE.get(CoordObfuscation.class);
         return new ClientboundBlockDestructionPacket(
             packet.getBreakerEntityId(),
             coordObf.getCoordOffset(session).offsetX(packet.getX()),

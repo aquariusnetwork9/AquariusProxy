@@ -1,7 +1,7 @@
 package com.zenith.feature.actionlimiter.handlers.inbound;
 
-import com.zenith.api.network.PacketHandler;
-import com.zenith.api.network.server.ServerSession;
+import com.zenith.network.codec.PacketHandler;
+import com.zenith.network.server.ServerSession;
 import com.zenith.util.math.MathHelper;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundMovePlayerPosPacket;
 

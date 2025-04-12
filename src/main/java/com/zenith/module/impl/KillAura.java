@@ -1,10 +1,10 @@
 package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
-import com.zenith.api.event.client.ClientBotTick;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.cache.data.entity.EntityStandard;
+import com.zenith.event.client.ClientBotTick;
 import com.zenith.feature.player.*;
 import com.zenith.feature.player.raycast.RaycastHelper;
 import com.zenith.mc.item.ItemRegistry;

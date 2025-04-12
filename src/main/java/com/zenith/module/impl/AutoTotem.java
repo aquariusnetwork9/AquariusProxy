@@ -2,12 +2,12 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
-import com.zenith.api.event.client.ClientBotTick;
-import com.zenith.api.event.client.ClientTickEvent;
-import com.zenith.api.event.module.NoTotemsEvent;
-import com.zenith.api.event.module.PlayerTotemPopAlertEvent;
-import com.zenith.api.event.module.TotemPopEvent;
 import com.zenith.cache.data.inventory.Container;
+import com.zenith.event.client.ClientBotTick;
+import com.zenith.event.client.ClientTickEvent;
+import com.zenith.event.module.NoTotemsEvent;
+import com.zenith.event.module.PlayerTotemPopAlertEvent;
+import com.zenith.event.module.TotemPopEvent;
 import com.zenith.feature.inventory.ContainerClickAction;
 import com.zenith.mc.item.ItemRegistry;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerActionType;

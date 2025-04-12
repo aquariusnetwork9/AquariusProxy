@@ -1,12 +1,12 @@
 package com.zenith.network.client.handler.incoming;
 
 import com.zenith.Proxy;
-import com.zenith.api.event.client.ClientOnlineEvent;
-import com.zenith.api.event.client.PrioStatusEvent;
-import com.zenith.api.event.queue.QueueCompleteEvent;
-import com.zenith.api.event.queue.QueueStartEvent;
-import com.zenith.api.network.ClientEventLoopPacketHandler;
-import com.zenith.api.network.client.ClientSession;
+import com.zenith.event.client.ClientOnlineEvent;
+import com.zenith.event.client.PrioStatusEvent;
+import com.zenith.event.queue.QueueCompleteEvent;
+import com.zenith.event.queue.QueueStartEvent;
+import com.zenith.network.client.ClientSession;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import com.zenith.util.ComponentSerializer;
 import com.zenith.util.Config;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundTabListPacket;

@@ -2,9 +2,9 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
-import com.zenith.api.event.client.ClientBotTick;
-import com.zenith.api.event.client.ClientDeathEvent;
-import com.zenith.api.module.Module;
+import com.zenith.event.client.ClientBotTick;
+import com.zenith.event.client.ClientDeathEvent;
+import com.zenith.module.api.Module;
 import org.geysermc.mcprotocollib.protocol.data.game.ClientCommand;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundClientCommandPacket;
 

@@ -1,9 +1,9 @@
 package com.zenith.database;
 
-import com.zenith.api.event.queue.QueueCompleteEvent;
-import com.zenith.api.event.queue.QueuePositionUpdateEvent;
-import com.zenith.api.event.queue.QueueStartEvent;
-import com.zenith.api.event.server.ServerRestartingEvent;
+import com.zenith.event.queue.QueueCompleteEvent;
+import com.zenith.event.queue.QueuePositionUpdateEvent;
+import com.zenith.event.queue.QueueStartEvent;
+import com.zenith.event.server.ServerRestartingEvent;
 
 import java.time.Duration;
 import java.time.Instant;

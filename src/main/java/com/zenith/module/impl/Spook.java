@@ -1,15 +1,15 @@
 package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
-import com.zenith.api.event.client.ClientBotTick;
-import com.zenith.api.event.client.ClientDisconnectEvent;
-import com.zenith.api.event.module.ServerPlayerInVisualRangeEvent;
-import com.zenith.api.event.module.ServerPlayerLeftVisualRangeEvent;
-import com.zenith.api.module.Module;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityPlayer;
+import com.zenith.event.client.ClientBotTick;
+import com.zenith.event.client.ClientDisconnectEvent;
+import com.zenith.event.module.ServerPlayerInVisualRangeEvent;
+import com.zenith.event.module.ServerPlayerLeftVisualRangeEvent;
 import com.zenith.feature.player.InputRequest;
 import com.zenith.feature.player.RotationHelper;
+import com.zenith.module.api.Module;
 import com.zenith.util.Timer;
 import com.zenith.util.Timers;
 import com.zenith.util.math.MathHelper;

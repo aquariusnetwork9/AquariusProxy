@@ -1,13 +1,13 @@
 package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
-import com.zenith.api.event.chat.PublicChatEvent;
-import com.zenith.api.event.chat.SystemChatEvent;
-import com.zenith.api.event.chat.WhisperChatEvent;
-import com.zenith.api.event.client.ClientDisconnectEvent;
-import com.zenith.api.event.player.PlayerLoginEvent;
-import com.zenith.api.event.player.SpectatorLoggedInEvent;
-import com.zenith.api.module.Module;
+import com.zenith.event.chat.PublicChatEvent;
+import com.zenith.event.chat.SystemChatEvent;
+import com.zenith.event.chat.WhisperChatEvent;
+import com.zenith.event.client.ClientDisconnectEvent;
+import com.zenith.event.player.PlayerLoginEvent;
+import com.zenith.event.player.SpectatorLoggedInEvent;
+import com.zenith.module.api.Module;
 import com.zenith.util.CircularFifoQueue;
 import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;

@@ -1,9 +1,9 @@
 package com.zenith.feature.coordobf.handlers.outbound;
 
 import com.zenith.Proxy;
-import com.zenith.api.network.PacketHandler;
-import com.zenith.api.network.server.ServerSession;
-import com.zenith.module.impl.CoordObfuscator;
+import com.zenith.module.impl.CoordObfuscation;
+import com.zenith.network.codec.PacketHandler;
+import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerSpawnInfo;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
@@ -14,7 +14,7 @@ import static com.zenith.Globals.MODULE;
 public class COLoginHandler implements PacketHandler<ClientboundLoginPacket, ServerSession> {
     @Override
     public ClientboundLoginPacket apply(final ClientboundLoginPacket packet, final ServerSession session) {
-        var coordObf = MODULE.get(CoordObfuscator.class);
+        var coordObf = MODULE.get(CoordObfuscation.class);
         if (coordObf.getPlayerState(session).isInGame()) {
             // i.e. velocity world switching
             coordObf.disconnect(session, "World switching");

@@ -1,12 +1,12 @@
 package com.zenith.network.client;
 
 import com.zenith.Proxy;
-import com.zenith.api.event.client.ClientBotTick;
-import com.zenith.api.event.client.ClientDisconnectEvent;
-import com.zenith.api.event.client.ClientOnlineEvent;
-import com.zenith.api.event.client.ClientTickEvent;
-import com.zenith.api.event.player.PlayerConnectedEvent;
-import com.zenith.api.event.player.PlayerDisconnectedEvent;
+import com.zenith.event.client.ClientBotTick;
+import com.zenith.event.client.ClientDisconnectEvent;
+import com.zenith.event.client.ClientOnlineEvent;
+import com.zenith.event.client.ClientTickEvent;
+import com.zenith.event.player.PlayerConnectedEvent;
+import com.zenith.event.player.PlayerDisconnectedEvent;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;

@@ -3,7 +3,7 @@ package com.zenith.command.brigadier;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
-import com.zenith.api.command.*;
+import com.zenith.command.api.*;
 import org.jspecify.annotations.NonNull;
 
 import java.util.function.Predicate;

@@ -1,10 +1,10 @@
 package com.zenith.network.server.handler.spectator.postoutgoing;
 
 import com.zenith.Proxy;
-import com.zenith.api.event.player.SpectatorLoggedInEvent;
-import com.zenith.api.network.PostOutgoingPacketHandler;
-import com.zenith.api.network.server.ServerSession;
+import com.zenith.event.player.SpectatorLoggedInEvent;
 import com.zenith.feature.spectator.SpectatorSync;
+import com.zenith.network.codec.PostOutgoingPacketHandler;
+import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntryAction;

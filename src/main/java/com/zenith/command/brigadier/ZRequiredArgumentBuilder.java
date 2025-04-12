@@ -5,8 +5,8 @@ import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.tree.ArgumentCommandNode;
 import com.mojang.brigadier.tree.CommandNode;
-import com.zenith.api.command.Command;
-import com.zenith.api.command.IExecutes;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.IExecutes;
 
 public class ZRequiredArgumentBuilder<S, T> extends ArgumentBuilder<S, ZRequiredArgumentBuilder<S, T>> {
     private final String name;

@@ -1,7 +1,7 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.api.command.*;
+import com.zenith.command.api.*;
 import com.zenith.discord.Embed;
 import com.zenith.util.MentionUtil;
 

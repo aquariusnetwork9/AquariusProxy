@@ -1,7 +1,7 @@
 package com.zenith.feature.tps;
 
 import com.google.common.primitives.Doubles;
-import com.zenith.api.event.client.ClientConnectEvent;
+import com.zenith.event.client.ClientConnectEvent;
 
 import java.util.Arrays;
 

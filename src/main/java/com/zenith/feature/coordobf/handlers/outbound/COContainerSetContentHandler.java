@@ -1,8 +1,8 @@
 package com.zenith.feature.coordobf.handlers.outbound;
 
-import com.zenith.api.network.PacketHandler;
-import com.zenith.api.network.server.ServerSession;
-import com.zenith.module.impl.CoordObfuscator;
+import com.zenith.module.impl.CoordObfuscation;
+import com.zenith.network.codec.PacketHandler;
+import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerSetContentPacket;
 
@@ -14,7 +14,7 @@ import static com.zenith.Globals.MODULE;
 public class COContainerSetContentHandler implements PacketHandler<ClientboundContainerSetContentPacket, ServerSession> {
     @Override
     public ClientboundContainerSetContentPacket apply(final ClientboundContainerSetContentPacket packet, final ServerSession session) {
-        CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
+        CoordObfuscation coordObf = MODULE.get(CoordObfuscation.class);
         List<ItemStack> itemStacks = Arrays.asList(packet.getItems());
         ItemStack[] stacks = itemStacks.stream()
             .map(is -> coordObf.getCoordOffset(session).sanitizeItemStack(is)).toList().toArray(new ItemStack[0]);

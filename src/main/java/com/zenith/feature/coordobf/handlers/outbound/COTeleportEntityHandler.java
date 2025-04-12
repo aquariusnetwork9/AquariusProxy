@@ -1,10 +1,10 @@
 package com.zenith.feature.coordobf.handlers.outbound;
 
-import com.zenith.api.network.PacketHandler;
-import com.zenith.api.network.server.ServerSession;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityStandard;
-import com.zenith.module.impl.CoordObfuscator;
+import com.zenith.module.impl.CoordObfuscation;
+import com.zenith.network.codec.PacketHandler;
+import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundTeleportEntityPacket;
 
@@ -20,7 +20,7 @@ public class COTeleportEntityHandler implements PacketHandler<ClientboundTelepor
                 return null;
             }
         }
-        CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
+        CoordObfuscation coordObf = MODULE.get(CoordObfuscation.class);
         return new ClientboundTeleportEntityPacket(
             packet.getEntityId(),
             coordObf.getCoordOffset(session).offsetX(packet.getX()),

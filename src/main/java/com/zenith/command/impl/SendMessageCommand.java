@@ -2,8 +2,8 @@ package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
-import com.zenith.api.command.*;
-import com.zenith.api.event.message.PrivateMessageSendEvent;
+import com.zenith.command.api.*;
+import com.zenith.event.message.PrivateMessageSendEvent;
 import com.zenith.util.ComponentSerializer;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;

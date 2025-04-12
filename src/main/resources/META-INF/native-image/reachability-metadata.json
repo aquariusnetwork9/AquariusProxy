@@ -103,19 +103,13 @@
       "type": "[Lcom.zaxxer.hikari.util.ConcurrentBag$IConcurrentBagEntry;"
     },
     {
-      "type": "[Lcom.zenith.api.network.PacketHandlerCodec;"
-    },
-    {
-      "type": "[Lcom.zenith.api.network.server.ServerSession;"
-    },
-    {
       "type": "[Lcom.zenith.feature.queue.mcping.rawData.Extra;"
     },
     {
       "type": "[Lcom.zenith.feature.queue.mcping.rawData.ForgeDataListItem;"
     },
     {
-      "type": "[Lcom.zenith.network.registry.PacketHandlerCodec;"
+      "type": "[Lcom.zenith.network.codec.PacketHandlerCodec;"
     },
     {
       "type": "[Lcom.zenith.network.server.ServerSession;"
@@ -1454,12 +1448,6 @@
           "name": "state"
         }
       ]
-    },
-    {
-      "type": "com.zenith.api.network.client.ClientSession"
-    },
-    {
-      "type": "com.zenith.api.network.server.ServerSession"
     },
     {
       "type": "com.zenith.database.dto.enums.Connectiontype",

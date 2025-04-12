@@ -1,12 +1,12 @@
 package com.zenith.feature.coordobf.handlers.outbound;
 
 import com.viaversion.nbt.mini.MNBT;
-import com.zenith.api.network.PacketHandler;
-import com.zenith.api.network.server.ServerSession;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityStandard;
 import com.zenith.mc.item.ItemRegistry;
-import com.zenith.module.impl.CoordObfuscator;
+import com.zenith.module.impl.CoordObfuscation;
+import com.zenith.network.codec.PacketHandler;
+import com.zenith.network.server.ServerSession;
 import lombok.NonNull;
 import org.cloudburstmc.math.vector.Vector3i;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.EntityMetadata;
@@ -45,7 +45,7 @@ public class COSetEntityDataHandler implements PacketHandler<ClientboundSetEntit
                 }
             }
         }
-        CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
+        CoordObfuscation coordObf = MODULE.get(CoordObfuscation.class);
         List<EntityMetadata<?, ?>> modifiedMetadata = metadata.stream()
             .map(m -> {
                 if (m.getType() == MetadataTypes.POSITION) {

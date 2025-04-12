@@ -2,8 +2,8 @@ package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
-import com.zenith.api.command.*;
 import com.zenith.cache.data.entity.Entity;
+import com.zenith.command.api.*;
 import com.zenith.feature.spectator.SpectatorSync;
 import com.zenith.util.ComponentSerializer;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSetCameraPacket;

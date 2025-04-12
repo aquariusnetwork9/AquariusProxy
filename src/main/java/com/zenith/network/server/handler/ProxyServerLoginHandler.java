@@ -1,12 +1,12 @@
 package com.zenith.network.server.handler;
 
 import com.zenith.Proxy;
-import com.zenith.api.event.player.PlayerConnectedEvent;
-import com.zenith.api.event.player.PlayerLoginEvent;
-import com.zenith.api.event.player.SpectatorConnectedEvent;
-import com.zenith.api.network.server.ServerSession;
 import com.zenith.cache.data.PlayerCache;
+import com.zenith.event.player.PlayerConnectedEvent;
+import com.zenith.event.player.PlayerLoginEvent;
+import com.zenith.event.player.SpectatorConnectedEvent;
 import com.zenith.feature.player.World;
+import com.zenith.network.server.ServerSession;
 import com.zenith.network.server.ZenithServerInfoBuilder;
 import com.zenith.util.Maps;
 import com.zenith.util.Wait;

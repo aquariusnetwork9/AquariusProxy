@@ -2,11 +2,11 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
-import com.zenith.api.event.client.ClientDisconnectEvent;
-import com.zenith.api.event.queue.QueueStartEvent;
-import com.zenith.api.module.Module;
-import com.zenith.api.network.PacketHandlerCodec;
-import com.zenith.api.network.PacketHandlerStateCodec;
+import com.zenith.event.client.ClientDisconnectEvent;
+import com.zenith.event.queue.QueueStartEvent;
+import com.zenith.module.api.Module;
+import com.zenith.network.codec.PacketHandlerCodec;
+import com.zenith.network.codec.PacketHandlerStateCodec;
 import com.zenith.util.Timer;
 import com.zenith.util.Timers;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;

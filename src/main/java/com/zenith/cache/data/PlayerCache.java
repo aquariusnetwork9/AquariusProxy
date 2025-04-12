@@ -1,7 +1,6 @@
 package com.zenith.cache.data;
 
 import com.zenith.Proxy;
-import com.zenith.api.network.server.ServerSession;
 import com.zenith.cache.CacheResetType;
 import com.zenith.cache.CachedData;
 import com.zenith.cache.data.entity.Entity;
@@ -9,6 +8,7 @@ import com.zenith.cache.data.entity.EntityCache;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.cache.data.inventory.Container;
 import com.zenith.cache.data.inventory.InventoryCache;
+import com.zenith.network.server.ServerSession;
 import com.zenith.util.math.MutableVec3i;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.ints.IntArrayFIFOQueue;

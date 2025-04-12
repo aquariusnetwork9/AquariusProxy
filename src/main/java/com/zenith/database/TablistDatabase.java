@@ -1,6 +1,6 @@
 package com.zenith.database;
 
-import com.zenith.api.event.db.DatabaseTickEvent;
+import com.zenith.event.db.DatabaseTickEvent;
 import com.zenith.util.ComponentSerializer;
 
 import java.time.Duration;

@@ -1,16 +1,16 @@
 package com.zenith.network.client.handler.incoming;
 
 import com.zenith.Proxy;
-import com.zenith.api.event.chat.DeathMessageChatEvent;
-import com.zenith.api.event.chat.PublicChatEvent;
-import com.zenith.api.event.chat.SystemChatEvent;
-import com.zenith.api.event.chat.WhisperChatEvent;
-import com.zenith.api.event.queue.QueueSkipEvent;
-import com.zenith.api.event.server.ClientDeathMessageEvent;
-import com.zenith.api.network.ClientEventLoopPacketHandler;
-import com.zenith.api.network.client.ClientSession;
+import com.zenith.event.chat.DeathMessageChatEvent;
+import com.zenith.event.chat.PublicChatEvent;
+import com.zenith.event.chat.SystemChatEvent;
+import com.zenith.event.chat.WhisperChatEvent;
+import com.zenith.event.queue.QueueSkipEvent;
+import com.zenith.event.server.ClientDeathMessageEvent;
 import com.zenith.feature.deathmessages.DeathMessageParseResult;
 import com.zenith.feature.deathmessages.DeathMessagesParser;
+import com.zenith.network.client.ClientSession;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import com.zenith.util.ComponentSerializer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;

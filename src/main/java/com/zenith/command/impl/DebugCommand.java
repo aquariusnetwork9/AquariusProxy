@@ -2,12 +2,12 @@ package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
-import com.zenith.api.command.Command;
-import com.zenith.api.command.CommandCategory;
-import com.zenith.api.command.CommandContext;
-import com.zenith.api.command.CommandUsage;
 import com.zenith.cache.data.PlayerCache;
 import com.zenith.cache.data.chunk.ChunkCache;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import org.geysermc.mcprotocollib.protocol.codec.MinecraftTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;

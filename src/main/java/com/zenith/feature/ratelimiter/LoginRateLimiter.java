@@ -2,7 +2,7 @@ package com.zenith.feature.ratelimiter;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.zenith.api.network.server.ServerSession;
+import com.zenith.network.server.ServerSession;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;

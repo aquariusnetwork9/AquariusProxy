@@ -2,7 +2,7 @@ package com.zenith.feature.inventory;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
-import com.zenith.api.event.client.ClientBotTick;
+import com.zenith.event.client.ClientBotTick;
 import com.zenith.feature.player.InputRequest;
 import com.zenith.util.RequestFuture;
 import com.zenith.util.Timer;

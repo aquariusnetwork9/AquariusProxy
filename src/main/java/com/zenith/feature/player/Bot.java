@@ -2,13 +2,13 @@ package com.zenith.feature.player;
 
 import com.google.common.collect.Lists;
 import com.zenith.Proxy;
-import com.zenith.api.event.client.ClientBotTick;
-import com.zenith.api.module.ModuleUtils;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.cache.data.entity.EntityPlayer;
+import com.zenith.event.client.ClientBotTick;
 import com.zenith.mc.block.*;
 import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.mc.entity.EntityData;
+import com.zenith.module.api.ModuleUtils;
 import com.zenith.util.math.MathHelper;
 import com.zenith.util.math.MutableVec3d;
 import lombok.Getter;

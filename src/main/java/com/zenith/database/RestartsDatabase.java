@@ -1,6 +1,6 @@
 package com.zenith.database;
 
-import com.zenith.api.event.server.ServerRestartingEvent;
+import com.zenith.event.server.ServerRestartingEvent;
 
 import java.time.Duration;
 import java.time.Instant;

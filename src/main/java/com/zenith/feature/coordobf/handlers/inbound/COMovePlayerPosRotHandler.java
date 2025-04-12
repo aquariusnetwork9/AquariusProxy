@@ -1,9 +1,9 @@
 package com.zenith.feature.coordobf.handlers.inbound;
 
-import com.zenith.api.network.PacketHandler;
-import com.zenith.api.network.server.ServerSession;
 import com.zenith.feature.coordobf.CoordOffset;
-import com.zenith.module.impl.CoordObfuscator;
+import com.zenith.module.impl.CoordObfuscation;
+import com.zenith.network.codec.PacketHandler;
+import com.zenith.network.server.ServerSession;
 import com.zenith.util.math.MathHelper;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundMovePlayerPosRotPacket;
 
@@ -13,7 +13,7 @@ import static com.zenith.Globals.MODULE;
 public class COMovePlayerPosRotHandler implements PacketHandler<ServerboundMovePlayerPosRotPacket, ServerSession> {
     @Override
     public ServerboundMovePlayerPosRotPacket apply(final ServerboundMovePlayerPosRotPacket packet, final ServerSession session) {
-        var coordObf = MODULE.get(CoordObfuscator.class);
+        var coordObf = MODULE.get(CoordObfuscation.class);
         var state= coordObf.getPlayerState(session);
         if (!state.isInGame()) {
             if (session.isSpectator()) {

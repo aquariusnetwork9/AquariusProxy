@@ -2,10 +2,12 @@ package com.zenith.plugin;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.zenith.api.event.plugin.PluginLoadFailureEvent;
-import com.zenith.api.event.plugin.PluginLoadedEvent;
-import com.zenith.api.plugin.PluginInfo;
-import com.zenith.api.plugin.ZenithProxyPlugin;
+import com.zenith.event.plugin.PluginLoadFailureEvent;
+import com.zenith.event.plugin.PluginLoadedEvent;
+import com.zenith.plugin.api.InstancedPluginAPI;
+import com.zenith.plugin.api.PluginInfo;
+import com.zenith.plugin.api.PluginInstance;
+import com.zenith.plugin.api.ZenithProxyPlugin;
 import com.zenith.util.ImageInfo;
 import lombok.SneakyThrows;
 

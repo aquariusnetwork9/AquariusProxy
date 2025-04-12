@@ -2,9 +2,9 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
-import com.zenith.api.event.module.*;
-import com.zenith.api.event.player.PlayerDisconnectedEvent;
-import com.zenith.api.module.Module;
+import com.zenith.event.module.*;
+import com.zenith.event.player.PlayerDisconnectedEvent;
+import com.zenith.module.api.Module;
 
 import java.util.List;
 

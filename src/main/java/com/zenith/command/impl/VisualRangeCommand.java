@@ -1,11 +1,11 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.api.command.Command;
-import com.zenith.api.command.CommandCategory;
-import com.zenith.api.command.CommandContext;
-import com.zenith.api.command.CommandUsage;
 import com.zenith.cache.data.entity.EntityPlayer;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import com.zenith.module.impl.VisualRange;
 import com.zenith.util.Config;

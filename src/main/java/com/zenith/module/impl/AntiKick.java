@@ -2,11 +2,11 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
-import com.zenith.api.event.client.ClientTickEvent;
-import com.zenith.api.event.module.ClientSwingEvent;
-import com.zenith.api.event.module.EntityFishHookSpawnEvent;
-import com.zenith.api.event.player.PlayerConnectedEvent;
-import com.zenith.api.module.Module;
+import com.zenith.event.client.ClientTickEvent;
+import com.zenith.event.module.ClientSwingEvent;
+import com.zenith.event.module.EntityFishHookSpawnEvent;
+import com.zenith.event.player.PlayerConnectedEvent;
+import com.zenith.module.api.Module;
 import com.zenith.util.Timer;
 import com.zenith.util.Timers;
 import com.zenith.util.math.MathHelper;

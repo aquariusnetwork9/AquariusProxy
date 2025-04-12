@@ -4,7 +4,7 @@ import com.viaversion.vialoader.impl.platform.ViaVersionPlatformImpl;
 import com.viaversion.viaversion.api.connection.UserConnection;
 import com.viaversion.viaversion.configuration.AbstractViaConfig;
 import com.zenith.Proxy;
-import com.zenith.api.network.server.ServerSession;
+import com.zenith.network.server.ServerSession;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundCustomPayloadPacket;

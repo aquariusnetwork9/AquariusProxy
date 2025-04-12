@@ -6,7 +6,7 @@ import com.mojang.brigadier.arguments.*;
 import com.mojang.brigadier.tree.ArgumentCommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.mojang.brigadier.tree.RootCommandNode;
-import com.zenith.api.command.CommandContext;
+import com.zenith.command.api.CommandContext;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import lombok.experimental.UtilityClass;

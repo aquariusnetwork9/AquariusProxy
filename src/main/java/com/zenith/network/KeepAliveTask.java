@@ -1,6 +1,6 @@
 package com.zenith.network;
 
-import com.zenith.api.network.server.ServerSession;
+import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundKeepAlivePacket;
 

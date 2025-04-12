@@ -2,13 +2,13 @@ package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
-import com.zenith.api.command.*;
-import com.zenith.api.network.server.ServerSession;
+import com.zenith.command.api.*;
 import com.zenith.discord.DiscordBot;
 import com.zenith.discord.Embed;
 import com.zenith.feature.api.sessionserver.SessionServerApi;
 import com.zenith.feature.player.World;
 import com.zenith.feature.whitelist.PlayerListsManager;
+import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntryAction;

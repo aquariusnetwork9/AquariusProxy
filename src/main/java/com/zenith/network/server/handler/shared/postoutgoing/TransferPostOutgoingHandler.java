@@ -1,7 +1,7 @@
 package com.zenith.network.server.handler.shared.postoutgoing;
 
-import com.zenith.api.network.PostOutgoingPacketHandler;
-import com.zenith.api.network.server.ServerSession;
+import com.zenith.network.codec.PostOutgoingPacketHandler;
+import com.zenith.network.server.ServerSession;
 import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundTransferPacket;
 

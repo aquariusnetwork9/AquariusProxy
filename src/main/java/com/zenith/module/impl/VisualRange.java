@@ -2,9 +2,9 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
-import com.zenith.api.event.module.*;
-import com.zenith.api.module.Module;
 import com.zenith.cache.data.entity.EntityPlayer;
+import com.zenith.event.module.*;
+import com.zenith.module.api.Module;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandPacket;
 
 import java.time.Instant;

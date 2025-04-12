@@ -1,13 +1,13 @@
 package com.zenith.network.client.handler.incoming;
 
 import com.zenith.Proxy;
-import com.zenith.api.network.ClientEventLoopPacketHandler;
-import com.zenith.api.network.client.ClientSession;
-import com.zenith.api.network.server.ServerSession;
 import com.zenith.cache.data.PlayerCache;
 import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.feature.spectator.SpectatorSync;
 import com.zenith.module.impl.AntiAFK;
+import com.zenith.network.client.ClientSession;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
+import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PositionElement;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
 import org.jspecify.annotations.NonNull;

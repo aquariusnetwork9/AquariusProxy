@@ -2,7 +2,7 @@ package com.zenith.command.impl;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.api.command.*;
+import com.zenith.command.api.*;
 
 import java.util.Arrays;
 import java.util.Optional;

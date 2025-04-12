@@ -3,10 +3,10 @@ package com.zenith.module.impl;
 import com.github.rfresh2.EventConsumer;
 import com.google.common.collect.Sets;
 import com.zenith.Proxy;
-import com.zenith.api.event.client.ClientConnectEvent;
-import com.zenith.api.event.client.ClientDisconnectEvent;
-import com.zenith.api.event.module.AutoReconnectEvent;
-import com.zenith.api.module.Module;
+import com.zenith.event.client.ClientConnectEvent;
+import com.zenith.event.client.ClientDisconnectEvent;
+import com.zenith.event.module.AutoReconnectEvent;
+import com.zenith.module.api.Module;
 import com.zenith.util.Wait;
 import org.jspecify.annotations.Nullable;
 

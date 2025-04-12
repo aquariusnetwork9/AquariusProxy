@@ -2,12 +2,12 @@ package com.zenith.network.server.handler.spectator.incoming;
 
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.zenith.Proxy;
-import com.zenith.api.event.message.PrivateMessageSendEvent;
-import com.zenith.api.network.PacketHandler;
-import com.zenith.api.network.server.ServerSession;
 import com.zenith.cache.data.entity.Entity;
+import com.zenith.event.message.PrivateMessageSendEvent;
 import com.zenith.feature.spectator.SpectatorEntityRegistry;
 import com.zenith.feature.spectator.SpectatorSync;
+import com.zenith.network.codec.PacketHandler;
+import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSetCameraPacket;

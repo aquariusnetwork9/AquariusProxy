@@ -1,9 +1,9 @@
 package com.zenith.feature.autoupdater;
 
 import com.zenith.Proxy;
-import com.zenith.api.event.client.ClientDisconnectEvent;
-import com.zenith.api.event.update.UpdateAvailableEvent;
-import com.zenith.api.event.update.UpdateStartEvent;
+import com.zenith.event.client.ClientDisconnectEvent;
+import com.zenith.event.update.UpdateAvailableEvent;
+import com.zenith.event.update.UpdateStartEvent;
 import com.zenith.feature.queue.Queue;
 import lombok.Getter;
 import org.jspecify.annotations.Nullable;

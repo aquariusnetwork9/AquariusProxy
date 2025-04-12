@@ -1,6 +1,6 @@
 package com.zenith.database;
 
-import com.zenith.api.event.db.RedisRestartEvent;
+import com.zenith.event.db.RedisRestartEvent;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import lombok.Getter;
 import org.redisson.Redisson;

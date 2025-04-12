@@ -1,8 +1,8 @@
 package com.zenith.network.client.handler.incoming.spawn;
 
-import com.zenith.api.network.ClientEventLoopPacketHandler;
-import com.zenith.api.network.client.ClientSession;
 import com.zenith.cache.data.entity.EntityExperienceOrb;
+import com.zenith.network.client.ClientSession;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.spawn.ClientboundAddExperienceOrbPacket;
 import org.jspecify.annotations.NonNull;

@@ -1,7 +1,7 @@
 package com.zenith.network.client.handler.postoutgoing;
 
-import com.zenith.api.network.PostOutgoingPacketHandler;
-import com.zenith.api.network.client.ClientSession;
+import com.zenith.network.client.ClientSession;
+import com.zenith.network.codec.PostOutgoingPacketHandler;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.packet.configuration.serverbound.ServerboundFinishConfigurationPacket;
 

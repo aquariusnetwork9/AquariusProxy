@@ -1,8 +1,8 @@
 package com.zenith.network.client.handler.incoming.scoreboard;
 
-import com.zenith.api.network.ClientEventLoopPacketHandler;
-import com.zenith.api.network.client.ClientSession;
 import com.zenith.cache.data.scoreboard.Objective;
+import com.zenith.network.client.ClientSession;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.scoreboard.ClientboundSetObjectivePacket;
 import org.jspecify.annotations.NonNull;
 

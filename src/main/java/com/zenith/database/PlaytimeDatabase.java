@@ -1,13 +1,13 @@
 package com.zenith.database;
 
 import com.zenith.Proxy;
-import com.zenith.api.event.client.ClientConnectEvent;
-import com.zenith.api.event.client.ClientDisconnectEvent;
-import com.zenith.api.event.client.ClientOnlineEvent;
-import com.zenith.api.event.db.DatabaseTickEvent;
-import com.zenith.api.event.server.ServerPlayerConnectedEvent;
-import com.zenith.api.event.server.ServerPlayerDisconnectedEvent;
 import com.zenith.database.dto.enums.Connectiontype;
+import com.zenith.event.client.ClientConnectEvent;
+import com.zenith.event.client.ClientDisconnectEvent;
+import com.zenith.event.client.ClientOnlineEvent;
+import com.zenith.event.db.DatabaseTickEvent;
+import com.zenith.event.server.ServerPlayerConnectedEvent;
+import com.zenith.event.server.ServerPlayerDisconnectedEvent;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 
 import java.time.Instant;

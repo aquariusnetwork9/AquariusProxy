@@ -1,8 +1,8 @@
 package com.zenith.network.client.handler.incoming;
 
-import com.zenith.api.event.module.SplashSoundEffectEvent;
-import com.zenith.api.network.ClientEventLoopPacketHandler;
-import com.zenith.api.network.client.ClientSession;
+import com.zenith.event.module.SplashSoundEffectEvent;
+import com.zenith.network.client.ClientSession;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundSoundPacket;
 
 import static com.zenith.Globals.EVENT_BUS;

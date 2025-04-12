@@ -1,8 +1,8 @@
 package com.zenith.network.client.handler.incoming;
 
 import com.zenith.Proxy;
-import com.zenith.api.network.PacketHandler;
-import com.zenith.api.network.client.ClientSession;
+import com.zenith.network.client.ClientSession;
+import com.zenith.network.codec.PacketHandler;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.packet.configuration.clientbound.ClientboundFinishConfigurationPacket;
 import org.geysermc.mcprotocollib.protocol.packet.configuration.serverbound.ServerboundFinishConfigurationPacket;

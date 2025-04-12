@@ -1,9 +1,9 @@
 package com.zenith.terminal;
 
 import com.zenith.Proxy;
-import com.zenith.api.command.CommandContext;
-import com.zenith.api.command.CommandOutputHelper;
-import com.zenith.api.command.CommandSource;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandOutputHelper;
+import com.zenith.command.api.CommandSource;
 import com.zenith.terminal.logback.TerminalConsoleAppender;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;

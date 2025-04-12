@@ -1,8 +1,8 @@
 package com.zenith.network.client.handler.incoming.level;
 
-import com.zenith.api.event.module.WeatherChangeEvent;
-import com.zenith.api.network.ClientEventLoopPacketHandler;
-import com.zenith.api.network.client.ClientSession;
+import com.zenith.event.module.WeatherChangeEvent;
+import com.zenith.network.client.ClientSession;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
 import org.geysermc.mcprotocollib.protocol.data.game.level.notify.RainStrengthValue;
 import org.geysermc.mcprotocollib.protocol.data.game.level.notify.RespawnScreenValue;

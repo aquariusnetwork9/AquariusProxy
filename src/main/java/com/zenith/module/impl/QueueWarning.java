@@ -1,10 +1,10 @@
 package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
-import com.zenith.api.event.module.QueueWarningEvent;
-import com.zenith.api.event.queue.QueuePositionUpdateEvent;
-import com.zenith.api.module.Module;
 import com.zenith.discord.DiscordBot;
+import com.zenith.event.module.QueueWarningEvent;
+import com.zenith.event.queue.QueuePositionUpdateEvent;
+import com.zenith.module.api.Module;
 
 import java.util.List;
 
