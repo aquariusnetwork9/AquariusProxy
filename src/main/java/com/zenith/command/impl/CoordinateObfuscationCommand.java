@@ -80,6 +80,7 @@ public class CoordinateObfuscationCommand extends Command {
                         c.getSource().getEmbed()
                             .title("Validation Error")
                             .description(description.toString())
+                            .addField("Info", "Don't care? Disable this check: `coordobf validateSetup off`")
                             .errorColor();
                         return ERROR;
                     }
