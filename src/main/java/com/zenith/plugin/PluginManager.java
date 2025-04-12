@@ -26,6 +26,7 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import static com.zenith.Globals.*;
+import static java.util.Objects.requireNonNull;
 
 public class PluginManager {
     public static final Path PLUGINS_PATH = Path.of("plugins");
@@ -65,9 +66,8 @@ public class PluginManager {
             if (!ImageInfo.inImageCode()) {
                 preLoadPlugins();
                 loadPlugins();
-            } else {
-                if (ImageInfo.inImageRuntimeCode())
-                    linuxChannelIncompatibilityWarning();
+            } else if (ImageInfo.inImageRuntimeCode() && LAUNCH_CONFIG.release_channel.contains("linux")) {
+                linuxChannelIncompatibilityWarning();
             }
         }
     }
@@ -134,7 +134,7 @@ public class PluginManager {
         try {
             classLoader = new URLClassLoader(new URL[]{jarPath.toUri().toURL()}, getClass().getClassLoader());;
             PluginInfo pluginInfo = readPluginInfo(classLoader, jarPath);
-            id = Objects.requireNonNull(pluginInfo.id(), "Plugin id is null");
+            id = requireNonNull(pluginInfo.id(), "Plugin id is null");
             if (pluginInstances.containsKey(id)) {
                 // todo: we could try to sort by version and load the "newest" one
                 throw new RuntimeException("Plugin id already exists: " + id);
@@ -175,7 +175,7 @@ public class PluginManager {
             var pluginInfo = pluginInstance.getPluginInfo();
             var classLoader = pluginInstance.getClassLoader();
             var jarPath = pluginInstance.getJarPath();
-            String entrypoint = Objects.requireNonNull(pluginInfo.entrypoint(), "Plugin entrypoint is null");
+            String entrypoint = requireNonNull(pluginInfo.entrypoint(), "Plugin entrypoint is null");
 
             PLUGIN_LOG.info("Loading Plugin: {}", pluginInfo.id());
 
@@ -210,7 +210,17 @@ public class PluginManager {
             if (stream == null) {
                 throw new RuntimeException("plugin.json not found in jar");
             }
-            return OBJECT_MAPPER.readValue(stream, PluginInfo.class);
+            var info = OBJECT_MAPPER.readValue(stream, PluginInfo.class);
+            requireNonNull(info.entrypoint(), "Entrypoint is null");
+            if (info.entrypoint().isBlank()) throw new RuntimeException("Invalid entrypoint");
+            requireNonNull(info.id(), "Plugin id is null");
+            if (info.id().isBlank()) throw new RuntimeException("Invalid plugin id");
+            requireNonNull(info.version(), "Plugin version is null");
+            requireNonNull(info.description(), "Plugin description is null");
+            requireNonNull(info.url(), "Plugin url is null");
+            requireNonNull(info.authors(), "Plugin authors is null");
+            requireNonNull(info.mcVersions(), "Plugin mcVersions is null");
+            return info;
         } catch (IOException e) {
             PLUGIN_LOG.error("Error reading plugin.json: {}", path, e);
             throw e;
