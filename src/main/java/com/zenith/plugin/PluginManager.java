@@ -32,7 +32,6 @@ public class PluginManager {
     private final Map<String, ConfigInstance> pluginConfigurations = new ConcurrentHashMap<>();
     private final Map<String, PluginInstance> pluginInstances = new ConcurrentHashMap<>();
     private final AtomicBoolean initialized = new AtomicBoolean(false);
-    private final AtomicBoolean pluginsLoaded = new AtomicBoolean(false);
 
     public List<PluginInfo> getPluginInfos() {
         return pluginInstances.values().stream().map(PluginInstance::getPluginInfo).collect(Collectors.toList());
@@ -87,6 +86,13 @@ public class PluginManager {
     }
 
     private void preLoadPlugins() {
+        try {
+            if (!PLUGINS_PATH.toFile().exists()) {
+                PLUGINS_PATH.toFile().mkdirs();
+            }
+        } catch (Exception e) {
+            PLUGIN_LOG.error("Error creating plugins directory", e);
+        }
         var potentialPlugins = findPotentialPluginJars();
         for (var jar : potentialPlugins) {
             try {
