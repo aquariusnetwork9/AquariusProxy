@@ -1,8 +1,8 @@
 package com.zenith.docs;
 
 import com.zenith.Globals;
-import com.zenith.api.command.Command;
-import com.zenith.api.command.CommandCategory;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
