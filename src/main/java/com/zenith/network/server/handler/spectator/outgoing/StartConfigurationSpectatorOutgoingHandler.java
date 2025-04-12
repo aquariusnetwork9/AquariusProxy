@@ -4,7 +4,6 @@ import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundStartConfigurationPacket;
 
-import static com.zenith.Globals.CONFIG;
 import static com.zenith.Globals.SERVER_LOG;
 
 public class StartConfigurationSpectatorOutgoingHandler implements PacketHandler<ClientboundStartConfigurationPacket, ServerSession> {
@@ -13,7 +12,7 @@ public class StartConfigurationSpectatorOutgoingHandler implements PacketHandler
         if (session.isConfigured()) {
             if (session.canTransfer()) {
                 SERVER_LOG.info("Reconnecting spectator: {} because client is switching servers", session.getName());
-                session.transferToSpectator(CONFIG.server.getProxyAddressForTransfer(), CONFIG.server.getProxyPortForTransfer());
+                session.transferToSpectator();
             } else {
                 session.disconnect("Client is switching servers");
             }

@@ -132,7 +132,7 @@ public class ServerChatSpectatorHandler implements PacketHandler<ServerboundChat
                         return;
                     }
                 }
-                session.transferToControllingPlayer(CONFIG.server.getProxyAddressForTransfer(), CONFIG.server.getProxyPortForTransfer());
+                session.transferToControllingPlayer();
             }
             default -> handleCommandInput("help", session);
         }

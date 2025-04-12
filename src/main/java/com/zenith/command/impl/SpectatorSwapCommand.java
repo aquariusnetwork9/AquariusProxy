@@ -8,7 +8,8 @@ import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 
-import static com.zenith.Globals.*;
+import static com.zenith.Globals.EXECUTOR;
+import static com.zenith.Globals.PLAYER_LISTS;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -58,7 +59,7 @@ public class SpectatorSwapCommand extends Command {
                     .addField("Error", "Client version must be at least 1.20.6", false);
                 return;
             }
-            player.transferToSpectator(CONFIG.server.getProxyAddressForTransfer(), CONFIG.server.getProxyPortForTransfer());
+            player.transferToSpectator();
         } else if (c.getSource().getSource() == CommandSource.SPECTATOR) {
             var session = c.getSource().getInGamePlayerInfo().session();
             var spectatorProfile = session.getProfileCache().getProfile();
@@ -78,14 +79,14 @@ public class SpectatorSwapCommand extends Command {
                         session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>Controlling player is using an unsupported Client MC Version"), false));
                         return;
                     }
-                    activePlayer.transferToSpectator(CONFIG.server.getProxyAddressForTransfer(), CONFIG.server.getProxyPortForTransfer());
-                    EXECUTOR.schedule(() -> session.transferToControllingPlayer(CONFIG.server.getProxyAddressForTransfer(), CONFIG.server.getProxyPortForTransfer()), 1, SECONDS);
+                    activePlayer.transferToSpectator();
+                    EXECUTOR.schedule(() -> session.transferToControllingPlayer(), 1, SECONDS);
                 } else {
                     session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>Someone is already controlling the player!"), false));
                 }
                 return;
             }
-            session.transferToControllingPlayer(CONFIG.server.getProxyAddressForTransfer(), CONFIG.server.getProxyPortForTransfer());
+            session.transferToControllingPlayer();
         }
     }
 }
