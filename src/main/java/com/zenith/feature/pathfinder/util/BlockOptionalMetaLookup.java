@@ -2,6 +2,7 @@ package com.zenith.feature.pathfinder.util;
 
 import com.google.common.collect.Sets;
 import com.zenith.mc.block.Block;
+import com.zenith.mc.block.BlockState;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
@@ -33,5 +34,17 @@ public class BlockOptionalMetaLookup {
     }
     public BlockOptionalMetaLookup(Block... blocks) {
         this(Sets.newHashSet(blocks));
+    }
+
+    public boolean has(Block block) {
+        return blockSet.contains(block);
+    }
+
+    public boolean has(BlockState state) {
+        return blockStateIds.contains(state.id());
+    }
+
+    public boolean has(int state) {
+        return blockStateIds.contains(state);
     }
 }

@@ -12,6 +12,10 @@ import com.zenith.feature.player.World;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockPos;
 import com.zenith.mc.block.BlockRegistry;
+import com.zenith.mc.item.ItemRegistry;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.MetadataTypes;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
+import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -349,21 +353,34 @@ public final class MineProcess extends BaritoneProcessHelper implements IBariton
     }
 
     public List<BlockPos> droppedItemsScan() {
-        return Collections.emptyList();
-//        if (!Baritone.settings().mineScanDroppedItems.value) {
-//            return Collections.emptyList();
-//        }
-//        List<BlockPos> ret = new ArrayList<>();
-//        for (Entity entity : ((ClientLevel) ctx.world()).entitiesForRendering()) {
-//            if (entity instanceof ItemEntity) {
-//                ItemEntity ei = (ItemEntity) entity;
-//                if (filter.has(ei.getItem())) {
-//                    ret.add(entity.blockPosition());
-//                }
-//            }
-//        }
-//        ret.addAll(anticipatedDrops.keySet());
-//        return ret;
+        List<BlockPos> ret = new ArrayList<>();
+        var items = CACHE.getEntityCache().getEntities().values().stream()
+            .filter(e -> e.getEntityType() == EntityType.ITEM)
+            .toList();
+        // todo: this will not work for all blocks
+        //  like stone drops cobblestone
+        //  we would need an actual loot table to check against
+        //  there could be a simpler way to do this, like setting a movement goal to the positions we are breaking
+        for (var itemEntity : items) {
+            var metadata = itemEntity.getMetadata().values();
+            for (var metadataValue : metadata) {
+                var val = metadataValue.getValue();
+                if (val != null && metadataValue.getType() == MetadataTypes.ITEM && val instanceof ItemStack itemStack) {
+                    var itemData = ItemRegistry.REGISTRY.get(itemStack.getId());
+                    if (itemData == null) continue;
+                    // will only work for certain blocks (or silk touch) like ancient debris
+                    var blockWithMatchingName = BlockRegistry.REGISTRY.get(itemData.name());
+                    if (blockWithMatchingName != null) {
+                        if (filter.has(blockWithMatchingName)) {
+                            ret.add(itemEntity.blockPos());
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        ret.addAll(anticipatedDrops.keySet());
+        return ret;
     }
 
     public static List<BlockPos> searchWorld(CalculationContext ctx, BlockOptionalMetaLookup filter, int max, List<BlockPos> alreadyKnown, List<BlockPos> blacklist, List<BlockPos> dropped) {
@@ -397,38 +414,6 @@ public final class MineProcess extends BaritoneProcessHelper implements IBariton
 
         return prune(ctx, locs, filter, max, blacklist, dropped);
     }
-
-//    private boolean addNearby() {
-//        List<BlockPos> dropped = droppedItemsScan();
-//        knownOreLocations.addAll(dropped);
-//        BlockPos playerFeet = ctx.playerFeet();
-//        BlockStateInterface bsi = new BlockStateInterface(ctx);
-//
-//
-//        BlockOptionalMetaLookup filter = filterFilter();
-//        if (filter == null) {
-//            return false;
-//        }
-//
-//        int searchDist = 10;
-//        double fakedBlockReachDistance = 20; // at least 10 * sqrt(3) with some extra space to account for positioning within the block
-//        for (int x = playerFeet.getX() - searchDist; x <= playerFeet.getX() + searchDist; x++) {
-//            for (int y = playerFeet.getY() - searchDist; y <= playerFeet.getY() + searchDist; y++) {
-//                for (int z = playerFeet.getZ() - searchDist; z <= playerFeet.getZ() + searchDist; z++) {
-//                    // crucial to only add blocks we can see because otherwise this
-//                    // is an x-ray and it'll get caught
-//                    if (filter.has(bsi.get0(x, y, z))) {
-//                        BlockPos pos = new BlockPos(x, y, z);
-//                        if ((Baritone.settings().legitMineIncludeDiagonals.value && knownOreLocations.stream().anyMatch(ore -> ore.distSqr(pos) <= 2 /* sq means this is pytha dist <= sqrt(2) */)) || RotationUtils.reachable(ctx, pos, fakedBlockReachDistance).isPresent()) {
-//                            knownOreLocations.add(pos);
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//        knownOreLocations = prune(new CalculationContext(baritone), knownOreLocations, filter, Baritone.settings().mineMaxOreLocationsCount.value, blacklist, dropped);
-//        return true;
-//    }
 
     private static List<BlockPos> prune(CalculationContext ctx, List<BlockPos> locs2, BlockOptionalMetaLookup filter, int max, List<BlockPos> blacklist, List<BlockPos> dropped) {
         dropped.removeIf(drop -> {
