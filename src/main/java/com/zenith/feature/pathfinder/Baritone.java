@@ -170,7 +170,7 @@ public class Baritone {
         inputOverrideHandler.onTick();
         ingamePathRenderer.onTick();
 
-        if (pathingBehavior.isPathing()) {
+        if (pathingBehavior.isPathing() || (pathingControlManager.isActive() && lookBehavior.currentRotation != null)) {
             var rotation = lookBehavior.currentRotation;
             var req = InputRequest.builder()
                 .input(inputOverrideHandler.currentInput)
