@@ -38,6 +38,7 @@ class Pinger {
 
     public static String fetchData(InetSocketAddress host, int timeout, int protocolVersion) throws IOException {
         try (Socket socket = new Socket()) {
+            socket.setTcpNoDelay(true);
             socket.setSoTimeout(timeout);
             socket.connect(host, timeout);
             try (DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());

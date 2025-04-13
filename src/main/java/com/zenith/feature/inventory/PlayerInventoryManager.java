@@ -7,6 +7,7 @@ import com.zenith.feature.player.InputRequest;
 import com.zenith.util.RequestFuture;
 import com.zenith.util.timer.Timer;
 import com.zenith.util.timer.Timers;
+import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ClickItemAction;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerActionType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClickPacket;
@@ -85,8 +86,12 @@ public class PlayerInventoryManager {
             if (nextAction != null) {
                 var packet = nextAction.toPacket();
                 if (packet != null) {
-                    CLIENT_LOG.debug("[Inventory Manager] Executing action: {} requester: {}", nextAction.actionType(), currentActionRequest.getOwner().getClass().getSimpleName());
-                    Proxy.getInstance().getClient().sendAwait(packet);
+                    if (shouldSendActionPacket(packet)) {
+                        CLIENT_LOG.debug("[Inventory Manager] Executing action: {} requester: {}", nextAction.actionType(), currentActionRequest.getOwner().getClass().getSimpleName());
+                        Proxy.getInstance().getClient().sendAwait(packet);
+                    } else {
+                        CLIENT_LOG.debug("[Inventory Manager] Skipping action: {} requester: {}", nextAction.actionType(), currentActionRequest.getOwner().getClass().getSimpleName());
+                    }
                     if (CONFIG.debug.ncpStrictInventory) {
                         if (packet instanceof ServerboundContainerClickPacket clickPacket && clickPacket.getCarriedItem() == null)
                             Proxy.getInstance().getClient().sendAwait(new ServerboundContainerClosePacket(0));
@@ -109,6 +114,15 @@ public class PlayerInventoryManager {
                 currentRequestFuture = DEFAULT_REQUEST_FUTURE;
             }
         }
+    }
+
+    public boolean shouldSendActionPacket(Packet packet) {
+        if (packet instanceof ServerboundSetCarriedItemPacket heldItemPacket
+            && CACHE.getPlayerCache().getHeldItemSlot() == heldItemPacket.getSlot()) {
+            // skip sending this packet to avoid anticheat flag
+            return false;
+        }
+        return true;
     }
 
     public List<ContainerClickAction> swapSlots(int fromSlot, int toSlot) {
