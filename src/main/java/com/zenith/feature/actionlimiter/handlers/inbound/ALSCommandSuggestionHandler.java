@@ -6,7 +6,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.Serverbound
 
 import static com.zenith.Globals.CONFIG;
 
-public class ALCommandSuggestionHandler implements PacketHandler<ServerboundCommandSuggestionPacket, ServerSession> {
+public class ALSCommandSuggestionHandler implements PacketHandler<ServerboundCommandSuggestionPacket, ServerSession> {
     @Override
     public ServerboundCommandSuggestionPacket apply(final ServerboundCommandSuggestionPacket packet, final ServerSession session) {
         if (CONFIG.client.extra.actionLimiter.allowServerCommands) return packet;

@@ -4,8 +4,8 @@ import com.github.rfresh2.EventConsumer;
 import com.zenith.event.player.PlayerConnectionRemovedEvent;
 import com.zenith.event.player.PlayerLoginEvent;
 import com.zenith.feature.actionlimiter.handlers.inbound.*;
+import com.zenith.feature.actionlimiter.handlers.outbound.ALCCommandSuggestionsHandler;
 import com.zenith.feature.actionlimiter.handlers.outbound.ALCMoveVehicleHandler;
-import com.zenith.feature.actionlimiter.handlers.outbound.ALCommandSuggestionsHandler;
 import com.zenith.feature.actionlimiter.handlers.outbound.ALLoginHandler;
 import com.zenith.feature.actionlimiter.handlers.outbound.ALPlayerPositionHandler;
 import com.zenith.module.api.Module;
@@ -46,7 +46,7 @@ public class ActionLimiter extends Module {
                 .inbound(ServerboundChatCommandSignedPacket.class, new ALSignedChatCommandHandler())
                 .inbound(ServerboundChatPacket.class, new ALChatHandler())
                 .inbound(ServerboundClientCommandPacket.class, new ALClientCommandHandler())
-                .inbound(ServerboundCommandSuggestionPacket.class, new ALCommandSuggestionHandler())
+                .inbound(ServerboundCommandSuggestionPacket.class, new ALSCommandSuggestionHandler())
                 .inbound(ServerboundContainerClickPacket.class, new ALContainerClickHandler())
                 .inbound(ServerboundInteractPacket.class, new ALInteractHandler())
                 .inbound(ServerboundMovePlayerPosPacket.class, new ALMovePlayerPosHandler())
@@ -57,7 +57,7 @@ public class ActionLimiter extends Module {
                 .inbound(ServerboundUseItemPacket.class, new ALUseItemHandler())
                 .inbound(ServerboundEditBookPacket.class, new ALEditBookHandler())
                 .outbound(ClientboundMoveVehiclePacket.class, new ALCMoveVehicleHandler())
-                .outbound(ClientboundCommandSuggestionsPacket.class, new ALCommandSuggestionsHandler())
+                .outbound(ClientboundCommandSuggestionsPacket.class, new ALCCommandSuggestionsHandler())
                 .outbound(ClientboundLoginPacket.class, new ALLoginHandler())
                 .outbound(ClientboundPlayerPositionPacket.class, new ALPlayerPositionHandler())
                 .build())
