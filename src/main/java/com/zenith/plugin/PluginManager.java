@@ -136,7 +136,7 @@ public class PluginManager {
         String id = null;
         URLClassLoader classLoader = null;
         try {
-            classLoader = new URLClassLoader(new URL[]{jarPath.toUri().toURL()}, getClass().getClassLoader());;
+            classLoader = new URLClassLoader(new URL[]{jarPath.toUri().toURL()}, getClass().getClassLoader());
             PluginInfo pluginInfo = readPluginInfo(classLoader, jarPath);
             id = requireNonNull(pluginInfo.id(), "Plugin id is null");
             if (pluginInstances.containsKey(id)) {
@@ -236,7 +236,7 @@ public class PluginManager {
             throw new RuntimeException("Config already registered: " + fileName);
         }
         var config = loadPluginConfig(fileName, clazz);
-        File configFile = PLUGINS_PATH.resolve("config").resolve(fileName + ".json").toFile();
+        File configFile = resolveConfigFile(fileName);
         if (!configFile.exists()) {
             if (!configFile.getParentFile().mkdirs() && !configFile.getParentFile().exists()) {
                 throw new RuntimeException("Unable to create plugin config directory: " + configFile.getParentFile());
@@ -255,7 +255,7 @@ public class PluginManager {
     private <T> T loadPluginConfig(String fileName, Class<T> clazz) {
         try {
             PLUGIN_LOG.info("Loading plugin config...");
-            File configFile = new File("plugins/" + fileName + ".json");
+            File configFile = resolveConfigFile(fileName);
             T config;
             if (configFile.exists()) {
                 try (Reader reader = new FileReader(configFile)) {
@@ -278,5 +278,9 @@ public class PluginManager {
             PLUGIN_LOG.error("Config must be manually fixed or deleted");
             throw e;
         }
+    }
+
+    private File resolveConfigFile(String fileName) {
+        return PLUGINS_PATH.resolve("config").resolve(fileName + ".json").toFile();
     }
 }
