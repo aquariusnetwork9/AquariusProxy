@@ -12,8 +12,11 @@ import static com.zenith.Globals.CACHE;
 public class COUseItemHandler implements PacketHandler<ServerboundUseItemPacket, ServerSession> {
     @Override
     public ServerboundUseItemPacket apply(final ServerboundUseItemPacket packet, final ServerSession session) {
-        // todo: move this to action limiter
         try {
+            // its still possible to throw an eye of ender even with this handler
+            // cache is updated on the client event loop
+            // and player could buffer this use packet right after a container slot swap in one tick
+            // so this will only block the simplest case
             ItemStack itemStack = CACHE.getPlayerCache().getEquipment(packet.getHand());
             if (itemStack != Container.EMPTY_STACK && itemStack.getId() == ItemRegistry.ENDER_EYE.id()) {
                 return null;

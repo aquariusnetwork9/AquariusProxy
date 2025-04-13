@@ -11,6 +11,7 @@ import com.zenith.feature.coordobf.handlers.outbound.*;
 import com.zenith.feature.player.World;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
+import com.zenith.mc.item.ItemRegistry;
 import com.zenith.module.api.Module;
 import com.zenith.network.codec.PacketCodecRegistries;
 import com.zenith.network.codec.PacketHandlerCodec;
@@ -24,7 +25,10 @@ import com.zenith.util.math.MathHelper;
 import com.zenith.util.math.MutableVec3d;
 import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.MetadataTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PositionElement;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
+import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundRespawnPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundStartConfigurationPacket;
@@ -229,6 +233,11 @@ public class CoordObfuscation extends Module {
                     reconnect(session);
                     return;
                 }
+                if (CONFIG.client.extra.coordObfuscation.disconnectWhileEyeOfEnderPresent && isEnderEyeInWorld()) {
+                    info("Disconnecting {} as ender eye is present", session.getName());
+                    disconnect(session, "Try again later");
+                    return;
+                }
                 var profile = session.getProfileCache().getProfile();
                 var proxyProfile = CACHE.getProfileCache().getProfile();
                 if (CONFIG.client.extra.coordObfuscation.exemptProxyAccount && profile != null && proxyProfile != null && profile.getId().equals(proxyProfile.getId())) {
@@ -418,6 +427,18 @@ public class CoordObfuscation extends Module {
 
     public void delayIncomingLogins() {
         awaitLoginsUntil.set(System.currentTimeMillis() + CONFIG.client.extra.coordObfuscation.delayPlayerLoginsAfterTpMs);
+    }
+
+    public boolean isEnderEyeInWorld() {
+        for (var entity : CACHE.getEntityCache().getEntities().values()) {
+            if (entity.getEntityType() == EntityType.EYE_OF_ENDER) return true;
+            if (entity.getEntityType() == EntityType.ITEM) {
+                var itemStack = entity.getMetadataValue(8, MetadataTypes.ITEM, ItemStack.class);
+                if (itemStack == null) continue;
+                if (itemStack.getId() == ItemRegistry.ENDER_EYE.id()) return true;
+            }
+        }
+        return false;
     }
 
     public record ValidationResult(boolean valid, List<String> invalidReasons) {}

@@ -57,6 +57,7 @@ public class CoordinateObfuscationCommand extends Command {
                 "obfuscateBedrock on/off",
                 "obfuscateBiomes on/off",
                 "obfuscateLighting on/off",
+                "disconnectWhileEnderEyePresent on/off",
                 "validateSetup on/off"
             )
             .build();

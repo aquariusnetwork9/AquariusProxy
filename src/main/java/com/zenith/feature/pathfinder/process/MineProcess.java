@@ -362,20 +362,16 @@ public final class MineProcess extends BaritoneProcessHelper implements IBariton
         //  we would need an actual loot table to check against
         //  there could be a simpler way to do this, like setting a movement goal to the positions we are breaking
         for (var itemEntity : items) {
-            var metadata = itemEntity.getMetadata().values();
-            for (var metadataValue : metadata) {
-                var val = metadataValue.getValue();
-                if (val != null && metadataValue.getType() == MetadataTypes.ITEM && val instanceof ItemStack itemStack) {
-                    var itemData = ItemRegistry.REGISTRY.get(itemStack.getId());
-                    if (itemData == null) continue;
-                    // will only work for certain blocks (or silk touch) like ancient debris
-                    var blockWithMatchingName = BlockRegistry.REGISTRY.get(itemData.name());
-                    if (blockWithMatchingName != null) {
-                        if (filter.has(blockWithMatchingName)) {
-                            ret.add(itemEntity.blockPos());
-                            break;
-                        }
-                    }
+            var itemStack = itemEntity.getMetadataValue(8, MetadataTypes.ITEM, ItemStack.class);
+            if (itemStack == null) continue;
+            var itemData = ItemRegistry.REGISTRY.get(itemStack.getId());
+            if (itemData == null) continue;
+            // will only work for certain blocks (or silk touch) like ancient debris
+            var blockWithMatchingName = BlockRegistry.REGISTRY.get(itemData.name());
+            if (blockWithMatchingName != null) {
+                if (filter.has(blockWithMatchingName)) {
+                    ret.add(itemEntity.blockPos());
+                    break;
                 }
             }
         }
