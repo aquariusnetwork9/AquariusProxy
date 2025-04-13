@@ -13,9 +13,9 @@ public class COPlayerActionHandler implements PacketHandler<ServerboundPlayerAct
         CoordObfuscation coordObf = MODULE.get(CoordObfuscation.class);
         return new ServerboundPlayerActionPacket(
             packet.getAction(),
-            coordObf.getCoordOffset(session).reverseOffsetX(packet.getX()),
+            packet.getX() != 0 ? coordObf.getCoordOffset(session).reverseOffsetX(packet.getX()) : 0,
             packet.getY(),
-            coordObf.getCoordOffset(session).reverseOffsetZ(packet.getZ()),
+            packet.getZ() != 0 ? coordObf.getCoordOffset(session).reverseOffsetZ(packet.getZ()) : 0,
             packet.getFace(),
             packet.getSequence()
         );
