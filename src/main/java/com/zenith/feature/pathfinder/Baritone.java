@@ -3,6 +3,7 @@ package com.zenith.feature.pathfinder;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.zenith.Proxy;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.event.client.ClientBotTick;
 import com.zenith.feature.pathfinder.behavior.InventoryBehavior;
@@ -90,7 +91,7 @@ public class Baritone {
     }
 
     public void pathTo(@NonNull GoalXZ goalXZ) {
-        getCustomGoalProcess().setGoalAndPath(goalXZ);
+        inEventLoop(() -> getCustomGoalProcess().setGoalAndPath(goalXZ));
     }
 
     public void pathTo(int x, int y, int z) {
@@ -98,59 +99,61 @@ public class Baritone {
     }
 
     public void pathTo(@NonNull GoalBlock goalBlock) {
-        getCustomGoalProcess().setGoalAndPath(goalBlock);
+        inEventLoop(() -> getCustomGoalProcess().setGoalAndPath(goalBlock));
     }
 
     public void thisWay(final int dist) {
-        Vector3d vector3d = MathHelper.calculateRayEndPos(
-            CACHE.getPlayerCache().getX(),
-            CACHE.getPlayerCache().getY(),
-            CACHE.getPlayerCache().getZ(),
-            CACHE.getPlayerCache().getYaw(),
-            0,
-            dist
-        );
-        pathTo(MathHelper.floorI(vector3d.getX()), MathHelper.floorI(vector3d.getZ()));
+        inEventLoop(() -> {
+            Vector3d vector3d = MathHelper.calculateRayEndPos(
+                CACHE.getPlayerCache().getX(),
+                CACHE.getPlayerCache().getY(),
+                CACHE.getPlayerCache().getZ(),
+                CACHE.getPlayerCache().getYaw(),
+                0,
+                dist
+            );
+            pathTo(MathHelper.floorI(vector3d.getX()), MathHelper.floorI(vector3d.getZ()));
+        });
     }
 
     public void getTo(final Block block) {
-        getGetToBlockProcess().getToBlock(block);
+        inEventLoop(() -> getGetToBlockProcess().getToBlock(block));
     }
 
     public void mine(Block... blocks) {
-        getMineProcess().mine(blocks);
+        inEventLoop(() -> getMineProcess().mine(blocks));
     }
 
     public void follow(Predicate<EntityLiving> entityPredicate) {
-        getFollowProcess().follow(entityPredicate);
+        inEventLoop(() -> getFollowProcess().follow(entityPredicate));
     }
 
     public void follow(EntityLiving target) {
-        getFollowProcess().follow(target);
+        inEventLoop(() -> getFollowProcess().follow(target));
     }
 
     public void leftClickBlock(int x, int y, int z) {
-        getInteractWithProcess().leftClickBlock(x, y, z);
+        inEventLoop(() -> getInteractWithProcess().leftClickBlock(x, y, z));
     }
 
     public void rightClickBlock(int x, int y, int z) {
-        getInteractWithProcess().rightClickBlock(x, y, z);
+        inEventLoop(() -> getInteractWithProcess().rightClickBlock(x, y, z));
     }
 
     public void leftClickEntity(EntityLiving entity) {
-        getInteractWithProcess().leftClickEntity(entity);
+        inEventLoop(() -> getInteractWithProcess().leftClickEntity(entity));
     }
 
     public void rightClickEntity(EntityLiving entity) {
-        getInteractWithProcess().rightClickEntity(entity);
+        inEventLoop(() -> getInteractWithProcess().rightClickEntity(entity));
     }
 
     public void goal(@NonNull Goal goal) {
-        getCustomGoalProcess().setGoalAndPath(goal);
+        inEventLoop(() -> getCustomGoalProcess().setGoalAndPath(goal));
     }
 
     public void stop() {
-        getPathingBehavior().cancelEverything();
+        inEventLoop(() -> getPathingBehavior().cancelEverything());
     }
 
     public @Nullable Goal currentGoal() {
@@ -197,5 +200,14 @@ public class Baritone {
 
     public void onPlayerPosRotate() {
         teleportDelayTimer.reset();
+    }
+
+    public void inEventLoop(Runnable runnable) {
+        var client = Proxy.getInstance().getClient();
+        if (client == null) {
+            runnable.run();
+            return;
+        }
+        client.executeInEventLoop(runnable);
     }
 }
