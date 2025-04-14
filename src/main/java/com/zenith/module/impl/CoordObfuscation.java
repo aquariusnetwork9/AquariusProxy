@@ -455,11 +455,11 @@ public class CoordObfuscation extends Module {
             valid = false;
         }
         if (!CONFIG.client.extra.actionLimiter.enabled) {
-            invalidReasons.add("Action Limiter should be enabled to prevent long distance movement and respawning: `actionLimiter on`");
+            invalidReasons.add("ActionLimiter should be enabled: `actionLimiter on`");
             valid = false;
         }
         if (CONFIG.client.extra.actionLimiter.allowMovement) {
-            invalidReasons.add("Action Limiter movement should be disabled to prevent long distance movement: `actionLimiter allowMovement off`");
+            invalidReasons.add("ActionLimiter movement should be disabled to prevent long distance movement: `actionLimiter allowMovement off`");
             valid = false;
         }
         if (CONFIG.client.extra.actionLimiter.allowRespawn) {
