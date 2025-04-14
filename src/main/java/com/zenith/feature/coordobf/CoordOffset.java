@@ -29,9 +29,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.level.particle.VibrationPar
 import org.geysermc.mcprotocollib.protocol.data.game.level.particle.positionsource.BlockPositionSource;
 
 import java.security.SecureRandom;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import static com.zenith.Globals.CONFIG;
 import static com.zenith.Globals.SERVER_LOG;
@@ -164,8 +162,7 @@ public record CoordOffset(
         DataComponentTypes.BLOCK_ENTITY_DATA,
         DataComponentTypes.LODESTONE_TRACKER,
         DataComponentTypes.CHARGED_PROJECTILES,
-        DataComponentTypes.BUNDLE_CONTENTS,
-        DataComponentTypes.CONTAINER // we could retain this but we'd need to recursively strip components from its itemstacks
+        DataComponentTypes.BUNDLE_CONTENTS
     );
 
     // 2b2t seems to remove most tags already but just to be safe
@@ -182,10 +179,31 @@ public record CoordOffset(
         }
         if (itemStack.getDataComponents() != null) {
             Map<DataComponentType<?>, DataComponent<?, ?>> components = new HashMap<>(itemStack.getDataComponents().getDataComponents());
-            components.entrySet()
-                .removeIf(entry ->
-                              componentsToStrip.contains(entry.getKey()));
-
+            for (var it = components.entrySet().iterator(); it.hasNext(); ) {
+                var entry = it.next();
+                if (componentsToStrip.contains(entry.getKey())) {
+                    it.remove();
+                    continue;
+                }
+                if (entry.getKey() == DataComponentTypes.CONTAINER) {
+                    var containerDataComponent = entry.getValue();
+                    var containerDataComponentValue = containerDataComponent.getValue();
+                    if (containerDataComponentValue != null) {
+                        var itemStacks = (List<ItemStack>) containerDataComponent.getValue();
+                        var copiedItemStacks = new ArrayList<ItemStack>(itemStacks.size());
+                        for (var itemStackValue : itemStacks) {
+                            // recursively sanitize item stacks in the container
+                            var newStack = sanitizeItemStack(itemStackValue);
+                            if (newStack != null) {
+                                copiedItemStacks.add(newStack);
+                            }
+                        }
+                        var newDataComponent = DataComponentTypes.CONTAINER.getDataComponentFactory()
+                            .create(DataComponentTypes.CONTAINER, copiedItemStacks);
+                        entry.setValue(newDataComponent);
+                    }
+                }
+            }
             return new ItemStack(itemStack.getId(), itemStack.getAmount(), new DataComponents(components));
         }
         return itemStack;
