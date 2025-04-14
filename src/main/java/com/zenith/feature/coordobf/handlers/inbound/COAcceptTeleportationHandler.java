@@ -15,8 +15,7 @@ public class COAcceptTeleportationHandler implements PacketHandler<ServerboundAc
         if (!playerState.isInGame() || session.isSpectator()) return packet;
         var serverTp = playerState.getServerTeleports().peek();
         if (serverTp == null || serverTp.id() != packet.getId()) {
-            coordObf.info("Reconnecting {} because they are trying to accept an unexpected teleport id: {}", session.getName(), packet.getId());
-            coordObf.reconnect(session);
+            coordObf.reconnect(session, "Tried to accept an unexpected teleport id: " + packet.getId());
             return null;
         }
         return packet;

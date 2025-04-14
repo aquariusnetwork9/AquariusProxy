@@ -16,14 +16,12 @@ public class COAddEntityHandler implements PacketHandler<ClientboundAddEntityPac
         CoordObfuscation coordObf = MODULE.get(CoordObfuscation.class);
         if (CONFIG.client.extra.coordObfuscation.disconnectWhileEyeOfEnderPresent) {
             if (packet.getType() == EntityType.EYE_OF_ENDER) {
-                coordObf.info("Disconnecting {} because an eye of ender was spawned in the world", session.getName());
-                coordObf.disconnect(session, "bye");
+                coordObf.disconnect(session, coordObf.genericDisconnectReason, "An eye of ender was spawned in the world");
                 return null;
             } else if (packet.getType() == EntityType.ITEM) {
                 Proxy.getInstance().getClient().getClientEventLoop().execute(() -> {
                     if (coordObf.isEnderEyeInWorld()) {
-                        coordObf.info("Disconnecting {} because an eye of ender was spawned in the world", session.getName());
-                        coordObf.disconnect(session, "bye");
+                        coordObf.disconnect(session, coordObf.genericDisconnectReason, "An eye of ender is in the world");
                     }
                 });
             }

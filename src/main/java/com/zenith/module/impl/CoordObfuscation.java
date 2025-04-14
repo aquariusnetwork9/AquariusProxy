@@ -2,6 +2,7 @@ package com.zenith.module.impl;
 
 import com.zenith.Proxy;
 import com.zenith.cache.data.PlayerCache;
+import com.zenith.discord.Embed;
 import com.zenith.event.player.PlayerConnectionRemovedEvent;
 import com.zenith.event.player.PlayerLoginEvent;
 import com.zenith.feature.coordobf.CoordOffset;
@@ -71,6 +72,7 @@ public class CoordObfuscation extends Module {
         ComponentLogger.logger("Module.CoordObf"),
         () -> packetLogConfig
     );
+    public final String genericDisconnectReason = "bye";
 
     public CoordObfuscation() {
         packetLogConfig.preSent = true;
@@ -170,13 +172,13 @@ public class CoordObfuscation extends Module {
 
     @Override
     public void onEnable() {
-        reconnectAllActiveConnections();
+        reconnectAllActiveConnections("Module enabled");
         PacketCodecRegistries.SERVER_REGISTRY.register(beforeOffsetPacketLogger);
     }
 
     @Override
     public void onDisable() {
-        reconnectAllActiveConnections();
+        reconnectAllActiveConnections("Module disabled");
         playerStateMap.clear();
         PacketCodecRegistries.SERVER_REGISTRY.unregister(beforeOffsetPacketLogger);
     }
@@ -185,7 +187,7 @@ public class CoordObfuscation extends Module {
         var state = playerStateMap.get(session);
         if (state == null) {
             if (!session.isDisconnected()) error("Tried to get player state for {} but it was null", session.getName(), new Exception(""));
-            disconnect(session, "Invalid state");
+            disconnect(session, "Invalid state", "Tried to get player state but it was null");
             return new ObfPlayerState(session);
         }
         return state;
@@ -214,28 +216,23 @@ public class CoordObfuscation extends Module {
             }
             client.getClientEventLoop().submit(() -> {
                 if (client.isInQueue() || !client.isOnline()) {
-                    info("Disconnecting {} as we are in queue", session.getName());
                     disconnect(session, "Queueing");
                     return;
                 }
                 if (CACHE.getPlayerCache().isRespawning()) {
-                    info("Reconnecting {} due to respawn in progress", session.getName());
-                    reconnect(session);
+                    reconnect(session, "Respawn in progress");
                     return;
                 }
                 if (CACHE.getChunkCache().getCache().size() < 12) {
-                    info("Reconnecting {} due to chunk cache not being populated", session.getName());
-                    reconnect(session);
+                    reconnect(session, "Chunk cache not populated");
                     return;
                 }
                 if (!CACHE.getPlayerCache().getTeleportQueue().isEmpty()) {
-                    info("Reconnecting {} due to teleport queue not being empty", session.getName());
-                    reconnect(session);
+                    reconnect(session, "Teleport queue not empty");
                     return;
                 }
                 if (CONFIG.client.extra.coordObfuscation.disconnectWhileEyeOfEnderPresent && isEnderEyeInWorld()) {
-                    info("Disconnecting {} as ender eye is present", session.getName());
-                    disconnect(session, "Try again later");
+                    disconnect(session, genericDisconnectReason, "An eye of ender is in the world");
                     return;
                 }
                 var profile = session.getProfileCache().getProfile();
@@ -253,7 +250,7 @@ public class CoordObfuscation extends Module {
             }).get(10L, TimeUnit.SECONDS);
         } catch (final Exception e) {
             error("Failed to generate coord offset", e);
-            disconnect(session, "bye");
+            disconnect(session, genericDisconnectReason, "Failed to generate coord offset");
         }
     }
 
@@ -262,7 +259,7 @@ public class CoordObfuscation extends Module {
     }
 
     public void onConfigChange() {
-        reconnectAllActiveConnections();
+        reconnectAllActiveConnections("Config changed");
     }
 
     private CoordOffset generateOffset(ServerSession session, double playerX, double playerZ) {
@@ -297,8 +294,7 @@ public class CoordObfuscation extends Module {
 
     private CoordOffset generateConstantOffset(final ServerSession session, final double playerX, final double playerZ) {
         if (MathHelper.distance2d(0, 0, playerX, playerZ) < CONFIG.client.extra.coordObfuscation.constantOffsetMinSpawnDistance) {
-            info("Disconnecting {} as we are to too close to spawn", session.getName());
-            disconnect(session, "bye");
+            disconnect(session, genericDisconnectReason, "Too close to spawn to use constant offset");
             return new CoordOffset(random.nextInt(12345, 999999), random.nextInt(12345, 999999));
         }
 
@@ -330,15 +326,18 @@ public class CoordObfuscation extends Module {
         var state = getPlayerState(session);
         MutableVec3d pos = state.getPlayerPos();
         if (!session.isSpectator()) {
-            if (MathHelper.distance2d(x, z, pos.getX(), pos.getZ()) > CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin) {
-                info("Reconnecting {} due to long distance movement", session.getName());
-                reconnect(session);
-                return;
-            }
-            var playerMoveDist = MathHelper.distance2d(x, z, CACHE.getPlayerCache().getX(), CACHE.getPlayerCache().getZ());
+            double playerMoveDist = MathHelper.distance2d(x, z, pos.getX(), pos.getZ());
             if (playerMoveDist > CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin) {
                 info("Reconnecting {} due to long distance movement", session.getName());
-                reconnect(session);
+                reconnect(session, String.format("Long distance movement attempted: %.1f blocks, from: [%.1f, %.1f] (player pos) to [%.1f, %.1f]",
+                                                 playerMoveDist, pos.getX(), pos.getZ(), x, z));
+                return;
+            }
+            var playerMoveDist2 = MathHelper.distance2d(x, z, CACHE.getPlayerCache().getX(), CACHE.getPlayerCache().getZ());
+            if (playerMoveDist2 > CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin) {
+                info("Reconnecting {} due to long distance movement", session.getName());
+                reconnect(session, String.format("Long distance movement attempted: %.1f blocks, from: [%.1f, %.1f] (cached pos) to [%.1f, %.1f]",
+                                                 playerMoveDist2, CACHE.getPlayerCache().getX(), CACHE.getPlayerCache().getZ(), x, z));
                 return;
             }
         }
@@ -358,7 +357,7 @@ public class CoordObfuscation extends Module {
         if (teleportId == session.getSpawnTeleportId() && session.isSpectator() && session.isAllowSpectatorServerPlayerPosRotate()) return;
         if (preTeleportId != teleportId) {
             warn("Unexpected teleport id {} != {} for {}", teleportId, preTeleportId, session.getName());
-            reconnect(session);
+            reconnect(session, "Unexpected teleport id");
             return;
         }
         if (relative.contains(PositionElement.X)) {
@@ -372,8 +371,7 @@ public class CoordObfuscation extends Module {
         }
         setServerTeleportPos(session, x, y, z, teleportId);
         if (getPlayerState(session).isRespawning()) {
-            info("Reconnecting {} due to teleport during respawn", session.getName());
-            reconnect(session);
+            reconnect(session, "Teleport during respawn");
 //            var futureOffset = generateOffset(session, x, z);
 //            info("Regenerated offset due to respawn teleport: {} {}", futureOffset.x(), futureOffset.z());
 //            getPlayerState(session).setCoordOffset(futureOffset);
@@ -383,19 +381,32 @@ public class CoordObfuscation extends Module {
 
         if (MathHelper.distance2d(x, z, preTeleportClientPos.getX(), preTeleportClientPos.getZ()) >= CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin) {
             info("Reconnecting {} due to long distance teleport using preTeleportPos calc", session.getName());
-            reconnect(session);
+            reconnect(session, String.format("Long distance server teleport, from: [%.1f, %.1f] to: [%.1f, %.1f] (0)", preTeleportClientPos.getX(), preTeleportClientPos.getZ(), x, z));
             return;
         }
         // it is possible for controlling players to manipulate the player cache position temporarily
         // but chunk cache should be not be able to be manipulated
         if (MathHelper.distance2d(x / 16, z / 16, CACHE.getChunkCache().getCenterX(), CACHE.getChunkCache().getCenterZ()) >= CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin / 16.0) {
-            info("Reconnecting {} due to long distance teleport using chunk center calc", session.getName());
-            reconnect(session);
+            reconnect(session, String.format("Long distance server teleport, from: [%.1f, %.1f] to: [%.1f, %.1f] (1)", preTeleportClientPos.getX(), preTeleportClientPos.getZ(), x, z));
             return;
         }
     }
 
-    public void reconnect(ServerSession session) {
+    public void onRespawn(final ServerSession session, final int dimension) {
+        getPlayerState(session).setRespawning(true);
+        // todo: could be possible to avoid a reconnect here
+        //  needs more testing
+        reconnect(session, "Respawning");
+    }
+
+    public void reconnect(ServerSession session, String reason) {
+        var embed = Embed.builder()
+            .title("Reconnecting Player")
+            .addField("Player", "[" + session.getName() + "](https://namemc.com/profile/" + session.getUUID() + ")")
+            .addField("Reason", reason)
+            .thumbnail(Proxy.getInstance().getPlayerBodyURL(session.getUUID()).toString())
+            .errorColor();
+        discordNotification(embed);
         delayIncomingLogins();
         if (session.isSpectator()) {
             session.transferToSpectator();
@@ -404,25 +415,35 @@ public class CoordObfuscation extends Module {
         }
     }
 
-    public void onRespawn(final ServerSession session, final int dimension) {
-        getPlayerState(session).setRespawning(true);
-        // todo: could be possible to avoid a reconnect here
-        //  needs more testing
-        reconnect(session);
-    }
-
-    private void reconnectAllActiveConnections() {
+    private void reconnectAllActiveConnections(String reason) {
         var connections = Proxy.getInstance().getActiveConnections().getArray();
         for (int i = 0; i < connections.length; i++) {
             var con = connections[i];
-            reconnect(con);
+            reconnect(con, reason);
         }
+    }
+
+    public void disconnect(ServerSession session, String publicReason, String privateReason) {
+        disconnectNotif(session, privateReason);
+        delayIncomingLogins();
+        super.disconnect(session, publicReason);
     }
 
     @Override
     public void disconnect(ServerSession session, String reason) {
+        disconnectNotif(session, reason);
         delayIncomingLogins();
         super.disconnect(session, reason);
+    }
+
+    private void disconnectNotif(final ServerSession session, final String reason) {
+        var embed = Embed.builder()
+            .title("Disconnecting Player")
+            .addField("Player", "[" + session.getName() + "](https://namemc.com/profile/" + session.getUUID() + ")")
+            .addField("Reason", reason)
+            .thumbnail(Proxy.getInstance().getPlayerBodyURL(session.getUUID()).toString())
+            .errorColor();
+        discordNotification(embed);
     }
 
     public void delayIncomingLogins() {

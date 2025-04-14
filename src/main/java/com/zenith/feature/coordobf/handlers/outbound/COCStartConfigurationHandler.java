@@ -16,7 +16,7 @@ public class COCStartConfigurationHandler implements PacketHandler<ClientboundSt
             // ensure we don't get stuck in a state where the bot is unaware it needs to enter configuration
             Proxy.getInstance().getClient().sendAsync(new ServerboundConfigurationAcknowledgedPacket());
         }
-        MODULE.get(CoordObfuscation.class).disconnect(session, "Server reconfiguring");
+        MODULE.get(CoordObfuscation.class).disconnect(session, "Server reconfiguring", "Server re-entering us to configuration state, probable world switch");
         return null;
     }
 }

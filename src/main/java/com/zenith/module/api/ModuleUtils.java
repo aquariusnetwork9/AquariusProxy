@@ -9,8 +9,7 @@ import com.zenith.util.ComponentSerializer;
 import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 
-import static com.zenith.Globals.DISCORD;
-import static com.zenith.Globals.MODULE_LOG;
+import static com.zenith.Globals.*;
 
 public abstract class ModuleUtils {
     public void sendClientPacketAsync(final Packet packet) {
@@ -117,15 +116,15 @@ public abstract class ModuleUtils {
     // is also logged to the terminal
     public void discordNotification(Embed embed) {
         embed.title(moduleLogPrefix + (embed.isTitlePresent() ? embed.title() : ""));
-        DISCORD.sendEmbedMessage(embed);
+        EXECUTOR.execute(() -> DISCORD.sendEmbedMessage(embed));
     }
 
     public void discordAndIngameNotification(Embed embed) {
         discordNotification(embed);
-        CommandOutputHelper.logEmbedOutputToInGameAllConnectedPlayers(embed);
+        EXECUTOR.execute(() -> CommandOutputHelper.logEmbedOutputToInGameAllConnectedPlayers(embed));
     }
 
     public void disconnect(ServerSession session, String reason) {
-        session.disconnect(ComponentSerializer.minimessage("<red>" + moduleLogPrefix + "</red> <gray>" + reason));
+        session.disconnect(ComponentSerializer.minimessage("<red>" + moduleLogPrefix + "</red><gray>" + reason));
     }
 }
