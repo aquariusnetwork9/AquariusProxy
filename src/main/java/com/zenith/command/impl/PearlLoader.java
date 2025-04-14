@@ -6,11 +6,11 @@ import com.zenith.command.api.CommandCategory;
 import com.zenith.command.api.CommandContext;
 import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
-import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.util.config.Config.Client.Extra.PearlLoader.Pearl;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
+import static com.zenith.Globals.BARITONE;
 import static com.zenith.Globals.CONFIG;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
@@ -88,7 +88,7 @@ public class PearlLoader extends Command {
                 var pearls = CONFIG.client.extra.pearlLoader.pearls;
                 for (var pearl : pearls) {
                     if (pearl.id().equals(id)) {
-                        Baritone.INSTANCE.rightClickBlock(pearl.x(), pearl.y(), pearl.z());
+                        BARITONE.rightClickBlock(pearl.x(), pearl.y(), pearl.z());
                         c.getSource().getEmbed()
                             .title("Loading Pearl")
                             .successColor();

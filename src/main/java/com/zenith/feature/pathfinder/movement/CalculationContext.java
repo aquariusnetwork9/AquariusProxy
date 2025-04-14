@@ -1,6 +1,5 @@
 package com.zenith.feature.pathfinder.movement;
 
-import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.feature.pathfinder.BlockStateInterface;
 import com.zenith.feature.pathfinder.PrecomputedData;
 import com.zenith.feature.pathfinder.goals.Goal;
@@ -10,14 +9,13 @@ import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockPos;
 import org.jspecify.annotations.Nullable;
 
-import static com.zenith.Globals.CACHE;
-import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.*;
 import static com.zenith.feature.pathfinder.movement.ActionCosts.COST_INF;
 
 public class CalculationContext {
 
     public final ToolSet toolSet = new ToolSet();
-    public final boolean hasThrowaway = CONFIG.client.extra.pathfinder.allowPlace && Baritone.INSTANCE.getInventoryBehavior().hasGenericThrowaway();
+    public final boolean hasThrowaway = CONFIG.client.extra.pathfinder.allowPlace && BARITONE.getInventoryBehavior().hasGenericThrowaway();
 //    public final boolean hasWaterBucket = Baritone.settings().allowWaterBucketFall.value && Inventory.isHotbarSlot(player.getInventory().findSlotMatchingItem(STACK_BUCKET_WATER)) && world.dimension() != Level.NETHER;
     public final boolean canSprint = CONFIG.client.extra.pathfinder.allowSprint && CACHE.getPlayerCache().getThePlayer().getFood() > 6;
     protected final double placeBlockCost = 20; // protected because you should call the function instead

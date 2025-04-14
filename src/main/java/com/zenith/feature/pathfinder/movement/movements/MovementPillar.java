@@ -1,7 +1,6 @@
 package com.zenith.feature.pathfinder.movement.movements;
 
 import com.google.common.collect.ImmutableSet;
-import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.feature.pathfinder.BlockStateInterface;
 import com.zenith.feature.pathfinder.PathInput;
 import com.zenith.feature.pathfinder.movement.*;
@@ -17,6 +16,7 @@ import org.cloudburstmc.math.vector.Vector3d;
 
 import java.util.Set;
 
+import static com.zenith.Globals.BARITONE;
 import static com.zenith.Globals.BLOCK_DATA;
 import static com.zenith.feature.pathfinder.movement.ActionCosts.*;
 
@@ -202,7 +202,7 @@ public class MovementPillar extends Movement {
             return state;
         } else {
             // Get ready to place a throwaway block
-            if (!Baritone.INSTANCE.getInventoryBehavior().selectThrowawayForLocation(true, src.x(), src.y(), src.z())) {
+            if (!BARITONE.getInventoryBehavior().selectThrowawayForLocation(true, src.x(), src.y(), src.z())) {
                 return state.setStatus(MovementStatus.UNREACHABLE);
             }
 

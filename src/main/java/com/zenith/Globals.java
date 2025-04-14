@@ -13,6 +13,7 @@ import com.zenith.command.CommandManager;
 import com.zenith.database.DatabaseManager;
 import com.zenith.discord.DiscordBot;
 import com.zenith.feature.inventory.PlayerInventoryManager;
+import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.feature.player.Bot;
 import com.zenith.feature.player.InputManager;
 import com.zenith.feature.tps.TPSCalculator;
@@ -79,6 +80,7 @@ public class Globals {
     public static final InGameCommandManager IN_GAME_COMMAND;
     public static final CommandManager COMMAND;
     public static final Bot BOT;
+    public static final Baritone BARITONE;
     public static final PlayerInventoryManager INVENTORY;
     public static final ZenithViaInitializer VIA_INITIALIZER;
     public static final PluginManager PLUGIN_MANAGER;
@@ -230,6 +232,7 @@ public class Globals {
             ConfigVerifier.verifyConfigs();
             PLAYER_LISTS.init(); // must be init after config
             BOT = new Bot();
+            BARITONE = new Baritone();
         } catch (final Throwable e) {
             DEFAULT_LOG.error("Unable to initialize!", e);
             throw e;

@@ -40,7 +40,6 @@ import static com.zenith.Globals.*;
 
 @Data
 public class Baritone {
-    public static final Baritone INSTANCE = new Baritone();
     public static final int MOVEMENT_PRIORITY = 200;
     private final PathingBehavior pathingBehavior = new PathingBehavior(this);
     private final InputOverrideHandler inputOverrideHandler = new InputOverrideHandler(this);
@@ -62,7 +61,7 @@ public class Baritone {
     private final Timer teleportDelayTimer = Timers.timer();
     private final IngamePathRenderer ingamePathRenderer = new IngamePathRenderer();
 
-    private Baritone() {
+    public Baritone() {
         pathingControlManager.registerProcess(customGoalProcess);
         pathingControlManager.registerProcess(followProcess);
         pathingControlManager.registerProcess(getToBlockProcess);

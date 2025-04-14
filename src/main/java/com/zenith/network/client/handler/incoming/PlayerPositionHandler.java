@@ -2,7 +2,6 @@ package com.zenith.network.client.handler.incoming;
 
 import com.zenith.Proxy;
 import com.zenith.cache.data.PlayerCache;
-import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.feature.spectator.SpectatorSync;
 import com.zenith.module.impl.AntiAFK;
 import com.zenith.network.client.ClientSession;
@@ -38,7 +37,7 @@ public class PlayerPositionHandler implements ClientEventLoopPacketHandler<Clien
         } else {
             CLIENT_LOG.debug("Passing teleport {} through to current player", packet.getTeleportId());
         }
-        Baritone.INSTANCE.onPlayerPosRotate();
+        BARITONE.onPlayerPosRotate();
         SpectatorSync.syncPlayerPositionWithSpectators();
         MODULE.get(AntiAFK.class).handlePlayerPosRotate();
         return true;

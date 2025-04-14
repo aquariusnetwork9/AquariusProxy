@@ -595,7 +595,7 @@ public final class MovementHelper {
 //            ctx.player().getInventory().selected = ts.getBestSlot(b.getBlock(), preferSilkTouch);
 //        }
         int hotbarSlotId = ts.getBestSlot(b, preferSilkTouch);
-        INVENTORY.invActionReq(Baritone.INSTANCE, ContainerClickAction.setCarriedItem(hotbarSlotId), Baritone.MOVEMENT_PRIORITY);
+        INVENTORY.invActionReq(BARITONE, ContainerClickAction.setCarriedItem(hotbarSlotId), Baritone.MOVEMENT_PRIORITY);
     }
 
     public static void moveTowards(MovementState state, BlockPos pos) {
@@ -774,7 +774,7 @@ public final class MovementHelper {
     }
 
     public static PlaceResult attemptToPlaceABlock(MovementState state, BlockPos placeAt, boolean preferDown, boolean wouldSneak) {
-        PlayerContext ctx = Baritone.INSTANCE.getPlayerContext();
+        PlayerContext ctx = BARITONE.getPlayerContext();
         Optional<Rotation> direct = RotationUtils.reachable(ctx, placeAt, wouldSneak); // we assume that if there is a block there, it must be replacable
         boolean found = false;
         if (direct.isPresent()) {
@@ -784,7 +784,7 @@ public final class MovementHelper {
         for (int i = 0; i < 5; i++) {
             BlockPos against1 = placeAt.relative(HORIZONTALS_BUT_ALSO_DOWN_____SO_EVERY_DIRECTION_EXCEPT_UP[i]);
             if (MovementHelper.canPlaceAgainst(against1)) {
-                if (!Baritone.INSTANCE.getInventoryBehavior().selectThrowawayForLocation(false, placeAt.x(), placeAt.y(), placeAt.z())) { // get ready to place a throwaway block
+                if (!BARITONE.getInventoryBehavior().selectThrowawayForLocation(false, placeAt.x(), placeAt.y(), placeAt.z())) { // get ready to place a throwaway block
                     PATH_LOG.info("No throwaway blocks found in inventory :(");
                     state.setStatus(MovementStatus.UNREACHABLE);
                     return PlaceResult.NO_OPTION;
@@ -830,7 +830,7 @@ public final class MovementHelper {
                 if (wouldSneak) {
                     state.setInput(PathInput.SNEAK, true);
                 }
-                Baritone.INSTANCE.getInventoryBehavior().selectThrowawayForLocation(true, placeAt.x(), placeAt.y(), placeAt.z());
+                BARITONE.getInventoryBehavior().selectThrowawayForLocation(true, placeAt.x(), placeAt.y(), placeAt.z());
                 return PlaceResult.READY_TO_PLACE;
             }
         }
@@ -838,7 +838,7 @@ public final class MovementHelper {
             if (wouldSneak) {
                 state.setInput(PathInput.SNEAK, true);
             }
-            Baritone.INSTANCE.getInventoryBehavior().selectThrowawayForLocation(true, placeAt.x(), placeAt.y(), placeAt.z());
+            BARITONE.getInventoryBehavior().selectThrowawayForLocation(true, placeAt.x(), placeAt.y(), placeAt.z());
             return PlaceResult.ATTEMPTING;
         }
         return PlaceResult.NO_OPTION;

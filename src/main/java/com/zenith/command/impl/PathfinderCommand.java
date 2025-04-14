@@ -7,7 +7,6 @@ import com.zenith.command.api.Command;
 import com.zenith.command.api.CommandCategory;
 import com.zenith.command.api.CommandContext;
 import com.zenith.command.api.CommandUsage;
-import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.entity.EntityData;
@@ -22,8 +21,7 @@ import static com.mojang.brigadier.arguments.FloatArgumentType.floatArg;
 import static com.mojang.brigadier.arguments.FloatArgumentType.getFloat;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
-import static com.zenith.Globals.CACHE;
-import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.*;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
@@ -67,7 +65,7 @@ public class PathfinderCommand extends Command {
                    .then(argument("z", integer()).executes(c -> {
                         int x = getInteger(c, "x");
                         int z = getInteger(c, "z");
-                        Baritone.INSTANCE.pathTo(x, z);
+                        BARITONE.pathTo(x, z);
                         c.getSource().getEmbed()
                             .title("Pathing")
                             .addField("Goal", x + ", " + z, false)
@@ -78,7 +76,7 @@ public class PathfinderCommand extends Command {
                        int x = getInteger(c, "x");
                        int y = getInteger(c, "y");
                        int z = getInteger(c, "z");
-                       Baritone.INSTANCE.pathTo(x, y, z);
+                       BARITONE.pathTo(x, y, z);
                        c.getSource().getEmbed()
                            .title("Pathing")
                            .addField("Goal", x + ", " + y + ", " + z, false)
@@ -86,7 +84,7 @@ public class PathfinderCommand extends Command {
                        return OK;
                    })))))
             .then(literal("stop").executes(c -> {
-                Baritone.INSTANCE.stop();
+                BARITONE.stop();
                 c.getSource().getEmbed()
                     .title("Pathing Stopped")
                     .addField("Status", "Stopped", false)
@@ -95,7 +93,7 @@ public class PathfinderCommand extends Command {
             }))
             .then(literal("follow")
                       .executes(c -> {
-                            Baritone.INSTANCE.follow((e) -> e instanceof EntityPlayer);
+                            BARITONE.follow((e) -> e instanceof EntityPlayer);
                             c.getSource().getEmbed()
                                 .title("Following")
                                 .primaryColor();
@@ -109,7 +107,7 @@ public class PathfinderCommand extends Command {
                                   .isPresent())
                               .findFirst()
                               .ifPresentOrElse(player -> {
-                                       Baritone.INSTANCE.follow(player);
+                                       BARITONE.follow(player);
                                        c.getSource().getEmbed()
                                            .title("Following")
                                            .addField("Player", escape(playerName), false)
@@ -132,7 +130,7 @@ public class PathfinderCommand extends Command {
                       }))))
             .then(literal("thisway").then(argument("dist", integer()).executes(c -> {
                 int dist = getInteger(c, "dist");
-                Baritone.INSTANCE.thisWay(dist);
+                BARITONE.thisWay(dist);
                 c.getSource().getEmbed()
                     .title("Pathing")
                     .addField("This Way", dist, false)
@@ -149,7 +147,7 @@ public class PathfinderCommand extends Command {
                         .errorColor();
                     return OK;
                 }
-                Baritone.INSTANCE.getTo(block);
+                BARITONE.getTo(block);
                 c.getSource().getEmbed()
                     .title("Pathing")
                     .addField("Get To", blockName, false)
@@ -166,7 +164,7 @@ public class PathfinderCommand extends Command {
                         .errorColor();
                     return OK;
                 }
-                Baritone.INSTANCE.mine(block);
+                BARITONE.mine(block);
                 c.getSource().getEmbed()
                     .title("Pathing")
                     .addField("Mine", blockName, false)
@@ -176,7 +174,7 @@ public class PathfinderCommand extends Command {
             .then(literal("click")
                       .then(literal("left")
                                 .then(argument("x", integer()).then(argument("y", integer(-64, 320)).then(argument("z", integer()).executes(c -> {
-                                    Baritone.INSTANCE.leftClickBlock(getInteger(c, "x"), getInteger(c, "y"), getInteger(c, "z"));
+                                    BARITONE.leftClickBlock(getInteger(c, "x"), getInteger(c, "y"), getInteger(c, "z"));
                                     c.getSource().getEmbed()
                                         .title("Pathing")
                                         .addField("Left Click", getInteger(c, "x") + ", " + getInteger(c, "y") + ", " + getInteger(c, "z"), false)
@@ -207,7 +205,7 @@ public class PathfinderCommand extends Command {
                                                       .errorColor();
                                                   return OK;
                                               }
-                                              Baritone.INSTANCE.leftClickEntity(entityOptional.get());
+                                              BARITONE.leftClickEntity(entityOptional.get());
                                               c.getSource().getEmbed()
                                                   .title("Pathing")
                                                   .addField("Left Click", entityOptional.get().getEntityType() + " [" + entityOptional.get().position() + "]", false)
@@ -216,7 +214,7 @@ public class PathfinderCommand extends Command {
                                           }))))
                       .then(literal("right")
                                 .then(argument("x", integer()).then(argument("y", integer(-64, 320)).then(argument("z", integer()).executes(c -> {
-                                    Baritone.INSTANCE.rightClickBlock(getInteger(c, "x"), getInteger(c, "y"), getInteger(c, "z"));
+                                    BARITONE.rightClickBlock(getInteger(c, "x"), getInteger(c, "y"), getInteger(c, "z"));
                                     c.getSource().getEmbed()
                                         .title("Pathing")
                                         .addField("Right Click", getInteger(c, "x") + ", " + getInteger(c, "y") + ", " + getInteger(c, "z"), false)
@@ -247,7 +245,7 @@ public class PathfinderCommand extends Command {
                                                       .errorColor();
                                                   return OK;
                                               }
-                                              Baritone.INSTANCE.rightClickEntity(entityOptional.get());
+                                              BARITONE.rightClickEntity(entityOptional.get());
                                               c.getSource().getEmbed()
                                                   .title("Pathing")
                                                   .addField("Right Click", entityOptional.get().getEntityType() + " [" + entityOptional.get().position() + "]", false)
@@ -255,7 +253,7 @@ public class PathfinderCommand extends Command {
                                               return OK;
                                           })))))
             .then(literal("status").executes(c -> {
-                boolean isActive = Baritone.INSTANCE.isActive();
+                boolean isActive = BARITONE.isActive();
                 c.getSource().getEmbed()
                     .title("Pathing Status")
                     .addField("Active", isActive ? "Yes" : "No", false);
@@ -265,7 +263,7 @@ public class PathfinderCommand extends Command {
                     c.getSource().getEmbed().inQueueColor();
                 }
                 if (isActive) {
-                    Baritone.INSTANCE.getPathingControlManager().mostRecentInControl().ifPresent(
+                    BARITONE.getPathingControlManager().mostRecentInControl().ifPresent(
                         process -> c.getSource().getEmbed()
                             .addField("Process", process.displayName(), false)
                     );

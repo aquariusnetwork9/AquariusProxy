@@ -444,7 +444,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IBariton
 
                 .filter(pos -> !blacklist.contains(pos))
 
-                .sorted(Comparator.comparingDouble(Baritone.INSTANCE.getPlayerContext().player().blockPosition()::squaredDistance))
+                .sorted(Comparator.comparingDouble(BARITONE.getPlayerContext().player().blockPosition()::squaredDistance))
                 .collect(Collectors.toList());
 
         if (locs.size() > max) {

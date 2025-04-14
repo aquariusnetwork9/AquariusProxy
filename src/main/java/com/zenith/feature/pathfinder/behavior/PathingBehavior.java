@@ -27,8 +27,7 @@ import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.zenith.Globals.CONFIG;
-import static com.zenith.Globals.PATH_LOG;
+import static com.zenith.Globals.*;
 import static java.util.Objects.requireNonNullElse;
 
 @Getter
@@ -507,7 +506,7 @@ public class PathingBehavior extends Behavior {
                 transformed = new GoalXZ(pos.x(), pos.z());
             }
         }
-        Favoring favoring = new Favoring(Baritone.INSTANCE.getPlayerContext(), previous, context);
+        Favoring favoring = new Favoring(BARITONE.getPlayerContext(), previous, context);
         BlockPos feet = ctx.playerFeet();
         var realStart = new BlockPos(start);
         var sub = feet.subtract(realStart);

@@ -1,6 +1,5 @@
 package com.zenith.feature.pathfinder.movement;
 
-import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.feature.pathfinder.BlockStateInterface;
 import com.zenith.feature.pathfinder.PathInput;
 import com.zenith.feature.pathfinder.PlayerContext;
@@ -15,6 +14,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
+import static com.zenith.Globals.BARITONE;
 import static com.zenith.Globals.BOT;
 
 public abstract class Movement implements IMovement {
@@ -118,19 +118,19 @@ public abstract class Movement implements IMovement {
         // If the movement target has to force the new rotations, or we aren't using silent move, then force the rotations
         Rotation currentTargetRotation = currentState.getTarget().rotation();
         if (currentTargetRotation != null) {
-            Baritone.INSTANCE.getLookBehavior().updateRotation(
+            BARITONE.getLookBehavior().updateRotation(
                 currentTargetRotation
             );
         }
-        Baritone.INSTANCE.getInputOverrideHandler().clearAllKeys();
+        BARITONE.getInputOverrideHandler().clearAllKeys();
         currentState.getInputStates().forEach((input, forced) -> {
-            Baritone.INSTANCE.getInputOverrideHandler().setInputForceState(input, forced);
+            BARITONE.getInputOverrideHandler().setInputForceState(input, forced);
         });
         currentState.getInputStates().clear();
 
         // If the current status indicates a completed movement
         if (currentState.getStatus().isComplete()) {
-            Baritone.INSTANCE.getInputOverrideHandler().clearAllKeys();
+            BARITONE.getInputOverrideHandler().clearAllKeys();
         }
 
         return currentState.getStatus();
@@ -252,7 +252,7 @@ public abstract class Movement implements IMovement {
     }
 
     protected boolean playerInValidPosition() {
-        return getValidPositions().contains(ctx.playerFeet()) || getValidPositions().contains(Baritone.INSTANCE.getPathingBehavior().pathStart());
+        return getValidPositions().contains(ctx.playerFeet()) || getValidPositions().contains(BARITONE.getPathingBehavior().pathStart());
     }
 
     public List<BlockPos> toWalkInto() { // overridden by movementdiagonal
