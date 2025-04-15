@@ -101,14 +101,18 @@ public class PlayerListsManager {
     }
 
     public static Optional<ProfileData> getProfileFromUsername(final String username) {
-        return MojangApi.INSTANCE.getProfile(username).map(o -> (ProfileData) o)
-            .or(() -> CraftheadApi.INSTANCE.getProfile(username).map(o -> (ProfileData) o)
-                .or(() -> MinetoolsApi.INSTANCE.getProfileFromUsername(username)));
+        return MojangApi.INSTANCE.getProfile(username).map(o -> (ProfileData) o).filter(PlayerListsManager::validProfile)
+            .or(() -> CraftheadApi.INSTANCE.getProfile(username).map(o -> (ProfileData) o).filter(PlayerListsManager::validProfile)
+                .or(() -> MinetoolsApi.INSTANCE.getProfileFromUsername(username).filter(PlayerListsManager::validProfile)));
     }
 
     public static Optional<ProfileData> getProfileFromUUID(final UUID uuid) {
-        return SessionServerApi.INSTANCE.getProfile(uuid).map(o -> (ProfileData) o)
-            .or(() -> CraftheadApi.INSTANCE.getProfile(uuid).map(o -> (ProfileData) o)
-                .or(() -> MinetoolsApi.INSTANCE.getProfileFromUUID(uuid)));
+        return SessionServerApi.INSTANCE.getProfile(uuid).map(o -> (ProfileData) o).filter(PlayerListsManager::validProfile)
+            .or(() -> CraftheadApi.INSTANCE.getProfile(uuid).map(o -> (ProfileData) o).filter(PlayerListsManager::validProfile)
+                .or(() -> MinetoolsApi.INSTANCE.getProfileFromUUID(uuid).filter(PlayerListsManager::validProfile)));
+    }
+
+    private static boolean validProfile(final ProfileData profile) {
+        return profile != null && profile.uuid() != null && profile.name() != null;
     }
 }

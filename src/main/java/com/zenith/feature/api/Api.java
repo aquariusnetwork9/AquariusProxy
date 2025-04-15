@@ -30,6 +30,10 @@ public abstract class Api {
         try (HttpClient client = buildHttpClient()) {
             var response = client
                 .send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 400) {
+                DEFAULT_LOG.error("Request failed to: {}{} - {}", baseUrl, uri, response.statusCode());
+                return Optional.empty();
+            }
             var body = response.body();
             try {
                 return Optional.of(OBJECT_MAPPER.readValue(body, clazz));
@@ -38,7 +42,7 @@ public abstract class Api {
                 return Optional.empty();
             }
         } catch (Exception e) {
-            DEFAULT_LOG.error("Failed to send get request to: {}{}", baseUrl, uri, e);
+            DEFAULT_LOG.error("Request failed to: {}{}", baseUrl, uri, e);
             return Optional.empty();
         }
     }
