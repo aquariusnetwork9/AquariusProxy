@@ -1,8 +1,9 @@
 package com.zenith.event.player;
 
 import org.geysermc.mcprotocollib.auth.GameProfile;
+import org.jspecify.annotations.Nullable;
 
-public record PlayerDisconnectedEvent(String reason, GameProfile clientGameProfile) {
+public record PlayerDisconnectedEvent(@Nullable String reason, @Nullable GameProfile clientGameProfile) {
 
     public PlayerDisconnectedEvent() {
         this(null, null);

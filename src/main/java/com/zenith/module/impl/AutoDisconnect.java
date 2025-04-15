@@ -10,7 +10,6 @@ import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Globals.*;
-import static java.util.Objects.nonNull;
 
 public class AutoDisconnect extends Module {
     public static final String AUTODISCONNECT_REASON_PREFIX = "[AutoDisconnect] ";
@@ -59,11 +58,8 @@ public class AutoDisconnect extends Module {
 
     public void handleProxyClientDisconnectedEvent(PlayerDisconnectedEvent event) {
         if (!CONFIG.client.extra.utility.actions.autoDisconnect.autoClientDisconnect) return;
-        var connection = Proxy.getInstance().getActivePlayer();
-        if (nonNull(connection) && connection.getProfileCache().getProfile().equals(event.clientGameProfile())) {
-            info("Auto Client Disconnect");
-            doDisconnect("Auto Client Disconnect");
-        }
+        info("Auto Client Disconnect");
+        doDisconnect("Auto Client Disconnect");
     }
 
     public void handleNewPlayerInVisualRangeEvent(ServerPlayerInVisualRangeEvent event) {
