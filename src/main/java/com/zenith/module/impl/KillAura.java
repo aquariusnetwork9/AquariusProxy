@@ -147,6 +147,7 @@ public class KillAura extends AbstractInventoryModule {
         if (CONFIG.client.extra.killAura.targetPlayers && entity instanceof EntityPlayer player) {
             if (player.isSelfPlayer()) return false;
             return !PLAYER_LISTS.getFriendsList().contains(player.getUuid())
+                && !(PLAYER_LISTS.getSpawnPatrolIgnoreList().contains(player.getUuid()) && MODULE.get(SpawnPatrol.class).isEnabled())
                 && !PLAYER_LISTS.getWhitelist().contains(player.getUuid())
                 && !PLAYER_LISTS.getSpectatorWhitelist().contains(player.getUuid());
 
