@@ -1,9 +1,11 @@
 package com.zenith.util.struct;
 
 import lombok.Data;
+import lombok.Locked;
 import org.jspecify.annotations.NonNull;
 
 import java.lang.reflect.Array;
+import java.util.function.Consumer;
 
 /**
  * An ArrayList implementation optimized for fast, direct, array access.
@@ -46,14 +48,16 @@ public class FastArrayList<T> {
         return false;
     }
 
-    public synchronized void add(@NonNull T element) {
+    @Locked
+    public void add(@NonNull T element) {
         T[] newArray = (T[]) Array.newInstance(clazz, this.array.length + 1);
         System.arraycopy(this.array, 0, newArray, 0, this.array.length);
         newArray[this.array.length] = element;
         this.array = newArray;
     }
 
-    public synchronized boolean remove(@NonNull T element) {
+    @Locked
+    public boolean remove(@NonNull T element) {
         var a = array;
         int index = -1;
         for (int i = 0; i < a.length; i++) {
@@ -74,5 +78,12 @@ public class FastArrayList<T> {
 
     public void clear() {
         this.array = (T[]) Array.newInstance(clazz, 0);
+    }
+
+    public void forEach(Consumer<T> action) {
+        var a = array;
+        for (int i = 0; i < a.length; i++) {
+            action.accept(a[i]);
+        }
     }
 }

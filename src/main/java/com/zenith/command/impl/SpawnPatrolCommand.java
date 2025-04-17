@@ -38,6 +38,8 @@ public class SpawnPatrolCommand extends Command {
                 "stuckKill minDist <blocks>",
                 "stuckKill antiStuck on/off",
                 "ignore add/del <player>",
+                "ignore addAll <player1,player2,...>",
+                "ignore clear",
                 "ignore list"
             )
             .build();
@@ -125,6 +127,22 @@ public class SpawnPatrolCommand extends Command {
                           });
                           return OK;
                       })))
+                      .then(literal("addAll").then(argument("playerList", wordWithChars()).executes(c -> {
+                          String playerList = getString(c, "playerList");
+                          String[] players = playerList.split(",");
+                          if (players.length == 0) {
+                                c.getSource().getEmbed()
+                                    .title("No players provided");
+                                return OK;
+                          }
+                          for (String player : players) {
+                              PLAYER_LISTS.getSpawnPatrolIgnoreList().add(player);
+                          }
+                          c.getSource().getEmbed()
+                              .title("Added " + players.length + " Players to ignore list")
+                              .description(playerListToString(PLAYER_LISTS.getSpawnPatrolIgnoreList()));;
+                          return OK;
+                      })))
                       .then(literal("del").then(argument("player", wordWithChars()).executes(c -> {
                           String player = getString(c, "player");
                           PLAYER_LISTS.getSpawnPatrolIgnoreList().remove(player);
@@ -133,6 +151,13 @@ public class SpawnPatrolCommand extends Command {
                               .description(playerListToString(PLAYER_LISTS.getSpawnPatrolIgnoreList()));
                           return OK;
                       })))
+                      .then(literal("clear").executes(c -> {
+                          PLAYER_LISTS.getSpawnPatrolIgnoreList().clear();
+                          c.getSource().getEmbed()
+                              .title("Cleared ignore list")
+                              .description(playerListToString(PLAYER_LISTS.getSpawnPatrolIgnoreList()));
+                          return OK;
+                      }))
                       .then(literal("list").executes(c -> {
                             c.getSource().getEmbed()
                                 .title("Ignore List")
@@ -143,17 +168,20 @@ public class SpawnPatrolCommand extends Command {
 
     @Override
     public void defaultEmbed(Embed embed) {
-        embed
-            .addField("SpawnPatrol", toggleStr(CONFIG.client.extra.spawnPatrol.enabled), false)
-            .addField("Goal", CONFIG.client.extra.spawnPatrol.goalX + ", " + CONFIG.client.extra.spawnPatrol.goalY + ", " + CONFIG.client.extra.spawnPatrol.goalZ, false)
-            .addField("Target Only Nakeds", toggleStr(CONFIG.client.extra.spawnPatrol.targetOnlyNakeds), false)
-            .addField("Sticky Targeting", toggleStr(CONFIG.client.extra.spawnPatrol.stickyTargeting), false)
-            .addField("Target Attackers", toggleStr(CONFIG.client.extra.spawnPatrol.targetAttackers), false)
-            .addField("Nether", toggleStr(CONFIG.client.extra.spawnPatrol.nether), false)
-            .addField("Stuck Kill", toggleStr(CONFIG.client.extra.spawnPatrol.stuckKill), false)
-            .addField("Stuck Kill Seconds", CONFIG.client.extra.spawnPatrol.stuckKillSeconds, false)
-            .addField("Stuck Kill MinDist", CONFIG.client.extra.spawnPatrol.stuckKillMinDist, false)
-            .addField("Stuck Kill AntiStuck", toggleStr(CONFIG.client.extra.spawnPatrol.stuckKillAntiStuck), false)
-            .primaryColor();
+        embed.primaryColor();
+        if (!embed.isDescriptionPresent()) {
+            embed
+                .addField("SpawnPatrol", toggleStr(CONFIG.client.extra.spawnPatrol.enabled), false)
+                .addField("Goal", CONFIG.client.extra.spawnPatrol.goalX + ", " + CONFIG.client.extra.spawnPatrol.goalY + ", " + CONFIG.client.extra.spawnPatrol.goalZ, false)
+                .addField("Target Only Nakeds", toggleStr(CONFIG.client.extra.spawnPatrol.targetOnlyNakeds), false)
+                .addField("Sticky Targeting", toggleStr(CONFIG.client.extra.spawnPatrol.stickyTargeting), false)
+                .addField("Target Attackers", toggleStr(CONFIG.client.extra.spawnPatrol.targetAttackers), false)
+                .addField("Nether", toggleStr(CONFIG.client.extra.spawnPatrol.nether), false)
+                .addField("Stuck Kill", toggleStr(CONFIG.client.extra.spawnPatrol.stuckKill), false)
+                .addField("Stuck Kill Seconds", CONFIG.client.extra.spawnPatrol.stuckKillSeconds, false)
+                .addField("Stuck Kill MinDist", CONFIG.client.extra.spawnPatrol.stuckKillMinDist, false)
+                .addField("Stuck Kill AntiStuck", toggleStr(CONFIG.client.extra.spawnPatrol.stuckKillAntiStuck), false);
+        }
+
     }
 }
