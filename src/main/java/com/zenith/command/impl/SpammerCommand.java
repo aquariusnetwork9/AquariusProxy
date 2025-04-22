@@ -145,10 +145,9 @@ public class SpammerCommand extends Command {
 
     @Override
     public void defaultEmbed(final Embed builder) {
-        addListDescription(builder)
-            .description("""
+        addListDescription(builder.description("""
                  **WARNING:** This module can and will get you muted on 2b2t or other servers. Use at your own risk.
-                 """)
+                 """))
             .addField("Spammer", toggleStr(CONFIG.client.extra.spammer.enabled), false)
             .addField("Whisper", toggleStr(CONFIG.client.extra.spammer.whisper), false)
             .addField("While Player Connected", toggleStr(CONFIG.client.extra.spammer.whilePlayerConnected), false)
@@ -163,6 +162,10 @@ public class SpammerCommand extends Command {
         for (int index = 0; index < CONFIG.client.extra.spammer.messages.size(); index++) {
             messages.add("`" + index + ":` " + CONFIG.client.extra.spammer.messages.get(index));
         }
-        return embedBuilder.description(String.join("\n", messages));
+        String str = String.join("\n", messages);
+        if (embedBuilder.isDescriptionPresent())
+            return embedBuilder.description(embedBuilder.description() + str);
+        else
+            return embedBuilder.description(str);
     }
 }
