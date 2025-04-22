@@ -1,7 +1,6 @@
 package com.zenith.network.codec;
 
 import com.zenith.network.client.ClientSession;
-import io.netty.channel.EventLoop;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 
 import java.util.concurrent.RejectedExecutionException;
@@ -17,12 +16,7 @@ public interface ClientEventLoopPacketHandler<P extends Packet, S extends Client
     default P apply(P packet, S session) {
         if (packet == null) return null;
         try {
-            EventLoop clientEventLoop = session.getClientEventLoop();
-            if (clientEventLoop.inEventLoop()) {
-                applyWithRetries(packet, session, 0);
-            } else {
-                clientEventLoop.execute(() -> applyWithRetries(packet, session, 0));
-            }
+            session.executeInEventLoop(() -> applyWithRetries(packet, session, 0));
         } catch (final RejectedExecutionException e) {
             // fall through
         }
