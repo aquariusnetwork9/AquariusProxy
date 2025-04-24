@@ -2,6 +2,7 @@ package com.zenith;
 
 import ch.qos.logback.classic.LoggerContext;
 import com.zenith.cache.CacheResetType;
+import com.zenith.discord.ChatRelayEventListener;
 import com.zenith.discord.Embed;
 import com.zenith.discord.NotificationEventListener;
 import com.zenith.event.client.*;
@@ -159,6 +160,7 @@ public class Proxy {
                 }
             }
             NotificationEventListener.INSTANCE.subscribeEvents();
+            ChatRelayEventListener.INSTANCE.subscribeEvents();
             if (CONFIG.plugins.enabled) PLUGIN_MANAGER.initialize();
             Queue.start();
             saveConfigAsync();

@@ -7,9 +7,9 @@ import com.zenith.command.api.Command;
 import com.zenith.command.api.CommandCategory;
 import com.zenith.command.api.CommandContext;
 import com.zenith.command.api.CommandUsage;
-import com.zenith.discord.DiscordBot;
 import com.zenith.discord.Embed;
 import com.zenith.module.impl.AutoReply;
+import com.zenith.util.ChatUtil;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
@@ -53,7 +53,7 @@ public class AutoReplyCommand extends Command {
                 return OK;
             })))
             .then(literal("message").then(argument("messageStr", greedyString()).executes(c -> {
-                String message = DiscordBot.sanitizeRelayInputMessage(StringArgumentType.getString(c, "messageStr"));
+                String message = ChatUtil.sanitizeChatMessage(StringArgumentType.getString(c, "messageStr"));
                 if (message.length() > 236)
                     message = message.substring(0, 236);
                 CONFIG.client.extra.autoReply.message = message;

@@ -5,7 +5,8 @@ import com.zenith.Proxy;
 import com.zenith.command.api.CommandContext;
 import com.zenith.command.api.CommandOutputHelper;
 import com.zenith.command.api.DiscordCommandContext;
-import com.zenith.event.message.DiscordMessageSentEvent;
+import com.zenith.event.message.DiscordMainChannelCommandReceivedEvent;
+import com.zenith.event.message.DiscordRelayChannelMessageReceivedEvent;
 import com.zenith.feature.autoupdater.AutoUpdater;
 import com.zenith.feature.queue.Queue;
 import com.zenith.module.impl.AutoReconnect;
@@ -18,7 +19,6 @@ import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.ISnowflake;
 import net.dv8tion.jda.api.entities.Icon;
-import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.StatusChangeEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
@@ -73,6 +73,10 @@ public class DiscordBot {
             of(SessionDisconnectEvent.class, e -> DISCORD_LOG.info("Session disconnected")),
             of(SessionInvalidateEvent.class, e -> DISCORD_LOG.info("Session invalidated")),
             of(StatusChangeEvent.class, e -> DISCORD_LOG.debug("JDA Status: {}", e.getNewStatus()))
+        );
+        EVENT_BUS.subscribe(
+            this,
+            of(DiscordMainChannelCommandReceivedEvent.class, this::executeDiscordCommand)
         );
     }
 
@@ -165,22 +169,24 @@ public class DiscordBot {
             && !CONFIG.discord.chatRelay.channelId.isEmpty()
             && event.getMessage().getChannelId().equals(CONFIG.discord.chatRelay.channelId)
             && !member.getId().equals(jda.getSelfUser().getId())) {
-            EVENT_BUS.postAsync(new DiscordMessageSentEvent(sanitizeRelayInputMessage(event.getMessage().getContentRaw()), event));
+            EVENT_BUS.postAsync(new DiscordRelayChannelMessageReceivedEvent(event));
             return;
         }
         if (!event.getMessage().getChannelId().equals(CONFIG.discord.channelId)) return;
         final String message = event.getMessage().getContentRaw();
         if (!message.startsWith(CONFIG.discord.prefix)) return;
-        EXECUTOR.execute(() -> executeDiscordCommand(event, message, member));
+        EVENT_BUS.postAsync(new DiscordMainChannelCommandReceivedEvent(event));
     }
 
-    private void executeDiscordCommand(final MessageReceivedEvent event, final String message, final Member member) {
+    private void executeDiscordCommand(final DiscordMainChannelCommandReceivedEvent event) {
         try {
-            final String inputMessage = message.substring(CONFIG.discord.prefix.length());
-            String memberName = member.getUser().getName();
-            String memberId = member.getId();
+            var jdaEvent = event.event();
+            var member = event.member();
+            var inputMessage = event.message().substring(CONFIG.discord.prefix.length());
+            var memberName = member.getUser().getName();
+            var memberId = member.getId();
             DISCORD_LOG.info("{} ({}) executed discord command: {}", memberName, memberId, inputMessage);
-            final CommandContext context = DiscordCommandContext.create(inputMessage, event);
+            final CommandContext context = DiscordCommandContext.create(inputMessage, jdaEvent);
             COMMAND.execute(context);
             final MessageCreateData request = commandEmbedOutputToMessage(context);
             if (request != null) {
@@ -195,7 +201,7 @@ public class DiscordBot {
                 CommandOutputHelper.logMultiLineOutputToTerminal(context.getMultiLineOutput());
             }
         } catch (final Exception e) {
-            DISCORD_LOG.error("Failed processing discord command: {}", message, e);
+            DISCORD_LOG.error("Failed processing discord command: {}", event.message(), e);
         }
     }
 
@@ -307,16 +313,6 @@ public class DiscordBot {
             .orElse(false);
     }
 
-    public static String sanitizeRelayInputMessage(final String input) {
-        StringBuilder stringbuilder = new StringBuilder();
-        for (char c0 : input.toCharArray()) {
-            if (isAllowedChatCharacter(c0)) {
-                stringbuilder.append(c0);
-            }
-        }
-        return stringbuilder.toString();
-    }
-
     public void updateProfileImage(final byte[] imageBytes) {
         if (!isRunning()) return;
         try {
@@ -332,10 +328,6 @@ public class DiscordBot {
             DISCORD_LOG.warn("Failed updating discord profile image: {}", e.getMessage());
             DISCORD_LOG.debug("Failed updating discord profile image", e);
         }
-    }
-
-    public static boolean isAllowedChatCharacter(char c0) {
-        return c0 != 167 && c0 >= 32 && c0 != 127;
     }
 
     public void defaultEmbedDecoration(Embed embed) {
