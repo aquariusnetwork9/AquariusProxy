@@ -10,6 +10,7 @@ import org.geysermc.mcprotocollib.network.ProxyInfo;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 
 public final class Config {
@@ -385,6 +386,10 @@ public final class Config {
 
                     AutoRecordMode(String name) {
                         this.name = name;
+                    }
+
+                    public static String[] names() {
+                        return Arrays.stream(AutoRecordMode.values()).map(AutoRecordMode::getName).toArray(String[]::new);
                     }
                 }
             }

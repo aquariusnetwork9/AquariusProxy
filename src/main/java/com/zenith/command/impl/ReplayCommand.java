@@ -98,7 +98,7 @@ public class ReplayCommand extends Command {
                 return OK;
             })))
             .then(literal("autoRecord")
-                      .then(literal("mode").then(argument("mode", enumStrings(AutoRecordMode.values())).executes(c -> {
+                      .then(literal("mode").then(argument("mode", enumStrings(AutoRecordMode.names())).executes(c -> {
                           var modeStr = getString(c, "mode").toLowerCase();
                           var foundMode = Arrays.stream(AutoRecordMode.values())
                               .filter(mode -> mode.getName().toLowerCase().equals(modeStr))
@@ -106,7 +106,7 @@ public class ReplayCommand extends Command {
                           if (foundMode.isEmpty()) {
                               c.getSource().getEmbed()
                                   .title("Invalid Mode")
-                                  .description("Available Modes: " + Arrays.toString(AutoRecordMode.values()));
+                                  .description("Available Modes: " + Arrays.toString(AutoRecordMode.names()));
                               return OK;
                           } else {
                               MODULE.get(ReplayMod.class).disable();
