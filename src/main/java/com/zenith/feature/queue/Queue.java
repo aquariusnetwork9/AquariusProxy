@@ -1,5 +1,6 @@
 package com.zenith.feature.queue;
 
+import com.zenith.Proxy;
 import com.zenith.feature.api.vcapi.VcApi;
 import com.zenith.feature.api.vcapi.model.QueueEtaEquationResponse;
 import com.zenith.feature.queue.mcping.MCPing;
@@ -141,5 +142,12 @@ public class Queue {
                 TimeUnit.MINUTES
             );
         }
+    }
+
+    public static String queuePositionStr() {
+        if (Proxy.getInstance().isPrio())
+            return Proxy.getInstance().getQueuePosition() + " / " + getQueueStatus().prio() + " - ETA: " + getQueueEta(Proxy.getInstance().getQueuePosition());
+        else
+            return Proxy.getInstance().getQueuePosition() + " / " + getQueueStatus().regular() + " - ETA: " + getQueueEta(Proxy.getInstance().getQueuePosition());
     }
 }

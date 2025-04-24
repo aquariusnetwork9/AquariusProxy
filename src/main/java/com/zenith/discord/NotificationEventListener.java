@@ -39,6 +39,7 @@ import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.utils.Color;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
+import org.jspecify.annotations.Nullable;
 
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
@@ -61,6 +62,7 @@ import static java.util.Objects.nonNull;
 
 public class NotificationEventListener {
     public static final NotificationEventListener INSTANCE = new NotificationEventListener();
+
     public void subscribeEvents() {
         if (EVENT_BUS.isSubscribed(this)) throw new RuntimeException("Event handlers already initialized");
         EVENT_BUS.subscribe(
@@ -115,6 +117,14 @@ public class NotificationEventListener {
             of(PrivateMessageSendEvent.class, this::handlePrivateMessageSendEvent),
             of(SpawnPatrolTargetAcquiredEvent.class, this::handleSpawnPatrolTargetAcquiredEvent),
             of(SpawnPatrolTargetKilledEvent.class, this::handleSpawnPatrolTargetKilledEvent)
+        );
+    }
+
+    public static String notificationMention() {
+        return mentionRole(
+            CONFIG.discord.notificationMentionRoleId.isEmpty()
+                ? CONFIG.discord.accountOwnerRoleId
+                : CONFIG.discord.notificationMentionRoleId
         );
     }
 
@@ -226,7 +236,7 @@ public class NotificationEventListener {
     private void handleQueueWarning(QueueWarningEvent event) {
         sendEmbedMessage((event.mention() ? notificationMention() : ""), Embed.builder()
             .title("Queue Warning")
-            .addField("Queue Position", "[" + queuePositionStr() + "]", false)
+            .addField("Queue Position", "[" + Queue.queuePositionStr() + "]", false)
             .inQueueColor());
     }
 
@@ -751,13 +761,13 @@ public class NotificationEventListener {
             try {
                 var messageData = event.event().getMessage().getReferencedMessage();
                 // abort if reply is not to a message sent by us
-                if (DISCORD.jda.getSelfUser().getIdLong() != messageData.getAuthor().getIdLong()) return;
+                if (DISCORD.jda().getSelfUser().getIdLong() != messageData.getAuthor().getIdLong()) return;
                 final MessageEmbed embed = messageData.getEmbeds().getFirst();
                 if (embed.getColor() != null && embed.getColor().getRGB() == PRIVATE_MESSAGE_EMBED_COLOR.getRGB()) {
                     // replying to private message
                     sendPrivateMessage(event.message(), event.event());
                 } else {
-                    final String sender = DISCORD.extractRelayEmbedSenderUsername(embed.getColor(), embed.getDescription());
+                    final String sender = extractRelayEmbedSenderUsername(embed.getColor(), embed.getDescription());
                     boolean pm = false;
                     var connections = Proxy.getInstance().getActiveConnections().getArray();
                     for (int i = 0; i < connections.length; i++) {
@@ -784,6 +794,21 @@ public class NotificationEventListener {
         DISCORD.lastRelayMessage = Optional.of(Instant.now());
     }
 
+    private String extractRelayEmbedSenderUsername(@Nullable final Color color, final String msgContent) {
+        final String sender;
+        if (color != null && color.equals(Color.MAGENTA)) {
+            // extract whisper sender
+            sender = msgContent.split("\\*\\*")[1];
+        } else if (color != null && color.equals(Color.BLACK)) {
+            // extract public chat sender
+            sender = msgContent.split("\\*\\*")[1].replace(":", "");
+            // todo: we could support death messages here if we remove any bolded discord formatting and feed the message content into the parser
+        } else {
+            throw new RuntimeException("Unhandled message being replied to, aborting relay");
+        }
+        return sender;
+    }
+
     private void sendPrivateMessage(String message, MessageReceivedEvent event) {
         EVENT_BUS.postAsync(new PrivateMessageSendEvent(
             event.getMessage().getAuthor().getName(),
@@ -791,7 +816,17 @@ public class NotificationEventListener {
     }
 
     public void handleUpdateStartEvent(UpdateStartEvent event) {
-        sendEmbedMessage(DISCORD.getUpdateMessage(event.newVersion()));
+        String verString = "Current Version: `" + escape(LAUNCH_CONFIG.version) + "`";
+        var newVersion = event.newVersion();
+        if (newVersion.isPresent()) verString += "\nNew Version: `" + escape(newVersion.get()) + "`";
+        var embed = Embed.builder()
+            .title("Updating and restarting...")
+            .description(verString)
+            .primaryColor();
+        if (!LAUNCH_CONFIG.auto_update) {
+            embed.addField("Info", "`autoUpdate` must be enabled for new updates to apply", false);
+        };
+        sendEmbedMessage(embed);
     }
 
     public void handleServerRestartingEvent(ServerRestartingEvent event) {
@@ -934,7 +969,7 @@ public class NotificationEventListener {
                 embed.description("Error reading replay file: " + e.getMessage());
             }
         }
-        sendEmbedMessageWithFileAttachment(embed);
+        sendEmbedMessage(embed);
     }
 
     public void handleTotemPopEvent(final PlayerTotemPopAlertEvent event) {
@@ -1027,8 +1062,5 @@ public class NotificationEventListener {
     }
     public void updatePresence() {
         DISCORD.updatePresence();
-    }
-    public void sendEmbedMessageWithFileAttachment(Embed embed) {
-        DISCORD.sendEmbedMessageWithFileAttachment(embed);
     }
 }

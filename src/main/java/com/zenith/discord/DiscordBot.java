@@ -10,6 +10,8 @@ import com.zenith.feature.autoupdater.AutoUpdater;
 import com.zenith.feature.queue.Queue;
 import com.zenith.module.impl.AutoReconnect;
 import com.zenith.util.MentionUtil;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.OnlineStatus;
@@ -29,7 +31,6 @@ import net.dv8tion.jda.api.interactions.components.ActionComponent;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.requests.ErrorResponse;
 import net.dv8tion.jda.api.requests.GatewayIntent;
-import net.dv8tion.jda.api.utils.Color;
 import net.dv8tion.jda.api.utils.FileUpload;
 import net.dv8tion.jda.api.utils.ShutdownException;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
@@ -53,14 +54,14 @@ import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Globals.*;
 import static java.util.Arrays.asList;
 
+@Accessors(fluent = true)
 public class DiscordBot {
-
     private TextChannel mainChannel; // Null if not running
-    private @Nullable TextChannel relayChannel;
+    private TextChannel relayChannel; // Null if not running or relay disabled
     private ScheduledFuture<?> presenceUpdateFuture;
-    protected JDA jda; // Null if not running
+    @Getter private JDA jda; // Null if not running
+    @Getter private final SimpleEventBus jdaEventBus = new SimpleEventBus();
     public Optional<Instant> lastRelayMessage = Optional.empty();
-    private final SimpleEventBus jdaEventBus = new SimpleEventBus();
 
     public DiscordBot() {
         jdaEventBus.subscribe(
@@ -103,7 +104,19 @@ public class DiscordBot {
         }
     }
 
-    public void initializeJda() {
+    public boolean isRunning() {
+        var status = getJdaStatus();
+        return status != JDA.Status.SHUTDOWN && status != JDA.Status.FAILED_TO_LOGIN;
+    }
+
+    public JDA.Status getJdaStatus() {
+        var jda = this.jda;
+        if (jda == null) return JDA.Status.SHUTDOWN;
+        return jda.getStatus();
+    }
+
+
+    private void initializeJda() {
         if (CONFIG.discord.channelId.isEmpty()) throw new RuntimeException("Discord bot is enabled but channel id is not set");
         if (CONFIG.discord.chatRelay.enable) {
             if (CONFIG.discord.chatRelay.channelId.isEmpty()) throw new RuntimeException("Discord chat relay is enabled and channel id is not set");
@@ -143,18 +156,7 @@ public class DiscordBot {
         }
     }
 
-    public boolean isRunning() {
-        var status = getJdaStatus();
-        return status != JDA.Status.SHUTDOWN && status != JDA.Status.FAILED_TO_LOGIN;
-    }
-
-    public JDA.Status getJdaStatus() {
-        var jda = this.jda;
-        if (jda == null) return JDA.Status.SHUTDOWN;
-        return jda.getStatus();
-    }
-
-    public void onMessageReceived(MessageReceivedEvent event) {
+    private void onMessageReceived(MessageReceivedEvent event) {
         var member = event.getMember();
         if (member == null) return;
         if (member.getUser().isBot() && CONFIG.discord.ignoreOtherBots) return;
@@ -197,19 +199,23 @@ public class DiscordBot {
         }
     }
 
-    public static String notificationMention() {
-        return mentionRole(
-            CONFIG.discord.notificationMentionRoleId.isEmpty()
-                ? CONFIG.discord.accountOwnerRoleId
-                : CONFIG.discord.notificationMentionRoleId
-        );
+    private MessageCreateData commandEmbedOutputToMessage(final CommandContext context) {
+        var embed = context.getEmbed();
+        if (embed.title() == null) return null;
+        var msgBuilder = new MessageCreateBuilder()
+            .addEmbeds(embed.toJDAEmbed());
+        if (embed.fileAttachment() != null) {
+            msgBuilder.addFiles(FileUpload.fromData(new ByteArrayInputStream(embed.fileAttachment.data()), embed.fileAttachment.name()));
+        }
+        return msgBuilder
+            .build();
     }
 
-    static String mentionAccountOwner() {
+    public static String mentionAccountOwner() {
         return mentionRole(CONFIG.discord.accountOwnerRoleId);
     }
 
-    static String mentionRole(final String roleId) {
+    public static String mentionRole(final String roleId) {
         try {
             return MentionUtil.forRole(roleId);
         } catch (final NumberFormatException e) {
@@ -274,7 +280,7 @@ public class DiscordBot {
                 return;
             }
             if (Proxy.getInstance().isInQueue())
-                jda.getPresence().setPresence(OnlineStatus.IDLE, Activity.customStatus(queuePositionStr()));
+                jda.getPresence().setPresence(OnlineStatus.IDLE, Activity.customStatus(Queue.queuePositionStr()));
             else if (Proxy.getInstance().isConnected())
                 jda.getPresence().setPresence(
                     OnlineStatus.ONLINE,
@@ -293,62 +299,12 @@ public class DiscordBot {
         jda.getPresence().setPresence(onlineStatus, activity);
     }
 
-    public void sendEmbedMessageWithFileAttachment(Embed embed) {
-        if (!isRunning()) return;
-        try {
-            var msgBuilder = new MessageCreateBuilder()
-                .addEmbeds(embed.toJDAEmbed());
-            if (embed.fileAttachment() != null) {
-                msgBuilder.addFiles(FileUpload.fromData(new ByteArrayInputStream(embed.fileAttachment.data()), embed.fileAttachment.name()));
-            }
-            mainChannel.sendMessage(msgBuilder.build()).queue();
-            CommandOutputHelper.logEmbedOutputToTerminal(embed);
-        } catch (final Exception e) {
-            DISCORD_LOG.error("Failed sending discord embed message. Check that the bot has correct permissions: {}", e.getMessage());
-            DISCORD_LOG.debug("Failed sending discord embed message. Check that the bot has correct permissions", e);
-        }
-    }
-
-    public static String queuePositionStr() {
-        if (Proxy.getInstance().isPrio())
-            return Proxy.getInstance().getQueuePosition() + " / " + Queue.getQueueStatus().prio() + " - ETA: " + Queue.getQueueEta(Proxy.getInstance().getQueuePosition());
-        else
-            return Proxy.getInstance().getQueuePosition() + " / " + Queue.getQueueStatus().regular() + " - ETA: " + Queue.getQueueEta(Proxy.getInstance().getQueuePosition());
-    }
-
     public static boolean validateButtonInteractionEventFromAccountOwner(final ButtonInteractionEvent event) {
         return Optional.ofNullable(event.getInteraction().getMember())
             .map(m -> m.getRoles().stream()
                 .map(ISnowflake::getId)
                 .anyMatch(roleId -> roleId.equals(CONFIG.discord.accountOwnerRoleId)))
             .orElse(false);
-    }
-
-    public String extractRelayEmbedSenderUsername(@Nullable final Color color, final String msgContent) {
-        final String sender;
-        if (color != null && color.equals(Color.MAGENTA)) {
-            // extract whisper sender
-            sender = msgContent.split("\\*\\*")[1];
-        } else if (color != null && color.equals(Color.BLACK)) {
-            // extract public chat sender
-            sender = msgContent.split("\\*\\*")[1].replace(":", "");
-            // todo: we could support death messages here if we remove any bolded discord formatting and feed the message content into the parser
-        } else {
-            throw new RuntimeException("Unhandled message being replied to, aborting relay");
-        }
-        return sender;
-    }
-
-    private MessageCreateData commandEmbedOutputToMessage(final CommandContext context) {
-        var embed = context.getEmbed();
-        if (embed.title() == null) return null;
-        var msgBuilder = new MessageCreateBuilder()
-            .addEmbeds(embed.toJDAEmbed());
-        if (embed.fileAttachment() != null) {
-            msgBuilder.addFiles(FileUpload.fromData(new ByteArrayInputStream(embed.fileAttachment.data()), embed.fileAttachment.name()));
-        }
-        return msgBuilder
-            .build();
     }
 
     public static String sanitizeRelayInputMessage(final String input) {
@@ -382,128 +338,87 @@ public class DiscordBot {
         return c0 != 167 && c0 >= 32 && c0 != 127;
     }
 
-    Embed getUpdateMessage(final Optional<String> newVersion) {
-        String verString = "Current Version: `" + escape(LAUNCH_CONFIG.version) + "`";
-        if (newVersion.isPresent()) verString += "\nNew Version: `" + escape(newVersion.get()) + "`";
-        var embed = Embed.builder()
-            .title("Updating and restarting...")
-            .description(verString)
-            .primaryColor();
-        if (!LAUNCH_CONFIG.auto_update) {
-            embed.addField("Info", "`autoUpdate` must be enabled for new updates to apply", false);
-        }
-        return embed;
-    }
-
     public void defaultEmbedDecoration(Embed embed) {
         if (embed.timestamp() == null) embed.timestamp(Instant.now());
     }
 
-    public void sendEmbedMessage(Embed embed) {
+    public void sendEmbedMessageTo(TextChannel channel, @Nullable String message, Embed embed) {
         defaultEmbedDecoration(embed);
         if (isRunning()) {
-            mainChannel.sendMessage(
-                    new MessageCreateBuilder()
-                        .addEmbeds(embed.toJDAEmbed())
-                        .build())
-                .queue();
+            var msgBuilder = new MessageCreateBuilder()
+                .setContent(message)
+                .addEmbeds(embed.toJDAEmbed());
+            if (embed.fileAttachment() != null) {
+                msgBuilder.addFiles(FileUpload.fromData(new ByteArrayInputStream(embed.fileAttachment.data()), embed.fileAttachment.name()));
+            }
+            channel.sendMessage(msgBuilder.build()).queue();
         }
-        CommandOutputHelper.logEmbedOutputToTerminal(embed);
+        if (message != null) TERMINAL_LOG.info(message);
     }
 
-    public void sendEmbedMessage(String message, Embed embed) {
-        defaultEmbedDecoration(embed);
-        if (isRunning()) {
-            mainChannel.sendMessage(
-                new MessageCreateBuilder()
-                    .setContent(message)
-                    .addEmbeds(embed.toJDAEmbed())
-                    .build())
-                .queue();
-        }
-        TERMINAL_LOG.info(message);
+    public void sendEmbedMessage(Embed embed) {
+        sendEmbedMessage(null, embed);
+    }
+
+    public void sendEmbedMessage(@Nullable String message, Embed embed) {
+        sendEmbedMessageTo(mainChannel, message, embed);
         CommandOutputHelper.logEmbedOutputToTerminal(embed);
     }
 
     public void sendRelayEmbedMessage(Embed embed) {
-        defaultEmbedDecoration(embed);
-        if (isRunning() && CONFIG.discord.chatRelay.enable) {
-            relayChannel.sendMessage(
-                new MessageCreateBuilder()
-                    .addEmbeds(embed.toJDAEmbed())
-                    .build())
-                .queue();
-        }
+        sendRelayEmbedMessage(null, embed);
     }
 
-    public void sendRelayEmbedMessage(String message, Embed embed) {
-        defaultEmbedDecoration(embed);
-        if (isRunning() && CONFIG.discord.chatRelay.enable) {
-            relayChannel.sendMessage(
+    public void sendRelayEmbedMessage(@Nullable String message, Embed embed) {
+        if (!CONFIG.discord.chatRelay.enable) return;
+        sendEmbedMessageTo(relayChannel, message, embed);
+    }
+
+    public void sendMessageTo(TextChannel channel, String message) {
+        if (isRunning()) {
+            channel.sendMessage(
                 new MessageCreateBuilder()
                     .setContent(message)
-                    .addEmbeds(embed.toJDAEmbed())
                     .build())
                 .queue();
         }
     }
 
     public void sendMessage(final String message) {
-        if (isRunning()) {
-            mainChannel.sendMessage(
-                new MessageCreateBuilder()
-                    .setContent(message)
-                    .build())
-                .queue();
-        }
+        sendMessageTo(mainChannel, message);
         TERMINAL_LOG.info(message);
     }
 
     public void sendRelayMessage(final String message) {
-        if (isRunning() && CONFIG.discord.chatRelay.enable) {
-            relayChannel.sendMessage(
-                new MessageCreateBuilder()
-                    .setContent(message)
-                    .build())
-                .queue();
-        }
+        if (!CONFIG.discord.chatRelay.enable) return;
+        sendMessageTo(relayChannel, message);
     }
 
-    public void sendEmbedMessageWithButtons(String message, Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> mapper, Duration timeout) {
+    public void sendEmbedMessageWithButtonsTo(TextChannel channel, @Nullable String message, Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> eventConsumer, Duration timeout) {
         defaultEmbedDecoration(embed);
         if (isRunning()) {
-            mainChannel.sendMessage(
-                new MessageCreateBuilder()
-                    .setEmbeds(embed.toJDAEmbed())
-                    .setContent(message)
-                    .setActionRow(buttons)
-                    .build())
+            channel.sendMessage(
+                    new MessageCreateBuilder()
+                        .setEmbeds(embed.toJDAEmbed())
+                        .setContent(message)
+                        .setActionRow(buttons)
+                        .build())
                 .queue();
             var buttonIds = buttons.stream().map(ActionComponent::getId).collect(Collectors.toSet());
             jda.listenOnce(ButtonInteractionEvent.class)
                 .filter(e -> buttonIds.contains(e.getComponentId()))
                 .timeout(timeout)
-                .subscribe(mapper);
+                .subscribe(eventConsumer);
         }
+    }
+
+    public void sendEmbedMessageWithButtons(@Nullable String message, Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> eventConsumer, Duration timeout) {
+        sendEmbedMessageWithButtonsTo(mainChannel, message, embed, buttons, eventConsumer, timeout);
         TERMINAL_LOG.info(message);
         CommandOutputHelper.logEmbedOutputToTerminal(embed);
     }
 
     public void sendEmbedMessageWithButtons(Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> mapper, Duration timeout) {
-        defaultEmbedDecoration(embed);
-        if (isRunning()) {
-            mainChannel.sendMessage(
-                new MessageCreateBuilder()
-                    .setEmbeds(embed.toJDAEmbed())
-                    .setActionRow(buttons)
-                    .build())
-                .queue();
-            var buttonIds = buttons.stream().map(ActionComponent::getId).collect(Collectors.toSet());
-            jda.listenOnce(ButtonInteractionEvent.class)
-                .filter(e -> buttonIds.contains(e.getComponentId()))
-                .timeout(timeout)
-                .subscribe(mapper);
-        }
-        CommandOutputHelper.logEmbedOutputToTerminal(embed);
+        sendEmbedMessageWithButtons(null, embed, buttons, mapper, timeout);
     }
 }

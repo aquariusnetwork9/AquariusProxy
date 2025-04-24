@@ -1,9 +1,9 @@
 package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
-import com.zenith.discord.DiscordBot;
 import com.zenith.event.module.QueueWarningEvent;
 import com.zenith.event.queue.QueuePositionUpdateEvent;
+import com.zenith.feature.queue.Queue;
 import com.zenith.module.api.Module;
 
 import java.util.List;
@@ -28,7 +28,7 @@ public class QueueWarning extends Module {
     private void onQueuePositionUpdate(QueuePositionUpdateEvent event) {
         if (CONFIG.client.extra.queueWarning.warningPositions.contains(event.position())) {
             var mention = CONFIG.client.extra.queueWarning.mentionPositions.contains(event.position());
-            warn("Queue Position: " + DiscordBot.queuePositionStr());
+            warn("Queue Position: " + Queue.queuePositionStr());
             EVENT_BUS.postAsync(new QueueWarningEvent(event.position(), mention));
         }
     }
