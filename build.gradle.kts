@@ -213,23 +213,6 @@ tasks {
             "about.html", "bungee.yml", "plugin.yml", "velocity-plugin.json", "fabric.mod.json", "OSGI-INF/**"
         ))
 
-        minimize {
-            exclude(dependency("org.slf4j:slf4j-api:.*"))
-            exclude(dependency("ch.qos.logback:.*:.*"))
-            exclude(dependency("org.jline:.*:.*"))
-            exclude(dependency("com.github.ben-manes.caffeine:caffeine:.*"))
-            exclude(dependency("org.postgresql:postgresql:.*"))
-            exclude(dependency("io.netty:netty-codec-http:.*"))
-            exclude(dependency("io.netty:netty-codec-http2:.*"))
-            exclude(dependency("io.netty:netty-resolver-dns:.*"))
-            exclude(dependency("org.cloudburstmc.math:api:.*"))
-            exclude(dependency("org.cloudburstmc.math:immutable:.*"))
-            exclude(dependency("com.viaversion:viaversion:.*"))
-            exclude(dependency("com.viaversion:viabackwards:.*"))
-            exclude(dependency("net.raphimc:ViaLoader:.*"))
-            exclude(dependency("net.kyori:adventure-api:.*"))
-            exclude(dependency("net.kyori:adventure-text-serializer-gson:.*"))
-        }
         manifest {
             attributes(mapOf(
                 "Implementation-Title" to "ZenithProxy",
