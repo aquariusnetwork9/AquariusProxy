@@ -103,6 +103,7 @@ tasks {
     }
     test {
         useJUnitPlatform()
+        workingDir = layout.projectDirectory.dir("run").asFile
     }
     val commitHashTask = register<Exec>("writeCommitHash") {
         group = "build"
