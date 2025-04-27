@@ -240,7 +240,7 @@ public class PluginManager {
                 throw e;
             }
         }
-        throw new RuntimeException("Error reading zenithproxy.plugin.json");
+        throw new RuntimeException("No zenithproxy.plugin.json found in: " + path);
     }
 
     @SneakyThrows
