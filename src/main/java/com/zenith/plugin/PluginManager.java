@@ -1,5 +1,7 @@
 package com.zenith.plugin;
 
+import com.google.gson.InstanceCreator;
+import com.zenith.Globals;
 import com.zenith.event.plugin.PluginLoadFailureEvent;
 import com.zenith.event.plugin.PluginLoadedEvent;
 import com.zenith.plugin.api.InstancedPluginAPI;
@@ -24,6 +26,8 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import static com.zenith.Globals.*;
+import static com.zenith.util.KotlinUtil.getKotlinObject;
+import static com.zenith.util.KotlinUtil.isKotlinObject;
 import static java.util.Objects.requireNonNull;
 
 public class PluginManager {
@@ -185,7 +189,13 @@ public class PluginManager {
             if (!ZenithProxyPlugin.class.isAssignableFrom(pluginClass)) {
                 throw new RuntimeException("Plugin does not implement ZenithProxyPlugin interface");
             }
-            ZenithProxyPlugin plugin = (ZenithProxyPlugin) pluginClass.getDeclaredConstructor().newInstance();
+            ZenithProxyPlugin plugin;
+
+            if (isKotlinObject(pluginClass)) {
+                plugin = (ZenithProxyPlugin) getKotlinObject(pluginClass);
+            } else {
+                plugin = (ZenithProxyPlugin) pluginClass.getDeclaredConstructor().newInstance();
+            }
 
             pluginInstance.setPluginInstance(plugin);
 
@@ -252,18 +262,27 @@ public class PluginManager {
     @SneakyThrows
     private <T> T loadPluginConfig(String fileName, Class<T> clazz) {
         try {
-            PLUGIN_LOG.info("Loading plugin config...");
+            PLUGIN_LOG.debug("Loading plugin config: {}", fileName);
             File configFile = resolveConfigFile(fileName);
             T config;
             if (configFile.exists()) {
+                var gson = Globals.GSON;
+                if (isKotlinObject(clazz)) {
+                    final T instance = getKotlinObject(clazz);
+                    gson = gson.newBuilder()
+                        .registerTypeAdapter(clazz, (InstanceCreator<T>) type -> instance)
+                        .create();
+                }
                 try (Reader reader = new FileReader(configFile)) {
-                    config = GSON.fromJson(reader, clazz);
+                    config = gson.fromJson(reader, clazz);
                 } catch (IOException e) {
                     throw new RuntimeException("Unable to load plugin config: " + fileName, e);
                 }
                 PLUGIN_LOG.info("Plugin config: {} loaded.", fileName);
             } else {
-                config = clazz.getDeclaredConstructor().newInstance();
+                config = isKotlinObject(clazz)
+                    ? getKotlinObject(clazz)
+                    : clazz.getDeclaredConstructor().newInstance();
                 PLUGIN_LOG.info("Plugin config: {} not found, loaded default config", fileName);
             }
             return config;
