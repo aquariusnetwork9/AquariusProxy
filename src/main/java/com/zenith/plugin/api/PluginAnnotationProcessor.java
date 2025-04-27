@@ -78,7 +78,7 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
             );
             try {
                 FileObject object = environment.getFiler()
-                    .createResource(StandardLocation.CLASS_OUTPUT, "", "plugin.json");
+                    .createResource(StandardLocation.CLASS_OUTPUT, "", "zenithproxy.plugin.json");
                 try (Writer writer = new BufferedWriter(object.openWriter())) {
                     new GsonBuilder()
                         .setPrettyPrinting()

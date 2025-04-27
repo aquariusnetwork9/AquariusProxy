@@ -218,9 +218,36 @@ public class PluginManager {
 
     @SneakyThrows
     private PluginInfo readPluginInfo(URLClassLoader classLoader, Path path) {
-        try (var stream = classLoader.getResourceAsStream("plugin.json")) {
+        try {
+            return readPluginInfo(classLoader, "zenithproxy.plugin.json");
+        } catch (Throwable e) {
+            if (e.getMessage().contains("not found in jar")) {
+                // fall through
+            } else {
+                PLUGIN_LOG.error("Error reading zenithproxy.plugin.json: {}", path, e);
+                throw e;
+            }
+        }
+        try {
+            var plugin = readPluginInfo(classLoader, "plugin.json");
+            PLUGIN_LOG.warn("{} using deprecated plugin.json. Rebuild to migrate to zenithproxy.plugin.json", path);
+            return plugin;
+        } catch (Throwable e) {
+            if (e.getMessage().endsWith("not found in jar")) {
+                // fall through
+            } else {
+                PLUGIN_LOG.error("Error reading plugin.json: {}", path, e);
+                throw e;
+            }
+        }
+        throw new RuntimeException("Error reading zenithproxy.plugin.json");
+    }
+
+    @SneakyThrows
+    private PluginInfo readPluginInfo(URLClassLoader classLoader, String pluginJsonFileName) {
+        try (var stream = classLoader.getResourceAsStream(pluginJsonFileName)) {
             if (stream == null) {
-                throw new RuntimeException("plugin.json not found in jar");
+                throw new RuntimeException(pluginJsonFileName + " not found in jar");
             }
             var info = OBJECT_MAPPER.readValue(stream, PluginInfo.class);
             requireNonNull(info.entrypoint(), "Entrypoint is null");
@@ -233,9 +260,6 @@ public class PluginManager {
             requireNonNull(info.authors(), "Plugin authors is null");
             requireNonNull(info.mcVersions(), "Plugin mcVersions is null");
             return info;
-        } catch (IOException e) {
-            PLUGIN_LOG.error("Error reading plugin.json: {}", path, e);
-            throw e;
         }
     }
 
