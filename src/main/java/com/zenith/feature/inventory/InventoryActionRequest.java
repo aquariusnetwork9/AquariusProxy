@@ -15,7 +15,7 @@ import java.util.Objects;
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 @NullMarked
 public class InventoryActionRequest {
-    private final Object owner;
+    private final @Nullable Object owner;
     private final List<InventoryAction> actions;
     private final int priority;
     private final @Nullable Integer actionDelayTicks;
@@ -49,7 +49,6 @@ public class InventoryActionRequest {
         return builder().owner(owner).priority(priority).build();
     }
 
-    @NullMarked
     public static final class Builder {
         private @Nullable Object owner = null;
         private List<InventoryAction> actions = Collections.emptyList();
@@ -81,7 +80,6 @@ public class InventoryActionRequest {
         }
 
         public InventoryActionRequest build() {
-            Objects.requireNonNull(owner, "owner must not be null");
             Objects.requireNonNull(actions, "actions must not be null");
             Objects.requireNonNull(priority, "priority must not be null");
             return new InventoryActionRequest(owner, actions, priority, actionDelayTicks);
