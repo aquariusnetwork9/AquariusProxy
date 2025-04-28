@@ -29,7 +29,7 @@ repositories {
 }
 
 dependencies {
-    api("com.github.rfresh2:JDA:5.4.10") {
+    api("com.github.rfresh2:JDA:5.5.11") {
         exclude(group = "club.minnced")
         exclude(group = "net.java.dev.jna")
         exclude(group = "com.google.crypto.tink")
@@ -56,7 +56,7 @@ dependencies {
     api("org.redisson:redisson:3.45.1") {
         exclude(group = "io.netty")
     }
-    api("com.github.rfresh2:SimpleEventBus:1.4")
+    api("com.github.rfresh2:SimpleEventBus:1.5")
     val fastutilVersion = "8.5.15"
     api("com.github.rfresh2.fastutil.maps:object-object-maps:$fastutilVersion")
     api("com.github.rfresh2.fastutil.maps:int-object-maps:$fastutilVersion")
