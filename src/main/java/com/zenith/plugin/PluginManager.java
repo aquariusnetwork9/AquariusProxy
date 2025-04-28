@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
+import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
@@ -294,6 +295,7 @@ public class PluginManager {
                 if (isKotlinObject(clazz)) {
                     final T instance = getKotlinObject(clazz);
                     gson = gson.newBuilder()
+                        .excludeFieldsWithModifiers(Modifier.TRANSIENT)
                         .registerTypeAdapter(clazz, (InstanceCreator<T>) type -> instance)
                         .create();
                 }
