@@ -1,5 +1,6 @@
 package com.zenith.plugin;
 
+import com.google.gson.Gson;
 import com.google.gson.InstanceCreator;
 import com.zenith.Globals;
 import com.zenith.event.plugin.PluginLoadFailureEvent;
@@ -23,7 +24,6 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import static com.zenith.Globals.*;
@@ -55,11 +55,6 @@ public class PluginManager {
 
     public PluginInfo getPluginInfo(final ZenithProxyPlugin pluginInstance) {
         return pluginInstances.get(getId(pluginInstance)).getPluginInfo();
-    }
-
-    public void saveConfigs(BiConsumer<File, Object> saveFunction) {
-        pluginConfigurations.values()
-            .forEach(config -> saveFunction.accept(config.file(), config.instance()));
     }
 
     public List<ConfigInstance> getAllPluginConfigs() {
@@ -284,6 +279,27 @@ public class PluginManager {
         return config;
     }
 
+    private static final Gson KOTLIN_CONFIG_OBJECT_GSON = GSON.newBuilder()
+        .excludeFieldsWithModifiers(Modifier.TRANSIENT)
+        .create();
+
+    @FunctionalInterface
+    public interface ConfigSaver {
+        void saveConfig(File file, Object config, Gson gson);
+    }
+
+    public void saveConfigs(ConfigSaver saver) {
+        pluginConfigurations.values()
+            .forEach(config -> saver.saveConfig(
+                         config.file(),
+                         config.instance(),
+                         isKotlinObject(config.clazz())
+                             ? KOTLIN_CONFIG_OBJECT_GSON
+                             : GSON
+                     )
+            );
+    }
+
     @SneakyThrows
     private <T> T loadPluginConfig(String fileName, Class<T> clazz) {
         try {
@@ -294,8 +310,7 @@ public class PluginManager {
                 var gson = Globals.GSON;
                 if (isKotlinObject(clazz)) {
                     final T instance = getKotlinObject(clazz);
-                    gson = gson.newBuilder()
-                        .excludeFieldsWithModifiers(Modifier.TRANSIENT)
+                    gson = KOTLIN_CONFIG_OBJECT_GSON.newBuilder()
                         .registerTypeAdapter(clazz, (InstanceCreator<T>) type -> instance)
                         .create();
                 }

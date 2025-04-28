@@ -4,6 +4,7 @@ import lombok.SneakyThrows;
 
 public class KotlinUtil {
     public static boolean isKotlinObject(Class<?> clazz) {
+        // todo: cache class lookups?
         if (!isKotlinClass(clazz)) return false;
         var declaredFields = clazz.getDeclaredFields();
         for (int i = 0; i < declaredFields.length; i++) {

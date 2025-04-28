@@ -166,14 +166,14 @@ public class Globals {
     }
 
     public static synchronized void saveConfig() {
-        saveConfig(CONFIG_FILE, CONFIG);
+        saveConfig(CONFIG_FILE, CONFIG, GSON);
         PLUGIN_MANAGER.saveConfigs(Globals::saveConfig);
     }
     public static synchronized void saveLaunchConfig() {
-        saveConfig(LAUNCH_CONFIG_FILE, LAUNCH_CONFIG);
+        saveConfig(LAUNCH_CONFIG_FILE, LAUNCH_CONFIG, GSON);
     }
 
-    static void saveConfig(File file, Object config) {
+    static void saveConfig(File file, Object config, Gson gson) {
         DEFAULT_LOG.debug("Saving {}...", file.getName());
 
         if (config == null) {
@@ -184,7 +184,7 @@ public class Globals {
         try {
             final File tempFile = File.createTempFile(file.getName(), null);
             try (Writer out = new FileWriter(tempFile)) {
-                GSON.toJson(config, out);
+                gson.toJson(config, out);
             }
             Files.move(tempFile, file);
         } catch (IOException e) {
