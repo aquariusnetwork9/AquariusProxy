@@ -106,8 +106,9 @@ public class KillAura extends AbstractInventoryModule {
                 } else {
                     // stop while doing inventory actions
                     INPUTS.submit(InputRequest.builder()
-                                      .priority(MOVEMENT_PRIORITY - 1)
-                                      .build());
+                        .owner(this)
+                        .priority(MOVEMENT_PRIORITY - 1)
+                        .build());
                 }
                 return;
             }
@@ -190,23 +191,25 @@ public class KillAura extends AbstractInventoryModule {
     private InputRequestFuture attack(final EntityLiving entity) {
         var rotation = RotationHelper.shortestRotationTo(entity);
         return INPUTS.submit(InputRequest.builder()
-                                 .input(Input.builder()
-                                            .leftClick(true)
-                                            .clickTarget(new ClickTarget.EntityInstance(entity))
-                                            .build())
-                                 .yaw(rotation.getX())
-                                 .pitch(rotation.getY())
-                                 .priority(MOVEMENT_PRIORITY)
-                                 .build());
+            .owner(this)
+            .input(Input.builder()
+                .leftClick(true)
+                .clickTarget(new ClickTarget.EntityInstance(entity))
+                .build())
+            .yaw(rotation.getX())
+            .pitch(rotation.getY())
+            .priority(MOVEMENT_PRIORITY)
+            .build());
     }
 
     private void rotateTo(EntityLiving entity) {
         var rotation = RotationHelper.shortestRotationTo(entity);
         INPUTS.submit(InputRequest.builder()
-                          .yaw(rotation.getX())
-                          .pitch(rotation.getY())
-                          .priority(MOVEMENT_PRIORITY)
-                          .build());
+            .owner(this)
+            .yaw(rotation.getX())
+            .pitch(rotation.getY())
+            .priority(MOVEMENT_PRIORITY)
+            .build());
     }
 
     private boolean hasRotation(final EntityLiving entity) {

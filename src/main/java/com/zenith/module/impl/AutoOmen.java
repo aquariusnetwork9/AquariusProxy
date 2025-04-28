@@ -49,7 +49,7 @@ public class AutoOmen extends AbstractInventoryModule {
             if (delay > 0) {
                 delay--;
                 if (isEating) {
-                    INVENTORY.invActionReq(this, MOVEMENT_PRIORITY);
+                    INPUTS.submit(InputRequest.noInput(this, MOVEMENT_PRIORITY));
                     INVENTORY.submit(InventoryActionRequest.noAction(this, MOVEMENT_PRIORITY));
                 }
                 return;
@@ -73,12 +73,13 @@ public class AutoOmen extends AbstractInventoryModule {
         var hand = getHand();
         if (hand == null) return;
         INPUTS.submit(InputRequest.builder()
-                          .input(Input.builder()
-                                     .rightClick(true)
-                                     .clickTarget(ClickTarget.None.INSTANCE)
-                                     .build())
-                          .priority(MOVEMENT_PRIORITY)
-                          .build())
+                .owner(this)
+                .input(Input.builder()
+                    .rightClick(true)
+                    .clickTarget(ClickTarget.None.INSTANCE)
+                    .build())
+                .priority(MOVEMENT_PRIORITY)
+                .build())
             .addInputExecutedListener(future -> {
                 isEating = true;
                 delay = 50;

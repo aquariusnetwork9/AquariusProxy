@@ -56,6 +56,7 @@ public class RotateCommand extends Command {
                 }
                 doRotate(
                     InputRequest.builder()
+                        .owner(this)
                         .yaw(yaw)
                         .priority(MOVE_PRIORITY)
                         .build(),
@@ -81,6 +82,7 @@ public class RotateCommand extends Command {
                 }
                 doRotate(
                     InputRequest.builder()
+                        .owner(this)
                         .pitch(pitch)
                         .priority(MOVE_PRIORITY)
                         .build(),
@@ -107,6 +109,7 @@ public class RotateCommand extends Command {
                 }
                 doRotate(
                     InputRequest.builder()
+                        .owner(this)
                         .yaw(yaw)
                         .pitch(pitch)
                         .priority(MOVE_PRIORITY)

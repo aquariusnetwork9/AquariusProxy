@@ -60,11 +60,12 @@ public class ClickCommand extends Command {
             }))
             .then(literal("left").requires((ctx) -> isClientConnected()).executes(c -> {
                 INPUTS.submit(InputRequest.builder()
-                                  .input(Input.builder()
-                                             .leftClick(true)
-                                             .build())
-                                  .priority(100000)
-                                  .build());
+                        .owner(this)
+                        .input(Input.builder()
+                            .leftClick(true)
+                            .build())
+                        .priority(100000)
+                        .build());
                 c.getSource().getEmbed()
                     .title("Left Clicked")
                     .primaryColor();
@@ -86,16 +87,17 @@ public class ClickCommand extends Command {
                                     return OK;
                                 })))))
             .then(literal("right").requires((ctx) -> isClientConnected()).executes(c -> {
-                INPUTS.submit(InputRequest.builder()
-                                  .input(Input.builder()
-                                             .rightClick(true)
-                                             .build())
-                                  .priority(100000)
-                                  .build());
-                c.getSource().getEmbed()
-                    .title("Right Clicked")
-                    .primaryColor();
-                return OK;
+                    INPUTS.submit(InputRequest.builder()
+                        .owner(this)
+                        .input(Input.builder()
+                            .rightClick(true)
+                            .build())
+                        .priority(100000)
+                        .build());
+                    c.getSource().getEmbed()
+                        .title("Right Clicked")
+                        .primaryColor();
+                    return OK;
             })
                       .then(literal("hold")
                                 .executes(c -> {

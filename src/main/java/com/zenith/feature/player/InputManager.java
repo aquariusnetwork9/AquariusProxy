@@ -8,9 +8,7 @@ import static com.zenith.Globals.BOT;
 import static com.zenith.Globals.EVENT_BUS;
 
 public class InputManager {
-    private static final InputRequest DEFAULT_MOVEMENT_INPUT_REQUEST = InputRequest.builder()
-        .priority(Integer.MIN_VALUE)
-        .build();
+    private static final InputRequest DEFAULT_MOVEMENT_INPUT_REQUEST = new InputRequest(new Object(), null, null, null, Integer.MIN_VALUE);
     private static final InputRequestFuture DEFAULT_REQUEST_FUTURE = new InputRequestFuture();
     private @NonNull InputRequest currentMovementInputRequest = DEFAULT_MOVEMENT_INPUT_REQUEST;
     private @NonNull InputRequestFuture currentMovementInputRequestFuture = DEFAULT_REQUEST_FUTURE;
@@ -39,6 +37,13 @@ public class InputManager {
 
     private synchronized void handleTick(final ClientBotTick event) {
         if (currentMovementInputRequest == DEFAULT_MOVEMENT_INPUT_REQUEST) return;
+        // todo: config setting for enabling input debug logs (will be giga spammy)
+//        CLIENT_LOG.debug("[Input Manager] Executing movement input: {} requester: {}",
+//            currentMovementInputRequest.input(),
+//            currentMovementInputRequest.owner() != null
+//                ? currentMovementInputRequest.owner().getClass().getSimpleName()
+//                : "Unknown"
+//        );
         BOT.requestMovement(currentMovementInputRequest, currentMovementInputRequestFuture);
         currentMovementInputRequest = DEFAULT_MOVEMENT_INPUT_REQUEST;
         currentMovementInputRequestFuture.complete(true);

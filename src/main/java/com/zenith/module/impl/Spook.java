@@ -123,10 +123,11 @@ public class Spook extends Module {
             }
             var rotation = RotationHelper.rotationTo(entity.getX(), entity.getY() + 1.6, entity.getZ());
             INPUTS.submit(InputRequest.builder()
-                              .yaw(rotation.getX())
-                              .pitch(rotation.getY())
-                              .priority(MOVEMENT_PRIORITY)
-                              .build());
+                .owner(this)
+                .yaw(rotation.getX())
+                .pitch(rotation.getY())
+                .priority(MOVEMENT_PRIORITY)
+                .build());
         }
     }
 

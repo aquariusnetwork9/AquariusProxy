@@ -175,6 +175,7 @@ public class Baritone {
         if (pathingBehavior.isPathing() || (pathingControlManager.isActive() && lookBehavior.currentRotation != null)) {
             var rotation = lookBehavior.currentRotation;
             var req = InputRequest.builder()
+                .owner(this)
                 .input(inputOverrideHandler.currentInput)
                 .priority(MOVEMENT_PRIORITY);
             if (rotation != null) {

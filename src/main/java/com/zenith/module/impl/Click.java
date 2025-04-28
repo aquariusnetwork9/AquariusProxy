@@ -45,18 +45,22 @@ public class Click extends Module {
                         .pitch(CONFIG.client.extra.click.rotationPitch);
                 }
                 in.sneaking(CONFIG.client.extra.click.holdSneak);
-                INPUTS.submit(req.input(in.build()).build());
+                INPUTS.submit(req
+                    .owner(this)
+                    .input(in.build())
+                    .build());
             } else if (CONFIG.client.extra.click.holdSneak) {
                 INPUTS.submit(InputRequest.builder()
-                                  .input(Input.builder()
-                                             .sneaking(true)
-                                             .build())
-                                  .priority(0) // 0 priority allows other modules to override this if needed
-                                  .build());
+                    .owner(this)
+                    .input(Input.builder()
+                        .sneaking(true)
+                        .build())
+                    .priority(0) // 0 priority allows other modules to override this if needed
+                    .build());
             }
         } else if (CONFIG.client.extra.click.holdRightClick) {
             if (holdRightClickTimer.tick(CONFIG.client.extra.click.holdRightClickInterval)) {
-                var req = InputRequest.builder().priority(MOVEMENT_PRIORITY);
+                var req = InputRequest.builder().owner(this).priority(MOVEMENT_PRIORITY);
                 var in = Input.builder().rightClick(true);
                 Hand hand = switch (CONFIG.client.extra.click.holdRightClickMode) {
                     case MAIN_HAND -> Hand.MAIN_HAND;
@@ -70,14 +74,17 @@ public class Click extends Module {
                         .pitch(CONFIG.client.extra.click.rotationPitch);
                 }
                 in.sneaking(CONFIG.client.extra.click.holdSneak);
-                INPUTS.submit(req.input(in.build()).build());
+                INPUTS.submit(req
+                    .input(in.build())
+                    .build());
             } else if (CONFIG.client.extra.click.holdSneak) {
                 INPUTS.submit(InputRequest.builder()
-                                  .input(Input.builder()
-                                             .sneaking(true)
-                                             .build())
-                                  .priority(0) // 0 priority allows other modules to override this if needed
-                                  .build());
+                    .owner(this)
+                    .input(Input.builder()
+                        .sneaking(true)
+                        .build())
+                    .priority(0) // 0 priority allows other modules to override this if needed
+                    .build());
             }
         }
     }

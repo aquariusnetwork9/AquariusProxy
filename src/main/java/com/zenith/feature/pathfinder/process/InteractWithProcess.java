@@ -128,6 +128,7 @@ public class InteractWithProcess extends BaritoneProcessHelper {
             Vector2f rot = RotationHelper.rotationTo(center.x(), center.y(), center.z());
             INPUTS.submit(
                 InputRequest.builder()
+                    .owner(this)
                     .input(in.build())
                     .yaw(rot.getX())
                     .pitch(rot.getY())
@@ -205,6 +206,7 @@ public class InteractWithProcess extends BaritoneProcessHelper {
             Vector2f rot = RotationHelper.shortestRotationTo(entity);
             INPUTS.submit(
                 InputRequest.builder()
+                    .owner(this)
                     .input(in.build())
                     .yaw(rot.getX())
                     .pitch(rot.getY())

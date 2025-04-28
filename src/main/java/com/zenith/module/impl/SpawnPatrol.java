@@ -108,6 +108,7 @@ public class SpawnPatrol extends Module {
                 .jumping(true)
                 .build();
             var req = InputRequest.builder()
+                .owner(this)
                 .input(in)
                 .priority(MOVEMENT_PRIORITY);
             if (ThreadLocalRandom.current().nextFloat() > 0.95f) {

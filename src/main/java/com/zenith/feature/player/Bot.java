@@ -114,25 +114,22 @@ public final class Bot extends ModuleUtils {
         }
     }
 
-    public void requestRotation(float yaw, float pitch) {
-        yaw = shortestRotation(yaw);
-        pitch = MathHelper.clamp(pitch, -90.0F, 90.0F);
-        pitch = ((int) (pitch * 10.0f)) / 10.0f; // always clamp pitch to 1 decimal place to avoid flagging for very small adjustments
-        this.requestedYaw = yaw;
-        this.requestedPitch = pitch;
-    }
-
-    public float shortestRotation(float targetYaw) {
-        float difference = targetYaw - this.yaw;
-        if (difference > 180) difference -= 360;
-        else if (difference < -180) difference += 360;
-        return this.yaw + difference;
-    }
-
     public synchronized void requestMovement(final InputRequest request, final InputRequestFuture inputRequestFuture) {
-        request.input().ifPresent(this.movementInput::apply);
-        if (request.yaw().isPresent() || request.pitch().isPresent()) {
-            requestRotation(request.yaw().orElse(this.yaw), request.pitch().orElse(this.pitch));
+        var reqInput = request.input();
+        if (reqInput != null) {
+            movementInput.apply(reqInput);
+        }
+        var reqYaw = request.yaw();
+        var reqPitch = request.pitch();
+        if (reqYaw != null) {
+            float difference = reqYaw - this.yaw;
+            if (difference > 180) difference -= 360;
+            else if (difference < -180) difference += 360;
+            this.requestedYaw = this.yaw + difference;
+        }
+        if (reqPitch != null) {
+            this.requestedPitch = MathHelper.clamp(reqPitch, -90f, 90f);
+            this.requestedPitch = ((int) (this.requestedPitch * 10.0f)) / 10.0f; // always clamp pitch to 1 decimal place to avoid flagging for very small adjustments
         }
         this.inputRequestFuture = inputRequestFuture;
     }

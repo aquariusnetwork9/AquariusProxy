@@ -126,16 +126,17 @@ public class AutoFish extends AbstractInventoryModule {
 
     private InputRequestFuture requestUseRod(boolean cast) {
         return INPUTS.submit(InputRequest.builder()
-                          .input(Input.builder()
-                                     .rightClick(true)
-                                     .clickTarget(ClickTarget.None.INSTANCE)
-                                     .hand(rodHand)
-                                     .clickRequiresRotation(cast)
-                                     .build())
-                          .yaw(CONFIG.client.extra.autoFish.yaw)
-                          .pitch(CONFIG.client.extra.autoFish.pitch)
-                          .priority(MOVEMENT_PRIORITY)
-                          .build());
+            .owner(this)
+            .input(Input.builder()
+                .rightClick(true)
+                .clickTarget(ClickTarget.None.INSTANCE)
+                .hand(rodHand)
+                .clickRequiresRotation(cast)
+                .build())
+            .yaw(CONFIG.client.extra.autoFish.yaw)
+            .pitch(CONFIG.client.extra.autoFish.pitch)
+            .priority(MOVEMENT_PRIORITY)
+            .build());
     }
 
     public boolean switchToFishingRod() {

@@ -1,21 +1,45 @@
 package com.zenith.feature.player;
 
-import java.util.Optional;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
-public record InputRequest(Optional<Input> input, Optional<Float> yaw, Optional<Float> pitch, int priority) {
+@Data
+@RequiredArgsConstructor(access = lombok.AccessLevel.PROTECTED)
+@Accessors(fluent = true)
+@NullMarked
+public class InputRequest {
+    private final @Nullable Object owner;
+    private final @Nullable Input input;
+    private final @Nullable Float yaw;
+    private final @Nullable Float pitch;
+    private final int priority;
+
     public static Builder builder() {
         return new Builder();
     }
 
+    public static InputRequest noInput(Object owner, int priority) {
+        return builder().owner(owner).priority(priority).build();
+    }
+
     public static final class Builder {
-        private Input input;
-        private Float yaw;
-        private Float pitch;
+        private @Nullable Object owner = null;
+        private @Nullable Input input;
+        private @Nullable Float yaw;
+        private @Nullable Float pitch;
         private int priority = 0;
 
         private Builder() {}
 
-        public Builder input(Input input) {
+        public Builder owner(Object owner) {
+            this.owner = owner;
+            return this;
+        }
+
+        public Builder input(@Nullable Input input) {
             this.input = input;
             return this;
         }
@@ -36,7 +60,8 @@ public record InputRequest(Optional<Input> input, Optional<Float> yaw, Optional<
         }
 
         public InputRequest build() {
-            return new InputRequest(Optional.ofNullable(input), Optional.ofNullable(yaw), Optional.ofNullable(pitch), priority);
+//            Objects.requireNonNull(owner, "owner must not be null");
+            return new InputRequest(owner, input, yaw, pitch, priority);
         }
     }
 }
