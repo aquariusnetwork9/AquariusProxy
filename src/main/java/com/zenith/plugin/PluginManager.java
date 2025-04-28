@@ -250,6 +250,9 @@ public class PluginManager {
             if (info.entrypoint().isBlank()) throw new RuntimeException("Invalid entrypoint");
             requireNonNull(info.id(), "Plugin id is null");
             if (info.id().isBlank()) throw new RuntimeException("Invalid plugin id");
+            if (!PluginInfo.ID_PATTERN.matcher(info.id()).matches()) {
+                throw new RuntimeException("Invalid plugin id: " + info.id());
+            }
             requireNonNull(info.version(), "Plugin version is null");
             requireNonNull(info.description(), "Plugin description is null");
             requireNonNull(info.url(), "Plugin url is null");

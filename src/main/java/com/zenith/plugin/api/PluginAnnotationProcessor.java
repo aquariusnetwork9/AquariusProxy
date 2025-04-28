@@ -66,6 +66,12 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
 
             Plugin plugin = element.getAnnotation(Plugin.class);
 
+            if (!PluginInfo.ID_PATTERN.matcher(plugin.id()).matches()) {
+                environment.getMessager()
+                    .printMessage(Diagnostic.Kind.ERROR, "Plugin ID '" + plugin.id() + "' is invalid.");
+                return false;
+            }
+
             // All good, generate the plugin.json
             PluginInfo pluginJson = new PluginInfo(
                 qualifiedName.toString(),
