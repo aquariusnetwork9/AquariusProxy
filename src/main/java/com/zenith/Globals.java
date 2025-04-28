@@ -12,7 +12,7 @@ import com.zenith.cache.DataCache;
 import com.zenith.command.CommandManager;
 import com.zenith.database.DatabaseManager;
 import com.zenith.discord.DiscordBot;
-import com.zenith.feature.inventory.PlayerInventoryManager;
+import com.zenith.feature.inventory.InventoryManager;
 import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.feature.player.Bot;
 import com.zenith.feature.player.InputManager;
@@ -81,7 +81,7 @@ public class Globals {
     public static final CommandManager COMMAND;
     public static final Bot BOT;
     public static final Baritone BARITONE;
-    public static final PlayerInventoryManager INVENTORY;
+    public static final InventoryManager INVENTORY;
     public static final ZenithViaInitializer VIA_INITIALIZER;
     public static final PluginManager PLUGIN_MANAGER;
     public static final String MC_VERSION;
@@ -223,7 +223,7 @@ public class Globals {
             TERMINAL = new TerminalManager();
             IN_GAME_COMMAND = new InGameCommandManager();
             COMMAND = new CommandManager();
-            INVENTORY = new PlayerInventoryManager();
+            INVENTORY = new InventoryManager();
             VIA_INITIALIZER = new ZenithViaInitializer();
             TranslationRegistryInitializer.registerAllTranslations();
             CONFIG = loadConfig();

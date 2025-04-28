@@ -4,6 +4,7 @@ import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
 import com.zenith.event.client.ClientBotTick;
 import com.zenith.event.module.AutoEatOutOfFoodEvent;
+import com.zenith.feature.inventory.InventoryActionRequest;
 import com.zenith.feature.player.ClickTarget;
 import com.zenith.feature.player.Input;
 import com.zenith.feature.player.InputRequest;
@@ -55,10 +56,8 @@ public class AutoEat extends AbstractInventoryModule {
             if (delay > 0) {
                 delay--;
                 if (isEating) {
-                    INPUTS.submit(InputRequest.builder()
-                                      .priority(MOVEMENT_PRIORITY)
-                                      .build());
                     INVENTORY.invActionReq(this, MOVEMENT_PRIORITY);
+                    INVENTORY.submit(InventoryActionRequest.noAction(this, MOVEMENT_PRIORITY));
                 }
                 return;
             }

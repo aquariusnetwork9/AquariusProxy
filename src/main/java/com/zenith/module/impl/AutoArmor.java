@@ -3,6 +3,8 @@ package com.zenith.module.impl;
 import com.github.rfresh2.EventConsumer;
 import com.zenith.cache.data.inventory.Container;
 import com.zenith.event.client.ClientBotTick;
+import com.zenith.feature.inventory.InventoryActionRequest;
+import com.zenith.feature.inventory.actions.InventoryActionMacros;
 import com.zenith.mc.item.ItemData;
 import com.zenith.mc.item.ItemRegistry;
 import com.zenith.module.api.Module;
@@ -52,17 +54,21 @@ public class AutoArmor extends Module {
             final BestArmorData bestArmorInInventory = getBestArmorInInventory(equipmentSlot);
             if (bestArmorInInventory == null) continue;
             if (currentItemStack == Container.EMPTY_STACK) {
-                INVENTORY.invActionReq(this,
-                                       INVENTORY.swapSlots(bestArmorInInventory.index(), invSlotId),
-                                       MOVEMENT_PRIORITY);
+                INVENTORY.submit(InventoryActionRequest.builder()
+                    .owner(this)
+                    .actions(InventoryActionMacros.swapSlots(bestArmorInInventory.index(), invSlotId))
+                    .priority(MOVEMENT_PRIORITY)
+                    .build());
                 delay = 5;
                 return;
             }
             final ArmorMaterial currentArmorMaterial = getArmorMaterial(ItemRegistry.REGISTRY.get(currentItemStack.getId()));
             if (currentArmorMaterial == null || bestArmorInInventory.material().compareTo(currentArmorMaterial) > 0) {
-                INVENTORY.invActionReq(this,
-                                       INVENTORY.swapSlots(bestArmorInInventory.index(), invSlotId),
-                                       MOVEMENT_PRIORITY);
+                INVENTORY.submit(InventoryActionRequest.builder()
+                    .owner(this)
+                    .actions(InventoryActionMacros.swapSlots(bestArmorInInventory.index(), invSlotId))
+                    .priority(MOVEMENT_PRIORITY)
+                    .build());
                 delay = 5;
                 return;
             }

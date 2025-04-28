@@ -40,7 +40,6 @@ public class DebugCommand extends Command {
                 "packetLog filter <string>",
                 "kickDisconnect on/off",
                 "dc",
-                "ncpStrictInventory on/off",
                 "debugLogs on/off",
                 "chunkCacheFullbright on/off"
             )
@@ -142,12 +141,6 @@ public class DebugCommand extends Command {
                 c.getSource().setNoOutput(true);
                 Proxy.getInstance().kickDisconnect(MANUAL_DISCONNECT, null);
             }))
-            .then(literal("ncpStrictInventory").then(argument("toggle", toggle()).executes(c -> {
-                CONFIG.debug.ncpStrictInventory = getToggle(c, "toggle");
-                c.getSource().getEmbed()
-                    .title("NCP Strict Inventory " + toggleStrCaps(CONFIG.debug.ncpStrictInventory));
-                return OK;
-            })))
             .then(literal("debugLogs").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.debug.debugLogs = getToggle(c, "toggle");
                 c.getSource().getEmbed()
@@ -176,7 +169,6 @@ public class DebugCommand extends Command {
             .addField("Server Packet Log", toggleStr(CONFIG.debug.packetLog.serverPacketLog.received), false)
             .addField("Packet Log Filter", CONFIG.debug.packetLog.packetFilter, false)
             .addField("Kick Disconnect", toggleStr(CONFIG.debug.kickDisconnect), false)
-            .addField("NCP Strict Inventory", toggleStr(CONFIG.debug.ncpStrictInventory), false)
             .addField("Debug Logs", toggleStr(CONFIG.debug.debugLogs), false)
             .addField("Chunk Cache Fullbright", toggleStr(CONFIG.debug.server.cache.fullbrightChunkSkylight), false)
             .primaryColor();

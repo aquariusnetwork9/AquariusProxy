@@ -33,15 +33,11 @@ public class RequestFuture implements Future<Boolean> {
     @Override
     public boolean cancel(final boolean mayInterruptIfRunning) {
         throw new UnsupportedOperationException("RequestFuture cannot be cancelled");
-//        if (completed) return false;
-//        valid = false;
-//        return true;
     }
 
     @Override
     public boolean isCancelled() {
         return false;
-//        return valid;
     }
 
     @Override

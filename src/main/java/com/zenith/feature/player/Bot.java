@@ -1,7 +1,6 @@
 package com.zenith.feature.player;
 
 import com.google.common.collect.Lists;
-import com.zenith.Proxy;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.event.client.ClientBotTick;
@@ -32,6 +31,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Globals.*;
@@ -67,7 +67,6 @@ public final class Bot extends ModuleUtils {
     private boolean wasLeftClicking = false;
     private final Input movementInput = new Input();
     private InputRequestFuture inputRequestFuture = InputRequestFuture.rejected;
-    private int waitTicks = 0;
     private static final CollisionBox STANDING_COLLISION_BOX = new CollisionBox(-0.3, 0.3, 0, 1.8, -0.3, 0.3);
     private static final CollisionBox SNEAKING_COLLISION_BOX = new CollisionBox(-0.3, 0.3, 0, 1.5, -0.3, 0.3);
     @Getter private LocalizedCollisionBox playerCollisionBox = new LocalizedCollisionBox(STANDING_COLLISION_BOX, 0, 0, 0);
@@ -219,30 +218,22 @@ public final class Bot extends ModuleUtils {
         }
     }
 
-    /**
-     * rationale: all inventory actions assume no container is open
-     * the id's are shifted and we have no handling for that
-     * will also cause issues for modules as the player should not be able to
-     * do many actions like moving
-     */
-    private void closeOpenContainers() {
-        var openContainerId = CACHE.getPlayerCache().getInventoryCache().getOpenContainerId();
-        if (openContainerId == 0) return;
-        Proxy.getInstance().getClient().sendAwait(new ServerboundContainerClosePacket(openContainerId));
-    }
-
     private synchronized void tick(final ClientBotTick event) {
         if (this.jumpingCooldown > 0) --this.jumpingCooldown;
         if (!CACHE.getChunkCache().isChunkLoaded((int) x >> 4, (int) z >> 4)) return;
-        if (waitTicks-- > 0) return;
-        if (waitTicks < 0) waitTicks = 0;
-        closeOpenContainers();
+
         if (resyncTeleport()) return;
 
-        interactionTick();
-
-        this.yaw = this.requestedYaw;
-        this.pitch = this.requestedPitch;
+        // stop movement and interaction inputs while a container is open
+        if (handleOpenContainer()) {
+            movementInput.reset();
+            this.inputRequestFuture.complete(false);
+            this.inputRequestFuture = InputRequestFuture.rejected;
+        } else {
+            interactionTick();
+            this.yaw = this.requestedYaw;
+            this.pitch = this.requestedPitch;
+        }
 
         if (Math.abs(velocity.getX()) < 0.003) velocity.setX(0);
         if (Math.abs(velocity.getY()) < 0.003) velocity.setY(0);
@@ -346,6 +337,36 @@ public final class Bot extends ModuleUtils {
         }
         tickEntityPushing();
         this.movementInput.reset();
+    }
+
+    // returns true if a container is open
+    private boolean handleOpenContainer() {
+        boolean isContainerOpen = CONFIG.client.inventory.ncpStrict
+            ? CACHE.getPlayerCache().getInventoryCache().getActiveContainerId() != -1
+            : CACHE.getPlayerCache().getInventoryCache().getOpenContainerId() != 0;
+        if (isContainerOpen) {
+            int containerId = CACHE.getPlayerCache().getInventoryCache().getOpenContainerId();
+            if (INVENTORY.hasActiveRequest()) {
+                if (containerId != INVENTORY.requestedContainerId()) {
+                    debug("Closing open container: {} for inventory request: {}", containerId, INVENTORY.requestedContainerId());
+                    sendClientPacketAwait(new ServerboundContainerClosePacket(
+                        CACHE.getPlayerCache().getInventoryCache().getOpenContainerId()
+                    ));
+                    isContainerOpen = false;
+                }
+            } else if (CONFIG.client.inventory.autoCloseOpenContainers) {
+                long containerOpenedAt = CACHE.getPlayerCache().getInventoryCache().getContainerOpenedAt();
+                long lastContainerClick = CACHE.getPlayerCache().getInventoryCache().getLastContainerClick();
+                if (System.currentTimeMillis() - Math.max(containerOpenedAt, lastContainerClick) >= TimeUnit.SECONDS.toMillis(CONFIG.client.inventory.autoCloseOpenContainerAfterSeconds)) {
+                    debug("Auto closing open container: {}", containerId);
+                    sendClientPacketAwait(new ServerboundContainerClosePacket(
+                        CACHE.getPlayerCache().getInventoryCache().getOpenContainerId()
+                    ));
+                    isContainerOpen = false;
+                }
+            }
+        }
+        return isContainerOpen;
     }
 
     private void postTick(ClientBotTick event) {

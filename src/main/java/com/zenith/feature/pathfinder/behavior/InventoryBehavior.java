@@ -1,7 +1,9 @@
 package com.zenith.feature.pathfinder.behavior;
 
 import com.zenith.cache.data.inventory.Container;
-import com.zenith.feature.inventory.ContainerClickAction;
+import com.zenith.feature.inventory.InventoryActionRequest;
+import com.zenith.feature.inventory.actions.MoveToHotbarSlot;
+import com.zenith.feature.inventory.actions.SetHeldItem;
 import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockRegistry;
@@ -12,7 +14,6 @@ import com.zenith.mc.item.ToolType;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
-import org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerActionType;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.MoveToHotbarAction;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 
@@ -95,11 +96,11 @@ public class InventoryBehavior extends Behavior {
 //            PATH_LOG.info("Inventory move requested but delaying until stationary");
 //            return false;
 //        }
-        INVENTORY.invActionReq(
-            this,
-            new ContainerClickAction(inInventory, ContainerActionType.MOVE_TO_HOTBAR_SLOT, MoveToHotbarAction.from(inHotbar)),
-            Baritone.MOVEMENT_PRIORITY
-        );
+        INVENTORY.submit(InventoryActionRequest.builder()
+             .owner(this)
+             .actions(new MoveToHotbarSlot(inInventory, MoveToHotbarAction.from(inHotbar)))
+             .priority(Baritone.MOVEMENT_PRIORITY)
+             .build());
         ticksSinceLastInventoryMove = 0;
         lastTickRequestedMove = null;
         return true;
@@ -222,7 +223,11 @@ public class InventoryBehavior extends Behavior {
                 if (select) {
                     int hotbarIndex = i - 36;
                     if (CACHE.getPlayerCache().getHeldItemSlot() != hotbarIndex) {
-                        INVENTORY.invActionReq(this, ContainerClickAction.setCarriedItem(hotbarIndex), Baritone.MOVEMENT_PRIORITY);
+                        INVENTORY.submit(InventoryActionRequest.builder()
+                            .owner(this)
+                            .actions(new SetHeldItem(hotbarIndex))
+                            .priority(Baritone.MOVEMENT_PRIORITY)
+                            .build());
                     }
                 }
                 return true;
@@ -240,14 +245,22 @@ public class InventoryBehavior extends Behavior {
                 if (item == Container.EMPTY_STACK) {
                     int hotbarIndex = i - 36;
                     if (CACHE.getPlayerCache().getHeldItemSlot() != hotbarIndex) {
-                        INVENTORY.invActionReq(this, ContainerClickAction.setCarriedItem(hotbarIndex), Baritone.MOVEMENT_PRIORITY);
+                        INVENTORY.submit(InventoryActionRequest.builder()
+                            .owner(this)
+                            .actions(new SetHeldItem(hotbarIndex))
+                            .priority(Baritone.MOVEMENT_PRIORITY)
+                            .build());
                     }
                 } else {
                     ItemData itemData = ItemRegistry.REGISTRY.get(item.getId());
                     if (itemData.toolTag() != null && itemData.toolTag().type() == ToolType.PICKAXE) {
                         int hotbarIndex = i - 36;
                         if (CACHE.getPlayerCache().getHeldItemSlot() != hotbarIndex) {
-                            INVENTORY.invActionReq(this, ContainerClickAction.setCarriedItem(hotbarIndex), Baritone.MOVEMENT_PRIORITY);
+                            INVENTORY.submit(InventoryActionRequest.builder()
+                                .owner(this)
+                                .actions(new SetHeldItem(hotbarIndex))
+                                .priority(Baritone.MOVEMENT_PRIORITY)
+                                .build());
                         }
                         return true;
                     }
@@ -263,7 +276,11 @@ public class InventoryBehavior extends Behavior {
                     if (select) {
                         requestSwapWithHotBar(i, 7);
                         if (CACHE.getPlayerCache().getHeldItemSlot() != 7) {
-                            INVENTORY.invActionReq(this, ContainerClickAction.setCarriedItem(7), Baritone.MOVEMENT_PRIORITY);
+                            INVENTORY.submit(InventoryActionRequest.builder()
+                                .owner(this)
+                                .actions(new SetHeldItem(7))
+                                .priority(Baritone.MOVEMENT_PRIORITY)
+                                .build());
                         }
                     }
                     return true;

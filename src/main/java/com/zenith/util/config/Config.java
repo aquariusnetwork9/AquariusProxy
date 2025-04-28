@@ -73,6 +73,14 @@ public final class Config {
         public final Ping ping = new Ping();
         public final ChatSigning chatSigning = new ChatSigning();
         public final Extra extra = new Extra();
+        public final Inventory inventory = new Inventory();
+
+        public static final class Inventory {
+            public int actionDelayTicks = 5;
+            public boolean autoCloseOpenContainers = true;
+            public int autoCloseOpenContainerAfterSeconds = 60;
+            public boolean ncpStrict = false;
+        }
 
         public static final class ChatSigning {
             public boolean enabled = true;
@@ -530,7 +538,6 @@ public final class Config {
         public final Server server = new Server();
         public boolean clearOldLogs = false;
         public boolean kickDisconnect = false;
-        public boolean ncpStrictInventory = false;
         public boolean debugLogs = false;
 
         public static final class PacketLog {

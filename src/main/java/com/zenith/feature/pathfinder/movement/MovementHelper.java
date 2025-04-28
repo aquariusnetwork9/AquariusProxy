@@ -1,6 +1,7 @@
 package com.zenith.feature.pathfinder.movement;
 
-import com.zenith.feature.inventory.ContainerClickAction;
+import com.zenith.feature.inventory.InventoryActionRequest;
+import com.zenith.feature.inventory.actions.SetHeldItem;
 import com.zenith.feature.pathfinder.*;
 import com.zenith.feature.pathfinder.movement.MovementState.MovementTarget;
 import com.zenith.feature.pathfinder.util.RotationUtils;
@@ -595,7 +596,11 @@ public final class MovementHelper {
 //            ctx.player().getInventory().selected = ts.getBestSlot(b.getBlock(), preferSilkTouch);
 //        }
         int hotbarSlotId = ts.getBestSlot(b, preferSilkTouch);
-        INVENTORY.invActionReq(BARITONE, ContainerClickAction.setCarriedItem(hotbarSlotId), Baritone.MOVEMENT_PRIORITY);
+        INVENTORY.submit(InventoryActionRequest.builder()
+            .owner(BARITONE)
+            .actions(new SetHeldItem(hotbarSlotId))
+            .priority(Baritone.MOVEMENT_PRIORITY)
+            .build());
     }
 
     public static void moveTowards(MovementState state, BlockPos pos) {

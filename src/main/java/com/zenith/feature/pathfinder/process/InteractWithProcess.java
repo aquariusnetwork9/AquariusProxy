@@ -135,7 +135,7 @@ public class InteractWithProcess extends BaritoneProcessHelper {
                     .build())
                 .addInputExecutedListener(future -> {
                     if (futureSucceeded(future)) {
-                        PATH_LOG.debug("Interacted with block click: {} at [{}, {}, {}]", leftClick ? "left" : "right", x, y, z);
+                        PATH_LOG.info("{} clicked block at: [{}, {}, {}]", leftClick ? "left" : "right", x, y, z);
                         succeeded = true;
                     }
                 });
@@ -212,7 +212,8 @@ public class InteractWithProcess extends BaritoneProcessHelper {
                     .build())
                 .addInputExecutedListener(future -> {
                     if (futureSucceeded(future)) {
-                        PATH_LOG.debug("Interacted with entity click: {} at [{}={}]", leftClick ? "left" : "right", entity.getEntityType(), entity.blockPos());
+                        var pos = entity.blockPos();
+                        PATH_LOG.info("{} clicked entity: {} at: [{}, {}, {}]", leftClick ? "left" : "right", entity.getEntityType(), pos.x(), pos.y(), pos.z());
                         succeeded = true;
                     }
                 });

@@ -1,0 +1,87 @@
+package com.zenith.feature.inventory;
+
+import com.zenith.Proxy;
+import com.zenith.event.client.ClientBotTick;
+import com.zenith.feature.inventory.actions.CloseContainer;
+import com.zenith.feature.inventory.actions.InventoryAction;
+import com.zenith.feature.inventory.actions.SetHeldItem;
+import com.zenith.util.RequestFuture;
+import com.zenith.util.timer.Timer;
+import com.zenith.util.timer.Timers;
+
+import java.util.Collections;
+
+import static com.github.rfresh2.EventConsumer.of;
+import static com.zenith.Globals.*;
+import static java.util.Objects.requireNonNullElse;
+
+public class InventoryManager {
+    private static final InventoryActionRequest DEFAULT_ACTION_REQUEST = new InventoryActionRequest(new Object(), Collections.emptyList(), Integer.MIN_VALUE, null);
+    private static final RequestFuture DEFAULT_REQUEST_FUTURE = new RequestFuture();
+    private final Timer tickTimer = Timers.tickTimer();
+    private InventoryActionRequest currentActionRequest = DEFAULT_ACTION_REQUEST;
+    private RequestFuture currentRequestFuture = DEFAULT_REQUEST_FUTURE;
+
+    public InventoryManager() {
+        EVENT_BUS.subscribe(
+            this,
+            // after modules, before player simulation
+            of(ClientBotTick.class, -5000, this::handleTick)
+        );
+    }
+
+    public synchronized RequestFuture submit(final InventoryActionRequest actionRequest) {
+        if (actionRequest.getPriority() <= currentActionRequest.getPriority()) return RequestFuture.rejected;
+        if (currentActionRequest.isExecuting()) return RequestFuture.rejected;
+        currentRequestFuture.complete(false);
+        currentActionRequest = actionRequest;
+        currentRequestFuture = new RequestFuture();
+        return currentRequestFuture;
+    }
+
+    private synchronized void handleTick(final ClientBotTick event) {
+        if (currentActionRequest == DEFAULT_ACTION_REQUEST) return;
+        int delay = requireNonNullElse(
+            currentActionRequest.getActionDelayTicks(),
+            CONFIG.client.inventory.actionDelayTicks
+        );
+        if (tickTimer.tick(delay)) {
+            var action = currentActionRequest.next();
+            if (action != null) {
+                if (action.containerId() != CACHE.getPlayerCache().getInventoryCache().getOpenContainerId()) {
+                    CLIENT_LOG.debug("[Inventory Manager] Skipping {} action {} for requested container: {} != {}", currentActionRequest.getOwner().getClass().getSimpleName(), action.type(), action.containerId(), CACHE.getPlayerCache().getInventoryCache().getOpenContainerId());
+                } else {
+                    var packet = action.packet();
+                    if (packet != null) {
+                        CLIENT_LOG.debug("[Inventory Manager] Executing action: {} requester: {}", action.type(), currentActionRequest.getOwner().getClass().getSimpleName());
+                        Proxy.getInstance().getClient().sendAwait(packet);
+                        InventoryAction actionNextTick = currentActionRequest.peek();
+                        if (action instanceof SetHeldItem || actionNextTick instanceof SetHeldItem) {
+                            // no delay needed for set carried item
+                            tickTimer.skip();
+                        }
+                    }
+                }
+            }
+            if (currentActionRequest.isCompleted()) {
+                currentRequestFuture.complete(true);
+                currentActionRequest = DEFAULT_ACTION_REQUEST;
+                currentRequestFuture = DEFAULT_REQUEST_FUTURE;
+                if (CONFIG.client.inventory.ncpStrict) {
+                    var closeActionPacket = new CloseContainer().packet();
+                    if (closeActionPacket != null) Proxy.getInstance().getClient().sendAwait(closeActionPacket);
+                }
+            }
+        }
+    }
+
+    public int requestedContainerId() {
+        var nextAction = currentActionRequest.peek();
+        if (nextAction == null) return 0;
+        return nextAction.containerId();
+    }
+
+    public boolean hasActiveRequest() {
+        return currentActionRequest != DEFAULT_ACTION_REQUEST;
+    }
+}

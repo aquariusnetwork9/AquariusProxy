@@ -5,6 +5,7 @@ import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.cache.data.entity.EntityStandard;
 import com.zenith.event.client.ClientBotTick;
+import com.zenith.feature.inventory.InventoryActionRequest;
 import com.zenith.feature.player.*;
 import com.zenith.feature.player.raycast.RaycastHelper;
 import com.zenith.mc.item.ItemRegistry;
@@ -90,7 +91,7 @@ public class KillAura extends AbstractInventoryModule {
                 if (!hasRotation(target)) {
                     rotateTo(target);
                 }
-                INVENTORY.invActionReq(this, MOVEMENT_PRIORITY - 1);
+                INVENTORY.submit(InventoryActionRequest.noAction(this, MOVEMENT_PRIORITY - 1));
             }
             return;
         }
@@ -100,7 +101,7 @@ public class KillAura extends AbstractInventoryModule {
                 if (!attackTarget.refersTo(target))
                     attackTarget = new WeakReference<>(target);
                 if (switchToWeapon()) {
-                    INVENTORY.invActionReq(this, MOVEMENT_PRIORITY - 1);
+                    INVENTORY.submit(InventoryActionRequest.noAction(this, MOVEMENT_PRIORITY - 1));
                     attack(target).addInputExecutedListener(this::onAttackInputExecuted);
                 } else {
                     // stop while doing inventory actions

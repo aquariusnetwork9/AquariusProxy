@@ -5,22 +5,26 @@ import com.zenith.Proxy;
 import com.zenith.cache.data.inventory.Container;
 import com.zenith.command.api.*;
 import com.zenith.discord.Embed;
-import com.zenith.feature.inventory.ContainerClickAction;
+import com.zenith.feature.inventory.InventoryActionRequest;
+import com.zenith.feature.inventory.actions.*;
+import com.zenith.mc.item.ContainerTypeInfoRegistry;
 import com.zenith.mc.item.ItemRegistry;
 import com.zenith.util.ComponentSerializer;
 import com.zenith.util.RequestFuture;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ClickItemAction;
-import org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerActionType;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.DropItemAction;
+import org.geysermc.mcprotocollib.protocol.data.game.inventory.ShiftClickItemAction;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
-import static com.zenith.Globals.CACHE;
-import static com.zenith.Globals.INVENTORY;
+import static com.zenith.Globals.*;
+import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
+import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 
 public class InventoryCommand extends Command {
     private static final int INV_ACTION_PRIORITY = 1000000;
@@ -37,7 +41,10 @@ public class InventoryCommand extends Command {
                 "hold <slot>",
                 "swap <from> <to>",
                 "drop <slot>",
-                "drop stack <slot>"
+                "drop stack <slot>",
+                "close",
+                "withdraw",
+                "deposit"
             )
             .aliases("inv")
             .build();
@@ -54,10 +61,24 @@ public class InventoryCommand extends Command {
                 if (!verifyLoggedIn(c.getSource().getEmbed())) return;
                 printInvAscii(c.getSource().getMultiLineOutput(), false);
             }))
-            .then(literal("hold").then(argument("slot", integer(36, 44)).executes(c -> {
+            .then(literal("hold").then(argument("slot", integer(36, 200)).executes(c -> {
                 if (!verifyAbleToDoInvActions(c.getSource().getEmbed())) return OK;
-                var slot = c.getArgument("slot", Integer.class);
-                var accepted = INVENTORY.invActionReq(this, ContainerClickAction.setCarriedItem(slot - 36), INV_ACTION_PRIORITY).get();
+                var slot = getInteger(c, "slot");
+                int hotbarSlot = getHotbarSlot0();
+                int hotbarIndex = slot - hotbarSlot;
+                if (hotbarIndex < 0 || hotbarIndex > 8) {
+                    c.getSource().getEmbed()
+                        .title("Error")
+                        .description("Slot: " + slot + " is not a hotbar slot")
+                        .errorColor();
+                    return OK;
+                }
+                var accepted = INVENTORY.submit(InventoryActionRequest.builder()
+                        .owner(this)
+                        .actions(new SetHeldItem(hotbarIndex))
+                        .priority(INV_ACTION_PRIORITY)
+                        .build())
+                    .get();
                 if (accepted) {
                     logInv();
                     c.getSource().setNoOutput(true);
@@ -70,11 +91,31 @@ public class InventoryCommand extends Command {
                 return OK;
             })))
             .then(literal("swap")
-                      .then(argument("from", integer(0, 45)).then(argument("to", integer(0, 45)).executes(c -> {
+                      .then(argument("from", integer(0, 200)).then(argument("to", integer(0, 200)).executes(c -> {
                           if (!verifyAbleToDoInvActions(c.getSource().getEmbed())) return OK;
-                          var from = c.getArgument("from", Integer.class);
-                          var to = c.getArgument("to", Integer.class);
-                          var accepted = INVENTORY.invActionReq(this, INVENTORY.swapSlots(from, to), INV_ACTION_PRIORITY).get();
+                          var from = getInteger(c, "from");
+                          var to = getInteger(c, "to");
+                          var containerSize = CACHE.getPlayerCache().getInventoryCache().getOpenContainer().getSize();
+                          if (from >= containerSize) {
+                              c.getSource().getEmbed()
+                                  .title("Error")
+                                  .description("From slot: " + from + " is out of bounds")
+                                  .errorColor();
+                              return OK;
+                          }
+                          if (to >= containerSize) {
+                              c.getSource().getEmbed()
+                                  .title("Error")
+                                  .description("To slot: " + to + " is out of bounds")
+                                  .errorColor();
+                              return OK;
+                          }
+                          var accepted = INVENTORY.submit(InventoryActionRequest.builder()
+                                  .owner(this)
+                                  .actions(InventoryActionMacros.swapSlots(getOpenContainerId(), from, to))
+                                  .priority(INV_ACTION_PRIORITY)
+                                  .build())
+                              .get();
                           if (accepted) {
                               logInv();
                               c.getSource().setNoOutput(true);
@@ -88,10 +129,19 @@ public class InventoryCommand extends Command {
                       }))))
             .then(literal("drop")
                       .then(literal("stack")
-                                .then(argument("slot", integer(0, 44)).executes(c -> {
+                                .then(argument("slot", integer(0, 200)).executes(c -> {
                                     if (!verifyAbleToDoInvActions(c.getSource().getEmbed())) return OK;
-                                    var slot = c.getArgument("slot", Integer.class);
-                                    var stack = CACHE.getPlayerCache().getPlayerInventory().get(slot);
+                                    var slot = getInteger(c, "slot");
+                                    Container container = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+                                    var containerSize = container.getSize();
+                                    if (slot >= containerSize) {
+                                        c.getSource().getEmbed()
+                                            .title("Error")
+                                            .description("Slot: " + slot + " is out of bounds")
+                                            .errorColor();
+                                        return OK;
+                                    }
+                                    var stack = container.getItemStack(slot);
                                     if (stack == Container.EMPTY_STACK) {
                                         c.getSource().getEmbed()
                                             .title("Error")
@@ -111,10 +161,19 @@ public class InventoryCommand extends Command {
                                     }
                                     return OK;
                                 })))
-                      .then(argument("slot", integer(0, 44)).executes(c -> {
+                      .then(argument("slot", integer(0, 200)).executes(c -> {
                           if (!verifyAbleToDoInvActions(c.getSource().getEmbed())) return OK;
-                          var slot = c.getArgument("slot", Integer.class);
-                          var stack = CACHE.getPlayerCache().getPlayerInventory().get(slot);
+                          var slot = getInteger( c, "slot");
+                          Container container = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+                          var containerSize = container.getSize();
+                          if (slot >= containerSize) {
+                              c.getSource().getEmbed()
+                                  .title("Error")
+                                  .description("Slot: " + slot + " is out of bounds")
+                                  .errorColor();
+                              return OK;
+                          }
+                          var stack = container.getItemStack(slot);
                           if (stack == Container.EMPTY_STACK) {
                               c.getSource().getEmbed()
                                   .title("Error")
@@ -133,28 +192,157 @@ public class InventoryCommand extends Command {
                                   .errorColor();
                           }
                           return OK;
-                      })));
+                      })))
+            .then(literal("close").executes(c -> {
+                if (!verifyAbleToDoInvActions(c.getSource().getEmbed())) return OK;
+                var openContainerId = getOpenContainerId();
+                if (openContainerId == 0) {
+                    c.getSource().getEmbed()
+                        .title("Error")
+                        .description("No open container to close")
+                        .errorColor();
+                    return OK;
+                }
+                var accepted = INVENTORY.submit(InventoryActionRequest.builder()
+                        .owner(this)
+                        .actions(new CloseContainer(openContainerId))
+                        .priority(INV_ACTION_PRIORITY)
+                        .build())
+                    .get();
+                if (accepted) {
+                    logInv();
+                    c.getSource().setNoOutput(true);
+                } else {
+                    c.getSource().getEmbed()
+                        .title("Failed")
+                        .description("Another inventory action has taken priority this tick, try again")
+                        .errorColor();
+                }
+                return OK;
+            }))
+            .then(literal("withdraw").executes(c -> {
+                if (!verifyAbleToDoInvActions(c.getSource().getEmbed())) return OK;
+                if (getOpenContainerId() == 0) {
+                    c.getSource().getEmbed()
+                        .title("Error")
+                        .description("No open container to withdraw from. Use `b click right <x> <y> <z>` to open a container")
+                        .errorColor();
+                    return OK;
+                }
+                var container = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+                int containerId = container.getContainerId();
+                List<InventoryAction> actions = new ArrayList<>();
+                final int containerTopInvEndIndex = container.getSize() - 36;
+                for (int i = 0; i < containerTopInvEndIndex; i++) {
+                    if (container.getItemStack(i) == Container.EMPTY_STACK) continue;
+                    actions.add(new ShiftClick(containerId, i, ShiftClickItemAction.LEFT_CLICK));
+                }
+                var accepted = INVENTORY.submit(InventoryActionRequest.builder()
+                        .owner(this)
+                        .actions(actions)
+                        .priority(INV_ACTION_PRIORITY)
+                        .build())
+                    .get();
+                if (accepted) {
+                    logInv();
+                    c.getSource().setNoOutput(true);
+                } else {
+                    c.getSource().getEmbed()
+                        .title("Failed")
+                        .description("Another inventory action has taken priority this tick, try again")
+                        .errorColor();
+                }
+                return OK;
+            }))
+            .then(literal("deposit").executes(c -> {
+                if (!verifyAbleToDoInvActions(c.getSource().getEmbed())) return OK;
+                if (getOpenContainerId() == 0) {
+                    c.getSource().getEmbed()
+                        .title("Error")
+                        .description("No open container to deposit to. Use `b click right <x> <y> <z>` to open a container")
+                        .errorColor();
+                    return OK;
+                }
+                var container = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+                int containerId = container.getContainerId();
+                List<InventoryAction> actions = new ArrayList<>();
+                final int containerTopInvEndIndex = container.getSize() - 36;
+                for (int i = container.getSize() - 1; i >= containerTopInvEndIndex; i--) {
+                    if (container.getItemStack(i) == Container.EMPTY_STACK) continue;
+                    actions.add(new ShiftClick(containerId, i, ShiftClickItemAction.LEFT_CLICK));
+                }
+                var accepted = INVENTORY.submit(InventoryActionRequest.builder()
+                        .owner(this)
+                        .actions(actions)
+                        .priority(INV_ACTION_PRIORITY)
+                        .build())
+                    .get();
+                if (accepted) {
+                    logInv();
+                    c.getSource().setNoOutput(true);
+                } else {
+                    c.getSource().getEmbed()
+                        .title("Failed")
+                        .description("Another inventory action has taken priority this tick, try again")
+                        .errorColor();
+                }
+                return OK;
+            }))
+            .then(literal("actionDelayTicks").then(argument("ticks", integer(0, 100)).executes(c -> {
+                CONFIG.client.inventory.actionDelayTicks = getInteger(c, "ticks");
+                c.getSource().getEmbed()
+                    .title("Action Delay Ticks Set")
+                    .addField("Action Delay Ticks", CONFIG.client.inventory.actionDelayTicks)
+                    .primaryColor();
+            })))
+            .then(literal("ncpStrict").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.inventory.ncpStrict = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("NCP Strict " + toggleStrCaps(CONFIG.client.inventory.ncpStrict))
+                    .primaryColor();
+            })))
+            .then(literal("autoCloseOpenContainers")
+                      .then(argument("toggle", toggle()).executes(c -> {
+                            CONFIG.client.inventory.autoCloseOpenContainers = getToggle(c, "toggle");
+                            c.getSource().getEmbed()
+                                .title("Auto Close " + toggleStrCaps(CONFIG.client.inventory.autoCloseOpenContainers))
+                                .primaryColor();
+                      }))
+                      .then(literal("delaySeconds").then(argument("seconds", integer(1, 1000)).executes(c -> {
+                          CONFIG.client.inventory.autoCloseOpenContainerAfterSeconds = getInteger(c, "seconds");
+                            c.getSource().getEmbed()
+                                .title("Auto Close Delay Set")
+                                .addField("Auto Close Delay Seconds", CONFIG.client.inventory.autoCloseOpenContainerAfterSeconds)
+                                .primaryColor();
+                      }))));
+    }
+
+    private int getOpenContainerId() {
+        return CACHE.getPlayerCache().getInventoryCache().getOpenContainerId();
+    }
+
+    private int getHotbarSlot0() {
+        if (getOpenContainerId() == 0) return 36;
+        var container = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+        return container.getSize() - 9;
     }
 
     private RequestFuture drop(final int slot, final boolean dropStack) {
-        var actionList = new ArrayList<ContainerClickAction>();
+        var actions = new ArrayList<InventoryAction>();
         if (CACHE.getPlayerCache().getInventoryCache().getMouseStack() != Container.EMPTY_STACK) {
             // drop the item in the mouse stack
-            actionList.add(new ContainerClickAction(
-                -999,
-                ContainerActionType.CLICK_ITEM,
-                ClickItemAction.LEFT_CLICK
-            ));
+            actions.add(new DropMouseStack(getOpenContainerId(), ClickItemAction.LEFT_CLICK));
         }
-        actionList.add(new ContainerClickAction(
+        actions.add(new DropItem(
+            getOpenContainerId(),
             slot,
-            ContainerActionType.DROP_ITEM,
             dropStack ? DropItemAction.DROP_SELECTED_STACK : DropItemAction.DROP_FROM_SELECTED
         ));
-        return INVENTORY.invActionReq(
-            this,
-            actionList,
-            INV_ACTION_PRIORITY);
+        return INVENTORY.submit(InventoryActionRequest.builder()
+                .owner(this)
+                .actions(actions)
+                .priority(INV_ACTION_PRIORITY)
+                .build());
     }
 
     private void logInv() {
@@ -164,14 +352,35 @@ public class InventoryCommand extends Command {
     }
 
     private void printInvAscii(final List<String> multiLineOutput, final boolean showAllSlotIds) {
-        var playerInv = CACHE.getPlayerCache().getPlayerInventory();
+        var container = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+        var isPlayerInv = container.getContainerId() == 0;
+        int containerSize = container.getSize();
+        String containerAscii;
+        if (!isPlayerInv) {
+            var containerTypeInfo = ContainerTypeInfoRegistry.REGISTRY.get(container.getType());
+            if (containerTypeInfo == null) {
+                multiLineOutput.add("Unknown container type: " + container.getType());
+                return;
+            }
+            if (containerSize != containerTypeInfo.totalSlots()) {
+                multiLineOutput.add("Container size mismatch: " + containerSize + " != " + containerTypeInfo.totalSlots());
+                return;
+            }
+            containerAscii = containerTypeInfo.ascii();
+        } else {
+            if (containerSize != 46) {
+                multiLineOutput.add("Player inventory size mismatch: " + containerSize + " != 46");
+                return;
+            }
+            containerAscii = ContainerTypeInfoRegistry.playerInventoryAscii;
+        }
         var sb = new StringBuilder();
-        var slotsWithItems = new String[46];
+        var slotsWithItems = new String[containerSize];
         Arrays.fill(slotsWithItems, "");
         sb.append("```\n");
         var heldSlot = CACHE.getPlayerCache().getHeldItemSlot() + 36;
-        for (int i = 0; i < playerInv.size(); i++) {
-            var itemStack = playerInv.get(i);
+        for (int i = 0; i < containerSize; i++) {
+            var itemStack = container.getItemStack(i);
             if (itemStack == Container.EMPTY_STACK) continue;
             slotsWithItems[i] = i + "";
             var itemData = ItemRegistry.REGISTRY.get(itemStack.getId());
@@ -189,10 +398,15 @@ public class InventoryCommand extends Command {
         }
         sb.append("\n```");
         var items = sb.toString();
-        if (showAllSlotIds)
-            multiLineOutput.add(inventoryAscii);
-        else
-            multiLineOutput.add(String.format(inventoryAsciiFormatter, (Object[]) slotsWithItems));
+        if (showAllSlotIds) {
+            String[] allSlots = new String[containerSize];
+            for (int i = 0; i < allSlots.length; i++) {
+                allSlots[i] = String.valueOf(i);
+            }
+            multiLineOutput.add(String.format(containerAscii, (Object[]) allSlots));
+        } else {
+            multiLineOutput.add(String.format(containerAscii, (Object[]) slotsWithItems));
+        }
         if (items.isEmpty()) {
             multiLineOutput.add("Empty!");
         } else {
@@ -201,9 +415,14 @@ public class InventoryCommand extends Command {
     }
 
     private boolean verifyAbleToDoInvActions(final Embed embed) {
-        return verifyLoggedIn(embed)
-            && verifyNoActivePlayer(embed)
-            && CACHE.getPlayerCache().getInventoryCache().getOpenContainerId() == 0;
+        boolean ok = verifyLoggedIn(embed)
+            && verifyNoActivePlayer(embed);
+        if (ok) return true;
+        embed
+            .title("Error")
+            .description("Unable to perform inventory actions while not logged in or while a player is controlling")
+            .errorColor();
+        return false;
     }
 
     private boolean verifyNoActivePlayer(final Embed embed) {
@@ -229,59 +448,4 @@ public class InventoryCommand extends Command {
         }
         return true;
     }
-
-    private static final String inventoryAscii =
-        """
-        ```
-        
-        ╔═══╦═══════════╗
-        ║ 5 ║    ███    ║   ╔═══╦═══╗
-        ╠═══╣    ███    ║   ║ 1 ║ 2 ║   ╔═══╗
-        ║ 6 ║  ███████  ║   ╠═══╬═══╣   ║ 0 ║
-        ╠═══╣  ███████  ║   ║ 3 ║ 4 ║   ╚═══╝
-        ║ 7 ║  ███████  ║   ╚═══╩═══╝
-        ╠═══╣    ███    ╠═══╗
-        ║ 8 ║    ███    ║45 ║
-        ╚═══╩═══════════╩═══╝
-        ╔═══╦═══╦═══╦═══╦═══╦═══╦═══╦═══╦═══╗
-        ║ 9 ║10 ║11 ║12 ║13 ║14 ║15 ║16 ║17 ║
-        ╠═══╬═══╬═══╬═══╬═══╬═══╬═══╬═══╬═══╣
-        ║18 ║19 ║20 ║21 ║22 ║23 ║24 ║25 ║26 ║
-        ╠═══╬═══╬═══╬═══╬═══╬═══╬═══╬═══╬═══╣
-        ║27 ║28 ║29 ║30 ║31 ║32 ║33 ║34 ║35 ║
-        ╚═══╩═══╩═══╩═══╩═══╩═══╩═══╩═══╩═══╝
-        ╔═══╦═══╦═══╦═══╦═══╦═══╦═══╦═══╦═══╗
-        ║36 ║37 ║38 ║39 ║40 ║41 ║42 ║43 ║44 ║
-        ╚═══╩═══╩═══╩═══╩═══╩═══╩═══╩═══╩═══╝
-        
-        ```
-        """;
-
-    private static final String inventoryAsciiFormatter =
-        """
-        ```
-        
-        ╔═══╦═══════════╗
-        ║%6$2s ║    ███    ║   ╔═══╦═══╗
-        ╠═══╣    ███    ║   ║%2$2s ║%3$2s ║   ╔═══╗
-        ║%7$2s ║  ███████  ║   ╠═══╬═══╣   ║%1$2s ║
-        ╠═══╣  ███████  ║   ║%4$2s ║%5$2s ║   ╚═══╝
-        ║%8$2s ║  ███████  ║   ╚═══╩═══╝
-        ╠═══╣    ███    ╠═══╗
-        ║%9$2s ║    ███    ║%46$2s ║
-        ╚═══╩═══════════╩═══╝
-        ╔═══╦═══╦═══╦═══╦═══╦═══╦═══╦═══╦═══╗
-        ║%10$2s ║%11$2s ║%12$2s ║%13$2s ║%14$2s ║%15$2s ║%16$2s ║%17$2s ║%18$2s ║
-        ╠═══╬═══╬═══╬═══╬═══╬═══╬═══╬═══╬═══╣
-        ║%19$2s ║%20$2s ║%21$2s ║%22$2s ║%23$2s ║%24$2s ║%25$2s ║%26$2s ║%27$2s ║
-        ╠═══╬═══╬═══╬═══╬═══╬═══╬═══╬═══╬═══╣
-        ║%28$2s ║%29$2s ║%30$2s ║%31$2s ║%32$2s ║%33$2s ║%34$2s ║%35$2s ║%36$2s ║
-        ╚═══╩═══╩═══╩═══╩═══╩═══╩═══╩═══╩═══╝
-        ╔═══╦═══╦═══╦═══╦═══╦═══╦═══╦═══╦═══╗
-        ║%37$2s ║%38$2s ║%39$2s ║%40$2s ║%41$2s ║%42$2s ║%43$2s ║%44$2s ║%45$2s ║
-        ╚═══╩═══╩═══╩═══╩═══╩═══╩═══╩═══╩═══╝
-        
-        ```
-        """;
-
 }

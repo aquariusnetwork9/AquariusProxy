@@ -78,7 +78,7 @@ public class Baritone {
     }
 
     public boolean isActive() {
-        return getPathingBehavior().getGoal() != null;
+        return getPathingBehavior().getGoal() != null || getPathingControlManager().isActive();
     }
 
     public boolean isGoalActive(@NonNull Goal goal) {
