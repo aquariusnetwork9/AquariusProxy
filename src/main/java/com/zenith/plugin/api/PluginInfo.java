@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 public record PluginInfo(
     String entrypoint,
     String id,
-    String version,
+    Version version,
     String description,
     String url,
     List<String> authors,

@@ -56,7 +56,7 @@ dependencies {
     api("org.redisson:redisson:3.45.1") {
         exclude(group = "io.netty")
     }
-    api("com.github.rfresh2:SimpleEventBus:1.5")
+    api("com.github.rfresh2:SimpleEventBus:1.6")
     val fastutilVersion = "8.5.15"
     api("com.github.rfresh2.fastutil.maps:object-object-maps:$fastutilVersion")
     api("com.github.rfresh2.fastutil.maps:int-object-maps:$fastutilVersion")

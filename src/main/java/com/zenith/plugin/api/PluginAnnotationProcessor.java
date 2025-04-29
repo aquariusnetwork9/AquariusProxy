@@ -1,7 +1,10 @@
 package com.zenith.plugin.api;
 
+import com.fasterxml.jackson.core.util.DefaultIndenter;
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.auto.service.AutoService;
-import com.google.gson.GsonBuilder;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
@@ -72,11 +75,17 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
                 return false;
             }
 
+            if (!Version.validate(plugin.version())) {
+                environment.getMessager()
+                    .printMessage(Diagnostic.Kind.ERROR, "Plugin version '" + plugin.version() + "' is invalid. Must match pattern: [0-9].[0-9].[0-9]");
+                return false;
+            }
+
             // All good, generate the plugin.json
             PluginInfo pluginJson = new PluginInfo(
                 qualifiedName.toString(),
                 plugin.id(),
-                plugin.version(),
+                new Version(plugin.version()),
                 plugin.description(),
                 plugin.url(),
                 Arrays.stream(plugin.authors()).filter(a -> !a.isBlank()).toList(),
@@ -85,12 +94,12 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
             try {
                 FileObject object = environment.getFiler()
                     .createResource(StandardLocation.CLASS_OUTPUT, "", "zenithproxy.plugin.json");
+                var objectMapper = new ObjectMapper()
+                    .enable(SerializationFeature.INDENT_OUTPUT);
+                var pp = new DefaultPrettyPrinter();
+                pp.indentArraysWith(DefaultIndenter.SYSTEM_LINEFEED_INSTANCE);
                 try (Writer writer = new BufferedWriter(object.openWriter())) {
-                    new GsonBuilder()
-                        .setPrettyPrinting()
-                        .disableHtmlEscaping()
-                        .create()
-                        .toJson(pluginJson, writer);
+                    objectMapper.writer(pp).writeValue(writer, pluginJson);
                 }
                 pluginClassFound = qualifiedName.toString();
             } catch (IOException e) {

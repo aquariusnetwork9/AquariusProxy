@@ -784,7 +784,7 @@ public class NotificationEventListener {
             .successColor()
             .addField("ID", escape(event.pluginInfo().id()), false)
             .addField("Description", escape(event.pluginInfo().description()))
-            .addField("Version", escape(event.pluginInfo().version()), false)
+            .addField("Version", escape(event.pluginInfo().version().toString()), false)
             .addField("URL", escape(event.pluginInfo().url()), false)
             .addField("Author(s)", String.join(", ", event.pluginInfo().authors()), false);
         sendEmbedMessage(embed);
