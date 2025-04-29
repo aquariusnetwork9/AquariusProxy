@@ -1,5 +1,6 @@
 package com.zenith.feature.spectator;
 
+import com.google.common.collect.Lists;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.Equipment;
@@ -14,6 +15,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.spaw
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.google.common.collect.Lists.newArrayList;
 import static com.zenith.Globals.CACHE;
 import static java.util.Arrays.asList;
 
@@ -49,12 +51,12 @@ public class SpectatorPacketProvider {
         return asList(
             new ClientboundSetEquipmentPacket(
                 CACHE.getPlayerCache().getEntityId(),
-                asList( helmet, chestplate, leggings, boots, mainHand, offHand ))
+                asList(helmet, chestplate, leggings, boots, mainHand, offHand))
         );
     }
 
     public static List<Packet> playerSpawn() {
-        return asList(
+        var list = Lists.<Packet>newArrayList(
             new ClientboundAddEntityPacket(
                 CACHE.getPlayerCache().getEntityId(),
                 CACHE.getProfileCache().getProfile().getId(),
@@ -69,13 +71,25 @@ public class SpectatorPacketProvider {
                 CACHE.getPlayerCache().getEntityId(),
                 new ArrayList<>(CACHE.getPlayerCache().getThePlayer().getMetadata().values()))
         );
+        if (CACHE.getPlayerCache().getThePlayer().isInVehicle()) {
+            var vehicleId = CACHE.getPlayerCache().getThePlayer().getVehicleId();
+            var vehicleEntity = CACHE.getEntityCache().get(vehicleId);
+            if (vehicleEntity != null) {
+                list.add(
+                    new ClientboundSetPassengersPacket(
+                        vehicleEntity.getEntityId(),
+                        vehicleEntity.getPassengerIds().toIntArray())
+                );
+            }
+        }
+        return list;
     }
 
     public static List<Packet> playerSneak() {
         return asList(
             new ClientboundSetEntityDataPacket(
                 CACHE.getPlayerCache().getEntityId(),
-                asList(new ObjectEntityMetadata<>(6, MetadataTypes.POSE, CACHE.getPlayerCache().isSneaking() ? Pose.SNEAKING : Pose.STANDING)))
+                newArrayList(new ObjectEntityMetadata<>(6, MetadataTypes.POSE, CACHE.getPlayerCache().isSneaking() ? Pose.SNEAKING : Pose.STANDING)))
         );
     }
 
