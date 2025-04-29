@@ -2627,7 +2627,13 @@
     },
     {
       "type": "com.zenith.util.config.Config$Client$Inventory",
-      "allDeclaredFields": true
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "com.zenith.util.config.Config$Client$Ping",
