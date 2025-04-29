@@ -285,7 +285,9 @@ public final class Bot extends ModuleUtils {
                 new ServerboundMovePlayerRotPacket(false, this.yaw, this.pitch),
                 new ServerboundPlayerInputPacket(0.0f, 0.0f, false, false)
             );
-            // todo: handle vehicle travel movement
+            // resync position from any vehicle movements
+            syncFromCache(true);
+            // todo: handle vehicle inputs
         } else {
             // send movement packets based on position
             if (wasSneaking != isSneaking) {
