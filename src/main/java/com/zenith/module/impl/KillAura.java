@@ -173,7 +173,7 @@ public class KillAura extends AbstractInventoryModule {
     }
 
     private static boolean isAggressive(final EntityLiving entity) {
-        // https://wiki.vg/Entity_metadata#Mob
+        // https://minecraft.wiki/w/Java_Edition_protocol/Entity_metadata#Mob
         var byteMetadata = entity.getMetadata().get(15);
         if (byteMetadata == null) return false;
         if (byteMetadata instanceof ByteEntityMetadata byteData) {

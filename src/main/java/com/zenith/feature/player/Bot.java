@@ -221,6 +221,12 @@ public final class Bot extends ModuleUtils {
 
         if (resyncTeleport()) return;
 
+        if (CACHE.getPlayerCache().getThePlayer().isSleeping()) {
+            debug("Player sleeping, sending leave bed packet");
+            sendClientPacketAwait(new ServerboundPlayerCommandPacket(CACHE.getPlayerCache().getEntityId(), PlayerState.LEAVE_BED));
+            return;
+        }
+
         // stop movement and interaction inputs while a container is open
         if (handleOpenContainer()) {
             movementInput.reset();
