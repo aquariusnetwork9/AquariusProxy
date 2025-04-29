@@ -281,13 +281,22 @@ public final class Bot extends ModuleUtils {
         }
 
         if (CACHE.getPlayerCache().getThePlayer().isInVehicle()) {
+            // resync position from any vehicle movements
+            this.x = this.lastX = CACHE.getPlayerCache().getX();
+            this.y = this.lastY = CACHE.getPlayerCache().getY();
+            this.z = this.lastZ = CACHE.getPlayerCache().getZ();
+            this.isSneaking = this.wasSneaking = false;
+            this.isSprinting = this.lastSprinting = false;
+            syncPlayerCollisionBox();
+            updateAttributes();
+
             sendClientPacketsAsync(
                 new ServerboundMovePlayerRotPacket(false, this.yaw, this.pitch),
-                new ServerboundPlayerInputPacket(0.0f, 0.0f, false, false)
+                // todo: pass in strafe/forward movement inputs from `getMovementInputVec()`
+                new ServerboundPlayerInputPacket(0.0f, 0.0f, movementInput.jumping, movementInput.sneaking)
             );
-            // resync position from any vehicle movements
-            syncFromCache(true);
-            // todo: handle vehicle inputs
+            // todo: handle vehicle move packets
+            //  need to determine if vehicle is a controllable type
         } else {
             // send movement packets based on position
             if (wasSneaking != isSneaking) {
@@ -996,8 +1005,7 @@ public final class Bot extends ModuleUtils {
         this.z = this.lastZ = CACHE.getPlayerCache().getZ();
         this.yaw = this.lastYaw = this.requestedYaw = CACHE.getPlayerCache().getYaw();
         this.pitch = this.lastPitch = this.requestedPitch = CACHE.getPlayerCache().getPitch();
-        this.onGround = true; // todo: cache
-        this.lastOnGround = true;
+        this.onGround = this.lastOnGround = true; // todo: cache
         this.velocity.set(0, 0, 0);
         this.supportingBlockPos = Optional.empty();
         this.onGroundNoBlocks = false;
