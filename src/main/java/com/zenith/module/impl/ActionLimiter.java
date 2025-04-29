@@ -4,10 +4,7 @@ import com.github.rfresh2.EventConsumer;
 import com.zenith.event.player.PlayerConnectionRemovedEvent;
 import com.zenith.event.player.PlayerLoginEvent;
 import com.zenith.feature.actionlimiter.handlers.inbound.*;
-import com.zenith.feature.actionlimiter.handlers.outbound.ALCCommandSuggestionsHandler;
-import com.zenith.feature.actionlimiter.handlers.outbound.ALCMoveVehicleHandler;
-import com.zenith.feature.actionlimiter.handlers.outbound.ALLoginHandler;
-import com.zenith.feature.actionlimiter.handlers.outbound.ALPlayerPositionHandler;
+import com.zenith.feature.actionlimiter.handlers.outbound.*;
 import com.zenith.module.api.Module;
 import com.zenith.network.codec.PacketHandlerCodec;
 import com.zenith.network.codec.PacketHandlerStateCodec;
@@ -19,6 +16,7 @@ import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundCommandSuggestionsPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundMoveVehiclePacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundTeleportEntityPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.*;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClickPacket;
@@ -60,6 +58,7 @@ public class ActionLimiter extends Module {
                 .outbound(ClientboundCommandSuggestionsPacket.class, new ALCCommandSuggestionsHandler())
                 .outbound(ClientboundLoginPacket.class, new ALLoginHandler())
                 .outbound(ClientboundPlayerPositionPacket.class, new ALPlayerPositionHandler())
+                .outbound(ClientboundTeleportEntityPacket.class, new ALTeleportEntityHandler())
                 .build())
             .build();
     }

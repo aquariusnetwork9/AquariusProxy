@@ -1,6 +1,5 @@
 package com.zenith.feature.coordobf.handlers.outbound;
 
-import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityStandard;
 import com.zenith.module.impl.CoordObfuscation;
 import com.zenith.network.codec.PacketHandler;
@@ -14,13 +13,17 @@ import static com.zenith.Globals.MODULE;
 public class COTeleportEntityHandler implements PacketHandler<ClientboundTeleportEntityPacket, ServerSession> {
     @Override
     public ClientboundTeleportEntityPacket apply(final ClientboundTeleportEntityPacket packet, final ServerSession session) {
-        Entity entity = CACHE.getEntityCache().get(packet.getEntityId());
+        var entity = CACHE.getEntityCache().get(packet.getEntityId());
         if (entity instanceof EntityStandard e) {
             if (e.getEntityType() == EntityType.EYE_OF_ENDER) {
                 return null;
             }
         }
-        CoordObfuscation coordObf = MODULE.get(CoordObfuscation.class);
+        var coordObf = MODULE.get(CoordObfuscation.class);
+        if (!entity.getPassengerIds().isEmpty()
+            && entity.getPassengerIds().contains(CACHE.getPlayerCache().getEntityId())) {
+            coordObf.playerMovePos(session, packet.getX(), packet.getZ());
+        }
         return new ClientboundTeleportEntityPacket(
             packet.getEntityId(),
             coordObf.getCoordOffset(session).offsetX(packet.getX()),
