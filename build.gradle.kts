@@ -165,7 +165,7 @@ tasks {
         workingDir = layout.projectDirectory.dir("run").asFile
         classpath = sourceSets.main.get().runtimeClasspath
         mainClass.set("com.zenith.Proxy")
-        jvmArgs = listOf("-Xmx300m", "-XX:+UseG1GC", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseCompactObjectHeaders", "--enable-native-access=ALL-UNNAMED")
+        jvmArgs = listOf("-Xmx300m", "-XX:+UseG1GC", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseCompactObjectHeaders")
         standardInput = System.`in`
         environment("ZENITH_DEV", "true")
         outputs.upToDateWhen { false }

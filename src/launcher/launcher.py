@@ -2,19 +2,20 @@ import os
 import platform
 import subprocess
 
-from jdk_install import get_java_executable
+from jdk_install import get_java_executable, get_java_version_from_subprocess
 from utils import critical_error
 
+default_java_xmx = 300
+
 default_java_args = """\
--Xmx300m \
--XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+AlwaysPreTouch \
--XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M -XX:G1ReservePercent=20 -XX:G1HeapWastePercent=5 \
--XX:G1MixedGCCountTarget=4 -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 \
--XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1"""
+-XX:+UseG1GC -XX:+UnlockExperimentalVMOptions -XX:+PerfDisableSharedMem"""
 
-default_linux_args = """\
--Xmx200m"""
+java24_addnl_args = """\
+-XX:+UseCompactObjectHeaders --sun-misc-unsafe-memory-access=allow --enable-native-access=ALL-UNNAMED"""
 
+default_linux_xmx = 200
+
+default_linux_args = ""
 
 def git_build():
     if platform.system() == "Windows":
@@ -30,6 +31,8 @@ def launch_linux(config):
         jvm_args = config.custom_jvm_args
     else:
         jvm_args = default_linux_args
+    if "-Xmx" not in jvm_args:
+        jvm_args += f" -Xmx{default_linux_xmx}M"
     run_script = f"./{config.launch_dir}ZenithProxy {jvm_args}"
     try:
         subprocess.run(run_script, shell=True, check=True)
@@ -40,6 +43,7 @@ def launch_linux(config):
 def launch_java(config):
     java_executable = get_java_executable()
     print("Using Java installation:", java_executable)
+    java_version = int(get_java_version_from_subprocess(java_executable))
     if platform.system() == "Windows":
         java_executable = "\"" + java_executable.replace("/", "\\") + "\""
     if not os.path.isfile(config.launch_dir + "ZenithProxy.jar"):
@@ -48,6 +52,10 @@ def launch_java(config):
         jvm_args = config.custom_jvm_args
     else:
         jvm_args = default_java_args
+        if java_version == 24:
+            jvm_args += " " + java24_addnl_args
+    if "-Xmx" not in jvm_args:
+        jvm_args += f" -Xmx{default_java_xmx}M"
     if platform.system() == "Windows":
         jar_command = "-jar " + config.launch_dir.replace("/", "\\") + "ZenithProxy.jar"
     else:
@@ -65,6 +73,8 @@ def launch_git(config):
         jvm_args = config.custom_jvm_args
     else:
         jvm_args = default_java_args
+    if "-Xmx" not in jvm_args:
+        jvm_args += f" -Xmx{default_java_xmx}M"
     if platform.system() == "Windows":
         toolchain_command = ".\\build\\java_toolchain.bat"
         jar_command = "-jar build\\libs\\ZenithProxy.jar"
