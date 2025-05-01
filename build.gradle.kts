@@ -162,10 +162,14 @@ tasks {
     register("run", JavaExec::class.java) {
         group = runGroup
         description = "Execute proxy"
+        javaLauncher = javaLauncherProvider
         workingDir = layout.projectDirectory.dir("run").asFile
         classpath = sourceSets.main.get().runtimeClasspath
         mainClass.set("com.zenith.Proxy")
-        jvmArgs = listOf("-Xmx300m", "-XX:+UseG1GC", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseCompactObjectHeaders")
+        val args = mutableListOf("-Xmx300m", "-XX:+UseG1GC")
+        if (javaLauncher.get().metadata.languageVersion.asInt() == 24)
+            args.addAll(listOf("-XX:+UnlockExperimentalVMOptions", "-XX:+UseCompactObjectHeaders"))
+        jvmArgs = args
         standardInput = System.`in`
         environment("ZENITH_DEV", "true")
         outputs.upToDateWhen { false }
