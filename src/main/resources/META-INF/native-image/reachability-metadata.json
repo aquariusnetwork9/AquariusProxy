@@ -4698,7 +4698,15 @@
       "type": "kotlin.jvm.JvmClassMappingKt"
     },
     {
-      "type": "net.lenni0451.commons.httpclient.executor.HttpClientExecutor"
+      "type": "net.lenni0451.commons.httpclient.executor.HttpClientExecutor",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "net.lenni0451.commons.httpclient.HttpClient"
+          ]
+        }
+      ]
     },
     {
       "type": "net.raphimc.viaaprilfools.api.AprilFoolsProtocolVersion"

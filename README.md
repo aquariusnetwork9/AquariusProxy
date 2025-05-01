@@ -59,7 +59,7 @@ This project is also used for the [2b2t.vc API](https://api.2b2t.vc) and [Discor
 
 # Features
 
-* High performance and efficiency on minimal hardware, <300MB RAM per java instance or <150MB on linux.
+* High performance and efficiency on minimal hardware, <300MB RAM per java instance or <200MB on linux.
 * Integrated ViaVersion
   * Can connect to (almost) any MC server and players can connect with (almost) any MC client
 * Secure Whitelist system - share MC accounts without sharing passwords
@@ -67,7 +67,7 @@ This project is also used for the [2b2t.vc API](https://api.2b2t.vc) and [Discor
     * Chat relay/bridge
     * Customizable pings and alerts. e.g. Player in visual range alerts
 * Spectator mode
-  * Multiple players can connect to the proxy and spectate the player
+  * Multiple players can connect and spectate the player
 * Coordinate obfuscation - let players you don't trust visit your base safely
 * Baritone pathfinding and movement
 * ReplayMod recordings

@@ -101,11 +101,11 @@ public final class Bot extends ModuleUtils {
         );
     }
 
-    public synchronized void handleClientTickStarting(final ClientBotTick.Starting event) {
+    private synchronized void handleClientTickStarting(final ClientBotTick.Starting event) {
         syncFromCache(false);
     }
 
-    public synchronized void handleClientTickStopped(final ClientBotTick.Stopped event) {
+    private synchronized void handleClientTickStopped(final ClientBotTick.Stopped event) {
         if (isSneaking) {
             sendClientPacketAsync(new ServerboundPlayerCommandPacket(CACHE.getPlayerCache().getEntityId(), PlayerState.STOP_SNEAKING));
         }
@@ -114,7 +114,7 @@ public final class Bot extends ModuleUtils {
         }
     }
 
-    public synchronized void requestMovement(final InputRequest request, final InputRequestFuture inputRequestFuture) {
+    protected synchronized void requestMovement(final InputRequest request, final InputRequestFuture inputRequestFuture) {
         var reqInput = request.input();
         if (reqInput != null) {
             movementInput.apply(reqInput);
@@ -1193,7 +1193,7 @@ public final class Bot extends ModuleUtils {
         return (float) v2;
     }
 
-    public Attribute getClonedAttribute(final AttributeType attributeType, final Attribute defaultAttribute) {
+    private Attribute getClonedAttribute(final AttributeType attributeType, final Attribute defaultAttribute) {
         var attribute = CACHE.getPlayerCache().getThePlayer().getAttributes().get(attributeType);
         if (attribute == null) return defaultAttribute;
         return new Attribute(attribute.getType(), attribute.getValue(), Lists.newArrayList(attribute.getModifiers()));
