@@ -39,14 +39,19 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.borde
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.Comparator;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
+import static com.google.common.collect.Lists.newArrayList;
 import static com.zenith.Globals.*;
 import static com.zenith.cache.data.chunk.Chunk.*;
 import static java.util.Arrays.asList;
+import static java.util.Collections.synchronizedList;
 
 @Getter
 @Setter
@@ -430,23 +435,20 @@ public class ChunkCache implements CachedData {
         final var chunkX = p.getX();
         final var chunkZ = p.getZ();
         var pos = chunkPosToLong(chunkX, chunkZ);
-        var chunk = this.cache.get(pos);
-        if (chunk == null) {
-            var blockEntitiesArray = p.getBlockEntities();
-            var blockEntities = Collections.synchronizedList(new ArrayList<BlockEntityInfo>(blockEntitiesArray.length));
-            Collections.addAll(blockEntities, blockEntitiesArray);
-            chunk = new Chunk(
-                chunkX,
-                chunkZ,
-                p.getSections(),
-                getMaxSection(),
-                getMinSection(),
-                blockEntities,
-                CONFIG.debug.server.cache.fullbrightChunkSkylight
-                    ? createFullBrightLightData(p.getLightData(), p.getSections().length)
-                    : p.getLightData()
-            );
-        }
+        // todo: check if chunk is outside range like vanilla?
+        //  Math.abs(x - this.viewCenterX) <= this.chunkRadius && Math.abs(z - this.viewCenterZ) <= this.chunkRadius
+        var blockEntities = synchronizedList(newArrayList(p.getBlockEntities()));
+        var chunk = new Chunk(
+            chunkX,
+            chunkZ,
+            p.getSections(),
+            getMaxSection(),
+            getMinSection(),
+            blockEntities,
+            CONFIG.debug.server.cache.fullbrightChunkSkylight
+                ? createFullBrightLightData(p.getLightData(), p.getSections().length)
+                : p.getLightData()
+        );
         this.cache.put(pos, chunk);
     }
 
