@@ -37,6 +37,7 @@ def launch_linux(config):
     if "-Xmx" not in jvm_args:
         jvm_args += f" -Xmx{default_linux_xmx}M"
     run_script = f"./{config.launch_dir}ZenithProxy {jvm_args}"
+    print(">", run_script)
     try:
         subprocess.run(run_script, shell=True, check=True)
     except subprocess.CalledProcessError as e:
@@ -67,6 +68,7 @@ def launch_java(config):
     else:
         jar_command = "-jar " + config.launch_dir + "ZenithProxy.jar"
     run_script = f"{java_executable} {jvm_args} {jar_command}"
+    print(">", run_script)
     try:
         subprocess.run(run_script, shell=True, check=True)
     except subprocess.CalledProcessError as e:
@@ -90,6 +92,7 @@ def launch_git(config):
         toolchain_command = "./build/java_toolchain"
         jar_command = "-jar build/libs/ZenithProxy.jar"
     run_script = f"{toolchain_command} {jvm_args} {jar_command}"
+    print(">", run_script)
     try:
         subprocess.run(run_script, shell=True, check=True)
     except subprocess.CalledProcessError as e:
