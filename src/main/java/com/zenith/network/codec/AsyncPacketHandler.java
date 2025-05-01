@@ -7,7 +7,6 @@ import org.geysermc.mcprotocollib.network.Session;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 
 import static com.zenith.Globals.SERVER_LOG;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 @FunctionalInterface
 public interface AsyncPacketHandler<P extends Packet, S extends Session> extends PacketHandler<P, S> {
@@ -17,21 +16,17 @@ public interface AsyncPacketHandler<P extends Packet, S extends Session> extends
 
     default P apply(P packet, S session) {
         if (packet == null) return null;
-        EVENT_LOOP.execute(() -> applyWithRetries(packet, session, 0));
+        EVENT_LOOP.execute(() -> applyCatching(packet, session));
         return packet;
     }
 
-    private void applyWithRetries(P packet, S session, final int tryCount) {
+    private void applyCatching(P packet, S session) {
         try {
             if (!applyAsync(packet, session)) {
-                if (tryCount > 1) {
-                    SERVER_LOG.debug("Unable to apply async handler for packet: {}", packet.getClass().getSimpleName());
-                    return;
-                }
-                EVENT_LOOP.schedule(() -> applyWithRetries(packet, session, tryCount + 1), 250, MILLISECONDS);
+                SERVER_LOG.warn("Async packet handler failed: {}", packet.getClass().getSimpleName());
             }
         } catch (final Throwable e) {
-            SERVER_LOG.error("Async handler error", e);
+            SERVER_LOG.error("Async packet handler error", e);
         }
     }
 }
