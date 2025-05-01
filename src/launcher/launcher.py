@@ -29,6 +29,9 @@ def launch_linux(config):
         critical_error("ZenithProxy executable not found")
     if config.custom_jvm_args is not None and config.custom_jvm_args != "":
         jvm_args = config.custom_jvm_args
+        # no default args to set yet
+        # if jvm_args.startswith("-Xmx") and len(jvm_args.split(" ")) == 1:
+        #     jvm_args += " " + default_linux_args
     else:
         jvm_args = default_linux_args
     if "-Xmx" not in jvm_args:
@@ -50,6 +53,9 @@ def launch_java(config):
         critical_error("ZenithProxy.jar not found")
     if config.custom_jvm_args is not None and config.custom_jvm_args != "":
         jvm_args = config.custom_jvm_args
+        # if jvm args only contain -Xmx<int><unit>, add default args
+        if jvm_args.startswith("-Xmx") and len(jvm_args.split(" ")) == 1:
+            jvm_args += " " + default_java_args
     else:
         jvm_args = default_java_args
         if java_version == 24:
@@ -71,6 +77,8 @@ def launch_git(config):
     git_build()
     if config.custom_jvm_args is not None and config.custom_jvm_args != "":
         jvm_args = config.custom_jvm_args
+        if jvm_args.startswith("-Xmx") and len(jvm_args.split(" ")) == 1:
+            jvm_args += " " + default_java_args
     else:
         jvm_args = default_java_args
     if "-Xmx" not in jvm_args:
