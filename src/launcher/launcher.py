@@ -57,6 +57,8 @@ def launch_java(config):
         # if jvm args only contain -Xmx<int><unit>, add default args
         if jvm_args.startswith("-Xmx") and len(jvm_args.split(" ")) == 1:
             jvm_args += " " + default_java_args
+            if java_version == 24:
+                jvm_args += " " + java24_addnl_args
     else:
         jvm_args = default_java_args
         if java_version == 24:
