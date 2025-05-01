@@ -12,7 +12,7 @@ import it.unimi.dsi.fastutil.longs.LongList;
 import lombok.experimental.UtilityClass;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.ChunkSection;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
-import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -21,10 +21,10 @@ import java.util.Optional;
 
 import static com.zenith.Globals.*;
 
+@NullMarked
 @UtilityClass
 public class World {
-    @Nullable
-    public ChunkSection getChunkSection(final int x, final int y, final int z) {
+    public @Nullable ChunkSection getChunkSection(final int x, final int y, final int z) {
         try {
             return CACHE.getChunkCache().getChunkSection(x, y, z );
         } catch (final Exception e) {
@@ -33,13 +33,12 @@ public class World {
         return null;
     }
 
-    @Nullable
-    public static Chunk getChunk(final int chunkX, final int chunkZ) {
+    public @Nullable Chunk getChunk(final int chunkX, final int chunkZ) {
         return CACHE.getChunkCache().get(chunkX, chunkZ);
     }
 
     // falls back to overworld if current dimension is null
-    public @NonNull DimensionData getCurrentDimension() {
+    public DimensionData getCurrentDimension() {
         DimensionData currentDimension = CACHE.getChunkCache().getCurrentDimension();
         if (currentDimension == null) return DimensionRegistry.OVERWORLD;
         return currentDimension;
@@ -150,8 +149,7 @@ public class World {
         return isWater(block) || block == BlockRegistry.LAVA;
     }
 
-    @Nullable
-    public FluidState getFluidState(int blockStateId) {
+    public @Nullable FluidState getFluidState(int blockStateId) {
         return BLOCK_DATA.getFluidState(blockStateId);
     }
 
@@ -221,7 +219,7 @@ public class World {
         return blockStates;
     }
 
-    public static boolean isSpaceEmpty(final LocalizedCollisionBox cb) {
+    public boolean isSpaceEmpty(final LocalizedCollisionBox cb) {
         LongList blockPosList = getBlockPosLongListInCollisionBox(cb);
         for (int i = 0; i < blockPosList.size(); i++) {
             var blockPos = blockPosList.getLong(i);
@@ -233,7 +231,7 @@ public class World {
         return true;
     }
 
-    public static Optional<BlockPos> findSupportingBlockPos(final LocalizedCollisionBox cb) {
+    public Optional<BlockPos> findSupportingBlockPos(final LocalizedCollisionBox cb) {
         BlockPos supportingBlock = null;
         double dist = Double.MAX_VALUE;
         LongList blockPosList = getBlockPosLongListInCollisionBox(cb);
@@ -258,11 +256,11 @@ public class World {
         return Optional.ofNullable(supportingBlock);
     }
 
-    public static MutableVec3d getFluidFlow(int x, int y, int z) {
+    public MutableVec3d getFluidFlow(int x, int y, int z) {
         return getFluidFlow(getBlockState(x, y, z));
     }
 
-    public static MutableVec3d getFluidFlow(BlockState localBlockState) {
+    public MutableVec3d getFluidFlow(BlockState localBlockState) {
         FluidState fluidState = getFluidState(localBlockState.id());
         if (fluidState == null) return new MutableVec3d(0, 0, 0);
         float fluidHeight = getFluidHeight(fluidState);
@@ -313,23 +311,23 @@ public class World {
         return flowVec;
     }
 
-    public static float getFluidHeight(final FluidState fluidState) {
+    public float getFluidHeight(final @Nullable FluidState fluidState) {
         if (fluidState == null) return 0;
         return fluidState.amount() / 9.0f;
     }
 
-    public static boolean affectsFlow(FluidState inType, FluidState fluidState) {
+    public boolean affectsFlow(FluidState inType, @Nullable FluidState fluidState) {
         if (fluidState == null) return true;
         if (inType.water() && fluidState.water()) return true;
         if (inType.lava() && fluidState.lava()) return true;
         return false;
     }
 
-    public static FluidState getFluidState(final int x, final int y, final int z) {
+    public @Nullable FluidState getFluidState(final int x, final int y, final int z) {
         return getFluidState(getBlockStateId(x, y, z));
     }
 
-    public static boolean onClimbable(EntityLiving entity) {
+    public boolean onClimbable(EntityLiving entity) {
         Block inBlock = getBlock(MathHelper.floorI(entity.getX()), MathHelper.floorI(entity.getY()), MathHelper.floorI(entity.getZ()));
         if (inBlock.blockTags().contains(BlockTags.CLIMBABLE)) {
             return true;
@@ -342,7 +340,7 @@ public class World {
         return false;
     }
 
-    public static Position blockInteractionCenter(int x, int y, int z) {
+    public Position blockInteractionCenter(int x, int y, int z) {
         var blockState = getBlockState(x, y, z);
         var cbs = blockState.getLocalizedInteractionBoxes();
         if (cbs.isEmpty()) {
@@ -362,15 +360,15 @@ public class World {
         return new Position(avgX, avgY, avgZ);
     }
 
-    public static double getCurrentPlayerX() {
+    public double getCurrentPlayerX() {
         return MathHelper.round(CACHE.getPlayerCache().getX(), 5);
     }
 
-    public static double getCurrentPlayerY() {
+    public double getCurrentPlayerY() {
         return MathHelper.round(CACHE.getPlayerCache().getY(), 5);
     }
 
-    public static double getCurrentPlayerZ() {
+    public double getCurrentPlayerZ() {
         return MathHelper.round(CACHE.getPlayerCache().getZ(), 5);
     }
 }
