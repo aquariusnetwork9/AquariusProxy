@@ -10,6 +10,7 @@ import com.zenith.feature.player.World;
 import com.zenith.feature.player.raycast.RaycastHelper;
 
 import static com.zenith.Globals.BOT;
+import static com.zenith.Globals.CONFIG;
 
 public class RaycastCommand extends Command {
     @Override
@@ -31,11 +32,13 @@ public class RaycastCommand extends Command {
                     .addField("Hit", result.hit(), false)
                     .primaryColor();
                 if (result.isBlock()) {
-                    embed.addField("Block", result.block().block().toString(), false)
-                        .addField("Pos", result.block().x() + ", " + result.block().y() + ", " + result.block().z(), false)
-                        .addField("Direction", result.block().direction().name(), false);
-                    if (result.hit()) {
-                        embed.addField("State", World.getBlockState(result.block().x(), result.block().y(), result.block().z()).toString(), false);
+                    embed.addField("Block", result.block().block().toString(), false);
+                    if (CONFIG.discord.reportCoords) {
+                        embed.addField("Pos", ("||[" + result.block().x() + ", " + result.block().y() + ", " + result.block().z()) + "]||", false);
+                    }
+                    embed.addField("Direction", result.block().direction().name(), false);
+                    if (result.hit() && CONFIG.discord.reportCoords) {
+                        embed.addField("State", "||" + World.getBlockState(result.block().x(), result.block().y(), result.block().z()).toString() + "||", false);
                     }
                 } else if (result.isEntity()) {
                     var type = result.entity().entityType();
@@ -57,12 +60,14 @@ public class RaycastCommand extends Command {
                 c.getSource().getEmbed()
                     .title("Raycast Result")
                     .addField("Hit", result.hit(), false)
-                    .addField("Block", result.block().toString(), false)
-                    .addField("Pos", result.x() + ", " + result.y() + ", " + result.z(), false)
-                    .addField("Direction", result.direction().name(), false)
+                    .addField("Block", result.block().toString(), false);
+                if (CONFIG.discord.reportCoords) {
+                    c.getSource().getEmbed().addField("Pos", "||[ " + result.x() + ", " + result.y() + ", " + result.z() + "]||", false);
+                }
+                c.getSource().getEmbed().addField("Direction", result.direction().name(), false)
                     .primaryColor();
-                if (result.hit()) {
-                    c.getSource().getEmbed().addField("State", World.getBlockState(result.x(), result.y(), result.z()).toString(), false);
+                if (result.hit() && CONFIG.discord.reportCoords) {
+                    c.getSource().getEmbed().addField("State", "||" + World.getBlockState(result.x(), result.y(), result.z()).toString() + "||", false);
                 }
             }));
     }
