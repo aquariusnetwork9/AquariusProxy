@@ -288,6 +288,55 @@ public class InventoryCommand extends Command {
                 }
                 return OK;
             }))
+            .then(literal("click").then(argument("slot", integer(0, 100)).executes(c  -> {
+                if (!verifyAbleToDoInvActions(c.getSource().getEmbed())) return OK;
+                int slot = getInteger(c, "slot");
+                var container = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+                var accepted = INVENTORY.submit(InventoryActionRequest.builder()
+                        .owner(this)
+                        .actions(new ClickItem(container.getContainerId(), slot, ClickItemAction.LEFT_CLICK))
+                        .priority(INV_ACTION_PRIORITY)
+                        .build())
+                    .get();
+                if (accepted) {
+                    logInv();
+                    c.getSource().setNoOutput(true);
+                } else {
+                    c.getSource().getEmbed()
+                        .title("Failed")
+                        .description("Another inventory action has taken priority this tick, try again")
+                        .errorColor();
+                }
+                return OK;
+            })))
+            .then(literal("button").then(argument("buttonId", integer(0, 1000)).executes(c -> {
+                if (!verifyAbleToDoInvActions(c.getSource().getEmbed())) return OK;
+                if (getOpenContainerId() == 0) {
+                    c.getSource().getEmbed()
+                        .title("Error")
+                        .description("No open container to click button in. Use `b click right <x> <y> <z>` to open a container")
+                        .errorColor();
+                    return OK;
+                }
+                int buttonId = getInteger(c, "buttonId");
+                var container = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+                var accepted = INVENTORY.submit(InventoryActionRequest.builder()
+                        .owner(this)
+                        .actions(new ContainerButtonClick(container.getContainerId(), buttonId))
+                        .priority(INV_ACTION_PRIORITY)
+                        .build())
+                    .get();
+                if (accepted) {
+                    logInv();
+                    c.getSource().setNoOutput(true);
+                } else {
+                    c.getSource().getEmbed()
+                        .title("Failed")
+                        .description("Another inventory action has taken priority this tick, try again")
+                        .errorColor();
+                }
+                return OK;
+            })))
             .then(literal("actionDelayTicks").then(argument("ticks", integer(0, 100)).executes(c -> {
                 CONFIG.client.inventory.actionDelayTicks = getInteger(c, "ticks");
                 c.getSource().getEmbed()
