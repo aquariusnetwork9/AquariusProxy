@@ -114,7 +114,7 @@ public final class Bot extends ModuleUtils {
         }
     }
 
-    protected synchronized void requestMovement(final InputRequest request, final InputRequestFuture inputRequestFuture) {
+    synchronized void requestMovement(final InputRequest request, final InputRequestFuture inputRequestFuture) {
         var reqInput = request.input();
         if (reqInput != null) {
             movementInput.apply(reqInput);

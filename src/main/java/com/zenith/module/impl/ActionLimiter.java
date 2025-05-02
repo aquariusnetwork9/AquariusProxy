@@ -18,6 +18,8 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.Clientbound
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundMoveVehiclePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundTeleportEntityPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundForgetLevelChunkPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundLevelChunkWithLightPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.*;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClickPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundEditBookPacket;
@@ -55,6 +57,8 @@ public class ActionLimiter extends Module {
                 .inbound(ServerboundUseItemPacket.class, new ALUseItemHandler())
                 .inbound(ServerboundEditBookPacket.class, new ALEditBookHandler())
                 .outbound(ClientboundMoveVehiclePacket.class, new ALCMoveVehicleHandler())
+                .outbound(ClientboundForgetLevelChunkPacket.class, new ALForgetLevelChunkHandler())
+                .outbound(ClientboundLevelChunkWithLightPacket.class, new ALLevelChunkWithLightHandler())
                 .outbound(ClientboundCommandSuggestionsPacket.class, new ALCCommandSuggestionsHandler())
                 .outbound(ClientboundLoginPacket.class, new ALLoginHandler())
                 .outbound(ClientboundPlayerPositionPacket.class, new ALPlayerPositionHandler())
