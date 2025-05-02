@@ -31,13 +31,13 @@ public class CommandContext {
     }
 
     public static CommandContext createInGamePlayerContext(String input, ServerSession session) {
-        var context = create(input, CommandSource.IN_GAME_PLAYER);
+        var context = create(input, CommandSources.PLAYER);
         context.setInGamePlayerInfo(new InGamePlayerInfo(session));
         return context;
     }
 
     public static CommandContext createSpectatorContext(String input, ServerSession session) {
-        var context = create(input, CommandSource.SPECTATOR);
+        var context = create(input, CommandSources.SPECTATOR);
         context.setInGamePlayerInfo(new InGamePlayerInfo(session));
         return context;
     }

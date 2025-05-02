@@ -82,21 +82,6 @@ public class CommandOutputHelper {
             multiLineOutput.forEach(TERMINAL_LOG::info);
     }
 
-    public void logEmbedOutputToSource(CommandContext context, Embed embed) {
-        switch (context.getSource()) {
-            case DISCORD -> {
-                logEmbedOutputToDiscord(embed);
-            }
-            case TERMINAL -> {
-                logEmbedOutputToTerminal(embed);
-            }
-            case IN_GAME_PLAYER, SPECTATOR -> {
-                logEmbedOutputToTerminal(embed);
-                logEmbedOutputToInGame(embed, context.getInGamePlayerInfo().session());
-            }
-        }
-    }
-
     // intended for use in embed descriptions
     public static String playerListToString(final PlayerList playerList) {
         var entries = playerList.entries();

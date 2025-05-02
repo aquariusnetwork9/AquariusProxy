@@ -19,7 +19,7 @@ public class SpectatorEntityToggleCommand extends Command {
 
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
-        return command("entityToggle").requires(c -> Command.validateCommandSource(c, CommandSource.SPECTATOR)).executes(c -> {
+        return command("entityToggle").requires(c -> Command.validateCommandSource(c, CommandSources.SPECTATOR)).executes(c -> {
             var session = c.getSource().getInGamePlayerInfo().session();
             session.setShowSelfEntity(!session.isShowSelfEntity());
             if (session.isShowSelfEntity()) {

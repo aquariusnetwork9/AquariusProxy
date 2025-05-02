@@ -1,15 +1,21 @@
 package com.zenith.command.api;
 
-import lombok.Getter;
+import com.zenith.discord.Embed;
+import lombok.Data;
 
-@Getter
-public enum CommandSource {
-    TERMINAL("Terminal"),
-    DISCORD("Discord"),
-    IN_GAME_PLAYER("In-Game"),
-    SPECTATOR("Spectator");
+import java.util.function.Supplier;
+
+@Data
+public abstract class CommandSource {
     private final String name;
-    CommandSource(final String name) {
+    private final Supplier<String> prefixSupplier;
+
+    public CommandSource(final String name, final Supplier<String> prefixSupplier) {
         this.name = name;
+        this.prefixSupplier = prefixSupplier;
     }
+
+    public abstract boolean validateAccountOwner(CommandContext ctx);
+
+    public abstract void logEmbed(CommandContext ctx, Embed embed);
 }

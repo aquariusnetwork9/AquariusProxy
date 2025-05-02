@@ -1,7 +1,10 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.api.*;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import com.zenith.util.config.Config.Client.Extra.PearlLoader.Pearl;
 
@@ -87,7 +90,7 @@ public class PearlLoader extends Command {
                     if (pearl.id().equals(id)) {
                         BARITONE.rightClickBlock(pearl.x(), pearl.y(), pearl.z())
                             .addExecutedListener(f -> {
-                                CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                                c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
                                     .title("Pearl Loaded!")
                                     .addField("Pearl ID", pearl.id(), false)
                                     .successColor());

@@ -2,7 +2,7 @@ package com.zenith.network.server.handler.player;
 
 import com.zenith.command.api.CommandContext;
 import com.zenith.command.api.CommandOutputHelper;
-import com.zenith.command.api.CommandSource;
+import com.zenith.command.api.CommandSources;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
@@ -50,7 +50,7 @@ public class InGameCommandManager {
             }
             if (CONFIG.inGameCommands.logToDiscord && DISCORD.isRunning() && !commandContext.isSensitiveInput()) {
                 // will also log to terminal
-                CommandOutputHelper.logInputToDiscord(command, CommandSource.IN_GAME_PLAYER);
+                CommandOutputHelper.logInputToDiscord(command, CommandSources.PLAYER);
                 CommandOutputHelper.logEmbedOutputToDiscord(embed);
                 CommandOutputHelper.logMultiLineOutputToDiscord(commandContext.getMultiLineOutput());
             } else {
@@ -79,7 +79,7 @@ public class InGameCommandManager {
         }
         if (CONFIG.inGameCommands.logToDiscord && DISCORD.isRunning() && !commandContext.isSensitiveInput()) {
             // will also log to terminal
-            CommandOutputHelper.logInputToDiscord(message, CommandSource.SPECTATOR);
+            CommandOutputHelper.logInputToDiscord(message, CommandSources.SPECTATOR);
             CommandOutputHelper.logEmbedOutputToDiscord(embed);
             CommandOutputHelper.logMultiLineOutputToDiscord(commandContext.getMultiLineOutput());
         } else {

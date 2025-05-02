@@ -31,7 +31,7 @@ public class SpectatorSwapCommand extends Command {
 
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
-        return command("swap").requires(c -> Command.validateCommandSource(c, asList(CommandSource.IN_GAME_PLAYER, CommandSource.SPECTATOR)))
+        return command("swap").requires(c -> Command.validateCommandSource(c, asList(CommandSources.PLAYER, CommandSources.SPECTATOR)))
             .executes(c -> {
                 swap(c, false);
             })
@@ -42,7 +42,7 @@ public class SpectatorSwapCommand extends Command {
 
     private void swap(com.mojang.brigadier.context.CommandContext<CommandContext> c, boolean force) {
         ServerSession activePlayer = Proxy.getInstance().getActivePlayer();
-        if (c.getSource().getSource() == CommandSource.IN_GAME_PLAYER) {
+        if (c.getSource().getSource() == CommandSources.PLAYER) {
             var player = activePlayer;
             if (player == null) {
                 c.getSource().getEmbed()
@@ -60,7 +60,7 @@ public class SpectatorSwapCommand extends Command {
                 return;
             }
             player.transferToSpectator();
-        } else if (c.getSource().getSource() == CommandSource.SPECTATOR) {
+        } else if (c.getSource().getSource() == CommandSources.SPECTATOR) {
             var session = c.getSource().getInGamePlayerInfo().session();
             var spectatorProfile = session.getProfileCache().getProfile();
             c.getSource().setNoOutput(true);

@@ -12,7 +12,7 @@ public class DiscordCommandContext extends CommandContext {
     private final MessageReceivedEvent messageReceivedEvent;
 
     public DiscordCommandContext(final String input, Embed embedBuilder, List<String> multiLineOutput, final MessageReceivedEvent messageReceivedEvent) {
-        super(input, CommandSource.DISCORD, embedBuilder, multiLineOutput);
+        super(input, CommandSources.DISCORD, embedBuilder, multiLineOutput);
         this.messageReceivedEvent = messageReceivedEvent;
     }
 

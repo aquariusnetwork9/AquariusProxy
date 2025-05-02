@@ -60,7 +60,7 @@ public class ServerSwitcherCommand extends Command {
                     .title("Server List");
                 return OK;
             }))
-            .then(argument("name", wordWithChars()).requires(context -> validateCommandSource(context, CommandSource.IN_GAME_PLAYER)).executes(c -> {
+            .then(argument("name", wordWithChars()).requires(context -> validateCommandSource(context, CommandSources.PLAYER)).executes(c -> {
                 var name = getString(c, "name");
                 var server = CONFIG.server.extra.serverSwitcher.servers.stream()
                     .filter(s -> s.name().equalsIgnoreCase(name))

@@ -177,11 +177,11 @@ public class AuthCommand extends Command {
     }
 
     private boolean validateTerminalSource(CommandContext c) {
-        return Command.validateCommandSource(c, CommandSource.TERMINAL);
+        return Command.validateCommandSource(c, CommandSources.TERMINAL);
     }
 
     private boolean validateDiscordOrTerminalSource(CommandContext c) {
-        return Command.validateCommandSource(c, asList(CommandSource.TERMINAL, CommandSource.DISCORD));
+        return Command.validateCommandSource(c, asList(CommandSources.TERMINAL, CommandSources.DISCORD));
     }
 
     @Override

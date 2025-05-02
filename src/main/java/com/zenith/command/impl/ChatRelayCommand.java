@@ -53,7 +53,7 @@ public class ChatRelayCommand extends Command {
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
         return command("chatRelay")
-            .requires(c -> Command.validateCommandSource(c, asList(CommandSource.DISCORD, CommandSource.TERMINAL)))
+            .requires(c -> Command.validateCommandSource(c, asList(CommandSources.DISCORD, CommandSources.TERMINAL)))
             .then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.discord.chatRelay.enable = getToggle(c, "toggle");
                 if (CONFIG.discord.chatRelay.enable && CONFIG.discord.chatRelay.channelId.isEmpty()) {

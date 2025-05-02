@@ -35,7 +35,7 @@ public class SendMessageCommand extends Command {
             .then(argument("message", greedyString())
                       .executes(c -> {
                           final String message = c.getArgument("message", String.class);
-                          if (c.getSource().getSource() == CommandSource.IN_GAME_PLAYER) {
+                          if (c.getSource().getSource() == CommandSources.PLAYER) {
                               var session = Proxy.getInstance().getCurrentPlayer().get();
                               if (session == null) return ERROR;
                               var senderName = session.getName();
@@ -43,7 +43,7 @@ public class SendMessageCommand extends Command {
                               EVENT_BUS.postAsync(new PrivateMessageSendEvent(senderUUID, senderName, message));
                               c.getSource().setSensitiveInput(true);
                               c.getSource().setNoOutput(true);
-                          } else if (c.getSource().getSource() == CommandSource.SPECTATOR) {
+                          } else if (c.getSource().getSource() == CommandSources.SPECTATOR) {
                               var session = c.getSource().getInGamePlayerInfo().session();
                               if (CONFIG.server.spectator.spectatorPublicChatEnabled) {
                                   Proxy.getInstance().getClient().sendAsync(new ServerboundChatPacket(message));

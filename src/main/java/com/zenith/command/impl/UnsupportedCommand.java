@@ -41,7 +41,7 @@ public class UnsupportedCommand extends Command {
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
         return command("unsupported")
-            .requires(c -> Command.validateCommandSource(c, CommandSource.TERMINAL))
+            .requires(c -> Command.validateCommandSource(c, CommandSources.TERMINAL))
             .then(literal("whitelist").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.server.extra.whitelist.enable = getToggle(c, "toggle");
                 c.getSource().getEmbed()

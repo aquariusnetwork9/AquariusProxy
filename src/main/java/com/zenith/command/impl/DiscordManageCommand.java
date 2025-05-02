@@ -52,7 +52,7 @@ public class DiscordManageCommand extends Command {
     public LiteralArgumentBuilder<CommandContext> register() {
         return command("discord")
             .requires(Command::validateAccountOwner)
-            .requires(c -> Command.validateCommandSource(c, asList(CommandSource.DISCORD, CommandSource.TERMINAL)))
+            .requires(c -> Command.validateCommandSource(c, asList(CommandSources.DISCORD, CommandSources.TERMINAL)))
             .then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.discord.enable = getToggle(c, "toggle");
                 c.getSource().getEmbed()
@@ -196,7 +196,7 @@ public class DiscordManageCommand extends Command {
     }
 
     private static boolean validateTerminalSource(CommandContext c) {
-        return Command.validateCommandSource(c, CommandSource.TERMINAL);
+        return Command.validateCommandSource(c, CommandSources.TERMINAL);
     }
 
     @Override

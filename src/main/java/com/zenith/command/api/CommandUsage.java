@@ -7,7 +7,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.zenith.Globals.COMMAND;
 import static com.zenith.Globals.DEFAULT_LOG;
 
 @Getter
@@ -112,7 +111,7 @@ public class CommandUsage {
         var result = this.description
             + "\n**Commands**"
             + usageLines.stream()
-            .map(line -> "\n" + COMMAND.getCommandPrefix(commandSource) + name + " " + line)
+            .map(line -> "\n" + commandSource.getPrefixSupplier().get() + name + " " + line)
             .collect(Collectors.joining());
         result += "\n\n[Commands Wiki](https://link.2b2t.vc/0)";
         if (isTooLongForDiscordDescription(result)) {
@@ -126,7 +125,7 @@ public class CommandUsage {
     public String mediumSerialize(CommandSource commandSource) {
         var result = "**Commands**"
             + usageLines.stream()
-            .map(line -> "\n" + COMMAND.getCommandPrefix(commandSource) + name + " " + line)
+            .map(line -> "\n" + commandSource.getPrefixSupplier().get() + name + " " + line)
             .collect(Collectors.joining());
         result += "\n\n[Commands Wiki](https://link.2b2t.vc/0)";
         if (isTooLongForDiscordDescription(result)) {
@@ -138,11 +137,11 @@ public class CommandUsage {
 
     // serializes aliases only
     public String shortSerialize(CommandSource commandSource) {
-        String result = COMMAND.getCommandPrefix(commandSource) + this.name;
+        String result = commandSource.getPrefixSupplier().get() + this.name;
         if (!aliases.isEmpty()) {
             result += aliases.stream()
-                    .collect(Collectors.joining(" / " + COMMAND.getCommandPrefix(commandSource),
-                            " / " + COMMAND.getCommandPrefix(commandSource),
+                    .collect(Collectors.joining(" / " + commandSource.getPrefixSupplier().get(),
+                            " / " + commandSource.getPrefixSupplier().get(),
                             ""));
         }
         result += "\n\n[Commands Wiki](https://link.2b2t.vc/0)";
@@ -150,11 +149,11 @@ public class CommandUsage {
     }
 
     public String shortSerializeButNoWikiFooter(CommandSource commandSource) {
-        String result = COMMAND.getCommandPrefix(commandSource) + this.name;
+        String result = commandSource.getPrefixSupplier().get() + this.name;
         if (!aliases.isEmpty()) {
             result += aliases.stream()
-                .collect(Collectors.joining(" / " + COMMAND.getCommandPrefix(commandSource),
-                                            " / " + COMMAND.getCommandPrefix(commandSource),
+                .collect(Collectors.joining(" / " + commandSource.getPrefixSupplier().get(),
+                                            " / " + commandSource.getPrefixSupplier().get(),
                                             ""));
         }
         return result;

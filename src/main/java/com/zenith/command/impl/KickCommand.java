@@ -34,7 +34,7 @@ public class KickCommand extends Command {
     public LiteralArgumentBuilder<CommandContext> register() {
         return command("kick").requires(Command::validateAccountOwner)
             .executes(c -> {
-                final boolean kickCurrentPlayer = c.getSource().getSource() != CommandSource.IN_GAME_PLAYER;
+                final boolean kickCurrentPlayer = c.getSource().getSource() != CommandSources.PLAYER;
                 final List<String> kickedPlayers = new ArrayList<>();
                 var connections = Proxy.getInstance().getActiveConnections().getArray();
                 for (int i = 0; i < connections.length; i++) {

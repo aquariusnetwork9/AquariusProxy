@@ -24,7 +24,7 @@ public class SpectatorPlayerCamCommand extends Command {
 
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
-        return command("playerCam").requires(c -> Command.validateCommandSource(c, CommandSource.SPECTATOR)).executes(c -> {
+        return command("playerCam").requires(c -> Command.validateCommandSource(c, CommandSources.SPECTATOR)).executes(c -> {
             var session = c.getSource().getInGamePlayerInfo().session();
             final Entity existingTarget = session.getCameraTarget();
             if (existingTarget != null) {

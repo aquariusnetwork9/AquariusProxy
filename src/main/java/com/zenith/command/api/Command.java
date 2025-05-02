@@ -8,18 +8,12 @@ import com.zenith.command.brigadier.CaseInsensitiveLiteralArgumentBuilder;
 import com.zenith.command.brigadier.EnumStringArgumentType;
 import com.zenith.command.brigadier.ZRequiredArgumentBuilder;
 import com.zenith.discord.Embed;
-import com.zenith.network.server.ServerSession;
-import com.zenith.util.MentionUtil;
-import net.dv8tion.jda.api.entities.ISnowflake;
-import org.geysermc.mcprotocollib.auth.GameProfile;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
 import java.util.function.Predicate;
 
-import static com.zenith.Globals.*;
+import static com.zenith.Globals.DEFAULT_LOG;
 
 public abstract class Command {
     public static <T> ZRequiredArgumentBuilder<CommandContext, T> argument(String name, ArgumentType<T> type) {
@@ -32,11 +26,7 @@ public abstract class Command {
 
     public static boolean validateAccountOwner(final CommandContext context) {
         try {
-            final boolean allowed = switch (context.getSource()) {
-                case DISCORD -> validateAccountOwnerDiscord(context);
-                case TERMINAL -> true;
-                case IN_GAME_PLAYER,SPECTATOR -> validatePlayerIsAccountOwner(context);
-            };
+            var allowed = context.getSource().validateAccountOwner(context);
             if (!allowed) {
                 context.getEmbed()
                     .title("Not Authorized!")
@@ -47,59 +37,6 @@ public abstract class Command {
             DEFAULT_LOG.error("Error validating command account owner authorization", e);
             return false;
         }
-    }
-
-    private static boolean validatePlayerIsAccountOwner(final CommandContext context) {
-        final ServerSession currentPlayer = context.getInGamePlayerInfo().session();
-        if (currentPlayer == null) return false;
-        final GameProfile playerProfile = currentPlayer.getProfileCache().getProfile();
-        if (playerProfile == null) return false;
-        final UUID playerUUID = playerProfile.getId();
-        if (playerUUID == null) return false;
-        boolean allowed;
-        if (CONFIG.inGameCommands.allowWhitelistedToUseAccountOwnerCommands) {
-            allowed = PLAYER_LISTS.getWhitelist().contains(playerUUID);
-        } else {
-            final GameProfile proxyProfile = CACHE.getProfileCache().getProfile();
-            if (proxyProfile == null) return false;
-            final UUID proxyUUID = proxyProfile.getId();
-            if (proxyUUID == null) return false;
-            allowed = playerUUID.equals(proxyUUID); // we have to be logged in with the owning MC account
-        }
-        if (!allowed) {
-            context.getEmbed()
-                .addField("Error",
-                    "Player: " + playerProfile.getName()
-                        + " is not authorized to execute this command! "
-                        + (CONFIG.inGameCommands.allowWhitelistedToUseAccountOwnerCommands ? "You must be whitelisted!" : "You must be logged in with the proxy's MC account!"),
-                    false);
-        }
-        return allowed;
-    }
-
-    private static boolean validateAccountOwnerDiscord(final CommandContext context) {
-        final DiscordCommandContext discordCommandContext = (DiscordCommandContext) context;
-        var event = discordCommandContext.getMessageReceivedEvent();
-        final boolean hasAccountOwnerRole = Optional.ofNullable(event.getMember())
-            .orElseThrow(() -> new RuntimeException("Message does not have a valid member"))
-            .getRoles()
-            .stream()
-            .map(ISnowflake::getId)
-            .anyMatch(roleId -> roleId.equals(CONFIG.discord.accountOwnerRoleId));
-        if (!hasAccountOwnerRole) {
-            String accountOwnerRoleMention = "";
-            try {
-                accountOwnerRoleMention = MentionUtil.forRole(CONFIG.discord.accountOwnerRoleId);
-            } catch (final Exception e) {
-                // fall through
-            }
-            context.getEmbed()
-                .addField("Error",
-                          "User: " + Optional.ofNullable(event.getMember()).map(m -> m.getUser().getName()).orElse("Unknown")
-                              + " is not authorized to execute this command! "
-                              + "You must have the account owner role: " + accountOwnerRoleMention, false);
-        }
-        return hasAccountOwnerRole;
     }
 
     public static boolean validateCommandSource(final CommandContext context, final List<CommandSource> allowedSources) {

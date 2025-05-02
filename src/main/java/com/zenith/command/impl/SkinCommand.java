@@ -43,7 +43,7 @@ public class SkinCommand extends Command {
 
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
-        return command("skin").requires(c -> Command.validateCommandSource(c, CommandSource.IN_GAME_PLAYER))
+        return command("skin").requires(c -> Command.validateCommandSource(c, CommandSources.PLAYER))
             .then(argument("playerName", word()).executes(c -> {
                 var playerName = c.getArgument("playerName", String.class);
                 c.getSource().setNoOutput(true);

@@ -3,7 +3,10 @@ package com.zenith.command.impl;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.cache.data.entity.EntityPlayer;
-import com.zenith.command.api.*;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockPos;
@@ -72,7 +75,7 @@ public class PathfinderCommand extends Command {
                     int z = MathHelper.floorI(vec2.getY());
                     BARITONE.pathTo(x, z)
                         .addExecutedListener(f -> {
-                            CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                            c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
                                 .title("Pathing Completed!")
                                 .addField("Pos", "||[" + x + ", " + z + "]||")
                                 .primaryColor());
@@ -89,7 +92,7 @@ public class PathfinderCommand extends Command {
                     int z = pos.z();
                     BARITONE.pathTo(x, y, z)
                         .addExecutedListener(f -> {
-                            CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                            c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
                                 .title("Pathing Completed!")
                                 .addField("Pos", "||[" + x + ", " + y + ", " + z + "]||")
                                 .primaryColor());
@@ -149,7 +152,7 @@ public class PathfinderCommand extends Command {
                 BARITONE.thisWay(dist)
                     .addExecutedListener(f -> {
                         BlockPos pos = CACHE.getPlayerCache().getThePlayer().blockPos();
-                        CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                        c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
                             .title("Pathing Completed!")
                             .addField("Pos", "||[" + pos.x() + ", " + pos.y() + ", " + pos.z() + "]||")
                             .primaryColor());
@@ -173,7 +176,7 @@ public class PathfinderCommand extends Command {
                 BARITONE.getTo(block)
                     .addExecutedListener(f -> {
                         BlockPos pos = CACHE.getPlayerCache().getThePlayer().blockPos();
-                        CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                        c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
                             .title("At Block!")
                             .addField("Player Pos", "||[" + pos.x() + ", " + pos.y() + ", " + pos.z() + "]||")
                             .primaryColor());
@@ -210,7 +213,7 @@ public class PathfinderCommand extends Command {
                         int z = pos.z();
                         BARITONE.leftClickBlock(x, y, z)
                             .addExecutedListener(f -> {
-                                CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                                c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
                                     .title("Block Left Clicked!")
                                     .addField("Target", "||[" + x + ", " + y + ", " + z + "]||")
                                     .primaryColor());
@@ -246,7 +249,7 @@ public class PathfinderCommand extends Command {
                             }
                             BARITONE.leftClickEntity(entityOptional.get())
                                 .addExecutedListener(f -> {
-                                    CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                                    c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
                                         .title("Entity Left Clicked!")
                                         .addField("Target", entityOptional.get().getEntityType() + " ||[" + entityOptional.get().position() + "]||")
                                         .primaryColor());
@@ -265,7 +268,7 @@ public class PathfinderCommand extends Command {
                         int z = pos.z();
                         BARITONE.rightClickBlock(x, y, z)
                             .addExecutedListener(f -> {
-                                CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                                c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
                                     .title("Block Right Clicked!")
                                     .addField("Target", "||[" + x + ", " + y + ", " + z + "]||")
                                     .primaryColor());
@@ -301,7 +304,7 @@ public class PathfinderCommand extends Command {
                             }
                             BARITONE.rightClickEntity(entityOptional.get())
                                 .addExecutedListener(f -> {
-                                    CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                                    c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
                                         .title("Entity Right Clicked!")
                                         .addField("Target", entityOptional.get().getEntityType() + " ||[" + entityOptional.get().position() + "]||")
                                         .primaryColor());

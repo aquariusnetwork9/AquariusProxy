@@ -29,7 +29,7 @@ public class SpectatorEntityCommand extends Command {
 
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
-        return command("spectatorEntity").requires(c -> Command.validateCommandSource(c, CommandSource.SPECTATOR))
+        return command("spectatorEntity").requires(c -> Command.validateCommandSource(c, CommandSources.SPECTATOR))
             .executes(c -> {
                 var session = c.getSource().getInGamePlayerInfo().session();
                 session.sendAsync(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>Entity id's: " + String.join(", ", SpectatorEntityRegistry.getEntityIdentifiers())), false));
