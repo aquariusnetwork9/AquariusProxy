@@ -94,7 +94,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IBariton
                 .filter(pos -> pos.x() == ctx.playerFeet().x() && pos.z() == ctx.playerFeet().z())
                 .filter(pos -> pos.y() >= ctx.playerFeet().y())
 //                .filter(pos -> !(BLOCK_DATA.isAir(BlockStateInterface.get(pos).block()))) // after breaking a block, it takes mineGoalUpdateInterval ticks for it to actually update this list =(
-                .min(Comparator.comparingDouble(ctx.playerFeet()::squaredDistance));
+                .min(Comparator.comparingDouble(ctx.playerFeet().above()::squaredDistance));
         baritone.getInputOverrideHandler().clearAllKeys();
         if (shaft.isPresent() && ctx.player().isOnGround()) {
             BlockPos pos = shaft.get();
@@ -401,7 +401,11 @@ public final class MineProcess extends BaritoneProcessHelper implements IBariton
     }
 
     public static boolean plausibleToBreak(CalculationContext ctx, BlockPos pos) {
-        if (MovementHelper.getMiningDurationTicks(ctx, pos.x(), pos.y(), pos.z(), BlockStateInterface.getId(pos), true) >= COST_INF) {
+        var state = BlockStateInterface.getId(pos);
+        if (MovementHelper.getMiningDurationTicks(ctx, pos.x(), pos.y(), pos.z(), state, true) >= COST_INF) {
+            return false;
+        }
+        if (MovementHelper.avoidBreaking(pos.x(), pos.y(), pos.z(), state)) {
             return false;
         }
 
