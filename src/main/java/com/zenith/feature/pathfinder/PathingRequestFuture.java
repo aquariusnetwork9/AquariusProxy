@@ -11,6 +11,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
+import static com.zenith.Globals.DEFAULT_LOG;
+
 public class PathingRequestFuture extends RequestFuture {
     @Getter @Setter
     private volatile @Nullable Goal goal = null;
@@ -27,7 +29,13 @@ public class PathingRequestFuture extends RequestFuture {
 
     public synchronized void notifyListeners() {
         if (executedListeners.isEmpty()) return;
-        executedListeners.forEach(listener -> listener.accept(this));
+        executedListeners.forEach(listener -> {
+            try {
+                listener.accept(this);
+            } catch (Exception e) {
+                DEFAULT_LOG.error("Error while executing pathing request future listener", e);
+            }
+        });
     }
 
     public static PathingRequestFuture wrap(RequestFuture future) {

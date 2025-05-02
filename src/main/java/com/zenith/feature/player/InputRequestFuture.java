@@ -9,6 +9,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
+import static com.zenith.Globals.DEFAULT_LOG;
+
 public class InputRequestFuture extends RequestFuture {
     @Getter @Setter
     private volatile ClickResult clickResult = ClickResult.None.INSTANCE;
@@ -29,7 +31,13 @@ public class InputRequestFuture extends RequestFuture {
 
     public synchronized void notifyListeners() {
         if (executedListeners.isEmpty()) return;
-        executedListeners.forEach(listener -> listener.accept(this));
+        executedListeners.forEach(listener -> {
+            try {
+                listener.accept(this);
+            } catch (Exception e) {
+                DEFAULT_LOG.error("Error while executing input request future listener", e);
+            }
+        });
     }
 
     public static InputRequestFuture wrap(RequestFuture future) {
