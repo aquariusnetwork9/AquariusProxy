@@ -5,6 +5,7 @@ import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.feature.pathfinder.PathingCommand;
 import com.zenith.feature.pathfinder.PathingCommandType;
+import com.zenith.feature.pathfinder.PathingRequestFuture;
 import com.zenith.feature.pathfinder.goals.Goal;
 import com.zenith.feature.pathfinder.goals.GoalComposite;
 import com.zenith.feature.pathfinder.goals.GoalNear;
@@ -27,9 +28,36 @@ public final class FollowProcess extends BaritoneProcessHelper implements IBarit
 
     private final Timer cooldownTimer = Timers.tickTimer();
     private @Nullable FollowTarget followTarget;
+    private @Nullable PathingRequestFuture future;
 
     public FollowProcess(Baritone baritone) {
         super(baritone);
+    }
+
+    public PathingRequestFuture follow(Predicate<EntityLiving> filter) {
+        PATH_LOG.info("Following entity predicate");
+        var followTarget = new EntityPredicateTarget(filter);
+        return follow(followTarget);
+    }
+
+    public PathingRequestFuture follow(EntityLiving entity) {
+        if (entity instanceof EntityPlayer player) {
+            var playerName = CACHE.getTabListCache().get(player.getUuid())
+                .map(PlayerListEntry::getName)
+                .orElse("Player ["+player.getUuid() + "]");
+            PATH_LOG.info("Following player: {}", playerName);
+        } else {
+            PATH_LOG.info("Following entity: {}", entity);
+        }
+        var followTarget = new SingleEntityTarget(entity);
+        return follow(followTarget);
+    }
+
+    public PathingRequestFuture follow(FollowTarget target) {
+        onLostControl();
+        this.followTarget = target;
+        this.future = new PathingRequestFuture();
+        return this.future;
     }
 
     @Override
@@ -57,29 +85,17 @@ public final class FollowProcess extends BaritoneProcessHelper implements IBarit
 
     @Override
     public void onLostControl() {
+        if (future != null && !future.isCompleted()) {
+            future.complete(true);
+            future.notifyListeners();
+        }
         followTarget = null;
+        future = null;
     }
 
     @Override
     public String displayName0() {
         return "Following " + followTarget;
-    }
-
-    public void follow(Predicate<EntityLiving> filter) {
-        PATH_LOG.info("Following entity predicate");
-        this.followTarget = new EntityPredicateTarget(filter);
-    }
-
-    public void follow(EntityLiving entity) {
-        if (entity instanceof EntityPlayer player) {
-            var playerName = CACHE.getTabListCache().get(player.getUuid())
-                .map(PlayerListEntry::getName)
-                .orElse("Player ["+player.getUuid() + "]");
-            PATH_LOG.info("Following player: {}", playerName);
-        } else {
-            PATH_LOG.info("Following entity: {}", entity);
-        }
-        this.followTarget = new SingleEntityTarget(entity);
     }
 
     /**

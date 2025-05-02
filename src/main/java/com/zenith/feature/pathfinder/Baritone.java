@@ -3,7 +3,6 @@ package com.zenith.feature.pathfinder;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.zenith.Proxy;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.event.client.ClientBotTick;
 import com.zenith.feature.pathfinder.behavior.InventoryBehavior;
@@ -40,7 +39,7 @@ import static com.zenith.Globals.*;
  */
 
 @Data
-public class Baritone {
+public class Baritone implements BaritoneAPI {
     public static final int MOVEMENT_PRIORITY = 200;
     private final PathingBehavior pathingBehavior = new PathingBehavior(this);
     private final InputOverrideHandler inputOverrideHandler = new InputOverrideHandler(this);
@@ -86,81 +85,85 @@ public class Baritone {
         return activeGoal != null && activeGoal.equals(goal);
     }
 
-    public void pathTo(int x, int z) {
-        pathTo(new GoalXZ(x, z));
+    @Override
+    public PathingRequestFuture pathTo(int x, int z) {
+        return pathTo(new GoalXZ(x, z));
     }
 
-    public void pathTo(@NonNull GoalXZ goalXZ) {
-        inEventLoop(() -> getCustomGoalProcess().setGoalAndPath(goalXZ));
+    @Override
+    public PathingRequestFuture pathTo(int x, int y, int z) {
+        return pathTo(new GoalBlock(x, y, z));
     }
 
-    public void pathTo(int x, int y, int z) {
-        pathTo(new GoalBlock(x, y, z));
+    @Override
+    public PathingRequestFuture pathTo(@NonNull Goal goal) {
+        return getCustomGoalProcess().setGoalAndPath(goal);
     }
 
-    public void pathTo(@NonNull GoalBlock goalBlock) {
-        inEventLoop(() -> getCustomGoalProcess().setGoalAndPath(goalBlock));
+    @Override
+    public PathingRequestFuture thisWay(final int dist) {
+        Vector3d vector3d = MathHelper.calculateRayEndPos(
+            CACHE.getPlayerCache().getX(),
+            CACHE.getPlayerCache().getY(),
+            CACHE.getPlayerCache().getZ(),
+            CACHE.getPlayerCache().getYaw(),
+            0,
+            dist
+        );
+        return pathTo(MathHelper.floorI(vector3d.getX()), MathHelper.floorI(vector3d.getZ()));
     }
 
-    public void thisWay(final int dist) {
-        inEventLoop(() -> {
-            Vector3d vector3d = MathHelper.calculateRayEndPos(
-                CACHE.getPlayerCache().getX(),
-                CACHE.getPlayerCache().getY(),
-                CACHE.getPlayerCache().getZ(),
-                CACHE.getPlayerCache().getYaw(),
-                0,
-                dist
-            );
-            pathTo(MathHelper.floorI(vector3d.getX()), MathHelper.floorI(vector3d.getZ()));
-        });
+    @Override
+    public PathingRequestFuture getTo(final Block block) {
+        return getGetToBlockProcess().getToBlock(block);
     }
 
-    public void getTo(final Block block) {
-        inEventLoop(() -> getGetToBlockProcess().getToBlock(block));
+    @Override
+    public PathingRequestFuture mine(Block... blocks) {
+        return getMineProcess().mine(blocks);
     }
 
-    public void mine(Block... blocks) {
-        inEventLoop(() -> getMineProcess().mine(blocks));
+    @Override
+    public PathingRequestFuture follow(Predicate<EntityLiving> entityPredicate) {
+        return getFollowProcess().follow(entityPredicate);
     }
 
-    public void follow(Predicate<EntityLiving> entityPredicate) {
-        inEventLoop(() -> getFollowProcess().follow(entityPredicate));
+    @Override
+    public PathingRequestFuture follow(EntityLiving target) {
+        return getFollowProcess().follow(target);
     }
 
-    public void follow(EntityLiving target) {
-        inEventLoop(() -> getFollowProcess().follow(target));
+    @Override
+    public PathingRequestFuture leftClickBlock(int x, int y, int z) {
+        return getInteractWithProcess().leftClickBlock(x, y, z);
     }
 
-    public void leftClickBlock(int x, int y, int z) {
-        inEventLoop(() -> getInteractWithProcess().leftClickBlock(x, y, z));
+    @Override
+    public PathingRequestFuture rightClickBlock(int x, int y, int z) {
+        return getInteractWithProcess().rightClickBlock(x, y, z);
     }
 
-    public void rightClickBlock(int x, int y, int z) {
-        inEventLoop(() -> getInteractWithProcess().rightClickBlock(x, y, z));
+    @Override
+    public PathingRequestFuture leftClickEntity(EntityLiving entity) {
+        return getInteractWithProcess().leftClickEntity(entity);
     }
 
-    public void leftClickEntity(EntityLiving entity) {
-        inEventLoop(() -> getInteractWithProcess().leftClickEntity(entity));
+    @Override
+    public PathingRequestFuture rightClickEntity(EntityLiving entity) {
+        return getInteractWithProcess().rightClickEntity(entity);
     }
 
-    public void rightClickEntity(EntityLiving entity) {
-        inEventLoop(() -> getInteractWithProcess().rightClickEntity(entity));
-    }
-
-    public void goal(@NonNull Goal goal) {
-        inEventLoop(() -> getCustomGoalProcess().setGoalAndPath(goal));
-    }
-
+    @Override
     public void stop() {
-        inEventLoop(() -> getPathingBehavior().cancelEverything());
+        getPathingBehavior().cancelEverything();
     }
 
+    @Override
     public @Nullable Goal currentGoal() {
         return pathingBehavior.getGoal();
     }
 
-    public void onClientBotTick(ClientBotTick event) {
+    private void onClientBotTick(ClientBotTick event) {
         if (!CACHE.getPlayerCache().isAlive()) return;
         if (CACHE.getChunkCache().getCache().size() < 8) return;
         if (!teleportDelayTimer.tick(CONFIG.client.extra.pathfinder.teleportDelayMs, false)) return;
@@ -187,28 +190,19 @@ public class Baritone {
         }
     }
 
-    public void onClientBotTickPost(ClientBotTick event) {
+    private void onClientBotTickPost(ClientBotTick event) {
         pathingControlManager.postTick();
     }
 
-    public void onClientBotTickStopped(ClientBotTick.Stopped event) {
+    private void onClientBotTickStopped(ClientBotTick.Stopped event) {
         getPathingBehavior().cancelEverything();
     }
 
-    public void onClientBotTickStarting(ClientBotTick.Starting event) {
+    private void onClientBotTickStarting(ClientBotTick.Starting event) {
         getPathingBehavior().cancelEverything();
     }
 
     public void onPlayerPosRotate() {
         teleportDelayTimer.reset();
-    }
-
-    public void inEventLoop(Runnable runnable) {
-        var client = Proxy.getInstance().getClient();
-        if (client == null) {
-            runnable.run();
-            return;
-        }
-        client.executeInEventLoop(runnable);
     }
 }

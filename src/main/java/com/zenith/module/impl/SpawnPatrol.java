@@ -272,7 +272,7 @@ public class SpawnPatrol extends Module {
             pathRandom();
         } else {
             info("Pathing to goal: {}", goal);
-            BARITONE.goal(goal);
+            BARITONE.pathTo(goal);
         }
     }
 
