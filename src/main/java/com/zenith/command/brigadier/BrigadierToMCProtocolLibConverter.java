@@ -125,6 +125,18 @@ public class BrigadierToMCProtocolLibConverter {
                     parser = CommandParser.INTEGER;
                     properties = new IntegerProperties(it.getMinimum(), it.getMaximum());
                 }
+                case BlockPosArgument it -> {
+                    parser = CommandParser.BLOCK_POS;
+                }
+                case RotationArgument it -> {
+                    parser = CommandParser.ROTATION;
+                }
+                case Vec2Argument it -> {
+                    parser = CommandParser.VEC2;
+                }
+                case Vec3Argument it -> {
+                    parser = CommandParser.VEC3;
+                }
                 default -> {}
             }
         }

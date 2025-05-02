@@ -10,6 +10,7 @@ import com.zenith.mc.block.BlockPos;
 import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.entity.EntityData;
 import com.zenith.mc.entity.EntityRegistry;
+import com.zenith.util.math.MathHelper;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -21,10 +22,14 @@ import static com.mojang.brigadier.arguments.FloatArgumentType.getFloat;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.zenith.Globals.*;
+import static com.zenith.command.brigadier.BlockPosArgument.blockPos;
+import static com.zenith.command.brigadier.BlockPosArgument.getBlockPos;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
+import static com.zenith.command.brigadier.Vec2Argument.getVec2;
+import static com.zenith.command.brigadier.Vec2Argument.vec2;
 import static com.zenith.discord.DiscordBot.escape;
 
 public class PathfinderCommand extends Command {
@@ -60,40 +65,40 @@ public class PathfinderCommand extends Command {
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
         return command("pathfinder")
-            .then(literal("goto").then(argument("x", integer())
-                   .then(argument("z", integer()).executes(c -> {
-                        int x = getInteger(c, "x");
-                        int z = getInteger(c, "z");
-                        BARITONE.pathTo(x, z)
-                            .addExecutedListener(f -> {
-                                CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
-                                    .title("Pathing Completed!")
-                                    .addField("Pos", "||[" + x + ", " + z + "]||")
-                                    .primaryColor());
-                            });
-                        c.getSource().getEmbed()
-                            .title("Pathing")
-                            .addField("Goal", x + ", " + z, false)
-                            .primaryColor();
-                        return OK;
-                    }))
-                   .then(argument("y", integer()).then(argument("z", integer()).executes(c -> {
-                       int x = getInteger(c, "x");
-                       int y = getInteger(c, "y");
-                       int z = getInteger(c, "z");
-                       BARITONE.pathTo(x, y, z)
-                           .addExecutedListener(f -> {
-                               CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
-                                   .title("Pathing Completed!")
-                                   .addField("Pos", "||[" + x + ", " + y + ", " + z + "]||")
-                                   .primaryColor());
-                           });
-                       c.getSource().getEmbed()
-                           .title("Pathing")
-                           .addField("Goal", x + ", " + y + ", " + z, false)
-                           .primaryColor();
-                       return OK;
-                   })))))
+            .then(literal("goto")
+                .then(argument("xz", vec2()).executes(c -> {
+                    var vec2 = getVec2(c, "xz");
+                    int x = MathHelper.floorI(vec2.getX());
+                    int z = MathHelper.floorI(vec2.getY());
+                    BARITONE.pathTo(x, z)
+                        .addExecutedListener(f -> {
+                            CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                                .title("Pathing Completed!")
+                                .addField("Pos", "||[" + x + ", " + z + "]||")
+                                .primaryColor());
+                        });
+                    c.getSource().getEmbed()
+                        .title("Pathing")
+                        .addField("Goal", x + ", " + z, false)
+                        .primaryColor();
+                }))
+                .then(argument("xyz", blockPos()).executes(c -> {
+                    var pos = getBlockPos(c, "xyz");
+                    int x = pos.x();
+                    int y = pos.y();
+                    int z = pos.z();
+                    BARITONE.pathTo(x, y, z)
+                        .addExecutedListener(f -> {
+                            CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                                .title("Pathing Completed!")
+                                .addField("Pos", "||[" + x + ", " + y + ", " + z + "]||")
+                                .primaryColor());
+                        });
+                    c.getSource().getEmbed()
+                        .title("Pathing")
+                        .addField("Goal", x + ", " + y + ", " + z, false)
+                        .primaryColor();
+                })))
             .then(literal("stop").executes(c -> {
                 BARITONE.stop();
                 c.getSource().getEmbed()
@@ -103,42 +108,42 @@ public class PathfinderCommand extends Command {
                 return OK;
             }))
             .then(literal("follow")
-                      .executes(c -> {
-                            BARITONE.follow((e) -> e instanceof EntityPlayer);
-                            c.getSource().getEmbed()
-                                .title("Following")
-                                .primaryColor();
-                        })
-                      .then(argument("playerName", wordWithChars()).executes(c -> {
-                          String playerName = getString(c, "playerName");
-                          CACHE.getEntityCache().getPlayers().values().stream()
-                              .filter(e -> CACHE.getTabListCache()
-                                  .get(e.getUuid())
-                                  .filter(p -> p.getName().equalsIgnoreCase(playerName))
-                                  .isPresent())
-                              .findFirst()
-                              .ifPresentOrElse(player -> {
-                                       BARITONE.follow(player);
-                                       c.getSource().getEmbed()
-                                           .title("Following")
-                                           .addField("Player", escape(playerName), false)
-                                           .primaryColor();
-                                   },
-                                   () -> c.getSource().getEmbed()
-                                       .title("Error")
-                                       .description("Player not found: " + playerName)
-                                       .errorColor());
-                          return OK;
-                      }))
-                      .then(literal("radius").then(argument("radius", integer()).executes(c -> {
-                          int radius = getInteger(c, "radius");
-                          CONFIG.client.extra.pathfinder.followRadius = radius;
-                          c.getSource().getEmbed()
-                              .title("Following")
-                              .addField("Radius", radius, false)
-                              .primaryColor();
-                          return OK;
-                      }))))
+                .executes(c -> {
+                    BARITONE.follow((e) -> e instanceof EntityPlayer);
+                    c.getSource().getEmbed()
+                        .title("Following")
+                        .primaryColor();
+                })
+                .then(argument("playerName", wordWithChars()).executes(c -> {
+                    String playerName = getString(c, "playerName");
+                    CACHE.getEntityCache().getPlayers().values().stream()
+                        .filter(e -> CACHE.getTabListCache()
+                            .get(e.getUuid())
+                            .filter(p -> p.getName().equalsIgnoreCase(playerName))
+                            .isPresent())
+                        .findFirst()
+                        .ifPresentOrElse(player -> {
+                                BARITONE.follow(player);
+                                c.getSource().getEmbed()
+                                    .title("Following")
+                                    .addField("Player", escape(playerName), false)
+                                    .primaryColor();
+                            },
+                            () -> c.getSource().getEmbed()
+                                .title("Error")
+                                .description("Player not found: " + playerName)
+                                .errorColor());
+                    return OK;
+                }))
+                .then(literal("radius").then(argument("radius", integer()).executes(c -> {
+                    int radius = getInteger(c, "radius");
+                    CONFIG.client.extra.pathfinder.followRadius = radius;
+                    c.getSource().getEmbed()
+                        .title("Following")
+                        .addField("Radius", radius, false)
+                        .primaryColor();
+                    return OK;
+                }))))
             .then(literal("thisway").then(argument("dist", integer()).executes(c -> {
                 int dist = getInteger(c, "dist");
                 BARITONE.thisWay(dist)
@@ -197,120 +202,116 @@ public class PathfinderCommand extends Command {
                 return OK;
             })))
             .then(literal("click")
-                      .then(literal("left")
-                                .then(argument("x", integer()).then(argument("y", integer(-64, 320)).then(argument("z", integer()).executes(c -> {
-                                    int x = getInteger(c, "x");
-                                    int y = getInteger(c, "y");
-                                    int z = getInteger(c, "z");
-                                    BARITONE.leftClickBlock(x, y, z)
-                                        .addExecutedListener(f -> {
-                                            CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
-                                                .title("Block Left Clicked!")
-                                                .addField("Target", "||[" + x + ", " + y + ", " + z + "]||")
-                                                .primaryColor());
-                                        });
-                                    c.getSource().getEmbed()
-                                        .title("Pathing")
-                                        .addField("Left Click", "||[" + x + ", " + y + ", " + z + "]||")
-                                        .primaryColor();
-                                    return OK;
-                                }))))
-                                .then(literal("entity")
-                                          .then(argument("type", wordWithChars()).executes(c -> {
-                                              String entityType = getString(c, "type");
-                                              EntityData entityData = EntityRegistry.REGISTRY.get(entityType.toLowerCase().trim());
-                                              if (entityData == null) {
-                                                    c.getSource().getEmbed()
-                                                        .title("Error")
-                                                        .description("Entity not found: " + entityType)
-                                                        .errorColor();
-                                                    return OK;
-                                              }
-                                              var entityOptional = CACHE.getEntityCache().getEntities().values().stream()
-                                                  .filter(e -> e instanceof EntityLiving)
-                                                  .map(e -> (EntityLiving) e)
-                                                  .filter(e -> !(e instanceof EntityPlayer player) || !player.isSelfPlayer())
-                                                  .filter(e -> e.getEntityType() == entityData.mcplType())
-                                                  .min((a, b) -> (int) (a.distanceSqTo(CACHE.getPlayerCache().getThePlayer()) - b.distanceSqTo(CACHE.getPlayerCache().getThePlayer())));
-                                              if (entityOptional.isEmpty()) {
-                                                  c.getSource().getEmbed()
-                                                      .title("Error")
-                                                      .description("Entity not found: " + entityType)
-                                                      .errorColor();
-                                                  return OK;
-                                              }
-                                              BARITONE.leftClickEntity(entityOptional.get())
-                                                  .addExecutedListener(f -> {
-                                                      CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
-                                                          .title("Entity Left Clicked!")
-                                                          .addField("Target", entityOptional.get().getEntityType() + " ||[" + entityOptional.get().position() + "]||")
-                                                          .primaryColor());
-                                                  });
-                                              c.getSource().getEmbed()
-                                                  .title("Pathing")
-                                                  .addField("Left Click", entityOptional.get().getEntityType() + " ||[" + entityOptional.get().position() + "]||", false)
-                                                  .primaryColor();
-                                              return OK;
-                                          }))))
-                      .then(literal("right")
-                                .then(argument("x", integer()).then(argument("y", integer(-64, 320)).then(argument("z", integer()).executes(c -> {
-                                    int x = getInteger(c, "x");
-                                    int y = getInteger(c, "y");
-                                    int z = getInteger(c, "z");
-                                    BARITONE.rightClickBlock(x, y, z)
-                                        .addExecutedListener(f -> {
-                                            CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
-                                                .title("Block Right Clicked!")
-                                                .addField("Target", "||[" + x + ", " + y + ", " + z + "]||")
-                                                .primaryColor());
-                                        });
-                                    c.getSource().getEmbed()
-                                        .title("Pathing")
-                                        .addField("Right Click", "||[" + x + ", " + y + ", " + z + "]||")
-                                        .primaryColor();
-                                    return OK;
-                                }))))
-                                .then(literal("entity")
-                                          .then(argument("type", wordWithChars()).executes(c -> {
-                                              String entityType = getString(c, "type");
-                                              EntityData entityData = EntityRegistry.REGISTRY.get(entityType.toLowerCase().trim());
-                                              if (entityData == null) {
-                                                  c.getSource().getEmbed()
-                                                      .title("Error")
-                                                      .description("Entity not found: " + entityType)
-                                                      .errorColor();
-                                                  return OK;
-                                              }
-                                              var entityOptional = CACHE.getEntityCache().getEntities().values().stream()
-                                                  .filter(e -> e instanceof EntityLiving)
-                                                  .map(e -> (EntityLiving) e)
-                                                  .filter(e -> !(e instanceof EntityPlayer player) || !player.isSelfPlayer())
-                                                  .filter(e -> e.getEntityType() == entityData.mcplType())
-                                                  .min((a, b) -> (int) (a.distanceSqTo(CACHE.getPlayerCache().getThePlayer()) - b.distanceSqTo(CACHE.getPlayerCache().getThePlayer())));
-                                              if (entityOptional.isEmpty()) {
-                                                  c.getSource().getEmbed()
-                                                      .title("Error")
-                                                      .description("Entity not found: " + entityType)
-                                                      .errorColor();
-                                                  return OK;
-                                              }
-                                              BARITONE.rightClickEntity(entityOptional.get())
-                                                  .addExecutedListener(f -> {
-                                                      var target = entityOptional.map(e -> {
-                                                          var pos = e.blockPos();
-                                                          return "||[" + pos.x() + ", " + pos.y() + ", " + pos.z() + "]||";
-                                                      }).orElse("?");
-                                                      CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
-                                                          .title("Entity Right Clicked!")
-                                                          .addField("Target", entityOptional.get().getEntityType() + " ||[" + entityOptional.get().position() + "]||")
-                                                          .primaryColor());
-                                                  });
-                                              c.getSource().getEmbed()
-                                                  .title("Pathing")
-                                                  .addField("Right Click", entityOptional.get().getEntityType() + " ||[" + entityOptional.get().position() + "]||")
-                                                  .primaryColor();
-                                              return OK;
-                                          })))))
+                .then(literal("left")
+                    .then(argument("pos", blockPos()).executes(c -> {
+                        var pos = getBlockPos(c, "pos");
+                        int x = pos.x();
+                        int y = pos.y();
+                        int z = pos.z();
+                        BARITONE.leftClickBlock(x, y, z)
+                            .addExecutedListener(f -> {
+                                CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                                    .title("Block Left Clicked!")
+                                    .addField("Target", "||[" + x + ", " + y + ", " + z + "]||")
+                                    .primaryColor());
+                            });
+                        c.getSource().getEmbed()
+                            .title("Pathing")
+                            .addField("Left Click", "||[" + x + ", " + y + ", " + z + "]||")
+                            .primaryColor();
+                    }))
+                    .then(literal("entity")
+                        .then(argument("type", wordWithChars()).executes(c -> {
+                            String entityType = getString(c, "type");
+                            EntityData entityData = EntityRegistry.REGISTRY.get(entityType.toLowerCase().trim());
+                            if (entityData == null) {
+                                c.getSource().getEmbed()
+                                    .title("Error")
+                                    .description("Entity not found: " + entityType)
+                                    .errorColor();
+                                return OK;
+                            }
+                            var entityOptional = CACHE.getEntityCache().getEntities().values().stream()
+                                .filter(e -> e instanceof EntityLiving)
+                                .map(e -> (EntityLiving) e)
+                                .filter(e -> !(e instanceof EntityPlayer player) || !player.isSelfPlayer())
+                                .filter(e -> e.getEntityType() == entityData.mcplType())
+                                .min((a, b) -> (int) (a.distanceSqTo(CACHE.getPlayerCache().getThePlayer()) - b.distanceSqTo(CACHE.getPlayerCache().getThePlayer())));
+                            if (entityOptional.isEmpty()) {
+                                c.getSource().getEmbed()
+                                    .title("Error")
+                                    .description("Entity not found: " + entityType)
+                                    .errorColor();
+                                return OK;
+                            }
+                            BARITONE.leftClickEntity(entityOptional.get())
+                                .addExecutedListener(f -> {
+                                    CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                                        .title("Entity Left Clicked!")
+                                        .addField("Target", entityOptional.get().getEntityType() + " ||[" + entityOptional.get().position() + "]||")
+                                        .primaryColor());
+                                });
+                            c.getSource().getEmbed()
+                                .title("Pathing")
+                                .addField("Left Click", entityOptional.get().getEntityType() + " ||[" + entityOptional.get().position() + "]||", false)
+                                .primaryColor();
+                            return OK;
+                        }))))
+                .then(literal("right")
+                    .then(argument("pos", blockPos()).executes(c -> {
+                        var pos = getBlockPos(c, "pos");
+                        int x = pos.x();
+                        int y = pos.y();
+                        int z = pos.z();
+                        BARITONE.rightClickBlock(x, y, z)
+                            .addExecutedListener(f -> {
+                                CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                                    .title("Block Right Clicked!")
+                                    .addField("Target", "||[" + x + ", " + y + ", " + z + "]||")
+                                    .primaryColor());
+                            });
+                        c.getSource().getEmbed()
+                            .title("Pathing")
+                            .addField("Right Click", "||[" + x + ", " + y + ", " + z + "]||")
+                            .primaryColor();
+                    }))
+                    .then(literal("entity")
+                        .then(argument("type", wordWithChars()).executes(c -> {
+                            String entityType = getString(c, "type");
+                            EntityData entityData = EntityRegistry.REGISTRY.get(entityType.toLowerCase().trim());
+                            if (entityData == null) {
+                                c.getSource().getEmbed()
+                                    .title("Error")
+                                    .description("Entity not found: " + entityType)
+                                    .errorColor();
+                                return OK;
+                            }
+                            var entityOptional = CACHE.getEntityCache().getEntities().values().stream()
+                                .filter(e -> e instanceof EntityLiving)
+                                .map(e -> (EntityLiving) e)
+                                .filter(e -> !(e instanceof EntityPlayer player) || !player.isSelfPlayer())
+                                .filter(e -> e.getEntityType() == entityData.mcplType())
+                                .min((a, b) -> (int) (a.distanceSqTo(CACHE.getPlayerCache().getThePlayer()) - b.distanceSqTo(CACHE.getPlayerCache().getThePlayer())));
+                            if (entityOptional.isEmpty()) {
+                                c.getSource().getEmbed()
+                                    .title("Error")
+                                    .description("Entity not found: " + entityType)
+                                    .errorColor();
+                                return OK;
+                            }
+                            BARITONE.rightClickEntity(entityOptional.get())
+                                .addExecutedListener(f -> {
+                                    CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                                        .title("Entity Right Clicked!")
+                                        .addField("Target", entityOptional.get().getEntityType() + " ||[" + entityOptional.get().position() + "]||")
+                                        .primaryColor());
+                                });
+                            c.getSource().getEmbed()
+                                .title("Pathing")
+                                .addField("Right Click", entityOptional.get().getEntityType() + " ||[" + entityOptional.get().position() + "]||")
+                                .primaryColor();
+                            return OK;
+                        })))))
             .then(literal("status").executes(c -> {
                 boolean isActive = BARITONE.isActive();
                 c.getSource().getEmbed()

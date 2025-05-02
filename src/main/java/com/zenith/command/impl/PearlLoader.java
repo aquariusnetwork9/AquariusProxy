@@ -5,10 +5,10 @@ import com.zenith.command.api.*;
 import com.zenith.discord.Embed;
 import com.zenith.util.config.Config.Client.Extra.PearlLoader.Pearl;
 
-import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
-import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.zenith.Globals.BARITONE;
 import static com.zenith.Globals.CONFIG;
+import static com.zenith.command.brigadier.BlockPosArgument.blockPos;
+import static com.zenith.command.brigadier.BlockPosArgument.getBlockPos;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 
@@ -37,25 +37,25 @@ public class PearlLoader extends Command {
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
         return command("pearlLoader")
-            .then(literal("add").then(argument("id", wordWithChars()).then(argument("x", integer()).then(argument("y", integer()).then(argument("z", integer()).executes(ctx -> {
-                String id = getString(ctx, "id");
-                int x = getInteger(ctx, "x");
-                int y = getInteger(ctx, "y");
-                int z = getInteger(ctx, "z");
-                Pearl pearl = new Pearl(id, x, y, z);
-                var pearls = CONFIG.client.extra.pearlLoader.pearls;
-                for (var p : pearls) {
-                    if (p.id().equals(id)) {
-                        pearls.remove(p);
-                        break;
+            .then(literal("add").then(argument("id", wordWithChars()).then(argument("pos", blockPos()).executes(c -> {
+                    String id = getString(c, "id");
+                    var pos = getBlockPos(c, "pos");
+                    int x = pos.x();
+                    int y = pos.y();
+                    int z = pos.z();
+                    Pearl pearl = new Pearl(id, x, y, z);
+                    var pearls = CONFIG.client.extra.pearlLoader.pearls;
+                    for (var p : pearls) {
+                        if (p.id().equals(id)) {
+                            pearls.remove(p);
+                            break;
+                        }
                     }
-                }
-                pearls.add(pearl);
-                ctx.getSource().getEmbed()
-                    .title("Pearl Added")
-                    .successColor();
-                return OK;
-            }))))))
+                    pearls.add(pearl);
+                    c.getSource().getEmbed()
+                        .title("Pearl Added")
+                        .successColor();
+                }))))
             .then(literal("del").then(argument("id", wordWithChars()).executes(c -> {
                 String id = getString(c, "id");
                 var pearls = CONFIG.client.extra.pearlLoader.pearls;

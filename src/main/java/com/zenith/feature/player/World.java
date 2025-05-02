@@ -52,6 +52,12 @@ public class World {
         return CACHE.getChunkCache().isChunkLoaded(chunkX, chunkZ);
     }
 
+    public boolean isInWorldBounds(final int x, final int y, final int z) {
+        var dim = getCurrentDimension();
+        if (y < dim.minY() || y > dim.buildHeight()) return false;
+        return x >= -30_000_000 && x <= 30_000_000 && z >= -30_000_000 && z <= 30_000_000;
+    }
+
     public int getBlockStateId(final BlockPos blockPos) {
         return getBlockStateId(blockPos.x(), blockPos.y(), blockPos.z());
     }

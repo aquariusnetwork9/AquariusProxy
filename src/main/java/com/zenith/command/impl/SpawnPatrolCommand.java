@@ -12,6 +12,8 @@ import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.zenith.Globals.*;
 import static com.zenith.command.api.CommandOutputHelper.playerListToString;
+import static com.zenith.command.brigadier.BlockPosArgument.blockPos;
+import static com.zenith.command.brigadier.BlockPosArgument.getBlockPos;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
@@ -55,15 +57,14 @@ public class SpawnPatrolCommand extends Command {
                     .title("SpawnPatrol " + toggleStrCaps(CONFIG.client.extra.spawnPatrol.enabled));
                 return OK;
             }))
-            .then(literal("goal")
-                      .then(argument("x", integer()).then(argument("y", integer(-64, 320)).then(argument("z", integer()).executes(c -> {
-                          CONFIG.client.extra.spawnPatrol.goalX = getInteger(c, "x");
-                          CONFIG.client.extra.spawnPatrol.goalY = getInteger(c, "y");
-                          CONFIG.client.extra.spawnPatrol.goalZ = getInteger(c, "z");
-                          c.getSource().getEmbed()
-                              .title("Goal Set");
-                          return OK;
-                      })))))
+            .then(literal("goal").then(argument("pos", blockPos()).executes(c -> {
+                var pos = getBlockPos(c, "pos");
+                CONFIG.client.extra.spawnPatrol.goalX = pos.x();
+                CONFIG.client.extra.spawnPatrol.goalY = pos.y();
+                CONFIG.client.extra.spawnPatrol.goalZ = pos.z();
+                c.getSource().getEmbed()
+                    .title("Goal Set");
+            })))
             .then(literal("targetOnlyNakeds").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.spawnPatrol.targetOnlyNakeds = getToggle(c, "toggle");
                 c.getSource().getEmbed()
