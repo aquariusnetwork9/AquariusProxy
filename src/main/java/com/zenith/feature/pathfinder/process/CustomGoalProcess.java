@@ -35,6 +35,7 @@ public final class CustomGoalProcess extends BaritoneProcessHelper implements IB
         onLostControl();
         this.goal = goal;
         this.future = new PathingRequestFuture();
+        this.future.setGoal(goal);
         if (this.state == State.NONE) {
             this.state = State.GOAL_SET;
         }

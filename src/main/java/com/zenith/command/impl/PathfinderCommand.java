@@ -3,11 +3,10 @@ package com.zenith.command.impl;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.cache.data.entity.EntityPlayer;
-import com.zenith.command.api.Command;
-import com.zenith.command.api.CommandCategory;
-import com.zenith.command.api.CommandContext;
-import com.zenith.command.api.CommandUsage;
+import com.zenith.command.api.*;
+import com.zenith.discord.Embed;
 import com.zenith.mc.block.Block;
+import com.zenith.mc.block.BlockPos;
 import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.entity.EntityData;
 import com.zenith.mc.entity.EntityRegistry;
@@ -65,7 +64,13 @@ public class PathfinderCommand extends Command {
                    .then(argument("z", integer()).executes(c -> {
                         int x = getInteger(c, "x");
                         int z = getInteger(c, "z");
-                        BARITONE.pathTo(x, z);
+                        BARITONE.pathTo(x, z)
+                            .addExecutedListener(f -> {
+                                CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                                    .title("Pathing Completed!")
+                                    .addField("Pos", "||[" + x + ", " + z + "]||")
+                                    .primaryColor());
+                            });
                         c.getSource().getEmbed()
                             .title("Pathing")
                             .addField("Goal", x + ", " + z, false)
@@ -76,7 +81,13 @@ public class PathfinderCommand extends Command {
                        int x = getInteger(c, "x");
                        int y = getInteger(c, "y");
                        int z = getInteger(c, "z");
-                       BARITONE.pathTo(x, y, z);
+                       BARITONE.pathTo(x, y, z)
+                           .addExecutedListener(f -> {
+                               CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                                   .title("Pathing Completed!")
+                                   .addField("Pos", "||[" + x + ", " + y + ", " + z + "]||")
+                                   .primaryColor());
+                           });
                        c.getSource().getEmbed()
                            .title("Pathing")
                            .addField("Goal", x + ", " + y + ", " + z, false)
@@ -130,7 +141,14 @@ public class PathfinderCommand extends Command {
                       }))))
             .then(literal("thisway").then(argument("dist", integer()).executes(c -> {
                 int dist = getInteger(c, "dist");
-                BARITONE.thisWay(dist);
+                BARITONE.thisWay(dist)
+                    .addExecutedListener(f -> {
+                        BlockPos pos = CACHE.getPlayerCache().getThePlayer().blockPos();
+                        CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                            .title("Pathing Completed!")
+                            .addField("Pos", "||[" + pos.x() + ", " + pos.y() + ", " + pos.z() + "]||")
+                            .primaryColor());
+                    });
                 c.getSource().getEmbed()
                     .title("Pathing")
                     .addField("This Way", dist, false)
@@ -147,7 +165,14 @@ public class PathfinderCommand extends Command {
                         .errorColor();
                     return OK;
                 }
-                BARITONE.getTo(block);
+                BARITONE.getTo(block)
+                    .addExecutedListener(f -> {
+                        BlockPos pos = CACHE.getPlayerCache().getThePlayer().blockPos();
+                        CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                            .title("At Block!")
+                            .addField("Player Pos", "||[" + pos.x() + ", " + pos.y() + ", " + pos.z() + "]||")
+                            .primaryColor());
+                    });
                 c.getSource().getEmbed()
                     .title("Pathing")
                     .addField("Get To", blockName, false)
@@ -174,10 +199,19 @@ public class PathfinderCommand extends Command {
             .then(literal("click")
                       .then(literal("left")
                                 .then(argument("x", integer()).then(argument("y", integer(-64, 320)).then(argument("z", integer()).executes(c -> {
-                                    BARITONE.leftClickBlock(getInteger(c, "x"), getInteger(c, "y"), getInteger(c, "z"));
+                                    int x = getInteger(c, "x");
+                                    int y = getInteger(c, "y");
+                                    int z = getInteger(c, "z");
+                                    BARITONE.leftClickBlock(x, y, z)
+                                        .addExecutedListener(f -> {
+                                            CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                                                .title("Block Left Clicked!")
+                                                .addField("Target", "||[" + x + ", " + y + ", " + z + "]||")
+                                                .primaryColor());
+                                        });
                                     c.getSource().getEmbed()
                                         .title("Pathing")
-                                        .addField("Left Click", getInteger(c, "x") + ", " + getInteger(c, "y") + ", " + getInteger(c, "z"), false)
+                                        .addField("Left Click", "||[" + x + ", " + y + ", " + z + "]||")
                                         .primaryColor();
                                     return OK;
                                 }))))
@@ -205,19 +239,34 @@ public class PathfinderCommand extends Command {
                                                       .errorColor();
                                                   return OK;
                                               }
-                                              BARITONE.leftClickEntity(entityOptional.get());
+                                              BARITONE.leftClickEntity(entityOptional.get())
+                                                  .addExecutedListener(f -> {
+                                                      CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                                                          .title("Entity Left Clicked!")
+                                                          .addField("Target", entityOptional.get().getEntityType() + " ||[" + entityOptional.get().position() + "]||")
+                                                          .primaryColor());
+                                                  });
                                               c.getSource().getEmbed()
                                                   .title("Pathing")
-                                                  .addField("Left Click", entityOptional.get().getEntityType() + " [" + entityOptional.get().position() + "]", false)
+                                                  .addField("Left Click", entityOptional.get().getEntityType() + " ||[" + entityOptional.get().position() + "]||", false)
                                                   .primaryColor();
                                               return OK;
                                           }))))
                       .then(literal("right")
                                 .then(argument("x", integer()).then(argument("y", integer(-64, 320)).then(argument("z", integer()).executes(c -> {
-                                    BARITONE.rightClickBlock(getInteger(c, "x"), getInteger(c, "y"), getInteger(c, "z"));
+                                    int x = getInteger(c, "x");
+                                    int y = getInteger(c, "y");
+                                    int z = getInteger(c, "z");
+                                    BARITONE.rightClickBlock(x, y, z)
+                                        .addExecutedListener(f -> {
+                                            CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                                                .title("Block Right Clicked!")
+                                                .addField("Target", "||[" + x + ", " + y + ", " + z + "]||")
+                                                .primaryColor());
+                                        });
                                     c.getSource().getEmbed()
                                         .title("Pathing")
-                                        .addField("Right Click", getInteger(c, "x") + ", " + getInteger(c, "y") + ", " + getInteger(c, "z"), false)
+                                        .addField("Right Click", "||[" + x + ", " + y + ", " + z + "]||")
                                         .primaryColor();
                                     return OK;
                                 }))))
@@ -245,10 +294,20 @@ public class PathfinderCommand extends Command {
                                                       .errorColor();
                                                   return OK;
                                               }
-                                              BARITONE.rightClickEntity(entityOptional.get());
+                                              BARITONE.rightClickEntity(entityOptional.get())
+                                                  .addExecutedListener(f -> {
+                                                      var target = entityOptional.map(e -> {
+                                                          var pos = e.blockPos();
+                                                          return "||[" + pos.x() + ", " + pos.y() + ", " + pos.z() + "]||";
+                                                      }).orElse("?");
+                                                      CommandOutputHelper.logEmbedOutputToSource(c.getSource(), Embed.builder()
+                                                          .title("Entity Right Clicked!")
+                                                          .addField("Target", entityOptional.get().getEntityType() + " ||[" + entityOptional.get().position() + "]||")
+                                                          .primaryColor());
+                                                  });
                                               c.getSource().getEmbed()
                                                   .title("Pathing")
-                                                  .addField("Right Click", entityOptional.get().getEntityType() + " [" + entityOptional.get().position() + "]", false)
+                                                  .addField("Right Click", entityOptional.get().getEntityType() + " ||[" + entityOptional.get().position() + "]||")
                                                   .primaryColor();
                                               return OK;
                                           })))))
