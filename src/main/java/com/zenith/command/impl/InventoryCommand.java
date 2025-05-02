@@ -445,6 +445,20 @@ public class InventoryCommand extends Command {
             if (i == heldSlot) sb.append(" [Held]");
             sb.append("\n");
         }
+        var mouseStack = CACHE.getPlayerCache().getInventoryCache().getMouseStack();
+        if (mouseStack != Container.EMPTY_STACK) {
+            sb.append("  mouse -> ");
+            var itemData = ItemRegistry.REGISTRY.get(mouseStack.getId());
+            sb.append(itemData.name());
+            if (mouseStack.getDataComponents() != null) {
+                var nameComponent = mouseStack.getDataComponents().get(DataComponentTypes.CUSTOM_NAME);
+                if (nameComponent != null) {
+                    sb.append(" \"").append(ComponentSerializer.serializePlain(nameComponent)).append("\"");
+                }
+            }
+            if (mouseStack.getAmount() > 1) sb.append(" (x").append(mouseStack.getAmount()).append(")");
+            sb.append("\n");
+        }
         sb.append("\n```");
         var items = sb.toString();
         if (showAllSlotIds) {
