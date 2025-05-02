@@ -98,7 +98,7 @@ public class CommandOutputHelper {
     }
 
     // intended for use in embed descriptions
-    public String playerListToString(final PlayerList playerList) {
+    public static String playerListToString(final PlayerList playerList) {
         var entries = playerList.entries();
         if (entries.isEmpty()) return "Empty";
         var output = new StringBuilder();

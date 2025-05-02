@@ -450,7 +450,7 @@ public class NotificationEventListener {
 
     public void handleNonWhitelistedPlayerConnectedEvent(NonWhitelistedPlayerConnectedEvent event) {
         var embed = Embed.builder()
-            .title("Non-Whitelisted Player Disconnected")
+            .title("Non-Whitelisted Login Blocked")
             .errorColor();
         if (nonNull(event.remoteAddress()) && CONFIG.discord.showNonWhitelistLoginIP) {
             embed = embed.addField("IP", escape(event.remoteAddress().toString()), false);
