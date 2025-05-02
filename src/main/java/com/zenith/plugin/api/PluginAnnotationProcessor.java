@@ -71,7 +71,7 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
 
             if (!PluginInfo.ID_PATTERN.matcher(plugin.id()).matches()) {
                 environment.getMessager()
-                    .printMessage(Diagnostic.Kind.ERROR, "Plugin ID '" + plugin.id() + "' is invalid.");
+                    .printMessage(Diagnostic.Kind.ERROR, "Plugin ID '" + plugin.id() + "' is invalid. Must be all lowercase letters, numbers, '-', or '_' and start with a letter");
                 return false;
             }
 
@@ -104,7 +104,8 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
                 pluginClassFound = qualifiedName.toString();
             } catch (IOException e) {
                 environment.getMessager()
-                    .printMessage(Diagnostic.Kind.ERROR, "Unable to generate plugin file");
+                    .printMessage(Diagnostic.Kind.ERROR, "Unable to generate plugin file: " + e.getMessage());
+                e.printStackTrace();
             }
         }
 
