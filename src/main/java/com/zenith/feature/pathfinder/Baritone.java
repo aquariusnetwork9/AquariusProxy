@@ -39,7 +39,7 @@ import static com.zenith.Globals.*;
  */
 
 @Data
-public class Baritone implements BaritoneAPI {
+public class Baritone implements Pathfinder {
     public static final int MOVEMENT_PRIORITY = 200;
     private final PathingBehavior pathingBehavior = new PathingBehavior(this);
     private final InputOverrideHandler inputOverrideHandler = new InputOverrideHandler(this);

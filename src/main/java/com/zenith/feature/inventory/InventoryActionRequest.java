@@ -29,13 +29,13 @@ public class InventoryActionRequest {
         return actionExecIndex > 0 && !isCompleted();
     }
 
-    public @Nullable InventoryAction next() {
+    protected @Nullable InventoryAction next() {
         var index = actionExecIndex++;
         if (index >= actions.size()) return null;
         return actions.get(index);
     }
 
-    public @Nullable InventoryAction peek() {
+    protected @Nullable InventoryAction peek() {
         var index = actionExecIndex;
         if (index >= actions.size()) return null;
         return actions.get(index);

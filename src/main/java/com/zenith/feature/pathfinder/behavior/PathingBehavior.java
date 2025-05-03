@@ -75,7 +75,6 @@ public class PathingBehavior extends Behavior {
         baritone.getPathingControlManager().cancelEverything();
     }
 
-//    @Override
     public void onTick() {
         dispatchEvents();
 
@@ -85,13 +84,6 @@ public class PathingBehavior extends Behavior {
         ticksElapsedSoFar++;
         dispatchEvents();
     }
-
-//    @Override
-//    public void onPlayerSprintState(SprintStateEvent event) {
-//        if (isPathing()) {
-//            event.setState(current.isSprinting());
-//        }
-//    }
 
     private void tickPath() {
         pausedThisTick = false;

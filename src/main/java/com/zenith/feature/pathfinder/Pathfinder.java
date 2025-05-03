@@ -7,7 +7,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.function.Predicate;
 
-public interface BaritoneAPI {
+public interface Pathfinder {
     boolean isActive();
     PathingRequestFuture pathTo(Goal goal);
     PathingRequestFuture pathTo(int x, int z);
