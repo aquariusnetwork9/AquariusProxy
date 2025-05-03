@@ -6,7 +6,9 @@ import lombok.Data;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Data
 public class CommandContext {
@@ -18,6 +20,8 @@ public class CommandContext {
     // don't log sensitive input like passwords to discord
     private boolean sensitiveInput = false;
     private boolean noOutput = false;
+    // can be used by plugins to pass additional arbitrary data to commands
+    private final Map<String, Object> data = new HashMap<>(0);
 
     public CommandContext(String input, CommandSource source, Embed embed, List<String> multiLineOutput) {
         this.input = input;
