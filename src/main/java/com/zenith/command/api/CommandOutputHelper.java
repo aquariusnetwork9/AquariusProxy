@@ -30,7 +30,7 @@ public class CommandOutputHelper {
     public void logInputToDiscord(String command, CommandSource source) {
         if (DISCORD.isRunning()) {
             DISCORD.sendEmbedMessage(Embed.builder()
-                                             .title(source.getName() + " Command Executed")
+                                             .title(source.name() + " Command Executed")
                                              .description(command));
         }
     }

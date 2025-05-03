@@ -1,10 +1,13 @@
 package com.zenith.command.api;
 
 import com.zenith.discord.Embed;
+import lombok.Data;
 
-public class TerminalCommandSource extends CommandSource {
-    public TerminalCommandSource() {
-        super("Terminal", () -> "");
+@Data
+public class TerminalCommandSource implements CommandSource {
+    @Override
+    public String name() {
+        return "Terminal";
     }
 
     @Override

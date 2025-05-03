@@ -2,15 +2,23 @@ package com.zenith.command.api;
 
 import com.zenith.discord.Embed;
 import com.zenith.util.MentionUtil;
+import lombok.Data;
 import net.dv8tion.jda.api.entities.ISnowflake;
 
 import java.util.Optional;
 
 import static com.zenith.Globals.CONFIG;
 
-public class DiscordCommandSource extends CommandSource {
-    public DiscordCommandSource() {
-        super("Discord", () -> CONFIG.discord.prefix);
+@Data
+public class DiscordCommandSource implements CommandSource {
+    @Override
+    public String name() {
+        return "Discord";
+    }
+
+    @Override
+    public String commandPrefix() {
+        return CONFIG.discord.prefix;
     }
 
     @Override

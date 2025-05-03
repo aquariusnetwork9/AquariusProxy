@@ -44,7 +44,7 @@ public abstract class Command {
         if (!allowed)
             context.getEmbed()
                 .addField("Error",
-                          "Command source: " + context.getSource().getName()
+                          "Command source: " + context.getSource().name()
                               + " is not authorized to execute this command!", false);
         return allowed;
     }
@@ -54,7 +54,7 @@ public abstract class Command {
         if (!allowed)
             context.getEmbed()
                 .addField("Error",
-                          "Command source: " + context.getSource().getName()
+                          "Command source: " + context.getSource().name()
                               + " is not authorized to execute this command!", false);
         return allowed;
     }

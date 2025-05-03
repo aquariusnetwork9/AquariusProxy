@@ -2,15 +2,27 @@ package com.zenith.command.api;
 
 import com.zenith.discord.Embed;
 import com.zenith.network.server.ServerSession;
+import lombok.Data;
+import lombok.experimental.Accessors;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 
 import java.util.UUID;
 
 import static com.zenith.Globals.*;
 
-public class PlayerCommandSource extends CommandSource {
-    public PlayerCommandSource(String name) {
-        super(name, () -> CONFIG.inGameCommands.slashCommands ? "/" : CONFIG.inGameCommands.prefix);
+@Data
+@Accessors(fluent = true)
+public class PlayerCommandSource implements CommandSource {
+    private final String name;
+
+    @Override
+    public String name() {
+        return name;
+    }
+
+    @Override
+    public String commandPrefix() {
+        return CONFIG.inGameCommands.slashCommands ? "/" : CONFIG.inGameCommands.prefix;
     }
 
     @Override

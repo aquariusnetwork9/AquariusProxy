@@ -111,7 +111,7 @@ public class CommandUsage {
         var result = this.description
             + "\n**Commands**"
             + usageLines.stream()
-            .map(line -> "\n" + commandSource.getPrefixSupplier().get() + name + " " + line)
+            .map(line -> "\n" + commandSource.commandPrefix() + name + " " + line)
             .collect(Collectors.joining());
         result += "\n\n[Commands Wiki](https://link.2b2t.vc/0)";
         if (isTooLongForDiscordDescription(result)) {
@@ -125,7 +125,7 @@ public class CommandUsage {
     public String mediumSerialize(CommandSource commandSource) {
         var result = "**Commands**"
             + usageLines.stream()
-            .map(line -> "\n" + commandSource.getPrefixSupplier().get() + name + " " + line)
+            .map(line -> "\n" + commandSource.commandPrefix() + name + " " + line)
             .collect(Collectors.joining());
         result += "\n\n[Commands Wiki](https://link.2b2t.vc/0)";
         if (isTooLongForDiscordDescription(result)) {
@@ -137,11 +137,11 @@ public class CommandUsage {
 
     // serializes aliases only
     public String shortSerialize(CommandSource commandSource) {
-        String result = commandSource.getPrefixSupplier().get() + this.name;
+        String result = commandSource.commandPrefix() + this.name;
         if (!aliases.isEmpty()) {
             result += aliases.stream()
-                    .collect(Collectors.joining(" / " + commandSource.getPrefixSupplier().get(),
-                            " / " + commandSource.getPrefixSupplier().get(),
+                    .collect(Collectors.joining(" / " + commandSource.commandPrefix(),
+                            " / " + commandSource.commandPrefix(),
                             ""));
         }
         result += "\n\n[Commands Wiki](https://link.2b2t.vc/0)";
@@ -149,11 +149,11 @@ public class CommandUsage {
     }
 
     public String shortSerializeButNoWikiFooter(CommandSource commandSource) {
-        String result = commandSource.getPrefixSupplier().get() + this.name;
+        String result = commandSource.commandPrefix() + this.name;
         if (!aliases.isEmpty()) {
             result += aliases.stream()
-                .collect(Collectors.joining(" / " + commandSource.getPrefixSupplier().get(),
-                                            " / " + commandSource.getPrefixSupplier().get(),
+                .collect(Collectors.joining(" / " + commandSource.commandPrefix(),
+                                            " / " + commandSource.commandPrefix(),
                                             ""));
         }
         return result;
