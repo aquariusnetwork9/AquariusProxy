@@ -14,7 +14,6 @@ import com.zenith.util.ComponentSerializer;
 import com.zenith.util.RequestFuture;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ClickItemAction;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.DropItemAction;
-import org.geysermc.mcprotocollib.protocol.data.game.inventory.ShiftClickItemAction;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
 
 import java.util.ArrayList;
@@ -230,17 +229,9 @@ public class InventoryCommand extends Command {
                         .errorColor();
                     return OK;
                 }
-                var container = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
-                int containerId = container.getContainerId();
-                List<InventoryAction> actions = new ArrayList<>();
-                final int containerTopInvEndIndex = container.getSize() - 36;
-                for (int i = 0; i < containerTopInvEndIndex; i++) {
-                    if (container.getItemStack(i) == Container.EMPTY_STACK) continue;
-                    actions.add(new ShiftClick(containerId, i, ShiftClickItemAction.LEFT_CLICK));
-                }
                 var accepted = INVENTORY.submit(InventoryActionRequest.builder()
                         .owner(this)
-                        .actions(actions)
+                        .actions(InventoryActionMacros.withdraw(getOpenContainerId()))
                         .priority(INV_ACTION_PRIORITY)
                         .build())
                     .get();
@@ -264,17 +255,9 @@ public class InventoryCommand extends Command {
                         .errorColor();
                     return OK;
                 }
-                var container = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
-                int containerId = container.getContainerId();
-                List<InventoryAction> actions = new ArrayList<>();
-                final int containerTopInvEndIndex = container.getSize() - 36;
-                for (int i = container.getSize() - 1; i >= containerTopInvEndIndex; i--) {
-                    if (container.getItemStack(i) == Container.EMPTY_STACK) continue;
-                    actions.add(new ShiftClick(containerId, i, ShiftClickItemAction.LEFT_CLICK));
-                }
                 var accepted = INVENTORY.submit(InventoryActionRequest.builder()
                         .owner(this)
-                        .actions(actions)
+                        .actions(InventoryActionMacros.deposit(getOpenContainerId()))
                         .priority(INV_ACTION_PRIORITY)
                         .build())
                     .get();
