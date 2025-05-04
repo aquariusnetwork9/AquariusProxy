@@ -4,7 +4,7 @@ import com.github.rfresh2.EventConsumer;
 import com.zenith.cache.data.inventory.Container;
 import com.zenith.event.client.ClientBotTick;
 import com.zenith.feature.inventory.InventoryActionRequest;
-import com.zenith.feature.inventory.actions.InventoryActionMacros;
+import com.zenith.feature.inventory.util.InventoryActionMacros;
 import com.zenith.mc.item.ItemData;
 import com.zenith.mc.item.ItemRegistry;
 import com.zenith.module.api.Module;

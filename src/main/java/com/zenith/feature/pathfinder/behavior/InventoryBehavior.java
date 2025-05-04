@@ -2,9 +2,9 @@ package com.zenith.feature.pathfinder.behavior;
 
 import com.zenith.cache.data.inventory.Container;
 import com.zenith.feature.inventory.InventoryActionRequest;
-import com.zenith.feature.inventory.actions.InventoryUtil;
 import com.zenith.feature.inventory.actions.MoveToHotbarSlot;
 import com.zenith.feature.inventory.actions.SetHeldItem;
+import com.zenith.feature.inventory.util.InventoryUtil;
 import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.item.ItemData;

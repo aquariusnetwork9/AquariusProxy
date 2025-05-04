@@ -7,6 +7,7 @@ import com.zenith.command.api.*;
 import com.zenith.discord.Embed;
 import com.zenith.feature.inventory.InventoryActionRequest;
 import com.zenith.feature.inventory.actions.*;
+import com.zenith.feature.inventory.util.InventoryActionMacros;
 import com.zenith.mc.item.ContainerTypeInfoRegistry;
 import com.zenith.mc.item.ItemRegistry;
 import com.zenith.util.ComponentSerializer;

@@ -1,6 +1,8 @@
-package com.zenith.feature.inventory.actions;
+package com.zenith.feature.inventory.util;
 
 import com.google.common.collect.Lists;
+import com.zenith.feature.inventory.actions.ClickItem;
+import com.zenith.feature.inventory.actions.InventoryAction;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ClickItemAction;
 
 import java.util.List;

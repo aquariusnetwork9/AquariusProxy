@@ -1,4 +1,4 @@
-package com.zenith.feature.inventory.actions;
+package com.zenith.feature.inventory.util;
 
 import com.zenith.cache.data.inventory.Container;
 import com.zenith.mc.block.Block;
