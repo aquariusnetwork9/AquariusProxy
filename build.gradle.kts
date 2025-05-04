@@ -29,7 +29,7 @@ repositories {
 }
 
 dependencies {
-    api("com.github.rfresh2:JDA:5.5.11") {
+    api("com.github.rfresh2:JDA:5.5.12") {
         exclude(group = "club.minnced")
         exclude(group = "net.java.dev.jna")
         exclude(group = "com.google.crypto.tink")
