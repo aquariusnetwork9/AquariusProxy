@@ -45,38 +45,50 @@ public class InventoryManager {
             currentActionRequest.getActionDelayTicks(),
             CONFIG.client.inventory.actionDelayTicks
         );
-        if (tickTimer.tick(delay)) {
-            var action = currentActionRequest.next();
-            if (action != null) {
-                if (action.containerId() != CACHE.getPlayerCache().getInventoryCache().getOpenContainerId()) {
-                    CLIENT_LOG.debug("[Inventory Manager] Skipping action {} requester: {} requested container: {} != {}",
+        if (delay > 0) {
+            if (tickTimer.tick(delay)) {
+                executeNextAction();
+            }
+        } else {
+            while (currentActionRequest != DEFAULT_ACTION_REQUEST) {
+                executeNextAction();
+            }
+        }
+    }
+
+    private void executeNextAction() {
+        var action = currentActionRequest.next();
+        if (action != null) {
+            if (action.containerId() != CACHE.getPlayerCache().getInventoryCache().getOpenContainerId()) {
+                CLIENT_LOG.debug("[Inventory Manager] Skipping action {} requester: {} requested container: {} != {}",
+                    action.type(),
+                    currentActionRequest.getOwner() != null ? currentActionRequest.getOwner().getClass().getSimpleName() : "Unknown",
+                    action.containerId(),
+                    CACHE.getPlayerCache().getInventoryCache().getOpenContainerId());
+            } else {
+                var packet = action.packet();
+                if (packet != null) {
+                    // todo: setting for toggling inv debug logging
+                    CLIENT_LOG.debug("[Inventory Manager] Executing action: {} requester: {}",
                         action.type(),
-                        currentActionRequest.getOwner() != null ? currentActionRequest.getOwner().getClass().getSimpleName() : "Unknown",
-                        action.containerId(),
-                        CACHE.getPlayerCache().getInventoryCache().getOpenContainerId());
-                } else {
-                    var packet = action.packet();
-                    if (packet != null) {
-                        // todo: setting for toggling inv debug logging
-                        CLIENT_LOG.debug("[Inventory Manager] Executing action: {} requester: {}",
-                            action.type(),
-                            currentActionRequest.getOwner() != null ? currentActionRequest.getOwner().getClass().getSimpleName() : "Unknown");
-                        Proxy.getInstance().getClient().sendAwait(packet);
-                        InventoryAction actionNextTick = currentActionRequest.peek();
-                        if (action instanceof SetHeldItem || actionNextTick instanceof SetHeldItem) {
-                            // no delay needed for set carried item
-                            tickTimer.skip();
-                        }
+                        currentActionRequest.getOwner() != null ? currentActionRequest.getOwner().getClass().getSimpleName() : "Unknown");
+                    Proxy.getInstance().getClient().sendAwait(packet);
+                    InventoryAction actionNextTick = currentActionRequest.peek();
+                    if (action instanceof SetHeldItem || actionNextTick instanceof SetHeldItem) {
+                        // no delay needed for set carried item
+                        tickTimer.skip();
                     }
                 }
             }
-            if (currentActionRequest.isCompleted()) {
-                currentRequestFuture.complete(true);
-                currentActionRequest = DEFAULT_ACTION_REQUEST;
-                currentRequestFuture = DEFAULT_REQUEST_FUTURE;
-                if (CONFIG.client.inventory.ncpStrict) {
-                    var closeActionPacket = new CloseContainer().packet();
-                    if (closeActionPacket != null) Proxy.getInstance().getClient().sendAwait(closeActionPacket);
+        }
+        if (currentActionRequest.isCompleted()) {
+            currentRequestFuture.complete(true);
+            currentActionRequest = DEFAULT_ACTION_REQUEST;
+            currentRequestFuture = DEFAULT_REQUEST_FUTURE;
+            if (CONFIG.client.inventory.ncpStrict) {
+                var closeActionPacket = new CloseContainer().packet();
+                if (closeActionPacket != null) {
+                    Proxy.getInstance().getClient().sendAwait(closeActionPacket);
                 }
             }
         }
