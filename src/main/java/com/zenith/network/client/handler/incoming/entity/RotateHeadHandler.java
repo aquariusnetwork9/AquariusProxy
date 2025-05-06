@@ -7,14 +7,14 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.Clie
 import org.jspecify.annotations.NonNull;
 
 import static com.zenith.Globals.CACHE;
-import static java.util.Objects.isNull;
 
 public class RotateHeadHandler implements ClientEventLoopPacketHandler<ClientboundRotateHeadPacket, ClientSession> {
     @Override
     public boolean applyAsync(@NonNull ClientboundRotateHeadPacket packet, @NonNull ClientSession session) {
         Entity entity = CACHE.getEntityCache().get(packet.getEntityId());
-        if (isNull(entity)) return false;
-        entity.setHeadYaw(packet.getHeadYaw());
+        if (entity != null) {
+            entity.setHeadYaw(packet.getHeadYaw());
+        }
         return true;
     }
 }

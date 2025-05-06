@@ -34,7 +34,7 @@ public class TeleportEntityHandler implements ClientEventLoopPacketHandler<Clien
             return true;
         } else {
             CLIENT_LOG.debug("Received ServerEntityTeleportPacket for invalid entity (id={})", packet.getEntityId());
-            return false;
+            return true;
         }
     }
 }

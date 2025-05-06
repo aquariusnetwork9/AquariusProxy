@@ -13,7 +13,6 @@ public class SetEquipmentHandler implements ClientEventLoopPacketHandler<Clientb
     @Override
     public boolean applyAsync(@NonNull ClientboundSetEquipmentPacket packet, @NonNull ClientSession session) {
         var entity = CACHE.getEntityCache().get(packet.getEntityId());
-        if (entity == null) return false;
         if (entity instanceof EntityLiving e) {
             var equipmentMap = e.getEquipment();
             var packetEquipment = packet.getEquipment();

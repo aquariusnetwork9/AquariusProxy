@@ -19,7 +19,7 @@ public class RemoveMobEffectHandler implements ClientEventLoopPacketHandler<Clie
                 e.getPotionEffectMap().remove(packet.getEffect());
             } else {
                 CLIENT_LOG.debug("Received ClientboundRemoveMobEffectPacket for invalid entity (id={})", packet.getEntityId());
-                return false;
+                return true;
             }
         } catch (Exception e) {
             CLIENT_LOG.debug("Failed handling ClientboundRemoveMobEffectPacket for entity (id={})", packet.getEntityId(), e);

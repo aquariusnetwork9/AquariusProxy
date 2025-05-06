@@ -12,9 +12,11 @@ public class MoveEntityRotHandler implements ClientEventLoopPacketHandler<Client
     @Override
     public boolean applyAsync(@NonNull ClientboundMoveEntityRotPacket packet, @NonNull ClientSession session) {
         Entity entity = CACHE.getEntityCache().get(packet.getEntityId());
-        if (entity == null) return false;
-        entity.setYaw(packet.getYaw())
-            .setPitch(packet.getPitch());
+        if (entity != null) {
+            entity
+                .setYaw(packet.getYaw())
+                .setPitch(packet.getPitch());
+        }
         return true;
     }
 }

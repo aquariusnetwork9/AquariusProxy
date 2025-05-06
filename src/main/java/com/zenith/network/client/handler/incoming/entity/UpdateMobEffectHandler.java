@@ -28,11 +28,11 @@ public class UpdateMobEffectHandler implements ClientEventLoopPacketHandler<Clie
                 ));
             } else {
                 CLIENT_LOG.debug("Received ServerEntityEffectPacket for invalid entity (id={})", packet.getEntityId());
-                return false;
+                return true;
             }
         } catch (ClassCastException e)  {
             CLIENT_LOG.debug("Received ServerEntityEffectPacket for non-equipment entity (id={})", packet.getEntityId(), e);
-            return false;
+            return true;
         }
         return true;
     }

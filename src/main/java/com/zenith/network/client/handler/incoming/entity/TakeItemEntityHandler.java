@@ -15,7 +15,6 @@ public class TakeItemEntityHandler implements ClientEventLoopPacketHandler<Clien
             CACHE.getEntityCache().remove(packet.getCollectedEntityId());
             return true;
         }
-        return false;
+        return true;
     }
-
 }

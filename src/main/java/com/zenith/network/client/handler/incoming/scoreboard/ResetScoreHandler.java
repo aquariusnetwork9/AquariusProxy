@@ -15,9 +15,9 @@ public class ResetScoreHandler implements ClientEventLoopPacketHandler<Clientbou
             CACHE.getScoreboardCache().removeEntry(packet.getOwner());
         } else {
             var objective = CACHE.getScoreboardCache().get(packet.getObjective());
-            if (objective == null) return false;
-
-            objective.getScores().remove(packet.getOwner());
+            if (objective != null) {
+                objective.getScores().remove(packet.getOwner());
+            }
         }
         return true;
     }

@@ -7,14 +7,14 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.Clie
 import org.jspecify.annotations.NonNull;
 
 import static com.zenith.Globals.CACHE;
-import static java.util.Objects.isNull;
 
 public class UpdateAttributesHandler implements ClientEventLoopPacketHandler<ClientboundUpdateAttributesPacket, ClientSession> {
     @Override
     public boolean applyAsync(@NonNull ClientboundUpdateAttributesPacket packet, @NonNull ClientSession session) {
         Entity entity = CACHE.getEntityCache().get(packet.getEntityId());
-        if (isNull(entity)) return false;
-        entity.updateAttributes(packet.getAttributes());
+        if (entity != null) {
+            entity.updateAttributes(packet.getAttributes());
+        }
         return true;
     }
 }

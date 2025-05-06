@@ -16,13 +16,12 @@ public class SetObjectiveHandler implements ClientEventLoopPacketHandler<Clientb
             case REMOVE -> CACHE.getScoreboardCache().remove(packet);
             case UPDATE -> {
                 final Objective objective = CACHE.getScoreboardCache().get(packet.getName());
-                if (objective == null) {
-                    return false;
+                if (objective != null) {
+                    objective
+                        .setDisplayName(packet.getDisplayName())
+                        .setScoreType(packet.getType())
+                        .setNumberFormat(packet.getNumberFormat());
                 }
-                objective
-                    .setDisplayName(packet.getDisplayName())
-                    .setScoreType(packet.getType())
-                    .setNumberFormat(packet.getNumberFormat());
             }
         }
 

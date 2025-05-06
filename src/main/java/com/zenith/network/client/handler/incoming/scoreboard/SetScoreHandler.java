@@ -12,9 +12,9 @@ public class SetScoreHandler implements ClientEventLoopPacketHandler<Clientbound
     @Override
     public boolean applyAsync(@NonNull ClientboundSetScorePacket packet, @NonNull ClientSession session) {
         var objective = CACHE.getScoreboardCache().get(packet.getObjective());
-        if (objective == null) return false;
-
-        objective.getScores().put(packet.getOwner(), new Score(packet));
+        if (objective != null) {
+            objective.getScores().put(packet.getOwner(), new Score(packet));
+        }
         return true;
     }
 }

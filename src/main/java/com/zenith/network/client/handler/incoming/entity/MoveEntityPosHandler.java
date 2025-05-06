@@ -7,16 +7,17 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.Clie
 import org.jspecify.annotations.NonNull;
 
 import static com.zenith.Globals.CACHE;
-import static java.util.Objects.isNull;
 
 public class MoveEntityPosHandler implements ClientEventLoopPacketHandler<ClientboundMoveEntityPosPacket, ClientSession> {
     @Override
     public boolean applyAsync(@NonNull ClientboundMoveEntityPosPacket packet, @NonNull ClientSession session) {
         Entity entity = CACHE.getEntityCache().get(packet.getEntityId());
-        if (isNull(entity)) return false;
-        entity.setX(entity.getX() + packet.getMoveX())
+        if (entity != null) {
+            entity
+                .setX(entity.getX() + packet.getMoveX())
                 .setY(entity.getY() + packet.getMoveY())
                 .setZ(entity.getZ() + packet.getMoveZ());
+        }
         return true;
     }
 }

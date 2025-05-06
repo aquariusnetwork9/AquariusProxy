@@ -22,7 +22,7 @@ public class SetEntityLinkHandler implements ClientEventLoopPacketHandler<Client
             return true;
         } else {
             CLIENT_LOG.debug("Received ServerEntityAttachPacket for invalid entity (id={})", packet.getEntityId());
-            return false;
+            return true;
         }
     }
 }
