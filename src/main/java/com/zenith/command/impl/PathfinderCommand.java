@@ -77,12 +77,16 @@ public class PathfinderCommand extends Command {
                         .addExecutedListener(f -> {
                             c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
                                 .title("Pathing Completed!")
-                                .addField("Pos", "||[" + x + ", " + z + "]||")
+                                .addField("Pos", CONFIG.discord.reportCoords
+                                    ? "||[" + x + ", " + z + "]||"
+                                    : "Coords disabled")
                                 .primaryColor());
                         });
                     c.getSource().getEmbed()
                         .title("Pathing")
-                        .addField("Goal", x + ", " + z, false)
+                        .addField("Goal", CONFIG.discord.reportCoords
+                            ? "||[" + x + ", " + z + "]||"
+                            : "Coords disabled")
                         .primaryColor();
                 }))
                 .then(argument("xyz", blockPos()).executes(c -> {
@@ -94,12 +98,16 @@ public class PathfinderCommand extends Command {
                         .addExecutedListener(f -> {
                             c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
                                 .title("Pathing Completed!")
-                                .addField("Pos", "||[" + x + ", " + y + ", " + z + "]||")
+                                .addField("Pos", CONFIG.discord.reportCoords
+                                    ? "||[" + x + ", " + y + ", " + z + "]||"
+                                    : "Coords disabled")
                                 .primaryColor());
                         });
                     c.getSource().getEmbed()
                         .title("Pathing")
-                        .addField("Goal", x + ", " + y + ", " + z, false)
+                        .addField("Goal", CONFIG.discord.reportCoords
+                            ? "||[" + x + ", " + y + ", " + z + "]||"
+                            : "Coords disabled")
                         .primaryColor();
                 })))
             .then(literal("stop").executes(c -> {
@@ -154,7 +162,9 @@ public class PathfinderCommand extends Command {
                         BlockPos pos = CACHE.getPlayerCache().getThePlayer().blockPos();
                         c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
                             .title("Pathing Completed!")
-                            .addField("Pos", "||[" + pos.x() + ", " + pos.y() + ", " + pos.z() + "]||")
+                            .addField("Pos", CONFIG.discord.reportCoords
+                                ? "||[" + pos.x() + ", " + pos.y() + ", " + pos.z() + "]||"
+                                : "Coords disabled")
                             .primaryColor());
                     });
                 c.getSource().getEmbed()
@@ -178,7 +188,9 @@ public class PathfinderCommand extends Command {
                         BlockPos pos = CACHE.getPlayerCache().getThePlayer().blockPos();
                         c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
                             .title("At Block!")
-                            .addField("Player Pos", "||[" + pos.x() + ", " + pos.y() + ", " + pos.z() + "]||")
+                            .addField("Player Pos", CONFIG.discord.reportCoords
+                                ? "||[" + pos.x() + ", " + pos.y() + ", " + pos.z() + "]||"
+                                : "Coords disabled")
                             .primaryColor());
                     });
                 c.getSource().getEmbed()
@@ -215,12 +227,16 @@ public class PathfinderCommand extends Command {
                             .addExecutedListener(f -> {
                                 c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
                                     .title("Block Left Clicked!")
-                                    .addField("Target", "||[" + x + ", " + y + ", " + z + "]||")
+                                    .addField("Target", CONFIG.discord.reportCoords
+                                        ? "||[" + x + ", " + y + ", " + z + "]||"
+                                        : "Coords disabled")
                                     .primaryColor());
                             });
                         c.getSource().getEmbed()
                             .title("Pathing")
-                            .addField("Left Click", "||[" + x + ", " + y + ", " + z + "]||")
+                            .addField("Left Click", CONFIG.discord.reportCoords
+                                ? "||[" + x + ", " + y + ", " + z + "]||"
+                                : "Coords disabled")
                             .primaryColor();
                     }))
                     .then(literal("entity")
@@ -251,12 +267,18 @@ public class PathfinderCommand extends Command {
                                 .addExecutedListener(f -> {
                                     c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
                                         .title("Entity Left Clicked!")
-                                        .addField("Target", entityOptional.get().getEntityType() + " ||[" + entityOptional.get().position() + "]||")
+                                        .addField("Target", entityOptional.get().getEntityType()
+                                            + (CONFIG.discord.reportCoords
+                                                ? " ||[" + entityOptional.get().position() + "]||"
+                                                : ""))
                                         .primaryColor());
                                 });
                             c.getSource().getEmbed()
                                 .title("Pathing")
-                                .addField("Left Click", entityOptional.get().getEntityType() + " ||[" + entityOptional.get().position() + "]||", false)
+                                .addField("Left Click", entityOptional.get().getEntityType()
+                                    + (CONFIG.discord.reportCoords
+                                        ? " ||[" + entityOptional.get().position() + "]||"
+                                        : ""))
                                 .primaryColor();
                             return OK;
                         }))))
@@ -270,12 +292,16 @@ public class PathfinderCommand extends Command {
                             .addExecutedListener(f -> {
                                 c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
                                     .title("Block Right Clicked!")
-                                    .addField("Target", "||[" + x + ", " + y + ", " + z + "]||")
+                                    .addField("Target", CONFIG.discord.reportCoords
+                                        ? "||[" + x + ", " + y + ", " + z + "]||"
+                                        : "Coords disabled")
                                     .primaryColor());
                             });
                         c.getSource().getEmbed()
                             .title("Pathing")
-                            .addField("Right Click", "||[" + x + ", " + y + ", " + z + "]||")
+                            .addField("Right Click", CONFIG.discord.reportCoords
+                                ? "||[" + x + ", " + y + ", " + z + "]||"
+                                : "Coords disabled")
                             .primaryColor();
                     }))
                     .then(literal("entity")
@@ -306,12 +332,18 @@ public class PathfinderCommand extends Command {
                                 .addExecutedListener(f -> {
                                     c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
                                         .title("Entity Right Clicked!")
-                                        .addField("Target", entityOptional.get().getEntityType() + " ||[" + entityOptional.get().position() + "]||")
+                                        .addField("Target", entityOptional.get().getEntityType()
+                                            + (CONFIG.discord.reportCoords
+                                                ? " ||[" + entityOptional.get().position() + "]||"
+                                                : ""))
                                         .primaryColor());
                                 });
                             c.getSource().getEmbed()
                                 .title("Pathing")
-                                .addField("Right Click", entityOptional.get().getEntityType() + " ||[" + entityOptional.get().position() + "]||")
+                                .addField("Right Click", entityOptional.get().getEntityType()
+                                    + (CONFIG.discord.reportCoords
+                                        ? " ||[" + entityOptional.get().position() + "]||"
+                                        : ""))
                                 .primaryColor();
                             return OK;
                         })))))
@@ -319,7 +351,7 @@ public class PathfinderCommand extends Command {
                 boolean isActive = BARITONE.isActive();
                 c.getSource().getEmbed()
                     .title("Pathing Status")
-                    .addField("Active", isActive ? "Yes" : "No", false);
+                    .addField("Active", isActive ? "Yes" : "No");
                 if (isActive) {
                     c.getSource().getEmbed().primaryColor();
                 } else {
@@ -328,7 +360,9 @@ public class PathfinderCommand extends Command {
                 if (isActive) {
                     BARITONE.getPathingControlManager().mostRecentInControl().ifPresent(
                         process -> c.getSource().getEmbed()
-                            .addField("Process", process.displayName(), false)
+                            .addField("Process", CONFIG.discord.reportCoords
+                                ? process.displayName()
+                                : "Coords disabled")
                     );
                 }
             }))
