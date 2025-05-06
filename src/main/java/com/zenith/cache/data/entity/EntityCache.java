@@ -9,6 +9,7 @@ import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.network.tcp.TcpSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.spawn.ClientboundAddEntityPacket;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.*;
@@ -76,7 +77,7 @@ public class EntityCache implements CachedData {
         }
     }
 
-    public Entity remove(int id)  {
+    public @Nullable Entity remove(int id)  {
         var entity = this.entities.remove(id);
         if (entity != null) entity.setRemoved(true);
         if (entity instanceof EntityPlayer player) {
@@ -90,15 +91,15 @@ public class EntityCache implements CachedData {
         return Optional.ofNullable(this.recentlyRemovedPlayers.getIfPresent(uuid));
     }
 
-    public Entity get(int id) {
+    public @Nullable Entity get(int id) {
         return this.entities.get(id);
     }
 
-    public Entity get(Entity entity) {
+    public @Nullable Entity get(Entity entity) {
         return this.entities.get(entity.getEntityId());
     }
 
-    public Entity get(UUID uuid) {
+    public @Nullable Entity get(UUID uuid) {
         return this.players.get(uuid);
     }
 }

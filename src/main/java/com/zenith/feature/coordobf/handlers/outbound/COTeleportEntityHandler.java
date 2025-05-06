@@ -13,15 +13,18 @@ import static com.zenith.Globals.MODULE;
 public class COTeleportEntityHandler implements PacketHandler<ClientboundTeleportEntityPacket, ServerSession> {
     @Override
     public ClientboundTeleportEntityPacket apply(final ClientboundTeleportEntityPacket packet, final ServerSession session) {
+        var coordObf = MODULE.get(CoordObfuscation.class);
         var entity = CACHE.getEntityCache().get(packet.getEntityId());
-        if (entity == null) return null;
+        if (entity == null && !coordObf.getSpectatorEntityIds().contains(packet.getEntityId())) {
+            return null;
+        }
         if (entity instanceof EntityStandard e) {
             if (e.getEntityType() == EntityType.EYE_OF_ENDER) {
                 return null;
             }
         }
-        var coordObf = MODULE.get(CoordObfuscation.class);
-        if (!entity.getPassengerIds().isEmpty()
+
+        if (entity != null && !entity.getPassengerIds().isEmpty()
             && entity.getPassengerIds().contains(CACHE.getPlayerCache().getEntityId())) {
             coordObf.playerMovePos(session, packet.getX(), packet.getZ());
         }

@@ -222,10 +222,10 @@ public class ServerSession extends TcpServerSession {
                                 reasonStr,
                                 cause);
                 try {
-                    EVENT_BUS.post(new PlayerDisconnectedEvent(reasonStr, profileCache.getProfile()));
+                    EVENT_BUS.post(new PlayerDisconnectedEvent(reasonStr, this, profileCache.getProfile()));
                 } catch (final Throwable e) {
                     SERVER_LOG.info("Could not get game profile of disconnecting player");
-                    EVENT_BUS.post(new PlayerDisconnectedEvent(reasonStr));
+                    EVENT_BUS.post(new PlayerDisconnectedEvent(reasonStr, this));
                 }
                 Proxy.getInstance().getSpectatorConnections().forEach(s -> {
                     s.sendAsyncAlert("<red>" + getName() + " disconnected from controlling player");
@@ -243,7 +243,7 @@ public class ServerSession extends TcpServerSession {
                     connection.send(new ClientboundRemoveEntitiesPacket(new int[]{this.spectatorEntityId}));
                     connection.sendAsyncAlert("<red>" + getName() + " disconnected from spectator");
                 }
-                EVENT_BUS.postAsync(new SpectatorDisconnectedEvent(profileCache.getProfile()));
+                EVENT_BUS.postAsync(new SpectatorDisconnectedEvent(this, profileCache.getProfile()));
             }
         }
         ServerSession serverConnection = Proxy.getInstance().getCurrentPlayer().get();

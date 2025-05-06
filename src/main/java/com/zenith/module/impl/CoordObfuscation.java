@@ -5,6 +5,8 @@ import com.zenith.cache.data.PlayerCache;
 import com.zenith.discord.Embed;
 import com.zenith.event.player.PlayerConnectionRemovedEvent;
 import com.zenith.event.player.PlayerLoginEvent;
+import com.zenith.event.player.SpectatorConnectedEvent;
+import com.zenith.event.player.SpectatorDisconnectedEvent;
 import com.zenith.feature.coordobf.CoordOffset;
 import com.zenith.feature.coordobf.ObfPlayerState;
 import com.zenith.feature.coordobf.handlers.inbound.*;
@@ -24,6 +26,9 @@ import com.zenith.util.config.Config;
 import com.zenith.util.config.Config.Client.Extra.CoordObfuscation.ObfuscationMode;
 import com.zenith.util.math.MathHelper;
 import com.zenith.util.math.MutableVec3d;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
+import lombok.Getter;
 import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.MetadataTypes;
@@ -63,6 +68,8 @@ public class CoordObfuscation extends Module {
     private final Map<ServerSession, ObfPlayerState> playerStateMap = new ConcurrentHashMap<>();
     private int preTeleportId = Integer.MIN_VALUE;
     private final MutableVec3d preTeleportClientPos = new MutableVec3d(0.0, 0.0, 0.0);
+    // todo: maybe add spectator entities to the main entity cache
+    @Getter private final IntSet spectatorEntityIds = new IntOpenHashSet();
 
     private final Config.Debug.PacketLog.PacketLogConfig packetLogConfig = new Config.Debug.PacketLog.PacketLogConfig();
     private final PacketHandlerCodec beforeOffsetPacketLogger = new PacketLogPacketHandlerCodec(
@@ -84,8 +91,18 @@ public class CoordObfuscation extends Module {
         EVENT_BUS.subscribe(
             this,
             of(PlayerConnectionRemovedEvent.class, this::onServerConnectionRemoved),
-            of(PlayerLoginEvent.Pre.class, this::onPlayerLoginEvent)
+            of(PlayerLoginEvent.Pre.class, this::onPlayerLoginEvent),
+            of(SpectatorConnectedEvent.class, this::onSpectatorConnected),
+            of(SpectatorDisconnectedEvent.class, this::onSpectatorDisconnected)
         );
+    }
+
+    private void onSpectatorDisconnected(SpectatorDisconnectedEvent event) {
+        spectatorEntityIds.remove(event.serverSession().getSpectatorEntityId());
+    }
+
+    private void onSpectatorConnected(SpectatorConnectedEvent event) {
+        spectatorEntityIds.add(event.session().getSpectatorEntityId());
     }
 
     @Override
