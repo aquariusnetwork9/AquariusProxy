@@ -28,7 +28,6 @@ import com.zenith.util.Wait;
 import com.zenith.util.struct.FastArrayList;
 import com.zenith.via.ZenithClientChannelInitializer;
 import com.zenith.via.ZenithServerChannelInitializer;
-import io.netty.util.ResourceLeakDetector;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -100,8 +99,6 @@ public class Proxy {
         Locale.setDefault(Locale.ENGLISH);
         SLF4JBridgeHandler.removeHandlersForRootLogger();
         SLF4JBridgeHandler.install();
-        if (System.getProperty("io.netty.leakDetection.level") == null)
-            ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.DISABLED);
         if (System.getProperty("io.netty.allocator.type") == null)
             // new adaptive alloc in netty 4.2 is causing out of memory errors with graalvm and 200M heap size
             // there could be some netty config props that could help
@@ -109,8 +106,12 @@ public class Proxy {
             System.setProperty("io.netty.allocator.type", "pooled");
         if (System.getProperty("reactor.schedulers.defaultPoolSize") == null)
             System.setProperty("reactor.schedulers.defaultPoolSize", "1");
-        if (System.getProperty("reactor.schedulers.defaultBoundedElasticOnVirtualThreads") == null)
-            System.setProperty("reactor.schedulers.defaultBoundedElasticOnVirtualThreads", "true");
+        if (System.getProperty("io.netty.allocator.numHeapArenas") == null)
+            System.setProperty("io.netty.allocator.numHeapArenas", "2");
+        if (System.getProperty("io.netty.allocator.numDirectArenas") == null)
+            System.setProperty("io.netty.allocator.numDirectArenas", "2");
+        if (System.getProperty("io.netty.leakDetection.level") == null)
+            System.setProperty("io.netty.leakDetection.level", "disabled");
         instance.start();
     }
 
