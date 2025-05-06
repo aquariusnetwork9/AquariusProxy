@@ -266,10 +266,15 @@ public class DiscordBot {
     private void handleProxyUpdateComplete() {
         CONFIG.discord.isUpdating = false;
         saveConfigAsync();
-        sendEmbedMessage(Embed.builder()
-                             .title("Update complete!")
-                             .description("Current Version: `" + escape(LAUNCH_CONFIG.version) + "`")
-                             .successColor());
+        var embed = Embed.builder()
+            .title("Update complete!")
+            .description("Current Version: `" + escape(LAUNCH_CONFIG.version) + "`")
+            .successColor();
+        if (!LAUNCH_CONFIG.auto_update) {
+            embed
+                .title("Restart complete!");
+        }
+        sendEmbedMessage(embed);
     }
 
     public static String escape(String message) {

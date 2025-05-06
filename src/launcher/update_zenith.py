@@ -118,6 +118,8 @@ def update_zenith_exec(config, api):
                 java_get_version(config, api, config.version)
             elif config.release_channel.startswith("linux"):
                 linux_native_get_version(config, api, config.version)
+        else:
+            print("Auto update is disabled, did not check for update")
         if config.release_channel == "git":
             git_read_version(config)
         config.write_launch_config()

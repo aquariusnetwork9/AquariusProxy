@@ -598,7 +598,9 @@ public class NotificationEventListener {
             .description(verString)
             .primaryColor();
         if (!LAUNCH_CONFIG.auto_update) {
-            embed.addField("Info", "`autoUpdate` must be enabled for new updates to apply", false);
+            embed
+                .title("Restarting...")
+                .addField("Error", "`autoUpdate` must be enabled for new updates to apply");
         };
         sendEmbedMessage(embed);
     }

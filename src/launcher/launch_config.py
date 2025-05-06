@@ -47,7 +47,7 @@ class LaunchConfig:
         self.local_version = data.get("local_version", self.local_version)
         self.repo_owner = data.get("repo_owner", self.repo_owner)
         self.repo_name = data.get("repo_name", self.repo_name)
-        self.custom_jvm_args = data.get("custom_jvm_args", self.custom_jvm_args)
+        self.custom_jvm_args = data.get("custom_jvm_args", None)
         if self.custom_jvm_args is not None and self.custom_jvm_args != "":
             print("Using custom JVM args:", self.custom_jvm_args)
 
