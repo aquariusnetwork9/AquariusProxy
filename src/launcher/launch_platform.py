@@ -20,7 +20,7 @@ def validate_linux_cpu_flags():
             if flag not in flags:
                 print(
                     "Unsupported CPU. "
-                    + "Use the Java release channel instead. Re-run setup.py to change the release channel. "
+                    + "Use the Java release channel instead. Re-run setup to change the release channel. "
                     + "\nFlag not found: "
                     + flag
                 )

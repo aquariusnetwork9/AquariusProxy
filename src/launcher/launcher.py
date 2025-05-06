@@ -13,7 +13,7 @@ default_java_args = """\
 java24_addnl_args = """\
 -XX:+UseCompactObjectHeaders --sun-misc-unsafe-memory-access=allow --enable-native-access=ALL-UNNAMED"""
 
-default_linux_xmx = 200
+default_linux_xmx = 225
 
 default_linux_args = ""
 
