@@ -82,7 +82,17 @@ public class DiscordBot {
 
     public synchronized void start() {
         if (isRunning()) return;
-        initializeJda();
+        try {
+            initializeJda();
+        } catch (Throwable e) {
+            if (this.jda != null) {
+                jda.shutdownNow();
+            }
+            this.mainChannel = null;
+            this.relayChannel = null;
+            jda = null;
+            throw e;
+        }
 
         if (CONFIG.discord.isUpdating) {
             handleProxyUpdateComplete();
