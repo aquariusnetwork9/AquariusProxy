@@ -14,6 +14,7 @@ public class COTeleportEntityHandler implements PacketHandler<ClientboundTelepor
     @Override
     public ClientboundTeleportEntityPacket apply(final ClientboundTeleportEntityPacket packet, final ServerSession session) {
         var entity = CACHE.getEntityCache().get(packet.getEntityId());
+        if (entity == null) return null;
         if (entity instanceof EntityStandard e) {
             if (e.getEntityType() == EntityType.EYE_OF_ENDER) {
                 return null;
