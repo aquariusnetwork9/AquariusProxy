@@ -120,10 +120,16 @@ public class PearlLoader extends Command {
         if (pearls.isEmpty()) return "None";
         StringBuilder sb = new StringBuilder();
         for (var pearl : pearls) {
-            sb.append("**").append(pearl.id())
-                .append("**: ||[")
-                .append(pearl.x()).append(", ").append(pearl.y()).append(", ").append(pearl.z())
-                .append("]||\n");
+            sb.append("**")
+                .append(pearl.id())
+                .append("**: ");
+            if (CONFIG.discord.reportCoords) {
+                sb.append("||[")
+                    .append(pearl.x()).append(", ").append(pearl.y()).append(", ").append(pearl.z())
+                    .append("]||\n");
+            } else {
+                sb.append("coords disabled\n");
+            }
         }
         return sb.toString();
     }
