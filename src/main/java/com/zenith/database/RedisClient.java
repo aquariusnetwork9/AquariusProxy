@@ -17,11 +17,7 @@ import static java.util.Objects.isNull;
 @Getter
 public class RedisClient {
 
-    private RedissonClient redissonClient;
-
-    public RedisClient() {
-        redissonClient = buildRedisClient();
-    }
+    private RedissonClient redissonClient = buildRedisClient();
 
     public RLock getLock(final String lockKey) {
         synchronized (this) {
