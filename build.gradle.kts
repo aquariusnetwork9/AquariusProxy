@@ -264,8 +264,17 @@ graalvmNative {
                 "--gc=serial",
                 "-J-XX:MaxRAMPercentage=90",
                 "--install-exit-handlers",
-//                "--enable-monitoring=jfr"
+//                "--enable-monitoring=nmt,jfr",
                 "--enable-native-access=ALL-UNNAMED",
+//                "-H:+PrintClassInitialization",
+                "--initialize-at-build-time=com.zenith.feature.deathmessages",
+                "--initialize-at-build-time=org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerType",
+                "--initialize-at-build-time=org.cloudburstmc.math.immutable.vector.ImmutableVector3i",
+                "--initialize-at-build-time=com.google.common.collect.RegularImmutableList",
+                "--initialize-at-build-time=org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType",
+                "--initialize-at-build-time=org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockEntityType",
+                "--initialize-at-build-time=it.unimi.dsi.fastutil",
+                "--initialize-at-build-time=com.zenith.mc",
                 "--initialize-at-run-time=sun.net.dns.ResolverConfigurationImpl", // fix for windows builds, exception when doing srv lookups with netty
             )
             val pgoPath = System.getenv("GRAALVM_PGO_PATH")

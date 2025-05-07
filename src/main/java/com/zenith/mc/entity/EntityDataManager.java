@@ -8,13 +8,13 @@ import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 
 public class EntityDataManager {
-    private final Reference2ObjectMap<EntityType, EntityData> entityTypeToData = new Reference2ObjectOpenHashMap<>(EntityRegistry.REGISTRY.size(), Maps.FAST_LOAD_FACTOR);
+    private static final Reference2ObjectMap<EntityType, EntityData> entityTypeToData = new Reference2ObjectOpenHashMap<>(EntityRegistry.REGISTRY.size(), Maps.FAST_LOAD_FACTOR);
 
-    public EntityDataManager() {
+    static {
         init();
     }
 
-    private void init() {
+    private static void init() {
         for (var entry : EntityRegistry.REGISTRY.getIdMap().int2ObjectEntrySet()) {
             var entity = entry.getValue();
             entityTypeToData.put(entity.mcplType(), entity);
