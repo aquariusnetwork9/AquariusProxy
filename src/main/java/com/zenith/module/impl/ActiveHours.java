@@ -1,9 +1,9 @@
 package com.zenith.module.impl;
 
 import com.zenith.Proxy;
-import com.zenith.event.proxy.ActiveHoursConnectEvent;
+import com.zenith.event.module.ActiveHoursConnectEvent;
 import com.zenith.feature.queue.Queue;
-import com.zenith.module.Module;
+import com.zenith.module.api.Module;
 import org.jspecify.annotations.Nullable;
 
 import java.time.*;
@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class ActiveHours extends Module {
     public static final String ACTIVE_HOURS_DISCONNECT_PREFIX = "[Active Hours] ";

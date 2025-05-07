@@ -1,32 +1,20 @@
 package com.zenith.feature.coordobf.handlers.inbound;
 
-import com.zenith.module.impl.CoordObfuscator;
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.module.impl.CoordObfuscation;
+import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundMovePlayerPosPacket;
 
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.MODULE;
 
 public class COMovePlayerPosHandler implements PacketHandler<ServerboundMovePlayerPosPacket, ServerSession> {
     @Override
     public ServerboundMovePlayerPosPacket apply(final ServerboundMovePlayerPosPacket packet, final ServerSession session) {
-        if (!session.isInGame()) {
+        var coordObf = MODULE.get(CoordObfuscation.class);
+        if (!coordObf.getPlayerState(session).isInGame()) {
             return null;
         }
-
-        CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
         coordObf.playerMovePos(session, coordObf.getCoordOffset(session).reverseOffsetX(packet.getX()), coordObf.getCoordOffset(session).reverseOffsetZ(packet.getZ()));
-        if (coordObf.isNextPlayerMovePacketIsTeleport()) {
-            coordObf.setNextPlayerMovePacketIsTeleport(false);
-            MODULE.get(CoordObfuscator.class).info("Sending corrected teleport packet {} {} {}", coordObf.getServerTeleportPos().getX(), coordObf.getServerTeleportPos().getY(), coordObf.getServerTeleportPos().getZ());
-            return new ServerboundMovePlayerPosPacket(
-                packet.isOnGround(),
-                packet.isHorizontalCollision(),
-                coordObf.getServerTeleportPos().getX(),
-                coordObf.getServerTeleportPos().getY(),
-                coordObf.getServerTeleportPos().getZ()
-            );
-        }
         return new ServerboundMovePlayerPosPacket(
             packet.isOnGround(),
             packet.isHorizontalCollision(),

@@ -1,12 +1,12 @@
 package com.zenith.network.client.handler.outgoing;
 
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.network.codec.PacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandSignedPacket;
 
 import java.util.BitSet;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class OutgoingChatCommandSignedHandler implements PacketHandler<ServerboundChatCommandSignedPacket, ClientSession> {
     @Override

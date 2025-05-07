@@ -4,7 +4,7 @@ import io.netty.channel.Channel;
 import org.geysermc.mcprotocollib.network.tcp.TcpClientChannelInitializer;
 import org.geysermc.mcprotocollib.network.tcp.TcpClientSession;
 
-import static com.zenith.Shared.VIA_INITIALIZER;
+import static com.zenith.Globals.VIA_INITIALIZER;
 
 public class ZenithClientChannelInitializer extends TcpClientChannelInitializer {
     public static final Factory FACTORY = ZenithClientChannelInitializer::new;

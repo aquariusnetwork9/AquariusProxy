@@ -1,11 +1,7 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
-import com.zenith.command.brigadier.CommandSource;
+import com.zenith.command.api.*;
 import com.zenith.util.ComponentSerializer;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundRemoveEntitiesPacket;
@@ -23,7 +19,7 @@ public class SpectatorEntityToggleCommand extends Command {
 
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
-        return command("entityToggle").requires(c -> Command.validateCommandSource(c, CommandSource.SPECTATOR)).executes(c -> {
+        return command("entityToggle").requires(c -> Command.validateCommandSource(c, CommandSources.SPECTATOR)).executes(c -> {
             var session = c.getSource().getInGamePlayerInfo().session();
             session.setShowSelfEntity(!session.isShowSelfEntity());
             if (session.isShowSelfEntity()) {

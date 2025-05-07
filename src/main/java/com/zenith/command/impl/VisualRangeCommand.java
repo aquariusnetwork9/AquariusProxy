@@ -2,13 +2,13 @@ package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.cache.data.entity.EntityPlayer;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import com.zenith.module.impl.VisualRange;
-import com.zenith.util.Config;
+import com.zenith.util.config.Config;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 
 import java.util.ArrayList;
@@ -18,7 +18,7 @@ import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 import static com.zenith.discord.DiscordBot.escape;
@@ -195,7 +195,7 @@ public class VisualRangeCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("VisualRange", toggleStr(CONFIG.client.extra.visualRange.enabled), false)
             .addField("Enter Alerts", toggleStr(CONFIG.client.extra.visualRange.enterAlert), false)

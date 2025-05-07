@@ -3,17 +3,16 @@ package com.zenith.module.impl;
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
 import com.zenith.cache.data.inventory.Container;
-import com.zenith.event.module.ClientBotTick;
-import com.zenith.event.module.ClientTickEvent;
+import com.zenith.event.client.ClientBotTick;
+import com.zenith.event.client.ClientTickEvent;
 import com.zenith.event.module.NoTotemsEvent;
 import com.zenith.event.module.PlayerTotemPopAlertEvent;
-import com.zenith.event.proxy.TotemPopEvent;
-import com.zenith.feature.items.ContainerClickAction;
+import com.zenith.event.module.TotemPopEvent;
+import com.zenith.feature.inventory.actions.CloseContainer;
+import com.zenith.feature.inventory.actions.MoveToHotbarSlot;
 import com.zenith.mc.item.ItemRegistry;
-import org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerActionType;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.MoveToHotbarAction;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClosePacket;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -21,7 +20,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static java.util.Objects.nonNull;
 
 public class AutoTotem extends AbstractInventoryModule {
@@ -74,13 +73,16 @@ public class AutoTotem extends AbstractInventoryModule {
             ItemStack itemStack = inventory.get(i);
             if (nonNull(itemStack) && itemStack.getId() == ItemRegistry.TOTEM_OF_UNDYING.id()) {
                 var actionSlot = MoveToHotbarAction.OFF_HAND;
-                var action = new ContainerClickAction(i, ContainerActionType.MOVE_TO_HOTBAR_SLOT, actionSlot);
                 CLIENT_LOG.debug("[{}] Swapping totem to offhand {}", getClass().getSimpleName(), actionSlot.getId());
-                if (CACHE.getPlayerCache().getInventoryCache().getOpenContainerId() != 0)
-                    sendClientPacketAsync(new ServerboundContainerClosePacket(CACHE.getPlayerCache().getInventoryCache().getOpenContainerId()));
-                sendClientPacketAsync(action.toPacket());
-                if (CONFIG.debug.ncpStrictInventory) {
-                    sendClientPacketAsync(new ServerboundContainerClosePacket(0));
+                if (CACHE.getPlayerCache().getInventoryCache().getOpenContainerId() != 0) {
+                    var closePacket = new CloseContainer().packet();
+                    if (closePacket != null) sendClientPacketAsync(closePacket);
+                }
+                var moveToHotbarPacket = new MoveToHotbarSlot(i, actionSlot).packet();
+                if (moveToHotbarPacket != null) sendClientPacketAsync(moveToHotbarPacket);
+                if (CONFIG.client.inventory.ncpStrict) {
+                    var closePacket = new CloseContainer(0).packet();
+                    if (closePacket != null) sendClientPacketAsync(closePacket);
                 }
                 return true;
             }

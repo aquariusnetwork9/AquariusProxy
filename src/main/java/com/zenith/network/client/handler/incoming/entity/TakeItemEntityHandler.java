@@ -1,11 +1,11 @@
 package com.zenith.network.client.handler.incoming.entity;
 
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundTakeItemEntityPacket;
 import org.jspecify.annotations.NonNull;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 import static java.util.Objects.nonNull;
 
 public class TakeItemEntityHandler implements ClientEventLoopPacketHandler<ClientboundTakeItemEntityPacket, ClientSession> {
@@ -15,7 +15,6 @@ public class TakeItemEntityHandler implements ClientEventLoopPacketHandler<Clien
             CACHE.getEntityCache().remove(packet.getCollectedEntityId());
             return true;
         }
-        return false;
+        return true;
     }
-
 }

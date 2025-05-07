@@ -5,7 +5,7 @@ import lombok.Data;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.zenith.Shared.LAUNCH_CONFIG;
+import static com.zenith.Globals.LAUNCH_CONFIG;
 
 @Data
 public class ReplayMetadata {

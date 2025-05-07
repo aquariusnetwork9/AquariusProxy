@@ -2,11 +2,11 @@ package com.zenith.network.client.handler.incoming.scoreboard;
 
 import com.zenith.cache.data.scoreboard.Objective;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.scoreboard.ClientboundSetObjectivePacket;
 import org.jspecify.annotations.NonNull;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class SetObjectiveHandler implements ClientEventLoopPacketHandler<ClientboundSetObjectivePacket, ClientSession> {
     @Override
@@ -16,13 +16,12 @@ public class SetObjectiveHandler implements ClientEventLoopPacketHandler<Clientb
             case REMOVE -> CACHE.getScoreboardCache().remove(packet);
             case UPDATE -> {
                 final Objective objective = CACHE.getScoreboardCache().get(packet.getName());
-                if (objective == null) {
-                    return false;
+                if (objective != null) {
+                    objective
+                        .setDisplayName(packet.getDisplayName())
+                        .setScoreType(packet.getType())
+                        .setNumberFormat(packet.getNumberFormat());
                 }
-                objective
-                    .setDisplayName(packet.getDisplayName())
-                    .setScoreType(packet.getType())
-                    .setNumberFormat(packet.getNumberFormat());
             }
         }
 

@@ -1,35 +1,29 @@
 package com.zenith.feature.coordobf.handlers.outbound;
 
-import com.zenith.feature.coordobf.CoordOffset;
-import com.zenith.module.impl.CoordObfuscator;
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.cache.data.chunk.Chunk;
+import com.zenith.module.impl.CoordObfuscation;
+import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
-import org.geysermc.mcprotocollib.protocol.data.game.chunk.ChunkSection;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundLevelChunkWithLightPacket;
 
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.*;
 
 public class COLevelChunkWithLightHandler implements PacketHandler<ClientboundLevelChunkWithLightPacket, ServerSession> {
     @Override
     public ClientboundLevelChunkWithLightPacket apply(final ClientboundLevelChunkWithLightPacket packet, final ServerSession session) {
-        CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
-        return coordObf.getCoordOffset(session).shouldAddBedrockLayerToChunkData()
-            ? offsetPacket(packet, coordObf.getCoordOffset(session), coordObf.getCoordOffset(session).addBedrockLayerToChunkData(packet))
-            : offsetPacket(packet, coordObf.getCoordOffset(session), packet.getSections());
-    }
-
-    private ClientboundLevelChunkWithLightPacket offsetPacket(
-        final ClientboundLevelChunkWithLightPacket packet,
-        final CoordOffset coordOffset,
-        final ChunkSection[] sections
-    ) {
+        CoordObfuscation coordObf = MODULE.get(CoordObfuscation.class);
+        var coordOffset = coordObf.getCoordOffset(session);
         return new ClientboundLevelChunkWithLightPacket(
             coordOffset.offsetChunkX(packet.getX()),
             coordOffset.offsetChunkZ(packet.getZ()),
-            sections,
-            packet.getHeightMaps(),
+            coordOffset.obfuscateChunkSections(packet.getSections()),
+            CONFIG.client.extra.coordObfuscation.obfuscateChunkHeightmap
+                ? Chunk.EMPTY_HEIGHT_MAP
+                : packet.getHeightMaps(),
             coordOffset.offsetBlockEntityInfos(packet.getBlockEntities()),
-            packet.getLightData()
+            CONFIG.client.extra.coordObfuscation.obfuscateChunkLighting
+                ? CACHE.getChunkCache().createFullBrightLightData(packet.getLightData(), packet.getSections().length)
+                : packet.getLightData()
         );
     }
 }

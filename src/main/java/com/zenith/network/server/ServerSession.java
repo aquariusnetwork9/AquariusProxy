@@ -7,16 +7,15 @@ import com.zenith.cache.data.ServerProfileCache;
 import com.zenith.cache.data.cookie.CookieCache;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityCache;
-import com.zenith.event.proxy.ProxyClientDisconnectedEvent;
-import com.zenith.event.proxy.ProxySpectatorDisconnectedEvent;
-import com.zenith.event.proxy.ServerConnectionRemovedEvent;
+import com.zenith.event.player.PlayerConnectionRemovedEvent;
+import com.zenith.event.player.PlayerDisconnectedEvent;
+import com.zenith.event.player.SpectatorDisconnectedEvent;
 import com.zenith.feature.ratelimiter.LoginRateLimiter;
 import com.zenith.feature.ratelimiter.PacketRateLimiter;
 import com.zenith.feature.spectator.SpectatorEntityRegistry;
 import com.zenith.feature.spectator.entity.SpectatorEntity;
-import com.zenith.network.registry.ZenithHandlerCodec;
+import com.zenith.network.codec.PacketCodecRegistries;
 import com.zenith.util.ComponentSerializer;
-import com.zenith.util.Wait;
 import io.netty.channel.ChannelException;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.DecoderException;
@@ -46,13 +45,14 @@ import java.io.IOException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 @Getter
 @Setter
@@ -67,11 +67,13 @@ public class ServerSession extends TcpServerSession {
             throw new IllegalStateException("Failed to generate server key pair.", e);
         }
     }
+    private static final SecureRandom random = new SecureRandom();
 
     private final byte[] challenge = new byte[4];
-    private String username = "";
+    private String username = "?";
     // as requested by the player during login. may not be the same as what mojang api returns
-    private @Nullable UUID loginProfileUUID;
+    private final UUID defaultUUID = UUID.randomUUID();
+    private UUID loginProfileUUID = defaultUUID;
     private int protocolVersionId; // as reported by the client when they connected
     private String connectingServerAddress; // as reported by the client when they connected
     private int connectingServerPort; // as reported by the client when they connected
@@ -87,7 +89,6 @@ public class ServerSession extends TcpServerSession {
     protected boolean whitelistChecked = false;
     protected boolean isPlayer = false;
     protected boolean isLoggedIn = false;
-    protected boolean isInGame = false; // player has accepted the join game packet and spawned at correct position
     protected boolean isSpectator = false;
     // we have performed the configuration phase at zenith
     // any subsequent configurations should pass through to client
@@ -110,7 +111,10 @@ public class ServerSession extends TcpServerSession {
     protected ServerProfileCache profileCache = new ServerProfileCache();
     protected ServerProfileCache spectatorFakeProfileCache = new ServerProfileCache();
     protected PlayerCache spectatorPlayerCache = new PlayerCache(new EntityCache());
-    protected SpectatorEntity spectatorEntity;
+    protected SpectatorEntity spectatorEntity = SpectatorEntityRegistry.getSpectatorEntityWithDefault(CONFIG.server.spectator.spectatorEntity);
+    private final long connectionTimeEpochMs = Instant.now().toEpochMilli();
+    @Getter(lazy = true) private final PacketRateLimiter packetRateLimiter = new PacketRateLimiter();
+    public static final LoginRateLimiter LOGIN_RATE_LIMITER = new LoginRateLimiter();
 
     /**
      * Team data
@@ -122,10 +126,6 @@ public class ServerSession extends TcpServerSession {
     private static final Component suffix = Component.text("");
     private static final boolean friendlyFire = false;
     private static final boolean seeFriendlyInvisibles = false;
-    protected boolean respawning = false;
-    private final long connectionTimeEpochMs = Instant.now().toEpochMilli();
-    @Getter(lazy = true) private final PacketRateLimiter packetRateLimiter = new PacketRateLimiter();
-    public static final LoginRateLimiter LOGIN_RATE_LIMITER = new LoginRateLimiter();
 
     public KeyPair getKeyPair() {
         return KEY_PAIR;
@@ -137,8 +137,7 @@ public class ServerSession extends TcpServerSession {
 
     public ServerSession(final String host, final int port, final MinecraftProtocol protocol, final TcpServer server) {
         super(host, port, protocol, server);
-        ThreadLocalRandom.current().nextBytes(this.challenge);
-        initSpectatorEntity();
+        random.nextBytes(this.challenge);
     }
 
     public EventLoop getEventLoop() {
@@ -157,7 +156,7 @@ public class ServerSession extends TcpServerSession {
             }
             Packet p = packet;
             var state = getPacketProtocol().getInboundState(); // storing this before handlers might mutate it on the session
-            p = ZenithHandlerCodec.SERVER_REGISTRY.handleInbound(p, this);
+            p = PacketCodecRegistries.SERVER_REGISTRY.handleInbound(p, this);
             if (p != null && !isSpectator() && (state == ProtocolState.GAME || state == ProtocolState.CONFIGURATION)) {
                 if (state == ProtocolState.CONFIGURATION && !isConfigured()) return;
                 Proxy.getInstance().getClient().sendAsync(p);
@@ -170,7 +169,7 @@ public class ServerSession extends TcpServerSession {
     @Override
     public Packet callPacketSending(Packet packet) {
         try {
-            return ZenithHandlerCodec.SERVER_REGISTRY.handleOutgoing(packet, this);
+            return PacketCodecRegistries.SERVER_REGISTRY.handleOutgoing(packet, this);
         } catch (final Exception e) {
             SERVER_LOG.error("Failed handling packet sending: {}", packet.getClass().getSimpleName(), e);
         }
@@ -180,7 +179,7 @@ public class ServerSession extends TcpServerSession {
     @Override
     public void callPacketSent(Packet packet) {
         try {
-            ZenithHandlerCodec.SERVER_REGISTRY.handlePostOutgoing(packet, this);
+            PacketCodecRegistries.SERVER_REGISTRY.handlePostOutgoing(packet, this);
         } catch (final Exception e) {
             SERVER_LOG.error("Failed handling PostOutgoing packet: {}", packet.getClass().getSimpleName(), e);
         }
@@ -206,7 +205,7 @@ public class ServerSession extends TcpServerSession {
     public void callDisconnected(Component reason, Throwable cause) {
         Proxy.getInstance().getCurrentPlayer().compareAndSet(this, null);
         Proxy.getInstance().getActiveConnections().remove(this);
-        EVENT_BUS.post(new ServerConnectionRemovedEvent(this));
+        EVENT_BUS.post(new PlayerConnectionRemovedEvent(this));
         if (!this.isPlayer && cause != null && !(cause instanceof DecoderException || cause instanceof IOException || cause instanceof ChannelException)) {
             // any scanners or TCP connections established result in a lot of these coming in even when they are not actually speaking mc protocol
             SERVER_LOG.debug("Connection disconnected: {}", getRemoteAddress(), cause);
@@ -216,24 +215,24 @@ public class ServerSession extends TcpServerSession {
             final String reasonStr = ComponentSerializer.serializePlain(reason);
             if (!isSpectator()) {
                 SERVER_LOG.info("Player disconnected: UUID: {}, Username: {}, Address: {}, Reason {}",
-                                Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getId).orElse(null),
-                                Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getName).orElse(null),
+                                getUUID(),
+                                getName(),
                                 getRemoteAddress(),
                                 reasonStr,
                                 cause);
                 try {
-                    EVENT_BUS.post(new ProxyClientDisconnectedEvent(reasonStr, profileCache.getProfile()));
+                    EVENT_BUS.post(new PlayerDisconnectedEvent(reasonStr, this, profileCache.getProfile()));
                 } catch (final Throwable e) {
                     SERVER_LOG.info("Could not get game profile of disconnecting player");
-                    EVENT_BUS.post(new ProxyClientDisconnectedEvent(reasonStr));
+                    EVENT_BUS.post(new PlayerDisconnectedEvent(reasonStr, this));
                 }
                 Proxy.getInstance().getSpectatorConnections().forEach(s -> {
-                    s.sendAsyncAlert("<red>" + Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getName).orElse("?") + " disconnected from controlling player");
+                    s.sendAsyncAlert("<red>" + getName() + " disconnected from controlling player");
                 });
             } else {
                 SERVER_LOG.info("Spectator disconnected: UUID: {}, Username: {}, Address: {}, Reason {}",
-                                Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getId).orElse(null),
-                                Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getName).orElse(null),
+                                getUUID(),
+                                getName(),
                                 getRemoteAddress(),
                                 reasonStr,
                                 cause);
@@ -241,9 +240,9 @@ public class ServerSession extends TcpServerSession {
                 for (int i = 0; i < connections.length; i++) {
                     var connection = connections[i];
                     connection.send(new ClientboundRemoveEntitiesPacket(new int[]{this.spectatorEntityId}));
-                    connection.sendAsyncAlert("<red>" + Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getName).orElse("?") + " disconnected from spectator");
+                    connection.sendAsyncAlert("<red>" + getName() + " disconnected from spectator");
                 }
-                EVENT_BUS.postAsync(new ProxySpectatorDisconnectedEvent(profileCache.getProfile()));
+                EVENT_BUS.postAsync(new SpectatorDisconnectedEvent(this, profileCache.getProfile()));
             }
         }
         ServerSession serverConnection = Proxy.getInstance().getCurrentPlayer().get();
@@ -329,10 +328,6 @@ public class ServerSession extends TcpServerSession {
         return cameraTarget != null;
     }
 
-    public void initSpectatorEntity() {
-        this.spectatorEntity = SpectatorEntityRegistry.getSpectatorEntityWithDefault(CONFIG.server.spectator.spectatorEntity);
-    }
-
     // todo: might rework this to handle respawns in some central place
     public boolean setSpectatorEntity(final String identifier) {
         Optional<SpectatorEntity> entity = SpectatorEntityRegistry.getSpectatorEntity(identifier);
@@ -364,7 +359,7 @@ public class ServerSession extends TcpServerSession {
             .map(ServerSession::getSpectatorEntityUUID)
             .map(UUID::toString)
             .collect(Collectors.toCollection(ArrayList::new));
-        if (!teamMembers.isEmpty()) teamMembers.add(profileCache.getProfile().getName());
+        if (!teamMembers.isEmpty()) teamMembers.add(getName());
         final List<String> toRemove = currentTeamMembers.stream()
             .filter(member -> !teamMembers.contains(member))
             .toList();
@@ -386,7 +381,7 @@ public class ServerSession extends TcpServerSession {
             ));
         }
         this.currentTeamMembers = teamMembers;
-        SERVER_LOG.debug("Synced Team members: {} for {}", currentTeamMembers, this.profileCache.getProfile().getName());
+        SERVER_LOG.debug("Synced Team members: {} for {}", currentTeamMembers, getName());
     }
 
     public String getMCVersion() {
@@ -395,6 +390,14 @@ public class ServerSession extends TcpServerSession {
 
     public ProtocolVersion getProtocolVersion() {
         return ProtocolVersion.getProtocol(protocolVersionId);
+    }
+
+    public String getName() {
+        return Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getName).orElse(username);
+    }
+
+    public UUID getUUID() {
+        return Optional.ofNullable(this.profileCache.getProfile()).map(GameProfile::getId).orElse(loginProfileUUID);
     }
 
     public boolean canTransfer() {
@@ -406,8 +409,6 @@ public class ServerSession extends TcpServerSession {
         cookieCache.getStoreSrcPacket(this::send);
         try {
             send(new ClientboundTransferPacket(address, port)).get(1L, TimeUnit.SECONDS);
-            // give them a fair shot to process the transfer as it needs to be done on the main thread
-            Wait.waitMs(100);
         } catch (Exception e) {
             // fall through
         }

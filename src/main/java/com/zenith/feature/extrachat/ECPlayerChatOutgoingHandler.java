@@ -1,11 +1,11 @@
 package com.zenith.feature.extrachat;
 
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.data.game.chat.ChatFilterType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundPlayerChatPacket;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class ECPlayerChatOutgoingHandler implements PacketHandler<ClientboundPlayerChatPacket, ServerSession> {
 

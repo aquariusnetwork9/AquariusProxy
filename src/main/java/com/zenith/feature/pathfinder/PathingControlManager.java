@@ -9,7 +9,7 @@ import com.zenith.mc.block.BlockPos;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-import static com.zenith.Shared.CLIENT_LOG;
+import static com.zenith.Globals.CLIENT_LOG;
 
 public class PathingControlManager {
 

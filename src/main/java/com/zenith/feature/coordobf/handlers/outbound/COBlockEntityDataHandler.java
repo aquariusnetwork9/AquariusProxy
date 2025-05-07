@@ -1,16 +1,16 @@
 package com.zenith.feature.coordobf.handlers.outbound;
 
-import com.zenith.module.impl.CoordObfuscator;
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.module.impl.CoordObfuscation;
+import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundBlockEntityDataPacket;
 
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.MODULE;
 
 public class COBlockEntityDataHandler implements PacketHandler<ClientboundBlockEntityDataPacket, ServerSession> {
     @Override
     public ClientboundBlockEntityDataPacket apply(final ClientboundBlockEntityDataPacket packet, final ServerSession session) {
-        CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
+        CoordObfuscation coordObf = MODULE.get(CoordObfuscation.class);
         return new ClientboundBlockEntityDataPacket(
             coordObf.getCoordOffset(session).offsetX(packet.getX()),
             packet.getY(),

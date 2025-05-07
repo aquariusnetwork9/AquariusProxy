@@ -9,6 +9,7 @@ import com.zenith.cache.CacheResetType;
 import com.zenith.cache.CachedData;
 import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.dimension.DimensionData;
+import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.BrandSerializer;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -38,14 +39,19 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.borde
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.Comparator;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-import static com.zenith.Shared.*;
+import static com.google.common.collect.Lists.newArrayList;
+import static com.zenith.Globals.*;
 import static com.zenith.cache.data.chunk.Chunk.*;
 import static java.util.Arrays.asList;
+import static java.util.Collections.synchronizedList;
 
 @Getter
 @Setter
@@ -323,7 +329,7 @@ public class ChunkCache implements CachedData {
         }
     }
 
-    private LightUpdateData createFullBrightLightData(LightUpdateData lightData, int sectionCount) {
+    public LightUpdateData createFullBrightLightData(LightUpdateData lightData, int sectionCount) {
         var sectionPlusAboveBelowCount = sectionCount + 2;
         var skylightMaskSet = new BitSet(sectionPlusAboveBelowCount);
         skylightMaskSet.set(0, sectionPlusAboveBelowCount);
@@ -333,13 +339,21 @@ public class ChunkCache implements CachedData {
         for (int i = 0; i < sectionPlusAboveBelowCount; i++) {
             skyUpdates.add(fullBrightSkyLightData);
         }
+        long[] lightMask = skylightMaskSet.toLongArray();
+        long[] emptyLightMask = emptySkyLightMask.toLongArray();
         return new LightUpdateData(
-            skylightMaskSet.toLongArray(),
-            lightData.getBlockYMask(),
-            emptySkyLightMask.toLongArray(),
-            lightData.getEmptyBlockYMask(),
+            lightMask,
+            CONFIG.debug.server.cache.fullbrightChunkBlocklight
+                ? lightMask
+                : lightData.getBlockYMask(),
+            emptyLightMask,
+            CONFIG.debug.server.cache.fullbrightChunkBlocklight
+                ? emptyLightMask
+                : lightData.getEmptyBlockYMask(),
             skyUpdates,
-            lightData.getBlockUpdates()
+            CONFIG.debug.server.cache.fullbrightChunkBlocklight
+                ? skyUpdates
+                : lightData.getBlockUpdates()
         );
     }
 
@@ -431,23 +445,20 @@ public class ChunkCache implements CachedData {
         final var chunkX = p.getX();
         final var chunkZ = p.getZ();
         var pos = chunkPosToLong(chunkX, chunkZ);
-        var chunk = this.cache.get(pos);
-        if (chunk == null) {
-            var blockEntitiesArray = p.getBlockEntities();
-            var blockEntities = Collections.synchronizedList(new ArrayList<BlockEntityInfo>(blockEntitiesArray.length));
-            Collections.addAll(blockEntities, blockEntitiesArray);
-            chunk = new Chunk(
-                chunkX,
-                chunkZ,
-                p.getSections(),
-                getMaxSection(),
-                getMinSection(),
-                blockEntities,
-                CONFIG.debug.server.cache.fullbrightChunkSkylight
-                    ? createFullBrightLightData(p.getLightData(), p.getSections().length)
-                    : p.getLightData()
-            );
-        }
+        // todo: check if chunk is outside range like vanilla?
+        //  Math.abs(x - this.viewCenterX) <= this.chunkRadius && Math.abs(z - this.viewCenterZ) <= this.chunkRadius
+        var blockEntities = synchronizedList(newArrayList(p.getBlockEntities()));
+        var chunk = new Chunk(
+            chunkX,
+            chunkZ,
+            p.getSections(),
+            getMaxSection(),
+            getMinSection(),
+            blockEntities,
+            CONFIG.debug.server.cache.fullbrightChunkSkylight
+                ? createFullBrightLightData(p.getLightData(), p.getSections().length)
+                : p.getLightData()
+        );
         this.cache.put(pos, chunk);
     }
 
@@ -517,6 +528,10 @@ public class ChunkCache implements CachedData {
             CACHE_LOG.error("Respawn packet tried updating dimension to unregistered dimension: {}", info.getDimension());
             CACHE_LOG.error("Things are going to break...");
         } else {
+            var vanillaRegistryDim = DimensionRegistry.REGISTRY.get(newDim.id());
+            if (vanillaRegistryDim == null || !vanillaRegistryDim.name().equals(newDim.name())) {
+                CACHE_LOG.warn("Server is switching us to a non-vanilla dimension: {} {}", newDim.id(), newDim.name());
+            }
             this.currentDimension = newDim;
             this.worldName = Key.key("minecraft", currentDimension.name());
         }

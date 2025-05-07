@@ -1,11 +1,11 @@
 package com.zenith.network.client.handler.incoming.scoreboard;
 
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.scoreboard.ClientboundResetScorePacket;
 import org.jspecify.annotations.NonNull;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class ResetScoreHandler implements ClientEventLoopPacketHandler<ClientboundResetScorePacket, ClientSession> {
     @Override
@@ -15,9 +15,9 @@ public class ResetScoreHandler implements ClientEventLoopPacketHandler<Clientbou
             CACHE.getScoreboardCache().removeEntry(packet.getOwner());
         } else {
             var objective = CACHE.getScoreboardCache().get(packet.getObjective());
-            if (objective == null) return false;
-
-            objective.getScores().remove(packet.getOwner());
+            if (objective != null) {
+                objective.getScores().remove(packet.getOwner());
+            }
         }
         return true;
     }

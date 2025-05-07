@@ -1,11 +1,11 @@
 package com.zenith.network.client.handler.incoming;
 
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.network.codec.PacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundKeepAlivePacket;
 import org.geysermc.mcprotocollib.protocol.packet.common.serverbound.ServerboundKeepAlivePacket;
 
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 
 public class CKeepAliveHandler implements PacketHandler<ClientboundKeepAlivePacket, ClientSession> {
     public static final CKeepAliveHandler INSTANCE = new CKeepAliveHandler();

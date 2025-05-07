@@ -8,42 +8,44 @@ import net.kyori.adventure.text.event.ClickEvent;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.*;
-import java.util.stream.Collectors;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.feature.deathmessages.DeathMessageSchemaInstance.spaceSplit;
 
 public class DeathMessagesParser {
-    private final List<DeathMessageSchemaInstance> deathMessageSchemaInstances;
-    private final List<String> mobs;
+    private static final List<DeathMessageSchemaInstance> deathMessageSchemaInstances = new ArrayList<>();
+    private static final List<String> mobs = new ArrayList<>();
+    static {
+        init();
+    }
 
-    public DeathMessagesParser() {
+    private static void init() {
         List<String> mobsTemp = Collections.emptyList();
         try {
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(getClass().getClassLoader().getResourceAsStream("death_message_mobs.schema")))) {
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(DeathMessagesParser.class.getClassLoader().getResourceAsStream("death_message_mobs.schema")))) {
                 mobsTemp = br.lines()
                     .filter(l -> !l.isEmpty()) //any empty lines
                     .filter(l -> !l.startsWith("#")) //comments
                     .sorted(Comparator.comparingInt(String::length).reversed())
-                    .collect(Collectors.toList());
+                    .toList();
             }
         } catch (final Exception e) {
             CLIENT_LOG.error("Error initializing mobs for death message parsing", e);
         }
-        mobs = mobsTemp;
+        mobs.addAll(mobsTemp);
         List<DeathMessageSchemaInstance> schemaInstancesTemp = Collections.emptyList();
         try {
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(getClass().getClassLoader().getResourceAsStream("death_messages.schema")))) {
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(DeathMessagesParser.class.getClassLoader().getResourceAsStream("death_messages.schema")))) {
                 schemaInstancesTemp = br.lines()
                     .filter(l -> !l.isEmpty()) //any empty lines
                     .filter(l -> !l.startsWith("#")) //comments
                     .map(l -> new DeathMessageSchemaInstance(l, mobs))
-                    .collect(Collectors.toList());
+                    .toList();
             }
         } catch (final Exception e) {
             CLIENT_LOG.error("Error initializing death message schemas", e);
         }
-        deathMessageSchemaInstances = schemaInstancesTemp;
+        deathMessageSchemaInstances.addAll(schemaInstancesTemp);
     }
 
     public Optional<DeathMessageParseResult> parse(final Component component, final String rawInput) {

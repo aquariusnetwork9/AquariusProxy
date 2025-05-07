@@ -1,7 +1,7 @@
 package com.zenith.network.client.handler.incoming;
 
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.network.codec.PacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.status.clientbound.ClientboundStatusResponsePacket;
 import org.geysermc.mcprotocollib.protocol.packet.status.serverbound.ServerboundPingRequestPacket;
 

@@ -1,16 +1,16 @@
 package com.zenith.network.client.handler.incoming;
 
 import com.zenith.Proxy;
-import com.zenith.event.proxy.ServerPlayerConnectedEvent;
+import com.zenith.event.server.ServerPlayerConnectedEvent;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
-import com.zenith.util.Config;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
+import com.zenith.util.config.Config;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundPlayerInfoUpdatePacket;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Objects;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntryAction.*;
 
 public class PlayerInfoUpdateHandler implements ClientEventLoopPacketHandler<ClientboundPlayerInfoUpdatePacket, ClientSession> {

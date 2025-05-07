@@ -5,7 +5,7 @@ import org.cloudburstmc.math.vector.Vector3d;
 
 import java.time.Duration;
 
-import static com.zenith.Shared.DEFAULT_LOG;
+import static com.zenith.Globals.DEFAULT_LOG;
 
 @UtilityClass
 public class MathHelper {
@@ -153,6 +153,10 @@ public class MathHelper {
     }
 
     public static boolean isInRange(float value, float target, float range) {
+        return value >= (target - range) && value <= (target + range);
+    }
+
+    public static boolean isInRange(double value, double target, double range) {
         return value >= (target - range) && value <= (target + range);
     }
 

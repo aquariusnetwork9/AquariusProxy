@@ -3,8 +3,8 @@ package com.zenith.feature.pathfinder;
 import com.zenith.Proxy;
 import com.zenith.feature.pathfinder.calc.IPath;
 import com.zenith.mc.block.BlockPos;
-import com.zenith.util.Timer;
-import com.zenith.util.Timers;
+import com.zenith.util.timer.Timer;
+import com.zenith.util.timer.Timers;
 import org.geysermc.mcprotocollib.protocol.data.game.level.particle.Particle;
 import org.geysermc.mcprotocollib.protocol.data.game.level.particle.ParticleType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundLevelParticlesPacket;
@@ -12,14 +12,13 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.Clien
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.PATH_LOG;
+import static com.zenith.Globals.*;
 
 public class IngamePathRenderer {
     private final Timer renderPathTimer = Timers.tickTimer();
 
     public void onTick() {
-        if (Baritone.INSTANCE.getPathingBehavior().isPathing() && CONFIG.client.extra.pathfinder.renderPath) {
+        if (BARITONE.getPathingBehavior().isPathing() && CONFIG.client.extra.pathfinder.renderPath) {
             renderPath();
         }
     }
@@ -36,10 +35,10 @@ public class IngamePathRenderer {
     }
 
     private void renderPath0() {
-        var pathOptional = Baritone.INSTANCE.getPathingBehavior().getPath();
+        var pathOptional = BARITONE.getPathingBehavior().getPath();
         if (pathOptional.isEmpty()) return;
         IPath path = pathOptional.get();
-        int pathPosition = Baritone.INSTANCE.getPathingBehavior().getCurrent().getPosition();
+        int pathPosition = BARITONE.getPathingBehavior().getCurrent().getPosition();
         List<ClientboundLevelParticlesPacket> packets = CONFIG.client.extra.pathfinder.renderPathDetailed
             ? buildPathPacketsDetailed(path.positions(), pathPosition)
             : buildPathPacketsSimple(path.positions(), pathPosition);

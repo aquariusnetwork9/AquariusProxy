@@ -11,18 +11,18 @@ import com.zenith.feature.pathfinder.calc.SplicedPath;
 import com.zenith.feature.pathfinder.movement.*;
 import com.zenith.feature.pathfinder.movement.movements.*;
 import com.zenith.feature.pathfinder.util.VecUtils;
-import com.zenith.feature.world.Rotation;
-import com.zenith.feature.world.RotationHelper;
+import com.zenith.feature.player.Rotation;
+import com.zenith.feature.player.RotationHelper;
 import com.zenith.mc.block.BlockPos;
-import com.zenith.util.Pair;
 import com.zenith.util.math.MutableVec3d;
+import com.zenith.util.struct.Pair;
 import lombok.Getter;
 import org.cloudburstmc.math.vector.Vector3d;
 import org.cloudburstmc.math.vector.Vector3i;
 
 import java.util.*;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.feature.pathfinder.movement.MovementStatus.*;
 
 public class PathExecutor {

@@ -2,18 +2,16 @@ package com.zenith.network.client.handler.incoming;
 
 import com.zenith.Proxy;
 import com.zenith.cache.data.PlayerCache;
-import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.feature.spectator.SpectatorSync;
 import com.zenith.module.impl.AntiAFK;
-import com.zenith.module.impl.PlayerSimulation;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PositionElement;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
 import org.jspecify.annotations.NonNull;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static java.util.Objects.isNull;
 
 public class PlayerPositionHandler implements ClientEventLoopPacketHandler<ClientboundPlayerPositionPacket, ClientSession> {
@@ -38,11 +36,11 @@ public class PlayerPositionHandler implements ClientEventLoopPacketHandler<Clien
             .setPitch((packet.getRelatives().contains(PositionElement.X_ROT) ? cache.getPitch() : 0.0f) + packet.getPitch());
         ServerSession currentPlayer = Proxy.getInstance().getCurrentPlayer().get();
         if (isNull(currentPlayer) || !currentPlayer.isLoggedIn()) {
-            MODULE.get(PlayerSimulation.class).handlePlayerPosRotate(packet.getId());
+            BOT.handlePlayerPosRotate(packet.getId());
         } else {
             CLIENT_LOG.debug("Passing teleport {} through to current player", packet.getId());
         }
-        Baritone.INSTANCE.onPlayerPosRotate();
+        BARITONE.onPlayerPosRotate();
         SpectatorSync.syncPlayerPositionWithSpectators();
         MODULE.get(AntiAFK.class).handlePlayerPosRotate();
         return true;

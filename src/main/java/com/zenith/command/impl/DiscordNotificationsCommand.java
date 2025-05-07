@@ -1,17 +1,17 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import com.zenith.util.MentionUtil;
 
 import java.util.regex.Pattern;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.DISCORD_LOG;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.DISCORD_LOG;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
@@ -161,7 +161,7 @@ public class DiscordNotificationsCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .primaryColor()
             .addField("Notification Role", CONFIG.discord.notificationMentionRoleId.isEmpty()

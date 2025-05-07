@@ -2,10 +2,11 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
-import com.zenith.event.module.ClientBotTick;
-import com.zenith.feature.world.ClickTarget;
-import com.zenith.feature.world.Input;
-import com.zenith.feature.world.InputRequest;
+import com.zenith.event.client.ClientBotTick;
+import com.zenith.feature.inventory.InventoryActionRequest;
+import com.zenith.feature.player.ClickTarget;
+import com.zenith.feature.player.Input;
+import com.zenith.feature.player.InputRequest;
 import com.zenith.mc.item.ItemData;
 import com.zenith.mc.item.ItemRegistry;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
@@ -15,7 +16,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class AutoOmen extends AbstractInventoryModule {
     private int delay = 0;
@@ -48,10 +49,8 @@ public class AutoOmen extends AbstractInventoryModule {
             if (delay > 0) {
                 delay--;
                 if (isEating) {
-                    INPUTS.submit(InputRequest.builder()
-                                      .priority(MOVEMENT_PRIORITY)
-                                      .build());
-                    INVENTORY.invActionReq(this, MOVEMENT_PRIORITY);
+                    INPUTS.submit(InputRequest.noInput(this, MOVEMENT_PRIORITY));
+                    INVENTORY.submit(InventoryActionRequest.noAction(this, MOVEMENT_PRIORITY));
                 }
                 return;
             }
@@ -74,12 +73,13 @@ public class AutoOmen extends AbstractInventoryModule {
         var hand = getHand();
         if (hand == null) return;
         INPUTS.submit(InputRequest.builder()
-                          .input(Input.builder()
-                                     .rightClick(true)
-                                     .clickTarget(ClickTarget.None.INSTANCE)
-                                     .build())
-                          .priority(MOVEMENT_PRIORITY)
-                          .build())
+                .owner(this)
+                .input(Input.builder()
+                    .rightClick(true)
+                    .clickTarget(ClickTarget.None.INSTANCE)
+                    .build())
+                .priority(MOVEMENT_PRIORITY)
+                .build())
             .addInputExecutedListener(future -> {
                 isEating = true;
                 delay = 50;

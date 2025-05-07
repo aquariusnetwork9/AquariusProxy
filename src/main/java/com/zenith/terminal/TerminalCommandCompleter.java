@@ -7,7 +7,7 @@ import org.jline.reader.ParsedLine;
 
 import java.util.List;
 
-import static com.zenith.Shared.COMMAND;
+import static com.zenith.Globals.COMMAND;
 
 public class TerminalCommandCompleter implements Completer {
     @Override

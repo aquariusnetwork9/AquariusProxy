@@ -2,8 +2,8 @@ package com.zenith.feature.replay;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.zenith.Proxy;
+import com.zenith.feature.player.World;
 import com.zenith.feature.spectator.SpectatorPacketProvider;
-import com.zenith.feature.world.World;
 import com.zenith.module.impl.ReplayMod;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -34,7 +34,7 @@ import java.util.concurrent.Executors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class ReplayRecording implements Closeable {
     private final ReplayMetadata metadata;

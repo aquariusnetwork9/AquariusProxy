@@ -1,14 +1,14 @@
 package com.zenith.network.client.handler.incoming;
 
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.data.game.advancement.Advancement;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundUpdateAdvancementsPacket;
 import org.jspecify.annotations.NonNull;
 
 import java.util.HashMap;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class UpdateAdvancementsHandler implements ClientEventLoopPacketHandler<ClientboundUpdateAdvancementsPacket, ClientSession> {
     @Override

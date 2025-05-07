@@ -1,10 +1,10 @@
 package com.zenith.network.client.handler.incoming;
 
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.configuration.clientbound.ClientboundUpdateEnabledFeaturesPacket;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class UpdateEnabledFeaturesHandler implements ClientEventLoopPacketHandler<ClientboundUpdateEnabledFeaturesPacket, ClientSession> {
     @Override

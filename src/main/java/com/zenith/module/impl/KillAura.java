@@ -4,9 +4,10 @@ import com.github.rfresh2.EventConsumer;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.cache.data.entity.EntityStandard;
-import com.zenith.event.module.ClientBotTick;
-import com.zenith.feature.world.*;
-import com.zenith.feature.world.raycast.RaycastHelper;
+import com.zenith.event.client.ClientBotTick;
+import com.zenith.feature.inventory.InventoryActionRequest;
+import com.zenith.feature.player.*;
+import com.zenith.feature.player.raycast.RaycastHelper;
 import com.zenith.mc.item.ItemRegistry;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
@@ -21,7 +22,7 @@ import java.util.List;
 import java.util.Set;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class KillAura extends AbstractInventoryModule {
 
@@ -90,7 +91,7 @@ public class KillAura extends AbstractInventoryModule {
                 if (!hasRotation(target)) {
                     rotateTo(target);
                 }
-                INVENTORY.invActionReq(this, MOVEMENT_PRIORITY - 1);
+                INVENTORY.submit(InventoryActionRequest.noAction(this, MOVEMENT_PRIORITY - 1));
             }
             return;
         }
@@ -100,13 +101,14 @@ public class KillAura extends AbstractInventoryModule {
                 if (!attackTarget.refersTo(target))
                     attackTarget = new WeakReference<>(target);
                 if (switchToWeapon()) {
-                    INVENTORY.invActionReq(this, MOVEMENT_PRIORITY - 1);
+                    INVENTORY.submit(InventoryActionRequest.noAction(this, MOVEMENT_PRIORITY - 1));
                     attack(target).addInputExecutedListener(this::onAttackInputExecuted);
                 } else {
                     // stop while doing inventory actions
                     INPUTS.submit(InputRequest.builder()
-                                      .priority(MOVEMENT_PRIORITY - 1)
-                                      .build());
+                        .owner(this)
+                        .priority(MOVEMENT_PRIORITY - 1)
+                        .build());
                 }
                 return;
             }
@@ -147,6 +149,7 @@ public class KillAura extends AbstractInventoryModule {
         if (CONFIG.client.extra.killAura.targetPlayers && entity instanceof EntityPlayer player) {
             if (player.isSelfPlayer()) return false;
             return !PLAYER_LISTS.getFriendsList().contains(player.getUuid())
+                && !(PLAYER_LISTS.getSpawnPatrolIgnoreList().contains(player.getUuid()) && MODULE.get(SpawnPatrol.class).isEnabled())
                 && !PLAYER_LISTS.getWhitelist().contains(player.getUuid())
                 && !PLAYER_LISTS.getSpectatorWhitelist().contains(player.getUuid());
 
@@ -170,7 +173,7 @@ public class KillAura extends AbstractInventoryModule {
     }
 
     private static boolean isAggressive(final EntityLiving entity) {
-        // https://wiki.vg/Entity_metadata#Mob
+        // https://minecraft.wiki/w/Java_Edition_protocol/Entity_metadata#Mob
         var byteMetadata = entity.getMetadata().get(15);
         if (byteMetadata == null) return false;
         if (byteMetadata instanceof ByteEntityMetadata byteData) {
@@ -188,23 +191,25 @@ public class KillAura extends AbstractInventoryModule {
     private InputRequestFuture attack(final EntityLiving entity) {
         var rotation = RotationHelper.shortestRotationTo(entity);
         return INPUTS.submit(InputRequest.builder()
-                                 .input(Input.builder()
-                                            .leftClick(true)
-                                            .clickTarget(new ClickTarget.EntityInstance(entity))
-                                            .build())
-                                 .yaw(rotation.getX())
-                                 .pitch(rotation.getY())
-                                 .priority(MOVEMENT_PRIORITY)
-                                 .build());
+            .owner(this)
+            .input(Input.builder()
+                .leftClick(true)
+                .clickTarget(new ClickTarget.EntityInstance(entity))
+                .build())
+            .yaw(rotation.getX())
+            .pitch(rotation.getY())
+            .priority(MOVEMENT_PRIORITY)
+            .build());
     }
 
     private void rotateTo(EntityLiving entity) {
         var rotation = RotationHelper.shortestRotationTo(entity);
         INPUTS.submit(InputRequest.builder()
-                          .yaw(rotation.getX())
-                          .pitch(rotation.getY())
-                          .priority(MOVEMENT_PRIORITY)
-                          .build());
+            .owner(this)
+            .yaw(rotation.getX())
+            .pitch(rotation.getY())
+            .priority(MOVEMENT_PRIORITY)
+            .build());
     }
 
     private boolean hasRotation(final EntityLiving entity) {
@@ -213,7 +218,7 @@ public class KillAura extends AbstractInventoryModule {
     }
 
     private boolean canPossiblyReach(final EntityLiving entity) {
-        var rangeSq = Math.pow(MODULE.get(PlayerSimulation.class).getEntityInteractDistance(), 2) + 5;
+        var rangeSq = Math.pow(BOT.getEntityInteractDistance(), 2) + 5;
         if (CACHE.getPlayerCache().distanceSqToSelf(entity) > rangeSq) return false;
         var rotation = RotationHelper.shortestRotationTo(entity);
         var entityRaycastResult = RaycastHelper.playerEyeRaycastThroughToTarget(entity, rotation.getX(), rotation.getY());

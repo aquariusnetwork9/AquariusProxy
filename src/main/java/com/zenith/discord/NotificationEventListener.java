@@ -1,93 +1,88 @@
 package com.zenith.discord;
 
-import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.zenith.Proxy;
+import com.zenith.event.chat.DeathMessageChatEvent;
+import com.zenith.event.client.*;
 import com.zenith.event.module.*;
-import com.zenith.event.proxy.*;
-import com.zenith.event.proxy.chat.DeathMessageChatEvent;
-import com.zenith.event.proxy.chat.PublicChatEvent;
-import com.zenith.event.proxy.chat.SystemChatEvent;
-import com.zenith.event.proxy.chat.WhisperChatEvent;
+import com.zenith.event.player.*;
+import com.zenith.event.plugin.PluginLoadFailureEvent;
+import com.zenith.event.plugin.PluginLoadedEvent;
+import com.zenith.event.queue.QueueCompleteEvent;
+import com.zenith.event.queue.QueuePositionUpdateEvent;
+import com.zenith.event.queue.QueueStartEvent;
+import com.zenith.event.server.ClientDeathMessageEvent;
+import com.zenith.event.server.ServerPlayerConnectedEvent;
+import com.zenith.event.server.ServerPlayerDisconnectedEvent;
+import com.zenith.event.server.ServerRestartingEvent;
+import com.zenith.event.update.UpdateAvailableEvent;
+import com.zenith.event.update.UpdateStartEvent;
 import com.zenith.feature.api.fileio.FileIOApi;
-import com.zenith.feature.deathmessages.DeathMessageParseResult;
-import com.zenith.feature.deathmessages.KillerType;
+import com.zenith.feature.player.World;
 import com.zenith.feature.queue.Queue;
-import com.zenith.feature.world.World;
 import com.zenith.module.impl.AntiAFK;
 import com.zenith.module.impl.SessionTimeLimit;
 import com.zenith.util.DisconnectReasonInfo;
 import com.zenith.util.math.MathHelper;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
-import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
-import net.dv8tion.jda.api.utils.Color;
-import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
-import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.time.Duration;
-import java.time.Instant;
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.command.impl.StatusCommand.getCoordinates;
 import static com.zenith.discord.DiscordBot.*;
 import static com.zenith.util.math.MathHelper.formatDuration;
 import static java.util.Arrays.asList;
-import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
 public class NotificationEventListener {
     public static final NotificationEventListener INSTANCE = new NotificationEventListener();
+
+    private NotificationEventListener() {}
+
     public void subscribeEvents() {
-        if (EVENT_BUS.isSubscribed(this)) throw new RuntimeException("Event handlers already initialized");
         EVENT_BUS.subscribe(
             this,
-            of(ConnectEvent.class, this::handleConnectEvent),
-            of(PlayerOnlineEvent.class, this::handlePlayerOnlineEvent),
-            of(DisconnectEvent.class, this::handleDisconnectEvent),
+            of(ClientConnectEvent.class, this::handleConnectEvent),
+            of(ClientOnlineEvent.class, this::handlePlayerOnlineEvent),
+            of(ClientDisconnectEvent.class, this::handleDisconnectEvent),
             of(QueuePositionUpdateEvent.class, this::handleQueuePositionUpdateEvent),
             of(QueueWarningEvent.class, this::handleQueueWarning),
             of(AutoEatOutOfFoodEvent.class, this::handleAutoEatOutOfFoodEvent),
             of(QueueCompleteEvent.class, this::handleQueueCompleteEvent),
-            of(StartQueueEvent.class, this::handleStartQueueEvent),
-            of(DeathEvent.class, this::handleDeathEvent),
-            of(SelfDeathMessageEvent.class, this::handleSelfDeathMessageEvent),
+            of(QueueStartEvent.class, this::handleStartQueueEvent),
+            of(ClientDeathEvent.class, this::handleDeathEvent),
+            of(ClientDeathMessageEvent.class, this::handleSelfDeathMessageEvent),
             of(HealthAutoDisconnectEvent.class, this::handleHealthAutoDisconnectEvent),
-            of(ProxyClientConnectedEvent.class, this::handleProxyClientConnectedEvent),
-            of(ProxyClientConnectedEvent.class, this::handleProxyClientConnectedEventCheck2b2tMCVersionMatch),
-            of(ProxySpectatorConnectedEvent.class, this::handleProxySpectatorConnectedEvent),
-            of(ProxyClientDisconnectedEvent.class, this::handleProxyClientDisconnectedEvent),
+            of(PlayerConnectedEvent.class, this::handleProxyClientConnectedEvent),
+            of(PlayerConnectedEvent.class, this::handleProxyClientConnectedEventCheck2b2tMCVersionMatch),
+            of(SpectatorConnectedEvent.class, this::handleProxySpectatorConnectedEvent),
+            of(PlayerDisconnectedEvent.class, this::handleProxyClientDisconnectedEvent),
             of(VisualRangeEnterEvent.class, this::handleVisualRangeEnterEvent),
             of(VisualRangeLeaveEvent.class, this::handleVisualRangeLeaveEvent),
             of(VisualRangeLogoutEvent.class, this::handleVisualRangeLogoutEvent),
             of(NonWhitelistedPlayerConnectedEvent.class, this::handleNonWhitelistedPlayerConnectedEvent),
-            of(ProxySpectatorDisconnectedEvent.class, this::handleProxySpectatorDisconnectedEvent),
+            of(BlacklistedPlayerConnectedEvent.class, this::handleBlacklistedPlayerConnectedEvent),
+            of(SpectatorDisconnectedEvent.class, this::handleProxySpectatorDisconnectedEvent),
             of(ActiveHoursConnectEvent.class, this::handleActiveHoursConnectEvent),
             of(DeathMessageChatEvent.class, this::handleDeathMessageChatEventKillMessage),
-            of(DeathMessageChatEvent.class, this::handleDeathMessageChatEventChatRelay),
-            of(PublicChatEvent.class, this::handlePublicChatEvent),
-            of(SystemChatEvent.class, this::handleSystemChatEvent),
-            of(WhisperChatEvent.class, this::handleWhisperChatEvent),
-            of(ServerPlayerConnectedEvent.class, this::handleServerPlayerConnectedEventChatRelay),
             of(ServerPlayerConnectedEvent.class, this::handleServerPlayerConnectedEventStalk),
-            of(ServerPlayerDisconnectedEvent.class, this::handleServerPlayerDisconnectedEventChatRelay),
             of(ServerPlayerDisconnectedEvent.class, this::handleServerPlayerDisconnectedEventStalk),
-            of(DiscordMessageSentEvent.class, this::handleDiscordMessageSentEvent),
             of(UpdateStartEvent.class, this::handleUpdateStartEvent),
             of(ServerRestartingEvent.class, this::handleServerRestartingEvent),
-            of(ProxyLoginFailedEvent.class, this::handleProxyLoginFailedEvent),
-            of(StartConnectEvent.class, this::handleStartConnectEvent),
+            of(ClientLoginFailedEvent.class, this::handleProxyLoginFailedEvent),
+            of(ClientStartConnectEvent.class, this::handleStartConnectEvent),
             of(PrioStatusUpdateEvent.class, this::handlePrioStatusUpdateEvent),
             of(PrioBanStatusUpdateEvent.class, this::handlePrioBanStatusUpdateEvent),
             of(AutoReconnectEvent.class, this::handleAutoReconnectEvent),
@@ -99,9 +94,16 @@ public class NotificationEventListener {
             of(NoTotemsEvent.class, this::handleNoTotemsEvent),
             of(PluginLoadFailureEvent.class, this::handlePluginLoadFailure),
             of(PluginLoadedEvent.class, this::handlePluginLoadedEvent),
-            of(PrivateMessageSendEvent.class, this::handlePrivateMessageSendEvent),
             of(SpawnPatrolTargetAcquiredEvent.class, this::handleSpawnPatrolTargetAcquiredEvent),
             of(SpawnPatrolTargetKilledEvent.class, this::handleSpawnPatrolTargetKilledEvent)
+        );
+    }
+
+    public static String notificationMention() {
+        return mentionRole(
+            CONFIG.discord.notificationMentionRoleId.isEmpty()
+                ? CONFIG.discord.accountOwnerRoleId
+                : CONFIG.discord.notificationMentionRoleId
         );
     }
 
@@ -128,7 +130,7 @@ public class NotificationEventListener {
         sendEmbedMessage(embed);
     }
 
-    public void handleConnectEvent(ConnectEvent event) {
+    public void handleConnectEvent(ClientConnectEvent event) {
         var embed = Embed.builder()
             .title("Connected")
             .inQueueColor()
@@ -142,7 +144,7 @@ public class NotificationEventListener {
         updatePresence();
     }
 
-    public void handlePlayerOnlineEvent(PlayerOnlineEvent event) {
+    public void handlePlayerOnlineEvent(ClientOnlineEvent event) {
         var embedBuilder = Embed.builder()
             .title("Online")
             .successColor();
@@ -155,7 +157,7 @@ public class NotificationEventListener {
         }
     }
 
-    public void handleDisconnectEvent(DisconnectEvent event) {
+    public void handleDisconnectEvent(ClientDisconnectEvent event) {
         var category = DisconnectReasonInfo.getDisconnectCategory(event.reason());
         var embed = Embed.builder()
             .title("Disconnected")
@@ -213,7 +215,7 @@ public class NotificationEventListener {
     private void handleQueueWarning(QueueWarningEvent event) {
         sendEmbedMessage((event.mention() ? notificationMention() : ""), Embed.builder()
             .title("Queue Warning")
-            .addField("Queue Position", "[" + queuePositionStr() + "]", false)
+            .addField("Queue Position", "[" + Queue.queuePositionStr() + "]", false)
             .inQueueColor());
     }
 
@@ -237,7 +239,7 @@ public class NotificationEventListener {
         updatePresence();
     }
 
-    public void handleStartQueueEvent(StartQueueEvent event) {
+    public void handleStartQueueEvent(QueueStartEvent event) {
         var embed = Embed.builder()
             .title("Started Queuing")
             .inQueueColor()
@@ -256,7 +258,7 @@ public class NotificationEventListener {
         updatePresence();
     }
 
-    public void handleDeathEvent(DeathEvent event) {
+    public void handleDeathEvent(ClientDeathEvent event) {
         var embed = Embed.builder()
             .title("Player Death")
             .errorColor()
@@ -269,7 +271,7 @@ public class NotificationEventListener {
         }
     }
 
-    public void handleSelfDeathMessageEvent(SelfDeathMessageEvent event) {
+    public void handleSelfDeathMessageEvent(ClientDeathMessageEvent event) {
         sendEmbedMessage(Embed.builder()
                              .title("Death Message")
                              .errorColor()
@@ -288,7 +290,7 @@ public class NotificationEventListener {
         }
     }
 
-    public void handleProxyClientConnectedEvent(ProxyClientConnectedEvent event) {
+    public void handleProxyClientConnectedEvent(PlayerConnectedEvent event) {
         if (!CONFIG.discord.clientConnectionMessages) return;
         var embed = Embed.builder()
             .title("Client Connected")
@@ -303,7 +305,7 @@ public class NotificationEventListener {
         }
     }
 
-    public void handleProxyClientConnectedEventCheck2b2tMCVersionMatch(ProxyClientConnectedEvent event) {
+    public void handleProxyClientConnectedEventCheck2b2tMCVersionMatch(PlayerConnectedEvent event) {
         if (!CONFIG.discord.mcVersionMismatchWarning) return;
         if (!Proxy.getInstance().isOn2b2t() || !Proxy.getInstance().isConnected()) return;
         var client = Proxy.getInstance().getClient();
@@ -320,23 +322,15 @@ public class NotificationEventListener {
                      It is recommended to use the same MC version as the ZenithProxy client.
                      
                      Otherwise you may experience issues with 2b2t's anti-cheat, which changes its checks based on client MC version.
+                     
+                     To configure ZenithProxy's client ViaVersion: `via zenithToServer version <version>`
                      """.formatted(playerProtocolVersion.getName(), clientProtocolVersion.getName()))
                 .errorColor();
-            var nativeZenithProtocolVersion = ProtocolVersion.getProtocol(MinecraftCodec.CODEC.getProtocolVersion());
-            if (nativeZenithProtocolVersion.equalTo(ProtocolVersion.v1_21_4) && playerProtocolVersion.equalTo(ProtocolVersion.v1_21)) {
-                embed.description(embed.description() + """
-                     Switch ZenithProxy to the 1.21.0 channel: `channel set <java/linux> 1.21.0`
-                     """);
-            } else {
-                embed.description(embed.description() + """
-                     To configure ZenithProxy's client ViaVersion: `via zenithToServer version <version>`
-                     """);
-            }
             sendEmbedMessage(embed);
         }
     }
 
-    public void handleProxySpectatorConnectedEvent(ProxySpectatorConnectedEvent event) {
+    public void handleProxySpectatorConnectedEvent(SpectatorConnectedEvent event) {
         if (!CONFIG.discord.clientConnectionMessages) return;
         var embed = Embed.builder()
             .title("Spectator Connected")
@@ -351,7 +345,7 @@ public class NotificationEventListener {
         }
     }
 
-    public void handleProxyClientDisconnectedEvent(ProxyClientDisconnectedEvent event) {
+    public void handleProxyClientDisconnectedEvent(PlayerDisconnectedEvent event) {
         if (!CONFIG.discord.clientConnectionMessages) return;
         var embed = Embed.builder()
             .title("Client Disconnected")
@@ -456,7 +450,7 @@ public class NotificationEventListener {
 
     public void handleNonWhitelistedPlayerConnectedEvent(NonWhitelistedPlayerConnectedEvent event) {
         var embed = Embed.builder()
-            .title("Non-Whitelisted Player Disconnected")
+            .title("Non-Whitelisted Login Blocked")
             .errorColor();
         if (nonNull(event.remoteAddress()) && CONFIG.discord.showNonWhitelistLoginIP) {
             embed = embed.addField("IP", escape(event.remoteAddress().toString()), false);
@@ -513,7 +507,27 @@ public class NotificationEventListener {
         }
     }
 
-    public void handleProxySpectatorDisconnectedEvent(ProxySpectatorDisconnectedEvent event) {
+    private void handleBlacklistedPlayerConnectedEvent(BlacklistedPlayerConnectedEvent event) {
+        var embed = Embed.builder()
+            .title("Blacklisted Player Disconnected")
+            .errorColor();
+        if (nonNull(event.remoteAddress()) && CONFIG.discord.showNonWhitelistLoginIP) {
+            embed = embed.addField("IP", escape(event.remoteAddress().toString()), false);
+        }
+        if (nonNull(event.gameProfile()) && nonNull(event.gameProfile().getId()) && nonNull(event.gameProfile().getName())) {
+            embed
+                .addField("Username", escape(event.gameProfile().getName()), false)
+                .addField("Player UUID", ("[" + event.gameProfile().getId().toString() + "](https://namemc.com/profile/" + event.gameProfile().getId().toString() + ")"), true)
+                .thumbnail(Proxy.getInstance().getPlayerBodyURL(event.gameProfile().getId()).toString());
+        }
+        if (CONFIG.discord.mentionOnNonWhitelistedClientConnected) {
+            sendEmbedMessage(notificationMention(), embed);
+        } else {
+            sendEmbedMessage(embed);
+        }
+    }
+
+    public void handleProxySpectatorDisconnectedEvent(SpectatorDisconnectedEvent event) {
         if (!CONFIG.discord.clientConnectionMessages) return;
         var embed = Embed.builder()
             .title("Spectator Disconnected")
@@ -544,104 +558,6 @@ public class NotificationEventListener {
         sendEmbedMessage(embed);
     }
 
-    private void handleWhisperChatEvent(WhisperChatEvent event) {
-        if (!CONFIG.discord.chatRelay.whispers) return;
-        if (!CONFIG.discord.chatRelay.enable || CONFIG.discord.chatRelay.channelId.isEmpty()) return;
-        if (CONFIG.discord.chatRelay.ignoreQueue && Proxy.getInstance().isInQueue()) return;
-        try {
-            String message = event.message();
-            String ping = "";
-            if (CONFIG.discord.chatRelay.mentionWhileConnected || isNull(Proxy.getInstance().getCurrentPlayer().get())) {
-                if (CONFIG.discord.chatRelay.mentionRoleOnWhisper && !event.outgoing()) {
-                    if (!message.toLowerCase(Locale.ROOT).contains("discord.gg/")
-                        && !PLAYER_LISTS.getIgnoreList().contains(event.sender().getName())) {
-                        ping = notificationMention();
-                    }
-                }
-            }
-            message = message.replace(event.sender().getName(), "**" + event.sender().getName() + "**");
-            message = message.replace(event.receiver().getName(), "**" + event.receiver().getName() + "**");
-            UUID senderUUID = event.sender().getProfileId();
-            final String avatarURL = Proxy.getInstance().getPlayerHeadURL(senderUUID).toString();
-            var embed = Embed.builder()
-                .description(escape(message))
-                .footer("\u200b", avatarURL)
-                .color(Color.MAGENTA)
-                .timestamp(Instant.now());
-            if (ping.isEmpty()) {
-                sendRelayEmbedMessage(embed);
-            } else {
-                sendRelayEmbedMessage(ping, embed);
-            }
-        } catch (final Throwable e) {
-            DISCORD_LOG.error("Error processing WhisperChatEvent", e);
-        }
-    }
-
-    private void handleSystemChatEvent(SystemChatEvent event) {
-        if (!CONFIG.discord.chatRelay.serverMessages) return;
-        if (!CONFIG.discord.chatRelay.enable || CONFIG.discord.chatRelay.channelId.isEmpty()) return;
-        if (CONFIG.discord.chatRelay.ignoreQueue && Proxy.getInstance().isInQueue()) return;
-        try {
-            String message = event.message();
-            final String avatarURL = Proxy.getInstance().isOn2b2t() ? Proxy.getInstance().getPlayerHeadURL("Hausemaster").toString() : null;
-            var embed = Embed.builder()
-                .description(escape(message))
-                .footer("\u200b", avatarURL)
-                .color(Color.MOON_YELLOW)
-                .timestamp(Instant.now());
-            sendRelayEmbedMessage(embed);
-        } catch (final Throwable e) {
-            DISCORD_LOG.error("Error processing SystemChatEvent", e);
-        }
-    }
-
-    private void handlePublicChatEvent(PublicChatEvent event) {
-        if (!CONFIG.discord.chatRelay.publicChats) return;
-        if (!CONFIG.discord.chatRelay.enable || CONFIG.discord.chatRelay.channelId.isEmpty()) return;
-        if (CONFIG.discord.chatRelay.ignoreQueue && Proxy.getInstance().isInQueue()) return;
-        try {
-            String message = event.message();
-            boolean customSenderFormatting = false;
-            Color color = Color.BLACK;
-            if (!event.isDefaultMessageSchema()) {
-                if (Proxy.getInstance().isOn2b2t()) {
-                    DISCORD_LOG.error("Received non-default schema chat message on 2b2t: {}", message);
-                }
-            } else {
-                message = event.extractMessageDefaultSchema();
-                customSenderFormatting = true;
-                if (message.startsWith(">")) color = Color.MEDIUM_SEA_GREEN;
-            }
-            String ping = "";
-            if (CONFIG.discord.chatRelay.mentionWhileConnected || isNull(Proxy.getInstance().getCurrentPlayer().get())) {
-                if (CONFIG.discord.chatRelay.mentionRoleOnNameMention
-                    && event.sender().getName().equals(CONFIG.authentication.username)
-                    && !PLAYER_LISTS.getIgnoreList().contains(event.sender().getName())
-                    && Arrays.asList(message.toLowerCase().split(" ")).contains(CONFIG.authentication.username.toLowerCase())) {
-                    ping = notificationMention();
-                }
-            }
-            if (customSenderFormatting) {
-                message = "**" + event.sender().getName() + ":** " + message;
-            }
-            UUID senderUUID = event.sender().getProfileId();
-            final String avatarURL = Proxy.getInstance().getPlayerHeadURL(senderUUID).toString();
-            var embed = Embed.builder()
-                .description(escape(message))
-                .footer("\u200b", avatarURL)
-                .color(color)
-                .timestamp(Instant.now());
-            if (ping.isEmpty()) {
-                sendRelayEmbedMessage(embed);
-            } else {
-                sendRelayEmbedMessage(ping, embed);
-            }
-        } catch (final Throwable e) {
-            DISCORD_LOG.error("Error processing PublicChatEvent", e);
-        }
-    }
-
     private void handleDeathMessageChatEventKillMessage(DeathMessageChatEvent event) {
         if (!CONFIG.client.extra.killMessage) return;
         event.deathMessage().killer().ifPresent(killer -> {
@@ -655,43 +571,6 @@ public class NotificationEventListener {
         });
     }
 
-    private void handleDeathMessageChatEventChatRelay(DeathMessageChatEvent event) {
-        if (!CONFIG.discord.chatRelay.deathMessages) return;
-        if (!CONFIG.discord.chatRelay.enable || CONFIG.discord.chatRelay.channelId.isEmpty()) return;
-        if (CONFIG.discord.chatRelay.ignoreQueue && Proxy.getInstance().isInQueue()) return;
-        try {
-            String message = event.message();
-            DeathMessageParseResult death = event.deathMessage();
-            message = message.replace(death.victim(), "**" + death.victim() + "**");
-            var k = death.killer().filter(killer -> killer.type() == KillerType.PLAYER);
-            if (k.isPresent()) message = message.replace(k.get().name(), "**" + k.get().name() + "**");
-            String senderName = death.victim();
-            UUID senderUUID = CACHE.getTabListCache().getFromName(death.victim()).map(PlayerListEntry::getProfileId).orElse(null);
-            final String avatarURL = senderUUID != null
-                ? Proxy.getInstance().getPlayerHeadURL(senderUUID).toString()
-                : Proxy.getInstance().getPlayerHeadURL(senderName).toString();
-            var embed = Embed.builder()
-                .description(escape(message))
-                .footer("\u200b", avatarURL)
-                .color(Color.RUBY)
-                .timestamp(Instant.now());
-            sendRelayEmbedMessage(embed);
-        } catch (final Throwable e) {
-            DISCORD_LOG.error("Error processing DeathMessageChatEvent", e);
-        }
-    }
-
-    public void handleServerPlayerConnectedEventChatRelay(ServerPlayerConnectedEvent event) {
-        if (!CONFIG.discord.chatRelay.enable || !CONFIG.discord.chatRelay.connectionMessages || CONFIG.discord.chatRelay.channelId.isEmpty()) return;
-        if (!Proxy.getInstance().isOnlineForAtLeastDuration(Duration.ofSeconds(3))) return;
-        if (CONFIG.discord.chatRelay.ignoreQueue && Proxy.getInstance().isInQueue()) return;
-        sendRelayEmbedMessage(Embed.builder()
-                                  .description(escape("**" + event.playerEntry().getName() + "** connected"))
-                                  .successColor()
-                                  .footer("\u200b", Proxy.getInstance().getPlayerHeadURL(event.playerEntry().getProfileId()).toString())
-                                  .timestamp(Instant.now()));
-    }
-
     public void handleServerPlayerConnectedEventStalk(ServerPlayerConnectedEvent event) {
         if (!CONFIG.client.extra.stalk.enabled || !PLAYER_LISTS.getStalkList().contains(event.playerEntry().getProfile())) return;
         sendEmbedMessage(notificationMention(), Embed.builder()
@@ -699,17 +578,6 @@ public class NotificationEventListener {
             .successColor()
             .addField("Player Name", event.playerEntry().getName(), true)
             .thumbnail(Proxy.getInstance().getPlayerBodyURL(event.playerEntry().getProfileId()).toString()));
-    }
-
-    public void handleServerPlayerDisconnectedEventChatRelay(ServerPlayerDisconnectedEvent event) {
-        if (!CONFIG.discord.chatRelay.enable || !CONFIG.discord.chatRelay.connectionMessages || CONFIG.discord.chatRelay.channelId.isEmpty()) return;
-        if (!Proxy.getInstance().isOnlineForAtLeastDuration(Duration.ofSeconds(3))) return;
-        if (CONFIG.discord.chatRelay.ignoreQueue && Proxy.getInstance().isInQueue()) return;
-        sendRelayEmbedMessage(Embed.builder()
-                                  .description(escape("**" + event.playerEntry().getName() + "** disconnected"))
-                                  .errorColor()
-                                  .footer("\u200b", Proxy.getInstance().getPlayerHeadURL(event.playerEntry().getProfileId()).toString())
-                                  .timestamp(Instant.now()));
     }
 
     public void handleServerPlayerDisconnectedEventStalk(ServerPlayerDisconnectedEvent event) {
@@ -721,58 +589,20 @@ public class NotificationEventListener {
             .thumbnail(Proxy.getInstance().getPlayerBodyURL(event.playerEntry().getProfileId()).toString()));
     }
 
-    public void handleDiscordMessageSentEvent(DiscordMessageSentEvent event) {
-        if (!CONFIG.discord.chatRelay.enable) return;
-        if (!CONFIG.discord.chatRelay.sendMessages) return;
-        if (!Proxy.getInstance().isConnected() || event.message().isEmpty()) return;
-        // determine if this message is a reply
-        if (event.event().getMessage().getReferencedMessage() != null) {
-            // we could do a bunch of if statements checking everything's in order and in expected format
-            // ...or we could just throw an exception wherever it fails and catch it
-            try {
-                var messageData = event.event().getMessage().getReferencedMessage();
-                // abort if reply is not to a message sent by us
-                if (DISCORD.jda.getSelfUser().getIdLong() != messageData.getAuthor().getIdLong()) return;
-                final MessageEmbed embed = messageData.getEmbeds().getFirst();
-                if (embed.getColor() != null && embed.getColor().getRGB() == PRIVATE_MESSAGE_EMBED_COLOR.getRGB()) {
-                    // replying to private message
-                    sendPrivateMessage(event.message(), event.event());
-                } else {
-                    final String sender = DISCORD.extractRelayEmbedSenderUsername(embed.getColor(), embed.getDescription());
-                    boolean pm = false;
-                    var connections = Proxy.getInstance().getActiveConnections().getArray();
-                    for (int i = 0; i < connections.length; i++) {
-                        var connection = connections[i];
-                        var name = connection.getProfileCache().getProfile().getName();
-                        if (sender.equals(name)) {
-                            sendPrivateMessage(event.message(), event.event());
-                            pm = true;
-                            break;
-                        }
-                    }
-                    if (!pm) Proxy.getInstance().getClient().sendAsync(new ServerboundChatPacket("/w " + sender + " " + event.message()));
-                }
-            } catch (final Exception e) {
-                DISCORD_LOG.error("Error performing chat relay reply", e);
-            }
-        } else {
-            if (event.message().startsWith(CONFIG.discord.prefix)) { // send as private message
-                sendPrivateMessage(event.message().substring(CONFIG.discord.prefix.length()), event.event());
-            } else {
-                Proxy.getInstance().getClient().sendAsync(new ServerboundChatPacket(event.message()));
-            }
-        }
-        DISCORD.lastRelayMessage = Optional.of(Instant.now());
-    }
-
-    private void sendPrivateMessage(String message, MessageReceivedEvent event) {
-        EVENT_BUS.postAsync(new PrivateMessageSendEvent(
-            event.getMessage().getAuthor().getName(),
-            message));
-    }
-
     public void handleUpdateStartEvent(UpdateStartEvent event) {
-        sendEmbedMessage(DISCORD.getUpdateMessage(event.newVersion()));
+        String verString = "Current Version: `" + escape(LAUNCH_CONFIG.version) + "`";
+        var newVersion = event.newVersion();
+        if (newVersion.isPresent()) verString += "\nNew Version: `" + escape(newVersion.get()) + "`";
+        var embed = Embed.builder()
+            .title("Updating and restarting...")
+            .description(verString)
+            .primaryColor();
+        if (!LAUNCH_CONFIG.auto_update) {
+            embed
+                .title("Restarting...")
+                .addField("Error", "`autoUpdate` must be enabled for new updates to apply");
+        };
+        sendEmbedMessage(embed);
     }
 
     public void handleServerRestartingEvent(ServerRestartingEvent event) {
@@ -787,7 +617,7 @@ public class NotificationEventListener {
         }
     }
 
-    public void handleProxyLoginFailedEvent(ProxyLoginFailedEvent event) {
+    public void handleProxyLoginFailedEvent(ClientLoginFailedEvent event) {
         var embed = Embed.builder()
             .title("Login Failed")
             .errorColor()
@@ -799,7 +629,7 @@ public class NotificationEventListener {
         }
     }
 
-    public void handleStartConnectEvent(StartConnectEvent event) {
+    public void handleStartConnectEvent(ClientStartConnectEvent event) {
         sendEmbedMessage(Embed.builder()
                              .title("Connecting...")
                              .inQueueColor());
@@ -915,7 +745,7 @@ public class NotificationEventListener {
                 embed.description("Error reading replay file: " + e.getMessage());
             }
         }
-        sendEmbedMessageWithFileAttachment(embed);
+        sendEmbedMessage(embed);
     }
 
     public void handleTotemPopEvent(final PlayerTotemPopAlertEvent event) {
@@ -939,21 +769,6 @@ public class NotificationEventListener {
             sendEmbedMessage(embed);
     }
 
-    static final Color PRIVATE_MESSAGE_EMBED_COLOR = Color.RED;
-
-    public void handlePrivateMessageSendEvent(final PrivateMessageSendEvent event) {
-        var embed = Embed.builder()
-            .description(escape("**" + event.getSenderName() + "**: " + event.getStringContents()))
-            .color(PRIVATE_MESSAGE_EMBED_COLOR)
-            .timestamp(Instant.now());
-        if (event.getSenderUUID() != null) {
-            embed.footer("Private Message", Proxy.getInstance().getPlayerHeadURL(event.getSenderUUID()).toString());
-        } else {
-            embed.footer("Private Message", null);
-        }
-        sendRelayEmbedMessage(embed);
-    }
-
     private void handlePluginLoadFailure(PluginLoadFailureEvent event) {
         String id = event.id() != null ? event.id() : "?";
         var embed = Embed.builder()
@@ -971,7 +786,7 @@ public class NotificationEventListener {
             .successColor()
             .addField("ID", escape(event.pluginInfo().id()), false)
             .addField("Description", escape(event.pluginInfo().description()))
-            .addField("Version", escape(event.pluginInfo().version()), false)
+            .addField("Version", escape(event.pluginInfo().version().toString()), false)
             .addField("URL", escape(event.pluginInfo().url()), false)
             .addField("Author(s)", String.join(", ", event.pluginInfo().authors()), false);
         sendEmbedMessage(embed);
@@ -989,15 +804,6 @@ public class NotificationEventListener {
     public void sendMessage(final String message) {
         DISCORD.sendMessage(message);
     }
-    public void sendRelayEmbedMessage(Embed embedCreateSpec) {
-        DISCORD.sendRelayEmbedMessage(embedCreateSpec);
-    }
-    public void sendRelayEmbedMessage(String message, Embed embed) {
-        DISCORD.sendRelayEmbedMessage(message, embed);
-    }
-    public void sendRelayMessage(final String message) {
-        DISCORD.sendRelayMessage(message);
-    }
     void sendEmbedMessageWithButtons(String message, Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> mapper, Duration timeout) {
         DISCORD.sendEmbedMessageWithButtons(message, embed, buttons, mapper, timeout);
     }
@@ -1009,8 +815,5 @@ public class NotificationEventListener {
     }
     public void updatePresence() {
         DISCORD.updatePresence();
-    }
-    public void sendEmbedMessageWithFileAttachment(Embed embed) {
-        DISCORD.sendEmbedMessageWithFileAttachment(embed);
     }
 }

@@ -2,7 +2,7 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.event.module.OutboundChatEvent;
-import com.zenith.module.Module;
+import com.zenith.module.api.Module;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
 
@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.CONFIG;
 
 public class AntiLeak extends Module {
     private final Pattern notNumber = Pattern.compile("[^0-9]");

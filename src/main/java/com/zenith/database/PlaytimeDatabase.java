@@ -2,7 +2,12 @@ package com.zenith.database;
 
 import com.zenith.Proxy;
 import com.zenith.database.dto.enums.Connectiontype;
-import com.zenith.event.proxy.*;
+import com.zenith.event.client.ClientConnectEvent;
+import com.zenith.event.client.ClientDisconnectEvent;
+import com.zenith.event.client.ClientOnlineEvent;
+import com.zenith.event.db.DatabaseTickEvent;
+import com.zenith.event.server.ServerPlayerConnectedEvent;
+import com.zenith.event.server.ServerPlayerDisconnectedEvent;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 
 import java.time.Instant;
@@ -14,7 +19,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class PlaytimeDatabase extends LockingDatabase {
     private final Map<GameProfile, List<ConnectionEvent>> connectionEvents = new ConcurrentHashMap<>();
@@ -64,9 +69,9 @@ public class PlaytimeDatabase extends LockingDatabase {
             of(DatabaseTickEvent.class, this::handleDatabaseTick),
             of(ServerPlayerConnectedEvent.class, this::handleServerPlayerConnectedEvent),
             of(ServerPlayerDisconnectedEvent.class, this::handleServerPlayerDisconnectedEvent),
-            of(PlayerOnlineEvent.class, (e) -> resetConnectionEvents()),
-            of(ConnectEvent.class, (e) -> resetConnectionEvents()),
-            of(DisconnectEvent.class, (e) -> resetConnectionEvents())
+            of(ClientOnlineEvent.class, (e) -> resetConnectionEvents()),
+            of(ClientConnectEvent.class, (e) -> resetConnectionEvents()),
+            of(ClientDisconnectEvent.class, (e) -> resetConnectionEvents())
         );
     }
 

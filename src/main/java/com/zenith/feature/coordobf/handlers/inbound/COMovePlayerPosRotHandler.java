@@ -1,64 +1,83 @@
 package com.zenith.feature.coordobf.handlers.inbound;
 
-import com.zenith.module.impl.CoordObfuscator;
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.feature.coordobf.CoordOffset;
+import com.zenith.module.impl.CoordObfuscation;
+import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
+import com.zenith.util.math.MathHelper;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundMovePlayerPosRotPacket;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.MODULE;
 
 public class COMovePlayerPosRotHandler implements PacketHandler<ServerboundMovePlayerPosRotPacket, ServerSession> {
     @Override
     public ServerboundMovePlayerPosRotPacket apply(final ServerboundMovePlayerPosRotPacket packet, final ServerSession session) {
-        if (!session.isInGame()) {
+        var coordObf = MODULE.get(CoordObfuscation.class);
+        var state= coordObf.getPlayerState(session);
+        if (!state.isInGame()) {
             if (session.isSpectator()) {
-                session.setInGame(true);
+                state.setInGame(true);
+                return packet;
             } else {
-                CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
-                if (packet.getX() == coordObf.getCoordOffset(session).offsetX(CACHE.getPlayerCache().getX())
+                if (MathHelper.isInRange(packet.getX(), coordObf.getCoordOffset(session).offsetX(CACHE.getPlayerCache().getX()), CoordOffset.EPSILON * 2)
                     && packet.getY() == CACHE.getPlayerCache().getY()
-                    && packet.getZ() == coordObf.getCoordOffset(session).offsetZ(CACHE.getPlayerCache().getZ())) {
-                    session.setInGame(true);
+                    && MathHelper.isInRange(packet.getZ(), coordObf.getCoordOffset(session).offsetZ(CACHE.getPlayerCache().getZ()), CoordOffset.EPSILON * 2)) {
+                    state.setInGame(true);
+                    // correct server teleport position
+                    return new ServerboundMovePlayerPosRotPacket(
+                        false,
+                        packet.isHorizontalCollision(),
+                        CACHE.getPlayerCache().getX(),
+                        CACHE.getPlayerCache().getY(),
+                        CACHE.getPlayerCache().getZ(),
+                        packet.getYaw(),
+                        packet.getPitch()
+                    );
                 } else {
                     coordObf.info("Received {} pos: {} {} {} but expected: {} {} {}",
-                                    session.getProfileCache().getProfile().getName(),
+                                    session.getName(),
                                     packet.getX(),
                                     packet.getY(),
                                     packet.getZ(),
                                     coordObf.getCoordOffset(session).offsetX(CACHE.getPlayerCache().getX()),
                                     CACHE.getPlayerCache().getY(),
                                     coordObf.getCoordOffset(session).offsetZ(CACHE.getPlayerCache().getZ()));
-                    session.sendAsync(new ClientboundPlayerPositionPacket(
-                        session.getSpawnTeleportId(),
-                        CACHE.getPlayerCache().getX(),
-                        CACHE.getPlayerCache().getY(),
-                        CACHE.getPlayerCache().getZ(),
-                        0, 0, 0,
-                        CACHE.getPlayerCache().getYaw(),
-                        CACHE.getPlayerCache().getPitch()
-                    ));
                     return null;
                 }
             }
         }
-        CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
         double reverseOffsetX = coordObf.getCoordOffset(session).reverseOffsetX(packet.getX());
         double reverseOffsetZ = coordObf.getCoordOffset(session).reverseOffsetZ(packet.getZ());
-        coordObf.playerMovePos(session, reverseOffsetX, reverseOffsetZ);
-        if (coordObf.isNextPlayerMovePacketIsTeleport()) {
-            coordObf.setNextPlayerMovePacketIsTeleport(false);
-            return new ServerboundMovePlayerPosRotPacket(
-                packet.isOnGround(),
-                packet.isHorizontalCollision(),
-                coordObf.getServerTeleportPos().getX(),
-                coordObf.getServerTeleportPos().getY(),
-                coordObf.getServerTeleportPos().getZ(),
-                packet.getYaw(),
-                packet.getPitch()
-            );
+        var serverTp = state.getServerTeleports().peek();
+        if (serverTp != null && !session.isSpectator()) {
+            if (MathHelper.isInRange(reverseOffsetX, serverTp.x(), CoordOffset.EPSILON * 2)
+                && packet.getY() == serverTp.y()
+                && MathHelper.isInRange(reverseOffsetZ, serverTp.z(), CoordOffset.EPSILON * 2)
+            ) {
+                coordObf.info("[{}] Accepting server teleport {}", session.getName(), serverTp.id());
+                state.getServerTeleports().poll();
+                return new ServerboundMovePlayerPosRotPacket(
+                    false,
+                    packet.isHorizontalCollision(),
+                    serverTp.x(),
+                    serverTp.y(),
+                    serverTp.z(),
+                    packet.getYaw(),
+                    packet.getPitch()
+                );
+            } else {
+                coordObf.info("[{}] Did not accept server teleport: {}, they sent: {} {} {}",
+                    session.getName(),
+                    serverTp,
+                    reverseOffsetX,
+                    packet.getY(),
+                    reverseOffsetZ
+                );
+                return null;
+            }
         }
+        coordObf.playerMovePos(session, reverseOffsetX, reverseOffsetZ);
         return new ServerboundMovePlayerPosRotPacket(
             packet.isOnGround(),
             packet.isHorizontalCollision(),

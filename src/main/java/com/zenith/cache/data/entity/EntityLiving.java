@@ -3,6 +3,7 @@ package com.zenith.cache.data.entity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
+import org.cloudburstmc.math.vector.Vector3i;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
@@ -18,6 +19,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 @Data
@@ -57,11 +59,23 @@ public class EntityLiving extends Entity {
 
     public boolean isAlive() {
         if (removed) return false;
+        // https://minecraft.wiki/w/Java_Edition_protocol/Entity_metadata#Entity
         EntityMetadata<?, ?> poseMetadata = getMetadata().get(6);
         if (poseMetadata != null && poseMetadata.getType() == MetadataTypes.POSE) {
             var pose = (Pose) poseMetadata.getValue();
             if (pose == Pose.DYING) return false;
         }
         return true;
+    }
+
+    public boolean isSleeping() {
+        if (removed) return false;
+        // https://minecraft.wiki/w/Java_Edition_protocol/Entity_metadata#Living_Entity
+        EntityMetadata<?, ?> bedLocationMetadata = getMetadata().get(14);
+        if (bedLocationMetadata != null && bedLocationMetadata.getType() == MetadataTypes.OPTIONAL_POSITION) {
+            var bedLocation = (Optional<Vector3i>) bedLocationMetadata.getValue();
+            if (bedLocation.isPresent()) return true;
+        }
+        return false;
     }
 }

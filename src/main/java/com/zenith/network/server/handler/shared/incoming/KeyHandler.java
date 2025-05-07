@@ -1,7 +1,7 @@
 package com.zenith.network.server.handler.shared.incoming;
 
 import com.zenith.network.UserAuthTask;
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.packet.login.serverbound.ServerboundKeyPacket;
 
@@ -9,7 +9,7 @@ import javax.crypto.SecretKey;
 import java.security.PrivateKey;
 import java.util.Arrays;
 
-import static com.zenith.Shared.EXECUTOR;
+import static com.zenith.Globals.EXECUTOR;
 
 public class KeyHandler implements PacketHandler<ServerboundKeyPacket, ServerSession> {
 

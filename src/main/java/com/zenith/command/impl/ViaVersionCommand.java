@@ -3,13 +3,13 @@ package com.zenith.command.impl;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
@@ -92,7 +92,7 @@ public class ViaVersionCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed embedBuilder) {
+    public void defaultEmbed(final Embed embedBuilder) {
         embedBuilder
             .addField("Zenith To Server ViaVersion", toggleStr(CONFIG.client.viaversion.enabled), false)
             .addField("Zenith To Server Disable On 2b2t", toggleStr(CONFIG.client.viaversion.disableOn2b2t), false)

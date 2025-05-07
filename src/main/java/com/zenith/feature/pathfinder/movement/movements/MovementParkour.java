@@ -1,18 +1,18 @@
 package com.zenith.feature.pathfinder.movement.movements;
 
-import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.feature.pathfinder.BlockStateInterface;
 import com.zenith.feature.pathfinder.MutableMoveResult;
 import com.zenith.feature.pathfinder.PathInput;
 import com.zenith.feature.pathfinder.movement.*;
 import com.zenith.feature.pathfinder.movement.MovementHelper.PlaceResult;
-import com.zenith.feature.world.World;
+import com.zenith.feature.player.World;
 import com.zenith.mc.block.*;
 
 import java.util.HashSet;
 import java.util.Set;
 
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.BARITONE;
+import static com.zenith.Globals.CONFIG;
 import static com.zenith.feature.pathfinder.movement.ActionCosts.*;
 
 public class MovementParkour extends Movement {
@@ -255,7 +255,7 @@ public class MovementParkour extends Movement {
         } else if (!ctx.playerFeet().equals(src)) {
             if (ctx.playerFeet().equals(src.relative(direction)) || ctx.player().getY() - src.y() > 0.0001) {
                 if (CONFIG.client.extra.pathfinder.allowPlace // see PR #3775
-                        && Baritone.INSTANCE.getInventoryBehavior().hasGenericThrowaway()
+                        && BARITONE.getInventoryBehavior().hasGenericThrowaway()
                         && !MovementHelper.canWalkOn(dest.below())
                         && !ctx.player().isOnGround()
                         && MovementHelper.attemptToPlaceABlock(state, dest.below(), true, false) == PlaceResult.READY_TO_PLACE

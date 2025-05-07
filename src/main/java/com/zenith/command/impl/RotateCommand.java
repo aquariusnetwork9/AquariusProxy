@@ -2,18 +2,17 @@ package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
-import com.zenith.feature.world.InputRequest;
-import com.zenith.module.impl.PlayerSimulation;
+import com.zenith.feature.player.InputRequest;
 
 import static com.mojang.brigadier.arguments.FloatArgumentType.floatArg;
 import static com.mojang.brigadier.arguments.FloatArgumentType.getFloat;
-import static com.zenith.Shared.INPUTS;
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.BOT;
+import static com.zenith.Globals.INPUTS;
 
 public class RotateCommand extends Command {
     private static final int MOVE_PRIORITY = 1000000;
@@ -57,6 +56,7 @@ public class RotateCommand extends Command {
                 }
                 doRotate(
                     InputRequest.builder()
+                        .owner(this)
                         .yaw(yaw)
                         .priority(MOVE_PRIORITY)
                         .build(),
@@ -82,6 +82,7 @@ public class RotateCommand extends Command {
                 }
                 doRotate(
                     InputRequest.builder()
+                        .owner(this)
                         .pitch(pitch)
                         .priority(MOVE_PRIORITY)
                         .build(),
@@ -108,6 +109,7 @@ public class RotateCommand extends Command {
                 }
                 doRotate(
                     InputRequest.builder()
+                        .owner(this)
                         .yaw(yaw)
                         .pitch(pitch)
                         .priority(MOVE_PRIORITY)
@@ -122,8 +124,8 @@ public class RotateCommand extends Command {
         var accepted = INPUTS.submit(input)
             .get();
         embed
-            .addField("Yaw", MODULE.get(PlayerSimulation.class).getYaw(), false)
-            .addField("Pitch", MODULE.get(PlayerSimulation.class).getPitch(), false);
+            .addField("Yaw", BOT.getYaw(), false)
+            .addField("Pitch", BOT.getPitch(), false);
         if (accepted) {
             embed
                 .title("Rotated")

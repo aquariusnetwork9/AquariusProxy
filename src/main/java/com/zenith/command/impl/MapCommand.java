@@ -1,10 +1,10 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import com.zenith.feature.map.MapGenerator;
 import com.zenith.feature.map.MapRenderer;
@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class MapCommand extends Command {
     @Override

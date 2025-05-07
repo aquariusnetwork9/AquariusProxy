@@ -1,7 +1,7 @@
 package com.zenith.feature.map;
 
 import com.zenith.cache.data.chunk.Chunk;
-import com.zenith.feature.world.World;
+import com.zenith.feature.player.World;
 import com.zenith.mc.block.Block;
 import com.zenith.util.math.MathHelper;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -10,7 +10,7 @@ import lombok.SneakyThrows;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.BitStorage;
 import org.jspecify.annotations.NonNull;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.cache.data.chunk.Chunk.chunkPosToLong;
 
 public class MapGenerator {

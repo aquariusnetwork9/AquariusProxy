@@ -1,11 +1,11 @@
 package com.zenith.network.server.handler.shared.postoutgoing;
 
-import com.zenith.network.registry.PostOutgoingPacketHandler;
+import com.zenith.network.codec.PostOutgoingPacketHandler;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.ClientboundLoginCompressionPacket;
 import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.ClientboundLoginFinishedPacket;
 
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 
 public class LoginCompressionPostOutgoingHandler implements PostOutgoingPacketHandler<ClientboundLoginCompressionPacket, ServerSession> {
     @Override

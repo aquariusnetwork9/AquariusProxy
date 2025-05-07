@@ -2,15 +2,15 @@ package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import com.zenith.feature.autoupdater.AutoUpdater;
 
-import static com.zenith.Shared.LAUNCH_CONFIG;
-import static com.zenith.Shared.saveLaunchConfig;
+import static com.zenith.Globals.LAUNCH_CONFIG;
+import static com.zenith.Globals.saveLaunchConfig;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 
@@ -50,7 +50,7 @@ public class AutoUpdateCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("AutoUpdater", toggleStr(LAUNCH_CONFIG.auto_update), false)
             .primaryColor();

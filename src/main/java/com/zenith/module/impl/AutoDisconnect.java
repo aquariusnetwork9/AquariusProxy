@@ -2,19 +2,14 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
-import com.zenith.event.module.PlayerHealthChangedEvent;
-import com.zenith.event.module.WeatherChangeEvent;
-import com.zenith.event.proxy.HealthAutoDisconnectEvent;
-import com.zenith.event.proxy.NewPlayerInVisualRangeEvent;
-import com.zenith.event.proxy.ProxyClientDisconnectedEvent;
-import com.zenith.event.proxy.TotemPopEvent;
-import com.zenith.module.Module;
+import com.zenith.event.module.*;
+import com.zenith.event.player.PlayerDisconnectedEvent;
+import com.zenith.module.api.Module;
 
 import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
-import static java.util.Objects.nonNull;
+import static com.zenith.Globals.*;
 
 public class AutoDisconnect extends Module {
     public static final String AUTODISCONNECT_REASON_PREFIX = "[AutoDisconnect] ";
@@ -28,8 +23,8 @@ public class AutoDisconnect extends Module {
         return List.of(
             of(PlayerHealthChangedEvent.class, this::handleLowPlayerHealthEvent),
             of(WeatherChangeEvent.class, this::handleWeatherChangeEvent),
-            of(ProxyClientDisconnectedEvent.class, this::handleProxyClientDisconnectedEvent),
-            of(NewPlayerInVisualRangeEvent.class, this::handleNewPlayerInVisualRangeEvent),
+            of(PlayerDisconnectedEvent.class, this::handleProxyClientDisconnectedEvent),
+            of(ServerPlayerInVisualRangeEvent.class, this::handleNewPlayerInVisualRangeEvent),
             of(TotemPopEvent.class, this::handleTotemPopEvent)
         );
     }
@@ -61,16 +56,13 @@ public class AutoDisconnect extends Module {
         }
     }
 
-    public void handleProxyClientDisconnectedEvent(ProxyClientDisconnectedEvent event) {
+    public void handleProxyClientDisconnectedEvent(PlayerDisconnectedEvent event) {
         if (!CONFIG.client.extra.utility.actions.autoDisconnect.autoClientDisconnect) return;
-        var connection = Proxy.getInstance().getActivePlayer();
-        if (nonNull(connection) && connection.getProfileCache().getProfile().equals(event.clientGameProfile())) {
-            info("Auto Client Disconnect");
-            doDisconnect("Auto Client Disconnect");
-        }
+        info("Auto Client Disconnect");
+        doDisconnect("Auto Client Disconnect");
     }
 
-    public void handleNewPlayerInVisualRangeEvent(NewPlayerInVisualRangeEvent event) {
+    public void handleNewPlayerInVisualRangeEvent(ServerPlayerInVisualRangeEvent event) {
         if (!CONFIG.client.extra.utility.actions.autoDisconnect.onUnknownPlayerInVisualRange) return;
         var playerUUID = event.playerEntity().getUuid();
         if (PLAYER_LISTS.getFriendsList().contains(playerUUID)

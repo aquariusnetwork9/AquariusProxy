@@ -1,14 +1,14 @@
 package com.zenith.network;
 
 import com.zenith.network.client.ClientSession;
-import com.zenith.util.Config;
+import com.zenith.util.config.Config;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.packet.status.serverbound.ServerboundPingRequestPacket;
 
 import java.util.concurrent.TimeUnit;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.EXECUTOR;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.EXECUTOR;
 
 /**
  * Zenith client -> server ping task

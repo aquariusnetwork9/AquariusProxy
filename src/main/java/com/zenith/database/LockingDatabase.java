@@ -2,7 +2,7 @@ package com.zenith.database;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.zenith.Proxy;
-import com.zenith.event.proxy.RedisRestartEvent;
+import com.zenith.event.db.RedisRestartEvent;
 import com.zenith.util.Wait;
 import org.jdbi.v3.core.HandleConsumer;
 import org.jspecify.annotations.Nullable;
@@ -16,7 +16,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 

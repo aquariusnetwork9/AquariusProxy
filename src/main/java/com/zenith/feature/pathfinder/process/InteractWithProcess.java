@@ -4,10 +4,11 @@ import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.feature.pathfinder.PathingCommand;
 import com.zenith.feature.pathfinder.PathingCommandType;
+import com.zenith.feature.pathfinder.PathingRequestFuture;
 import com.zenith.feature.pathfinder.goals.Goal;
 import com.zenith.feature.pathfinder.goals.GoalNear;
-import com.zenith.feature.world.*;
-import com.zenith.feature.world.raycast.RaycastHelper;
+import com.zenith.feature.player.*;
+import com.zenith.feature.player.raycast.RaycastHelper;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.LocalizedCollisionBox;
 import lombok.Data;
@@ -17,30 +18,38 @@ import org.jspecify.annotations.Nullable;
 
 import java.lang.ref.WeakReference;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class InteractWithProcess extends BaritoneProcessHelper {
 
-    @Nullable private InteractTarget target = null;
+    private @Nullable PathingRequestFuture future;
+    private @Nullable InteractTarget target = null;
 
     public InteractWithProcess(final Baritone baritone) {
         super(baritone);
     }
 
-    public void rightClickBlock(int x, int y, int z) {
-        this.target = new InteractWithBlock(x, y, z, false);
+    public PathingRequestFuture rightClickBlock(int x, int y, int z) {
+        return interact(new InteractWithBlock(x, y, z, false));
     }
 
-    public void leftClickBlock(int x, int y, int z) {
-        this.target = new InteractWithBlock(x, y, z, true);
+    public PathingRequestFuture leftClickBlock(int x, int y, int z) {
+        return interact(new InteractWithBlock(x, y, z, true));
     }
 
-    public void rightClickEntity(EntityLiving entity) {
-        this.target = new InteractWithEntity(new WeakReference<>(entity), false);
+    public PathingRequestFuture rightClickEntity(EntityLiving entity) {
+        return interact(new InteractWithEntity(new WeakReference<>(entity), false));
     }
 
-    public void leftClickEntity(EntityLiving entity) {
-        this.target = new InteractWithEntity(new WeakReference<>(entity), true);
+    public PathingRequestFuture leftClickEntity(EntityLiving entity) {
+        return interact(new InteractWithEntity(new WeakReference<>(entity), true));
+    }
+
+    public PathingRequestFuture interact(InteractTarget target) {
+        onLostControl();
+        this.target = target;
+        this.future = new PathingRequestFuture();
+        return future;
     }
 
     @Override
@@ -57,6 +66,10 @@ public class InteractWithProcess extends BaritoneProcessHelper {
         }
         PathingCommand pathingCommand = t.pathingCommand();
         if (pathingCommand == null) {
+            if (t.succeeded() && future != null) {
+                future.complete(true);
+                future.notifyListeners();
+            }
             onLostControl();
             return new PathingCommand(null, PathingCommandType.DEFER);
         }
@@ -66,6 +79,10 @@ public class InteractWithProcess extends BaritoneProcessHelper {
     @Override
     public void onLostControl() {
         target = null;
+        if (future != null && !future.isCompleted()) {
+            future.complete(false);
+        }
+        future = null;
     }
 
     @Override
@@ -73,8 +90,9 @@ public class InteractWithProcess extends BaritoneProcessHelper {
         return "InteractWith: " + target;
     }
 
-    interface InteractTarget {
+    public interface InteractTarget {
         PathingCommand pathingCommand();
+        boolean succeeded();
     }
 
     @Data
@@ -94,6 +112,11 @@ public class InteractWithProcess extends BaritoneProcessHelper {
             }
             // todo: some antistuck func here
             return new PathingCommand(new GoalNear(x, y, z, 1), PathingCommandType.REVALIDATE_GOAL_AND_PATH);
+        }
+
+        @Override
+        public boolean succeeded() {
+            return this.succeeded;
         }
 
         public boolean targetValid() {
@@ -128,6 +151,7 @@ public class InteractWithProcess extends BaritoneProcessHelper {
             Vector2f rot = RotationHelper.rotationTo(center.x(), center.y(), center.z());
             INPUTS.submit(
                 InputRequest.builder()
+                    .owner(this)
                     .input(in.build())
                     .yaw(rot.getX())
                     .pitch(rot.getY())
@@ -135,7 +159,7 @@ public class InteractWithProcess extends BaritoneProcessHelper {
                     .build())
                 .addInputExecutedListener(future -> {
                     if (futureSucceeded(future)) {
-                        PATH_LOG.debug("Interacted with block click: {} at [{}, {}, {}]", leftClick ? "left" : "right", x, y, z);
+                        PATH_LOG.info("{} clicked block at: [{}, {}, {}]", leftClick ? "left" : "right", x, y, z);
                         succeeded = true;
                     }
                 });
@@ -172,6 +196,11 @@ public class InteractWithProcess extends BaritoneProcessHelper {
             return new PathingCommand(new GoalNear(entity.blockPos(), 1), PathingCommandType.REVALIDATE_GOAL_AND_PATH);
         }
 
+        @Override
+        public boolean succeeded() {
+            return this.succeeded;
+        }
+
         public boolean targetValid() {
             var entity = entityRef.get();
             if (entity == null) return false;
@@ -205,6 +234,7 @@ public class InteractWithProcess extends BaritoneProcessHelper {
             Vector2f rot = RotationHelper.shortestRotationTo(entity);
             INPUTS.submit(
                 InputRequest.builder()
+                    .owner(this)
                     .input(in.build())
                     .yaw(rot.getX())
                     .pitch(rot.getY())
@@ -212,7 +242,8 @@ public class InteractWithProcess extends BaritoneProcessHelper {
                     .build())
                 .addInputExecutedListener(future -> {
                     if (futureSucceeded(future)) {
-                        PATH_LOG.debug("Interacted with entity click: {} at [{}={}]", leftClick ? "left" : "right", entity.getEntityType(), entity.blockPos());
+                        var pos = entity.blockPos();
+                        PATH_LOG.info("{} clicked entity: {} at: [{}, {}, {}]", leftClick ? "left" : "right", entity.getEntityType(), pos.x(), pos.y(), pos.z());
                         succeeded = true;
                     }
                 });

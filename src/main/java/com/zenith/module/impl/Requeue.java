@@ -2,13 +2,13 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
-import com.zenith.event.proxy.DisconnectEvent;
-import com.zenith.event.proxy.StartQueueEvent;
-import com.zenith.module.Module;
-import com.zenith.network.registry.PacketHandlerCodec;
-import com.zenith.network.registry.PacketHandlerStateCodec;
-import com.zenith.util.Timer;
-import com.zenith.util.Timers;
+import com.zenith.event.client.ClientDisconnectEvent;
+import com.zenith.event.queue.QueueStartEvent;
+import com.zenith.module.api.Module;
+import com.zenith.network.codec.PacketHandlerCodec;
+import com.zenith.network.codec.PacketHandlerStateCodec;
+import com.zenith.util.timer.Timer;
+import com.zenith.util.timer.Timers;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.packet.common.serverbound.ServerboundKeepAlivePacket;
 import org.jspecify.annotations.Nullable;
@@ -18,7 +18,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.EXECUTOR;
+import static com.zenith.Globals.EXECUTOR;
 
 /**
  * On 2b2t, if we stop responding to KeepAlive packets we will get sent back to queue
@@ -38,8 +38,8 @@ public class Requeue extends Module {
     @Override
     public List<EventConsumer<?>> registerEvents() {
         return List.of(
-            of(StartQueueEvent.class, e -> disable()),
-            of(DisconnectEvent.class, e -> disable())
+            of(QueueStartEvent.class, e -> disable()),
+            of(ClientDisconnectEvent.class, e -> disable())
         );
     }
 
@@ -49,7 +49,7 @@ public class Requeue extends Module {
             .setId("requeue")
             .setPriority(10)
             .state(ProtocolState.GAME, PacketHandlerStateCodec.clientBuilder()
-                .registerOutbound(ServerboundKeepAlivePacket.class, (packet, session) -> null)
+                .outbound(ServerboundKeepAlivePacket.class, (packet, session) -> null)
                 .build())
             .build();
     }

@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-import static com.zenith.Shared.DEFAULT_LOG;
+import static com.zenith.Globals.DEFAULT_LOG;
 import static java.util.Arrays.asList;
 import static java.util.Objects.isNull;
 

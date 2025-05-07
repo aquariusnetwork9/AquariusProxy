@@ -2,11 +2,7 @@ package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
-import com.zenith.command.brigadier.CommandSource;
+import com.zenith.command.api.*;
 import com.zenith.feature.spectator.SpectatorEntityRegistry;
 import com.zenith.feature.spectator.SpectatorSync;
 import com.zenith.util.ComponentSerializer;
@@ -33,7 +29,7 @@ public class SpectatorEntityCommand extends Command {
 
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
-        return command("spectatorEntity").requires(c -> Command.validateCommandSource(c, CommandSource.SPECTATOR))
+        return command("spectatorEntity").requires(c -> Command.validateCommandSource(c, CommandSources.SPECTATOR))
             .executes(c -> {
                 var session = c.getSource().getInGamePlayerInfo().session();
                 session.sendAsync(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>Entity id's: " + String.join(", ", SpectatorEntityRegistry.getEntityIdentifiers())), false));

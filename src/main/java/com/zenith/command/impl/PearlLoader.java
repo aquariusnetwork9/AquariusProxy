@@ -1,17 +1,17 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
-import com.zenith.feature.pathfinder.Baritone;
-import com.zenith.util.Config.Client.Extra.PearlLoader.Pearl;
+import com.zenith.util.config.Config.Client.Extra.PearlLoader.Pearl;
 
-import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
-import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.BARITONE;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.command.brigadier.BlockPosArgument.blockPos;
+import static com.zenith.command.brigadier.BlockPosArgument.getBlockPos;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 
@@ -40,25 +40,25 @@ public class PearlLoader extends Command {
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
         return command("pearlLoader")
-            .then(literal("add").then(argument("id", wordWithChars()).then(argument("x", integer()).then(argument("y", integer()).then(argument("z", integer()).executes(ctx -> {
-                String id = getString(ctx, "id");
-                int x = getInteger(ctx, "x");
-                int y = getInteger(ctx, "y");
-                int z = getInteger(ctx, "z");
-                Pearl pearl = new Pearl(id, x, y, z);
-                var pearls = CONFIG.client.extra.pearlLoader.pearls;
-                for (var p : pearls) {
-                    if (p.id().equals(id)) {
-                        pearls.remove(p);
-                        break;
+            .then(literal("add").then(argument("id", wordWithChars()).then(argument("pos", blockPos()).executes(c -> {
+                    String id = getString(c, "id");
+                    var pos = getBlockPos(c, "pos");
+                    int x = pos.x();
+                    int y = pos.y();
+                    int z = pos.z();
+                    Pearl pearl = new Pearl(id, x, y, z);
+                    var pearls = CONFIG.client.extra.pearlLoader.pearls;
+                    for (var p : pearls) {
+                        if (p.id().equals(id)) {
+                            pearls.remove(p);
+                            break;
+                        }
                     }
-                }
-                pearls.add(pearl);
-                ctx.getSource().getEmbed()
-                    .title("Pearl Added")
-                    .successColor();
-                return OK;
-            }))))))
+                    pearls.add(pearl);
+                    c.getSource().getEmbed()
+                        .title("Pearl Added")
+                        .successColor();
+                }))))
             .then(literal("del").then(argument("id", wordWithChars()).executes(c -> {
                 String id = getString(c, "id");
                 var pearls = CONFIG.client.extra.pearlLoader.pearls;
@@ -88,7 +88,13 @@ public class PearlLoader extends Command {
                 var pearls = CONFIG.client.extra.pearlLoader.pearls;
                 for (var pearl : pearls) {
                     if (pearl.id().equals(id)) {
-                        Baritone.INSTANCE.rightClickBlock(pearl.x(), pearl.y(), pearl.z());
+                        BARITONE.rightClickBlock(pearl.x(), pearl.y(), pearl.z())
+                            .addExecutedListener(f -> {
+                                c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
+                                    .title("Pearl Loaded!")
+                                    .addField("Pearl ID", pearl.id(), false)
+                                    .successColor());
+                            });
                         c.getSource().getEmbed()
                             .title("Loading Pearl")
                             .successColor();
@@ -104,7 +110,7 @@ public class PearlLoader extends Command {
     }
 
     @Override
-    public void postPopulate(Embed embed) {
+    public void defaultEmbed(Embed embed) {
         embed
             .description(pearlsList());
     }
@@ -114,7 +120,16 @@ public class PearlLoader extends Command {
         if (pearls.isEmpty()) return "None";
         StringBuilder sb = new StringBuilder();
         for (var pearl : pearls) {
-            sb.append("**").append(pearl.id()).append("**: [").append(pearl.x()).append(", ").append(pearl.y()).append(", ").append(pearl.z()).append("]\n");
+            sb.append("**")
+                .append(pearl.id())
+                .append("**: ");
+            if (CONFIG.discord.reportCoords) {
+                sb.append("||[")
+                    .append(pearl.x()).append(", ").append(pearl.y()).append(", ").append(pearl.z())
+                    .append("]||\n");
+            } else {
+                sb.append("coords disabled\n");
+            }
         }
         return sb.toString();
     }

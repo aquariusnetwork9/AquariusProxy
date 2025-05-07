@@ -3,10 +3,10 @@ package com.zenith.command.impl;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
 import com.zenith.cache.data.entity.Entity;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.feature.queue.Queue;
 import com.zenith.module.impl.*;
 import com.zenith.network.server.ServerSession;
@@ -19,7 +19,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static java.util.Objects.nonNull;
 
 public class StatusCommand extends Command {
@@ -54,7 +54,7 @@ public class StatusCommand extends Command {
     private String getCurrentClientUserName() {
         ServerSession currentConnection = Proxy.getInstance().getCurrentPlayer().get();
         if (nonNull(currentConnection)) {
-            return currentConnection.getProfileCache().getProfile().getName() + " [" + currentConnection.getPing() + "ms]";
+            return currentConnection.getName() + " [" + currentConnection.getPing() + "ms]";
         } else {
             return "None";
         }
@@ -62,7 +62,7 @@ public class StatusCommand extends Command {
 
     private List<String> getSpectatorUserNames() {
         return Proxy.getInstance().getSpectatorConnections().stream()
-                .map(connection -> connection.getProfileCache().getProfile().getName() + " [" + connection.getPing() + "ms]")
+                .map(connection -> connection.getName() + " [" + connection.getPing() + "ms]")
                 .collect(Collectors.toList());
     }
 

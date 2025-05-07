@@ -7,7 +7,7 @@ import com.zenith.feature.pathfinder.movement.MovementHelper;
 import com.zenith.feature.pathfinder.util.BlockOptionalMetaLookup;
 import com.zenith.feature.pathfinder.util.RotationUtils;
 import com.zenith.feature.pathfinder.util.WorldScanner;
-import com.zenith.feature.world.Rotation;
+import com.zenith.feature.player.Rotation;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockPos;
 import com.zenith.mc.block.BlockRegistry;
@@ -15,10 +15,10 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public final class GetToBlockProcess extends BaritoneProcessHelper {
-
+    private PathingRequestFuture future;
     private Block gettingTo;
     private List<BlockPos> knownLocations;
     private List<BlockPos> blacklist; // locations we failed to calc to
@@ -32,13 +32,15 @@ public final class GetToBlockProcess extends BaritoneProcessHelper {
         super(baritone);
     }
 
-    public void getToBlock(Block block) {
+    public PathingRequestFuture getToBlock(Block block) {
         onLostControl();
+        future = new PathingRequestFuture();
         gettingTo = block;
         start = ctx.playerFeet();
         blacklist = new ArrayList<>();
         arrivalTickCount = 0;
         rescan();
+        return future;
     }
 
     @Override
@@ -108,10 +110,14 @@ public final class GetToBlockProcess extends BaritoneProcessHelper {
             // we're there
             if (rightClickOnArrival(gettingTo)) {
                 if (rightClick()) {
+                    future.complete(true);
+                    future.notifyListeners();
                     onLostControl();
                     return new PathingCommand(null, PathingCommandType.CANCEL_AND_SET_GOAL);
                 }
             } else {
+                future.complete(true);
+                future.notifyListeners();
                 onLostControl();
                 return new PathingCommand(null, PathingCommandType.CANCEL_AND_SET_GOAL);
             }
@@ -151,6 +157,10 @@ public final class GetToBlockProcess extends BaritoneProcessHelper {
 
     @Override
     public synchronized void onLostControl() {
+        if (future != null && !future.isCompleted()) {
+            future.complete(false);
+        }
+        future = null;
         gettingTo = null;
         knownLocations = null;
         start = null;

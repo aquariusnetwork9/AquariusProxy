@@ -2,14 +2,14 @@ package com.zenith.network.client.handler.incoming.entity;
 
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityPlayer;
-import com.zenith.event.proxy.PlayerLeftVisualRangeEvent;
+import com.zenith.event.module.ServerPlayerLeftVisualRangeEvent;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundRemoveEntitiesPacket;
 import org.jspecify.annotations.NonNull;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class RemoveEntitiesHandler implements ClientEventLoopPacketHandler<ClientboundRemoveEntitiesPacket, ClientSession> {
     @Override
@@ -27,7 +27,7 @@ public class RemoveEntitiesHandler implements ClientEventLoopPacketHandler<Clien
                         }
                     }
                     if (removed instanceof EntityPlayer player && !player.isSelfPlayer()) {
-                        EVENT_BUS.postAsync(new PlayerLeftVisualRangeEvent(
+                        EVENT_BUS.postAsync(new ServerPlayerLeftVisualRangeEvent(
                             CACHE.getTabListCache()
                                 .get(player.getUuid())
                                 // todo: this packet seems to always be received first and we shouldn't hit the orElse, but this could change based on the server

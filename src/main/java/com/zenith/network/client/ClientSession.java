@@ -2,12 +2,12 @@ package com.zenith.network.client;
 
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.zenith.Proxy;
-import com.zenith.event.proxy.ConnectEvent;
-import com.zenith.event.proxy.DisconnectEvent;
+import com.zenith.event.client.ClientConnectEvent;
+import com.zenith.event.client.ClientDisconnectEvent;
 import com.zenith.network.ClientPacketPingTask;
-import com.zenith.network.registry.ZenithHandlerCodec;
+import com.zenith.network.codec.PacketCodecRegistries;
 import com.zenith.util.ComponentSerializer;
-import com.zenith.util.Config;
+import com.zenith.util.config.Config;
 import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.DefaultThreadFactory;
@@ -29,7 +29,7 @@ import org.geysermc.mcprotocollib.protocol.packet.login.serverbound.ServerboundH
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.via.ZenithViaInitializer.VIA_USER;
 import static java.util.Objects.isNull;
 
@@ -90,7 +90,7 @@ public class ClientSession extends TcpClientSession {
     public void callPacketReceived(Packet packet) {
         try {
             var state = this.getPacketProtocol().getInboundState();
-            final Packet p = ZenithHandlerCodec.CLIENT_REGISTRY.handleInbound(packet, this);
+            final Packet p = PacketCodecRegistries.CLIENT_REGISTRY.handleInbound(packet, this);
             if (p != null && (state == ProtocolState.GAME || state == ProtocolState.CONFIGURATION)) {
                 // sends on each connection's own event loop
                 var connections = Proxy.getInstance().getActiveConnections().getArray();
@@ -109,7 +109,7 @@ public class ClientSession extends TcpClientSession {
     @Override
     public Packet callPacketSending(Packet packet) {
         try {
-            return ZenithHandlerCodec.CLIENT_REGISTRY.handleOutgoing(packet, this);
+            return PacketCodecRegistries.CLIENT_REGISTRY.handleOutgoing(packet, this);
         } catch (Exception e) {
             CLIENT_LOG.error("Client Packet Sending Error", e);
             throw new RuntimeException(e);
@@ -119,7 +119,7 @@ public class ClientSession extends TcpClientSession {
     @Override
     public void callPacketSent(Packet packet) {
         try {
-            ZenithHandlerCodec.CLIENT_REGISTRY.handlePostOutgoing(packet, this);
+            PacketCodecRegistries.CLIENT_REGISTRY.handlePostOutgoing(packet, this);
         } catch (Exception e) {
             CLIENT_LOG.error("Client Packet Sent Error", e);
             throw new RuntimeException(e);
@@ -140,7 +140,7 @@ public class ClientSession extends TcpClientSession {
         send(new ClientIntentionPacket(getPacketProtocol().getCodec().getProtocolVersion(), getHost(), getPort(), HandshakeIntent.LOGIN));
         switchOutboundState(ProtocolState.LOGIN);
         updateClientProtocolVersion();
-        EVENT_BUS.postAsync(new ConnectEvent());
+        EVENT_BUS.postAsync(new ClientConnectEvent());
         send(new ServerboundHelloPacket(profile.getName(), profile.getId()));
         if (CONFIG.client.ping.mode == Config.Client.Ping.Mode.PACKET) EXECUTOR.execute(new ClientPacketPingTask(this));
     }
@@ -184,12 +184,12 @@ public class ClientSession extends TcpClientSession {
             CLIENT_LOG.warn("Unable to parse disconnect reason: {}", reason, e);
             reasonStr = isNull(reason) ? "Disconnected" : ComponentSerializer.serializeJson(reason);
         }
-        CLIENT_LOG.info("Disconnected: {}", reasonStr);
+        CLIENT_LOG.info("Disconnected: {}", reason != null ? reason : reasonStr);
         var onlineDuration = Duration.ofSeconds(Proxy.getInstance().getOnlineTimeSeconds());
         var onlineDurationWithQueueSkip = Duration.ofSeconds(Proxy.getInstance().getOnlineTimeSecondsWithQueueSkip());
         // stop processing packets before we reset the client cache to avoid race conditions
         getClientEventLoop().shutdownGracefully(0L, 15L, TimeUnit.SECONDS).awaitUninterruptibly();
-        EVENT_BUS.post(new DisconnectEvent(reasonStr, onlineDuration, onlineDurationWithQueueSkip, Proxy.getInstance().isInQueue(), Proxy.getInstance().getQueuePosition()));
+        EVENT_BUS.post(new ClientDisconnectEvent(reasonStr, onlineDuration, onlineDurationWithQueueSkip, Proxy.getInstance().isInQueue(), Proxy.getInstance().getQueuePosition()));
     }
 
     public ProtocolVersion getProtocolVersion() {

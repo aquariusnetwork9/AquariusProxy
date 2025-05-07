@@ -22,7 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import static com.zenith.Shared.GSON;
+import static com.zenith.Globals.GSON;
 
 public class ReplayReader {
     private final File mcprFile;

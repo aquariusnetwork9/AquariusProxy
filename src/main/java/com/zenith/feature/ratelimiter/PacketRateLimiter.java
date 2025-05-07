@@ -1,12 +1,12 @@
 package com.zenith.feature.ratelimiter;
 
-import com.zenith.util.Timer;
-import com.zenith.util.Timers;
+import com.zenith.util.timer.Timer;
+import com.zenith.util.timer.Timers;
 import lombok.Getter;
 import lombok.Setter;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.SERVER_LOG;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.SERVER_LOG;
 
 public class PacketRateLimiter {
     private final IntervalledCounter counter = new IntervalledCounter((long) (CONFIG.server.packetRateLimiter.intervalSeconds * 1.0e9));

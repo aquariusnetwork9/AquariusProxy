@@ -3,7 +3,7 @@ package com.zenith.network.server.handler.spectator.incoming;
 import com.zenith.Proxy;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.feature.spectator.SpectatorSync;
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerState;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSetCameraPacket;

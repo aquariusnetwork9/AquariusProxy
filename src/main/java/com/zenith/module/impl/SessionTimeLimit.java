@@ -2,9 +2,9 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
-import com.zenith.event.module.ClientTickEvent;
+import com.zenith.event.client.ClientTickEvent;
 import com.zenith.feature.api.vcapi.VcApi;
-import com.zenith.module.Module;
+import com.zenith.module.api.Module;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import lombok.Getter;
@@ -20,7 +20,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 /**
  * Displays an in-game warning when the 2b2t non-prio session time limit is about to be reached

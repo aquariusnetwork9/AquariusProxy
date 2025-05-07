@@ -1,18 +1,18 @@
 package com.zenith.feature.pathfinder;
 
 import com.zenith.cache.data.entity.EntityLiving;
-import com.zenith.feature.world.Rotation;
-import com.zenith.feature.world.raycast.BlockRaycastResult;
-import com.zenith.feature.world.raycast.RaycastHelper;
+import com.zenith.feature.player.Bot;
+import com.zenith.feature.player.Rotation;
+import com.zenith.feature.player.raycast.BlockRaycastResult;
+import com.zenith.feature.player.raycast.RaycastHelper;
 import com.zenith.mc.block.BlockPos;
-import com.zenith.module.impl.PlayerSimulation;
 import org.cloudburstmc.math.vector.Vector3d;
 
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.BOT;
+import static com.zenith.Globals.CACHE;
 
 public final class PlayerContext {
     public static final PlayerContext INSTANCE = new PlayerContext();
@@ -22,8 +22,8 @@ public final class PlayerContext {
         return ifSneaking ? 1.27 : 1.62;
     }
 
-    public PlayerSimulation player() {
-        return MODULE.get(PlayerSimulation.class);
+    public Bot player() {
+        return BOT;
     }
 
     public Stream<EntityLiving> entitiesStream() {

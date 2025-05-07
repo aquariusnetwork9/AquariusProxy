@@ -1,14 +1,18 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.DATABASE;
+import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
+import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.DATABASE;
+import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
+import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 
@@ -25,6 +29,13 @@ public class DatabaseCommand extends Command {
             """)
             .usageLines(
                 "on/off",
+                "host <host>",
+                "port <port>",
+                "username <username>",
+                "password <password>",
+                "redis address <address>",
+                "redis username <username>",
+                "redis password <password>",
                 "queueWait on/off",
                 "queueLength on/off",
                 "publicChat on/off",
@@ -50,8 +61,73 @@ public class DatabaseCommand extends Command {
                 c.getSource().getEmbed()
                     .title("Databases " + toggleStrCaps(CONFIG.database.enabled));
                 return OK;
-
             }))
+            .then(literal("host").then(argument("hostArg", wordWithChars()).executes(c -> {
+                CONFIG.database.host = getString(c , "hostArg");
+                if (CONFIG.database.enabled) {
+                    DATABASE.stop();
+                    DATABASE.start();
+                }
+                c.getSource().getEmbed()
+                    .title("Host Set");
+            })))
+            .then(literal("port").then(argument("portArg", integer(1, 65535)).executes(c -> {
+                CONFIG.database.port = getInteger(c, "portArg");
+                if (CONFIG.database.enabled) {
+                    DATABASE.stop();
+                    DATABASE.start();
+                }
+                c.getSource().getEmbed()
+                    .title("Port Set");
+            })))
+            .then(literal("username").then(argument("usernameArg", wordWithChars()).executes(c -> {
+                CONFIG.database.username = getString(c, "usernameArg");
+                if (CONFIG.database.enabled) {
+                    DATABASE.stop();
+                    DATABASE.start();
+                }
+                c.getSource().getEmbed()
+                    .title("Username Set");
+            })))
+            .then(literal("password").then(argument("passwordArg", wordWithChars()).executes(c -> {
+                CONFIG.database.password = getString(c, "passwordArg");
+                if (CONFIG.database.enabled) {
+                    DATABASE.stop();
+                    DATABASE.start();
+                }
+                c.getSource().setSensitiveInput(true);
+                c.getSource().getEmbed()
+                    .title("Password Set");
+            })))
+            .then(literal("redis")
+                .then(literal("address").then(argument("redisAddress", wordWithChars()).executes(c -> {
+                    CONFIG.database.lock.redisAddress = getString(c, "redisAddress");
+                    if (CONFIG.database.enabled) {
+                        DATABASE.stop();
+                        DATABASE.start();
+                    }
+                    c.getSource().getEmbed()
+                        .title("Redis Address Set");
+                })))
+                .then(literal("username").then(argument("redisUsername", wordWithChars()).executes(c -> {
+                    CONFIG.database.lock.redisUsername = getString(c, "redisUsername");
+                    if (CONFIG.database.enabled) {
+                        DATABASE.stop();
+                        DATABASE.start();
+                    }
+                    c.getSource().getEmbed()
+                        .title("Redis Username Set");
+                })))
+                .then(literal("password").then(argument("redisPassword", wordWithChars()).executes(c -> {
+                    CONFIG.database.lock.redisPassword = getString(c, "redisPassword");
+                    if (CONFIG.database.enabled) {
+                        DATABASE.stop();
+                        DATABASE.start();
+                    }
+                    c.getSource().setSensitiveInput(true);
+                    c.getSource().getEmbed()
+                        .title("Redis Password Set");
+                }))))
             .then(literal("queueWait")
                       .then(argument("toggle", toggle()).executes(c -> {
                           CONFIG.database.queueWaitEnabled = getToggle(c, "toggle");
@@ -145,7 +221,7 @@ public class DatabaseCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("Queue Wait", toggleStr(CONFIG.database.queueWaitEnabled), false)
             .addField("Queue Length", toggleStr(CONFIG.database.queueLengthEnabled), false)

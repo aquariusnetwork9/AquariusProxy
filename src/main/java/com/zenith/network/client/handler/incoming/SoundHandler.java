@@ -2,10 +2,10 @@ package com.zenith.network.client.handler.incoming;
 
 import com.zenith.event.module.SplashSoundEffectEvent;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundSoundPacket;
 
-import static com.zenith.Shared.EVENT_BUS;
+import static com.zenith.Globals.EVENT_BUS;
 import static org.geysermc.mcprotocollib.protocol.data.game.level.sound.BuiltinSound.ENTITY_FISHING_BOBBER_SPLASH;
 
 public class SoundHandler implements ClientEventLoopPacketHandler<ClientboundSoundPacket, ClientSession> {

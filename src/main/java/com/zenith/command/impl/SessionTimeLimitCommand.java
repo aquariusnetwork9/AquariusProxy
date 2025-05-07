@@ -1,15 +1,15 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import com.zenith.module.impl.SessionTimeLimit;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 import static com.zenith.util.math.MathHelper.formatDuration;
@@ -49,7 +49,7 @@ public class SessionTimeLimitCommand extends Command {
     }
 
     @Override
-    public void postPopulate(Embed embed) {
+    public void defaultEmbed(Embed embed) {
         embed
             .addField("Limit", formatDuration(MODULE.get(SessionTimeLimit.class).getSessionTimeLimit()), false)
             .primaryColor();

@@ -1,9 +1,9 @@
 package com.zenith.feature.autoupdater;
 
 import com.zenith.Proxy;
-import com.zenith.event.proxy.DisconnectEvent;
-import com.zenith.event.proxy.UpdateAvailableEvent;
-import com.zenith.event.proxy.UpdateStartEvent;
+import com.zenith.event.client.ClientDisconnectEvent;
+import com.zenith.event.update.UpdateAvailableEvent;
+import com.zenith.event.update.UpdateStartEvent;
 import com.zenith.feature.queue.Queue;
 import lombok.Getter;
 import org.jspecify.annotations.Nullable;
@@ -15,7 +15,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.util.DisconnectMessages.MANUAL_DISCONNECT;
 
 public abstract class AutoUpdater {
@@ -28,7 +28,7 @@ public abstract class AutoUpdater {
     public void start() {
         if (updateCheckFuture != null) return;
         if (!EVENT_BUS.isSubscribed(this)) EVENT_BUS.subscribe(this,
-            DisconnectEvent.class, this::handleDisconnectEvent
+                                                               ClientDisconnectEvent.class, this::handleDisconnectEvent
         );
         scheduleUpdateCheck(this::executeUpdateCheck,
                             30 + ThreadLocalRandom.current().nextInt(150),
@@ -88,7 +88,7 @@ public abstract class AutoUpdater {
         return updateAvailable;
     }
 
-    public void handleDisconnectEvent(final DisconnectEvent event) {
+    public void handleDisconnectEvent(final ClientDisconnectEvent event) {
         if (updateAvailable && !CONFIG.discord.isUpdating) {
             CONFIG.autoUpdater.shouldReconnectAfterAutoUpdate = !event.reason().equals(MANUAL_DISCONNECT);
             saveConfigAsync();

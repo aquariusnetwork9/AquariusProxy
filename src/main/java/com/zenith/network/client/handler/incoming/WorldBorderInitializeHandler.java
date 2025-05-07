@@ -2,10 +2,10 @@ package com.zenith.network.client.handler.incoming;
 
 import com.zenith.cache.data.chunk.WorldBorderData;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.border.ClientboundInitializeBorderPacket;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class WorldBorderInitializeHandler implements ClientEventLoopPacketHandler<ClientboundInitializeBorderPacket, ClientSession> {
     @Override

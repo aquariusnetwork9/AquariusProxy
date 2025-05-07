@@ -2,11 +2,11 @@ package com.zenith.network.client.handler.incoming.inventory;
 
 import com.zenith.feature.spectator.SpectatorSync;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundSetHeldSlotPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundSetCarriedItemPacket;
 
-import static com.zenith.Shared.DEFAULT_LOG;
+import static com.zenith.Globals.DEFAULT_LOG;
 
 public class SetCarriedItemHandler implements ClientEventLoopPacketHandler<ClientboundSetHeldSlotPacket, ClientSession> {
     @Override

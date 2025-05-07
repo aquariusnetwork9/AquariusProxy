@@ -49,7 +49,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-import static com.zenith.Shared.CLIENT_LOG;
+import static com.zenith.Globals.CLIENT_LOG;
 import static java.util.Objects.nonNull;
 import static org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot.*;
 

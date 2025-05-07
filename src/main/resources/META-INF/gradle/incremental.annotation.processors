@@ -1,1 +1,1 @@
-com.zenith.plugins.PluginAnnotationProcessor,isolating
+com.zenith.plugin.api.PluginAnnotationProcessor,isolating

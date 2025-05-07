@@ -6,7 +6,7 @@ import ch.qos.logback.core.spi.FilterReply;
 
 import java.util.function.BooleanSupplier;
 
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 
 public class DebugLogConfigurationFilter extends Filter<ILoggingEvent> {
 

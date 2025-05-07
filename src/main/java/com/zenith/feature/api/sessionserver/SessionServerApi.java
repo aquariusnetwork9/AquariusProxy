@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.Optional;
 import java.util.UUID;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class SessionServerApi extends Api {
     public static final SessionServerApi INSTANCE = new SessionServerApi();

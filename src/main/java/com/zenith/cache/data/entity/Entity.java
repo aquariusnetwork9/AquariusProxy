@@ -13,12 +13,14 @@ import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.Attribute;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.AttributeType;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.EntityMetadata;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.MetadataType;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.object.ObjectData;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundSetEntityDataPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundSetPassengersPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundUpdateAttributesPacket;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +29,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
-import static com.zenith.Shared.ENTITY_DATA;
+import static com.zenith.Globals.ENTITY_DATA;
 
 
 @Data
@@ -97,5 +99,20 @@ public abstract class Entity {
 
     public double distanceSqTo(Entity entity) {
         return this.position().distanceSquared(entity.position());
+    }
+
+    public <T> @Nullable T getMetadataValue(int index, MetadataType<T> metadataType, Class<T> valueClass) {
+        var metadata = this.metadata.get(index);
+        if (metadata == null) return null;
+        if (metadata.getType() == metadataType) {
+            var metadataValue = metadata.getValue();
+            if (metadataValue == null) {
+                return null;
+            }
+            if (valueClass.isInstance(metadataValue)) {
+                return valueClass.cast(metadata.getValue());
+            }
+        }
+        return null;
     }
 }

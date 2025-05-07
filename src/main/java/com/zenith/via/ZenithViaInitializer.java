@@ -15,7 +15,7 @@ import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class ZenithViaInitializer {
     private final AtomicBoolean initialized = new AtomicBoolean(false);

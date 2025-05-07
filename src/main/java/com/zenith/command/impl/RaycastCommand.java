@@ -2,15 +2,15 @@ package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
-import com.zenith.feature.world.World;
-import com.zenith.feature.world.raycast.RaycastHelper;
-import com.zenith.module.impl.PlayerSimulation;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
+import com.zenith.feature.player.World;
+import com.zenith.feature.player.raycast.RaycastHelper;
 
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.BOT;
+import static com.zenith.Globals.CONFIG;
 
 public class RaycastCommand extends Command {
     @Override
@@ -25,28 +25,28 @@ public class RaycastCommand extends Command {
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
         return command("raycast").executes(c -> {
-                var sim = MODULE.get(PlayerSimulation.class);
-                if (Proxy.getInstance().hasActivePlayer()) sim.syncFromCache(true);
-                var result = RaycastHelper.playerBlockOrEntityRaycast(sim.getBlockReachDistance(), sim.getEntityInteractDistance());
+                if (Proxy.getInstance().hasActivePlayer()) BOT.syncFromCache(true);
+                var result = RaycastHelper.playerBlockOrEntityRaycast(BOT.getBlockReachDistance(), BOT.getEntityInteractDistance());
                 var embed = c.getSource().getEmbed();
                 embed.title("Raycast Result")
                     .addField("Hit", result.hit(), false)
                     .primaryColor();
                 if (result.isBlock()) {
-                    embed.addField("Block", result.block().block().toString(), false)
-                        .addField("Pos", result.block().x() + ", " + result.block().y() + ", " + result.block().z(), false)
-                        .addField("Direction", result.block().direction().name(), false);
-                    if (result.hit()) {
-                        embed.addField("State", World.getBlockState(result.block().x(), result.block().y(), result.block().z()).toString(), false);
+                    embed.addField("Block", result.block().block().toString(), false);
+                    if (CONFIG.discord.reportCoords) {
+                        embed.addField("Pos", ("||[" + result.block().x() + ", " + result.block().y() + ", " + result.block().z()) + "]||", false);
+                    }
+                    embed.addField("Direction", result.block().direction().name(), false);
+                    if (result.hit() && CONFIG.discord.reportCoords) {
+                        embed.addField("State", "||" + World.getBlockState(result.block().x(), result.block().y(), result.block().z()).toString() + "||", false);
                     }
                 } else if (result.isEntity()) {
                     var type = result.entity().entityType();
                     embed.addField("Entity", type != null ? type : "N/A", false);
                 }})
             .then(literal("e").executes(c -> {
-                var sim = MODULE.get(PlayerSimulation.class);
-                if (Proxy.getInstance().hasActivePlayer()) sim.syncFromCache(true);
-                var result = RaycastHelper.playerEntityRaycast(sim.getEntityInteractDistance());
+                if (Proxy.getInstance().hasActivePlayer()) BOT.syncFromCache(true);
+                var result = RaycastHelper.playerEntityRaycast(BOT.getEntityInteractDistance());
                 c.getSource().getEmbed()
                     .title("Raycast Result")
                     .addField("Hit", result.hit(), false)
@@ -55,18 +55,19 @@ public class RaycastCommand extends Command {
                     .primaryColor();
             }))
             .then(literal("b").executes(c -> {
-                var sim = MODULE.get(PlayerSimulation.class);
-                if (Proxy.getInstance().hasActivePlayer()) sim.syncFromCache(true);
-                var result = RaycastHelper.playerBlockRaycast(sim.getBlockReachDistance(), false);
+                if (Proxy.getInstance().hasActivePlayer()) BOT.syncFromCache(true);
+                var result = RaycastHelper.playerBlockRaycast(BOT.getBlockReachDistance(), false);
                 c.getSource().getEmbed()
                     .title("Raycast Result")
                     .addField("Hit", result.hit(), false)
-                    .addField("Block", result.block().toString(), false)
-                    .addField("Pos", result.x() + ", " + result.y() + ", " + result.z(), false)
-                    .addField("Direction", result.direction().name(), false)
+                    .addField("Block", result.block().toString(), false);
+                if (CONFIG.discord.reportCoords) {
+                    c.getSource().getEmbed().addField("Pos", "||[ " + result.x() + ", " + result.y() + ", " + result.z() + "]||", false);
+                }
+                c.getSource().getEmbed().addField("Direction", result.direction().name(), false)
                     .primaryColor();
-                if (result.hit()) {
-                    c.getSource().getEmbed().addField("State", World.getBlockState(result.x(), result.y(), result.z()).toString(), false);
+                if (result.hit() && CONFIG.discord.reportCoords) {
+                    c.getSource().getEmbed().addField("State", "||" + World.getBlockState(result.x(), result.y(), result.z()).toString() + "||", false);
                 }
             }));
     }

@@ -1,11 +1,10 @@
 package com.zenith.network.client.handler.incoming;
 
 import com.zenith.cache.CacheResetType;
+import com.zenith.feature.player.World;
 import com.zenith.feature.spectator.SpectatorSync;
-import com.zenith.feature.world.World;
-import com.zenith.module.impl.PlayerSimulation;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundRespawnPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundPlayerLoadedPacket;
 import org.jspecify.annotations.NonNull;
@@ -14,7 +13,7 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class RespawnHandler implements ClientEventLoopPacketHandler<ClientboundRespawnPacket, ClientSession> {
 
@@ -56,8 +55,7 @@ public class RespawnHandler implements ClientEventLoopPacketHandler<ClientboundR
         if (!packet.isKeepMetadata()) {
             CACHE.getPlayerCache().getThePlayer().getMetadata().clear();
         }
-        MODULE.get(PlayerSimulation.class).handleRespawn();
-
+        BOT.handleRespawn();
         // todo: doesn't look like there's any penalty to duplicate sending the player loaded packet
         //  so doesn't matter if controlling player also sends it
         //  but we should watch out for anticheats validating this state in the future

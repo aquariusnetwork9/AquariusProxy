@@ -1,6 +1,6 @@
 package com.zenith.database;
 
-import com.zenith.event.proxy.DatabaseTickEvent;
+import com.zenith.event.db.DatabaseTickEvent;
 import com.zenith.util.ComponentSerializer;
 
 import java.time.Duration;
@@ -8,7 +8,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class TablistDatabase extends LockingDatabase {
     private static final Duration textInsertCooldownDuration = Duration.ofHours(6L);

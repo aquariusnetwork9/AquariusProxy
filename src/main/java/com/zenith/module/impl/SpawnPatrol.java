@@ -5,26 +5,25 @@ import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.cache.data.inventory.Container;
-import com.zenith.event.module.ClientBotTick;
+import com.zenith.event.chat.DeathMessageChatEvent;
+import com.zenith.event.client.ClientBotTick;
+import com.zenith.event.client.ClientDeathEvent;
+import com.zenith.event.module.ServerPlayerAttackedUsEvent;
 import com.zenith.event.module.SpawnPatrolTargetAcquiredEvent;
 import com.zenith.event.module.SpawnPatrolTargetKilledEvent;
-import com.zenith.event.proxy.DeathEvent;
-import com.zenith.event.proxy.PlayerAttackedUsEvent;
-import com.zenith.event.proxy.chat.DeathMessageChatEvent;
-import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.feature.pathfinder.goals.Goal;
 import com.zenith.feature.pathfinder.goals.GoalNear;
 import com.zenith.feature.pathfinder.goals.GoalXZ;
-import com.zenith.feature.world.Input;
-import com.zenith.feature.world.InputRequest;
-import com.zenith.feature.world.World;
+import com.zenith.feature.player.Input;
+import com.zenith.feature.player.InputRequest;
+import com.zenith.feature.player.World;
 import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
-import com.zenith.module.Module;
-import com.zenith.util.Timer;
-import com.zenith.util.Timers;
+import com.zenith.module.api.Module;
 import com.zenith.util.math.MathHelper;
+import com.zenith.util.timer.Timer;
+import com.zenith.util.timer.Timers;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
@@ -37,7 +36,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class SpawnPatrol extends Module {
     private final Timer pathTimer = Timers.tickTimer();
@@ -57,12 +56,12 @@ public class SpawnPatrol extends Module {
             of(ClientBotTick.class, this::handleBotTick),
             of(ClientBotTick.Starting.class, this::handleBotTickStarting),
             of(DeathMessageChatEvent.class, this::handleDeathMessage),
-            of(PlayerAttackedUsEvent.class, this::handlePlayerAttackedUs),
-            of(DeathEvent.class, this::handleDeathEvent)
+            of(ServerPlayerAttackedUsEvent.class, this::handlePlayerAttackedUs),
+            of(ClientDeathEvent.class, this::handleDeathEvent)
         );
     }
 
-    private void handleDeathEvent(DeathEvent event) {
+    private void handleDeathEvent(ClientDeathEvent event) {
         lastDeath = System.currentTimeMillis();
     }
 
@@ -73,7 +72,7 @@ public class SpawnPatrol extends Module {
 
     @Override
     public void onDisable() {
-        Baritone.INSTANCE.stop();
+        BARITONE.stop();
         targetEntityId = -1;
     }
 
@@ -99,7 +98,7 @@ public class SpawnPatrol extends Module {
             return;
         }
         walkForwardAndJumpFuture = Proxy.getInstance().getClient().getClientEventLoop().scheduleAtFixedRate(() -> {
-            if (Baritone.INSTANCE.getPathingBehavior().getFailedPathSearches().get() == 0) {
+            if (BARITONE.getPathingBehavior().getFailedPathSearches().get() == 0) {
                 walkForwardAndJumpFuture.cancel(true);
                 return;
             }
@@ -109,6 +108,7 @@ public class SpawnPatrol extends Module {
                 .jumping(true)
                 .build();
             var req = InputRequest.builder()
+                .owner(this)
                 .input(in)
                 .priority(MOVEMENT_PRIORITY);
             if (ThreadLocalRandom.current().nextFloat() > 0.95f) {
@@ -141,14 +141,14 @@ public class SpawnPatrol extends Module {
 
         if (pathTimer.tick(20L)) {
             boolean netherPathing = false;
-            if (CONFIG.client.extra.spawnPatrol.nether && !Baritone.INSTANCE.getGetToBlockProcess().isActive() && !Baritone.INSTANCE.getFollowProcess().isActive()) {
+            if (CONFIG.client.extra.spawnPatrol.nether && !BARITONE.getGetToBlockProcess().isActive() && !BARITONE.getFollowProcess().isActive()) {
                 DimensionData currentDimension = World.getCurrentDimension();
                 if (currentDimension.id() != DimensionRegistry.THE_NETHER.id()) {
-                    Baritone.INSTANCE.getTo(BlockRegistry.NETHER_PORTAL);
+                    BARITONE.getTo(BlockRegistry.NETHER_PORTAL);
                     netherPathing = true;
                 }
             }
-            if (!Baritone.INSTANCE.isActive() && !Baritone.INSTANCE.getFollowProcess().isActive() && !netherPathing) {
+            if (!BARITONE.isActive() && !BARITONE.getFollowProcess().isActive() && !netherPathing) {
                 pathToGoal();
             }
             if (CONFIG.client.extra.spawnPatrol.stickyTargeting) {
@@ -171,21 +171,21 @@ public class SpawnPatrol extends Module {
                         targetProfile = targetPlayerListEntry.get().getProfile();
                         info("Target Acquired: {}", targetPlayerListEntry.map(PlayerListEntry::getName).orElse("???"));
                         EVENT_BUS.postAsync(new SpawnPatrolTargetAcquiredEvent(potentialTarget.get(), targetPlayerListEntry.get()));
-                        Baritone.INSTANCE.follow(potentialTarget.get());
+                        BARITONE.follow(potentialTarget.get());
                     }
                 } else if (!targetEntityExists) {
                     info("Target escaped :(");
                     targetEntityId = -1;
                     targetProfile = null;
-                    Baritone.INSTANCE.getFollowProcess().onLostControl();
+                    BARITONE.getFollowProcess().onLostControl();
                 } else {
-                    if (!Baritone.INSTANCE.getFollowProcess().isActive()) {
-                        Baritone.INSTANCE.follow(targetEntity);
+                    if (!BARITONE.getFollowProcess().isActive()) {
+                        BARITONE.follow(targetEntity);
                     }
                 }
             } else if (isValidTargetsPresent()) {
-                if (!Baritone.INSTANCE.getFollowProcess().isActive()) {
-                    Baritone.INSTANCE.follow(this::targetFilter);
+                if (!BARITONE.getFollowProcess().isActive()) {
+                    BARITONE.follow(this::targetFilter);
                 }
             }
         }
@@ -201,7 +201,7 @@ public class SpawnPatrol extends Module {
         }
     }
 
-    private void handlePlayerAttackedUs(PlayerAttackedUsEvent event) {
+    private void handlePlayerAttackedUs(ServerPlayerAttackedUsEvent event) {
         if (!CONFIG.client.extra.spawnPatrol.stickyTargeting || !CONFIG.client.extra.spawnPatrol.targetAttackers) return;
         int currentTargetId = targetEntityId;
         EntityPlayer newTarget = event.attacker();
@@ -225,7 +225,7 @@ public class SpawnPatrol extends Module {
         }
         targetProfile = targetPlayerListEntry.get().getProfile();
         info("Attacker Target Acquired: {}", targetPlayerListEntry.map(PlayerListEntry::getName).orElse("???"));
-        Baritone.INSTANCE.follow(newTarget);
+        BARITONE.follow(newTarget);
         EVENT_BUS.postAsync(new SpawnPatrolTargetAcquiredEvent(newTarget, targetPlayerListEntry.get()));
     }
 
@@ -272,7 +272,7 @@ public class SpawnPatrol extends Module {
             pathRandom();
         } else {
             info("Pathing to goal: {}", goal);
-            Baritone.INSTANCE.goal(goal);
+            BARITONE.pathTo(goal);
         }
     }
 
@@ -283,6 +283,6 @@ public class SpawnPatrol extends Module {
         randomZOff += Math.signum(randomZOff) * 100;
         var goal = new GoalXZ(MathHelper.floorI(randomXOff + CACHE.getPlayerCache().getX()), MathHelper.floorI(randomZOff + CACHE.getPlayerCache().getZ()));
         info("Pathing to {}", goal);
-        Baritone.INSTANCE.pathTo(goal);
+        BARITONE.pathTo(goal);
     }
 }

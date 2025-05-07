@@ -4,10 +4,10 @@ import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.cache.data.entity.EntityStandard;
 import com.zenith.event.module.EntityFishHookSpawnEvent;
-import com.zenith.event.proxy.NewPlayerInVisualRangeEvent;
+import com.zenith.event.module.ServerPlayerInVisualRangeEvent;
 import com.zenith.feature.whitelist.PlayerListsManager;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.spawn.ClientboundAddEntityPacket;
@@ -15,8 +15,8 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.EVENT_BUS;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.EVENT_BUS;
 
 public class AddEntityHandler implements ClientEventLoopPacketHandler<ClientboundAddEntityPacket, ClientSession> {
 
@@ -67,7 +67,7 @@ public class AddEntityHandler implements ClientEventLoopPacketHandler<Clientboun
                            PlayerListsManager.getProfileFromUUID(packet.getUuid())
                                .map(entry -> new PlayerListEntry(entry.name(), entry.uuid()))
                                .orElseGet(() -> new PlayerListEntry("", packet.getUuid())));
-        EVENT_BUS.postAsync(new NewPlayerInVisualRangeEvent(playerEntry, entity));
+        EVENT_BUS.postAsync(new ServerPlayerInVisualRangeEvent(playerEntry, entity));
         return true;
     }
 }

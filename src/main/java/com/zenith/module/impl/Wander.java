@@ -1,13 +1,12 @@
 package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
-import com.zenith.event.module.ClientBotTick;
-import com.zenith.feature.pathfinder.Baritone;
+import com.zenith.event.client.ClientBotTick;
 import com.zenith.feature.pathfinder.goals.GoalXZ;
-import com.zenith.module.Module;
-import com.zenith.util.Timer;
-import com.zenith.util.Timers;
+import com.zenith.module.api.Module;
 import com.zenith.util.math.MathHelper;
+import com.zenith.util.timer.Timer;
+import com.zenith.util.timer.Timers;
 import lombok.Getter;
 
 import java.util.List;
@@ -15,8 +14,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.*;
 
 public class Wander extends Module {
     private final Timer pathTimer = Timers.tickTimer();
@@ -40,9 +38,9 @@ public class Wander extends Module {
 
     @Override
     public void onDisable() {
-        if (Baritone.INSTANCE.isGoalActive(goal)) {
+        if (BARITONE.isGoalActive(goal)) {
             debug("Stopping active pathing goal");
-            Baritone.INSTANCE.stop();
+            BARITONE.stop();
         }
     }
 
@@ -52,7 +50,7 @@ public class Wander extends Module {
     }
 
     private void handleBotTick(ClientBotTick clientBotTick) {
-        if (!Baritone.INSTANCE.isActive() && pathTimer.tick(20L)) {
+        if (!BARITONE.isActive() && pathTimer.tick(20L)) {
             if (System.currentTimeMillis() - lastPathTime < TimeUnit.MINUTES.toMillis(1)) {
                 if (System.currentTimeMillis() - lastStuckWarning > TimeUnit.MINUTES.toMillis(5)) {
                     warn("we are likely stuck :(");
@@ -73,7 +71,7 @@ public class Wander extends Module {
             goalZ += goalZ < currentZ ? -minRadius : minRadius;
             goal = new GoalXZ(goalX, goalZ);
             info("Pathing to goal: [{}, {}]", goalX, goalZ);
-            Baritone.INSTANCE.pathTo(goal);
+            BARITONE.pathTo(goal);
             lastPathTime = System.currentTimeMillis();
         }
     }

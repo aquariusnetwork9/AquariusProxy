@@ -13,7 +13,7 @@ group = "com.zenith"
 version = "1.21.4"
 
 val javaReleaseVersion = 21
-val javaVersion = JavaLanguageVersion.of(23)
+val javaVersion = JavaLanguageVersion.of(24)
 val javaLauncherProvider = javaToolchains.launcherFor { languageVersion = javaVersion }
 java {
     toolchain { languageVersion = javaVersion }
@@ -24,33 +24,12 @@ repositories {
     maven("https://maven.2b2t.vc/releases") {
         content { includeGroupByRegex("com.github.rfresh2.*") }
     }
-    maven("https://libraries.minecraft.net") {
-        content { includeGroup("com.mojang") }
-    }
-    maven("https://repo.opencollab.dev/maven-releases/") {
-        content { includeGroupByRegex("org.cloudburstmc.*") }
-    }
-    maven("https://repo.papermc.io/repository/maven-public/") {
-        content { includeGroup("com.velocitypowered") }
-    }
-    maven("https://repo.viaversion.com") {
-        content {
-            includeGroup("com.viaversion")
-            includeGroup("net.raphimc")
-        }
-    }
-    maven("https://maven.lenni0451.net/releases") {
-        content {
-            includeGroup("net.raphimc")
-            includeGroup("net.lenni0451")
-        }
-    }
-    mavenCentral()
+    maven("https://maven.2b2t.vc/remote")
     mavenLocal()
 }
 
 dependencies {
-    api("com.github.rfresh2:JDA:5.3.8") {
+    api("com.github.rfresh2:JDA:5.5.12") {
         exclude(group = "club.minnced")
         exclude(group = "net.java.dev.jna")
         exclude(group = "com.google.crypto.tink")
@@ -58,7 +37,8 @@ dependencies {
     api("com.github.rfresh2:MCProtocolLib:1.21.4.19") {
         exclude(group = "io.netty")
     }
-    val nettyVersion = "4.1.119.Final"
+    val nettyVersion = "4.2.0.Final"
+    api("io.netty:netty-buffer:$nettyVersion")
     api("io.netty:netty-codec-haproxy:$nettyVersion")
     api("io.netty:netty-codec-dns:$nettyVersion")
     api("io.netty:netty-codec-http2:$nettyVersion")
@@ -73,10 +53,10 @@ dependencies {
     api("io.netty:netty-resolver-dns-native-macos:$nettyVersion:osx-aarch_64")
     api("org.cloudburstmc.math:api:2.0")
     api("org.cloudburstmc.math:immutable:2.0")
-    api("org.redisson:redisson:3.45.1") {
+    api("org.redisson:redisson:3.46.0") {
         exclude(group = "io.netty")
     }
-    api("com.github.rfresh2:SimpleEventBus:1.4")
+    api("com.github.rfresh2:SimpleEventBus:1.6")
     val fastutilVersion = "8.5.15"
     api("com.github.rfresh2.fastutil.maps:object-object-maps:$fastutilVersion")
     api("com.github.rfresh2.fastutil.maps:int-object-maps:$fastutilVersion")
@@ -88,8 +68,8 @@ dependencies {
     api("com.github.rfresh2.fastutil.maps:long-double-maps:$fastutilVersion")
     api("com.github.rfresh2.fastutil.queues:int-queues:$fastutilVersion")
     api("com.viaversion:vialoader:4.0.2")
-    api("com.viaversion:viaversion:5.3.1")
-    api("com.viaversion:viabackwards:5.3.1")
+    api("com.viaversion:viaversion:5.3.2")
+    api("com.viaversion:viabackwards:5.3.2")
     api("org.jline:jline:3.29.0")
     api("org.jline:jline-terminal-jni:3.29.0")
     api("ar.com.hjg:pngj:2.1.0")
@@ -101,17 +81,18 @@ dependencies {
     api("org.slf4j:slf4j-api:2.0.17")
     api("org.slf4j:jul-to-slf4j:2.0.17")
     api("com.mojang:brigadier:1.3.10")
-    api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.3")
+    api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.19.0")
     api("org.jspecify:jspecify:1.0.0")
-    testImplementation("org.junit.jupiter:junit-jupiter:5.12.1")
+    api("net.kyori:adventure-text-logger-slf4j:4.21.0")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.12.2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     val lombokVersion = "1.18.38"
     compileOnly("org.projectlombok:lombok:$lombokVersion")
     testCompileOnly("org.projectlombok:lombok:$lombokVersion")
     annotationProcessor("org.projectlombok:lombok:$lombokVersion")
     testAnnotationProcessor("org.projectlombok:lombok:$lombokVersion")
-    compileOnly("com.google.auto.service:auto-service-annotations:1.0.1")
-    annotationProcessor("com.google.auto.service:auto-service:1.0.1")
+    compileOnly("com.google.auto.service:auto-service-annotations:1.1.1")
+    annotationProcessor("com.google.auto.service:auto-service:1.1.1")
 }
 
 tasks {
@@ -122,6 +103,7 @@ tasks {
     }
     test {
         useJUnitPlatform()
+        workingDir = layout.projectDirectory.dir("run").asFile
     }
     val commitHashTask = register<Exec>("writeCommitHash") {
         group = "build"
@@ -180,10 +162,14 @@ tasks {
     register("run", JavaExec::class.java) {
         group = runGroup
         description = "Execute proxy"
+        javaLauncher = javaLauncherProvider
         workingDir = layout.projectDirectory.dir("run").asFile
         classpath = sourceSets.main.get().runtimeClasspath
         mainClass.set("com.zenith.Proxy")
-        jvmArgs = listOf("-Xmx300m", "-XX:+UseG1GC")
+        val args = mutableListOf("-Xmx300m", "-XX:+UseG1GC")
+        if (javaLauncher.get().metadata.languageVersion.asInt() == 24)
+            args.addAll(listOf("-XX:+UnlockExperimentalVMOptions", "-XX:+UseCompactObjectHeaders"))
+        jvmArgs = args
         standardInput = System.`in`
         environment("ZENITH_DEV", "true")
         outputs.upToDateWhen { false }
@@ -232,29 +218,13 @@ tasks {
             "about.html", "bungee.yml", "plugin.yml", "velocity-plugin.json", "fabric.mod.json", "OSGI-INF/**"
         ))
 
-        minimize {
-            exclude(dependency("org.slf4j:slf4j-api:.*"))
-            exclude(dependency("ch.qos.logback:.*:.*"))
-            exclude(dependency("org.jline:.*:.*"))
-            exclude(dependency("com.github.ben-manes.caffeine:caffeine:.*"))
-            exclude(dependency("org.postgresql:postgresql:.*"))
-            exclude(dependency("io.netty:netty-codec-http:.*"))
-            exclude(dependency("io.netty:netty-codec-http2:.*"))
-            exclude(dependency("io.netty:netty-resolver-dns:.*"))
-            exclude(dependency("org.cloudburstmc.math:api:.*"))
-            exclude(dependency("org.cloudburstmc.math:immutable:.*"))
-            exclude(dependency("com.viaversion:viaversion:.*"))
-            exclude(dependency("com.viaversion:viabackwards:.*"))
-            exclude(dependency("net.raphimc:ViaLoader:.*"))
-            exclude(dependency("net.kyori:adventure-api:.*"))
-            exclude(dependency("net.kyori:adventure-text-serializer-gson:.*"))
-        }
         manifest {
             attributes(mapOf(
                 "Implementation-Title" to "ZenithProxy",
                 "Implementation-Version" to project.version,
                 "Main-Class" to "com.zenith.Proxy",
-                "Multi-Release" to "true"
+                "Multi-Release" to "true",
+                "Enable-Native-Access" to "ALL-UNNAMED"
             ))
         }
     }
@@ -286,13 +256,25 @@ graalvmNative {
                 "-H:DeadlockWatchdogInterval=30",
                 "-H:IncludeLocales=en",
                 "-H:+CompactingOldGen",
+                "-H:+TrackPrimitiveValues",
+                "-H:+UsePredicates",
 //                "--emit build-report",
                 "-R:MaxHeapSize=200m",
                 "-march=x86-64-v3",
                 "--gc=serial",
                 "-J-XX:MaxRAMPercentage=90",
                 "--install-exit-handlers",
-//                "--enable-monitoring=jfr"
+//                "--enable-monitoring=nmt,jfr",
+                "--enable-native-access=ALL-UNNAMED",
+//                "-H:+PrintClassInitialization",
+                "--initialize-at-build-time=com.zenith.feature.deathmessages",
+                "--initialize-at-build-time=org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerType",
+                "--initialize-at-build-time=org.cloudburstmc.math.immutable.vector.ImmutableVector3i",
+                "--initialize-at-build-time=com.google.common.collect.RegularImmutableList",
+                "--initialize-at-build-time=org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType",
+                "--initialize-at-build-time=org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockEntityType",
+                "--initialize-at-build-time=it.unimi.dsi.fastutil",
+                "--initialize-at-build-time=com.zenith.mc",
                 "--initialize-at-run-time=sun.net.dns.ResolverConfigurationImpl", // fix for windows builds, exception when doing srv lookups with netty
             )
             val pgoPath = System.getenv("GRAALVM_PGO_PATH")
@@ -329,10 +311,18 @@ publishing {
         }
     }
     publications {
-        create<MavenPublication>("maven") {
+        create<MavenPublication>("snapshot") {
             groupId = "com.zenith"
             artifactId = "ZenithProxy"
-            version = project.version.toString() + "-SNAPSHOT"
+            version = "${project.version}-SNAPSHOT"
+            val javaComponent = components["java"] as AdhocComponentWithVariants
+            javaComponent.withVariantsFromConfiguration(configurations["shadowRuntimeElements"]) { skip() }
+            from(javaComponent)
+        }
+        create<MavenPublication>("release") {
+            groupId = "com.zenith"
+            artifactId = "ZenithProxy"
+            version = System.getenv("ZENITH_RELEASE_TAG") ?: "0.0.0+${project.version}"
             val javaComponent = components["java"] as AdhocComponentWithVariants
             javaComponent.withVariantsFromConfiguration(configurations["shadowRuntimeElements"]) { skip() }
             from(javaComponent)

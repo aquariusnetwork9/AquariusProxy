@@ -7,9 +7,9 @@ import com.zenith.feature.pathfinder.movement.*;
 import com.zenith.feature.pathfinder.movement.MovementHelper.PlaceResult;
 import com.zenith.feature.pathfinder.util.RotationUtils;
 import com.zenith.feature.pathfinder.util.VecUtils;
-import com.zenith.feature.world.Rotation;
-import com.zenith.feature.world.RotationHelper;
-import com.zenith.feature.world.World;
+import com.zenith.feature.player.Rotation;
+import com.zenith.feature.player.RotationHelper;
+import com.zenith.feature.player.World;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockPos;
 import com.zenith.mc.block.BlockRegistry;
@@ -18,7 +18,7 @@ import org.cloudburstmc.math.vector.Vector3d;
 
 import java.util.Set;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.feature.pathfinder.movement.ActionCosts.*;
 
 public class MovementTraverse extends Movement {

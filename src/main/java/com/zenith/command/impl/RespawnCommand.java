@@ -3,15 +3,15 @@ package com.zenith.command.impl;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
 import com.zenith.cache.data.entity.EntityPlayer;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.network.client.ClientSession;
 import org.geysermc.mcprotocollib.protocol.data.game.ClientCommand;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundClientCommandPacket;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 import static java.util.Objects.nonNull;
 
 public class RespawnCommand extends Command {

@@ -3,11 +3,11 @@ package com.zenith.network.client.handler.incoming.entity;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundRemoveMobEffectPacket;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.CLIENT_LOG;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.CLIENT_LOG;
 
 public class RemoveMobEffectHandler implements ClientEventLoopPacketHandler<ClientboundRemoveMobEffectPacket, ClientSession> {
 
@@ -19,7 +19,7 @@ public class RemoveMobEffectHandler implements ClientEventLoopPacketHandler<Clie
                 e.getPotionEffectMap().remove(packet.getEffect());
             } else {
                 CLIENT_LOG.debug("Received ClientboundRemoveMobEffectPacket for invalid entity (id={})", packet.getEntityId());
-                return false;
+                return true;
             }
         } catch (Exception e) {
             CLIENT_LOG.debug("Failed handling ClientboundRemoveMobEffectPacket for entity (id={})", packet.getEntityId(), e);

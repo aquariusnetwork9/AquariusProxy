@@ -1,12 +1,12 @@
 package com.zenith.feature.extrachat;
 
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandPacket;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class ECChatCommandIncomingHandler implements PacketHandler<ServerboundChatCommandPacket, ServerSession> {
     @Override

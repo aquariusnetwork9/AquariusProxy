@@ -2,15 +2,15 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
-import com.zenith.event.proxy.ServerPlayerConnectedEvent;
-import com.zenith.event.proxy.ServerPlayerDisconnectedEvent;
+import com.zenith.event.server.ServerPlayerConnectedEvent;
+import com.zenith.event.server.ServerPlayerDisconnectedEvent;
 import com.zenith.feature.extrachat.ECChatCommandIncomingHandler;
 import com.zenith.feature.extrachat.ECPlayerChatOutgoingHandler;
 import com.zenith.feature.extrachat.ECSignedChatCommandIncomingHandler;
 import com.zenith.feature.extrachat.ECSystemChatOutgoingHandler;
-import com.zenith.module.Module;
-import com.zenith.network.registry.PacketHandlerCodec;
-import com.zenith.network.registry.PacketHandlerStateCodec;
+import com.zenith.module.api.Module;
+import com.zenith.network.codec.PacketHandlerCodec;
+import com.zenith.network.codec.PacketHandlerStateCodec;
 import com.zenith.util.ComponentSerializer;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundPlayerChatPacket;
@@ -21,7 +21,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.Serverbound
 import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 import static java.util.Objects.nonNull;
 
 public class ExtraChat extends Module {
@@ -44,10 +44,10 @@ public class ExtraChat extends Module {
             .setId("extra-chat")
             .setPriority(-1)
             .state(ProtocolState.GAME, PacketHandlerStateCodec.serverBuilder()
-                .registerOutbound(ClientboundSystemChatPacket.class, new ECSystemChatOutgoingHandler())
-                .registerOutbound(ClientboundPlayerChatPacket.class, new ECPlayerChatOutgoingHandler())
-                .registerInbound(ServerboundChatCommandPacket.class, new ECChatCommandIncomingHandler())
-                .registerInbound(ServerboundChatCommandSignedPacket.class, new ECSignedChatCommandIncomingHandler())
+                .outbound(ClientboundSystemChatPacket.class, new ECSystemChatOutgoingHandler())
+                .outbound(ClientboundPlayerChatPacket.class, new ECPlayerChatOutgoingHandler())
+                .inbound(ServerboundChatCommandPacket.class, new ECChatCommandIncomingHandler())
+                .inbound(ServerboundChatCommandSignedPacket.class, new ECSignedChatCommandIncomingHandler())
                 .build())
             .build();
     }

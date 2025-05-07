@@ -1,11 +1,11 @@
 package com.zenith.feature.tps;
 
 import com.google.common.primitives.Doubles;
-import com.zenith.event.proxy.ConnectEvent;
+import com.zenith.event.client.ClientConnectEvent;
 
 import java.util.Arrays;
 
-import static com.zenith.Shared.EVENT_BUS;
+import static com.zenith.Globals.EVENT_BUS;
 
 public class TPSCalculator {
 
@@ -19,7 +19,7 @@ public class TPSCalculator {
         reset();
         // calculators must always be reused
         // beware: event sub is never unsubbed
-        EVENT_BUS.subscribe(this, ConnectEvent.class, (e) -> reset());
+        EVENT_BUS.subscribe(this, ClientConnectEvent.class, (e) -> reset());
     }
 
     // expected to be received once per second by the mc server

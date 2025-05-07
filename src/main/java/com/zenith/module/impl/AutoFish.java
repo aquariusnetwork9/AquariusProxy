@@ -4,10 +4,10 @@ import com.github.rfresh2.EventConsumer;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityStandard;
 import com.zenith.cache.data.inventory.Container;
-import com.zenith.event.module.ClientBotTick;
+import com.zenith.event.client.ClientBotTick;
 import com.zenith.event.module.EntityFishHookSpawnEvent;
 import com.zenith.event.module.SplashSoundEffectEvent;
-import com.zenith.feature.world.*;
+import com.zenith.feature.player.*;
 import com.zenith.mc.item.ItemRegistry;
 import com.zenith.util.math.MathHelper;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
@@ -20,7 +20,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class AutoFish extends AbstractInventoryModule {
     private int fishHookEntityId = -1;
@@ -126,16 +126,17 @@ public class AutoFish extends AbstractInventoryModule {
 
     private InputRequestFuture requestUseRod(boolean cast) {
         return INPUTS.submit(InputRequest.builder()
-                          .input(Input.builder()
-                                     .rightClick(true)
-                                     .clickTarget(ClickTarget.None.INSTANCE)
-                                     .hand(rodHand)
-                                     .clickRequiresRotation(cast)
-                                     .build())
-                          .yaw(CONFIG.client.extra.autoFish.yaw)
-                          .pitch(CONFIG.client.extra.autoFish.pitch)
-                          .priority(MOVEMENT_PRIORITY)
-                          .build());
+            .owner(this)
+            .input(Input.builder()
+                .rightClick(true)
+                .clickTarget(ClickTarget.None.INSTANCE)
+                .hand(rodHand)
+                .clickRequiresRotation(cast)
+                .build())
+            .yaw(CONFIG.client.extra.autoFish.yaw)
+            .pitch(CONFIG.client.extra.autoFish.pitch)
+            .priority(MOVEMENT_PRIORITY)
+            .build());
     }
 
     public boolean switchToFishingRod() {

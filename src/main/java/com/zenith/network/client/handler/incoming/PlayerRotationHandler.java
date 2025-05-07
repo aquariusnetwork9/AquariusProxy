@@ -3,13 +3,11 @@ package com.zenith.network.client.handler.incoming;
 import com.zenith.Proxy;
 import com.zenith.feature.spectator.SpectatorSync;
 import com.zenith.module.impl.AntiAFK;
-import com.zenith.module.impl.PlayerSimulation;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerRotationPacket;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.*;
 
 public class PlayerRotationHandler implements ClientEventLoopPacketHandler<ClientboundPlayerRotationPacket, ClientSession> {
     @Override
@@ -17,7 +15,7 @@ public class PlayerRotationHandler implements ClientEventLoopPacketHandler<Clien
         CACHE.getPlayerCache().setYaw(packet.getYaw());
         CACHE.getPlayerCache().setPitch(packet.getPitch());
         if (!Proxy.getInstance().hasActivePlayer()) {
-            MODULE.get(PlayerSimulation.class).handlePlayerRotate();
+            BOT.handlePlayerRotate();
         }
         SpectatorSync.syncPlayerPositionWithSpectators();
         MODULE.get(AntiAFK.class).handlePlayerPosRotate();

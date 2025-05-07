@@ -1,5 +1,6 @@
 package com.zenith.module;
 
+import com.zenith.module.api.Module;
 import com.zenith.module.impl.*;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
@@ -30,10 +31,9 @@ public class ModuleManager {
             new AutoTotem(),
             new ChatHistory(),
             new Click(),
-            new CoordObfuscator(),
+            new CoordObfuscation(),
             new ExtraChat(),
             new KillAura(),
-            new PlayerSimulation(),
             new QueueWarning(),
             new ReplayMod(),
             new Requeue(),

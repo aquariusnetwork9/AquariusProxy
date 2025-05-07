@@ -21,6 +21,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
+import static com.zenith.Globals.CONFIG;
+
 @Data
 public class RecipeCache implements CachedData {
     protected Map<String, int[]> itemSets = new ConcurrentHashMap<>();

@@ -2,12 +2,12 @@ package com.zenith.feature.pathfinder.util;
 
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.feature.pathfinder.BlockStateInterface;
+import com.zenith.feature.player.Bot;
 import com.zenith.mc.block.BlockPos;
 import com.zenith.mc.block.BlockRegistry;
-import com.zenith.module.impl.PlayerSimulation;
 import org.cloudburstmc.math.vector.Vector3d;
 
-import static com.zenith.Shared.BLOCK_DATA;
+import static com.zenith.Globals.BLOCK_DATA;
 
 public class VecUtils {
     public static Vector3d calculateBlockCenter(BlockPos pos) {
@@ -70,11 +70,11 @@ public class VecUtils {
         return distanceToCenter(pos, entity.getX(), entity.getY(), entity.getZ());
     }
 
-    public static double entityDistanceToCenter(final PlayerSimulation player, final BlockPos pos) {
+    public static double entityDistanceToCenter(final Bot player, final BlockPos pos) {
         return distanceToCenter(pos, player.getX(), player.getY(), player.getZ());
     }
 
-    public static double entityFlatDistanceToCenter(final PlayerSimulation player, final BlockPos pos) {
+    public static double entityFlatDistanceToCenter(final Bot player, final BlockPos pos) {
         return distanceToCenter(pos, player.getX(), pos.y() + 0.5, player.getZ());
     }
 }

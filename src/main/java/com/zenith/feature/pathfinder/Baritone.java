@@ -4,7 +4,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.zenith.cache.data.entity.EntityLiving;
-import com.zenith.event.module.ClientBotTick;
+import com.zenith.event.client.ClientBotTick;
 import com.zenith.feature.pathfinder.behavior.InventoryBehavior;
 import com.zenith.feature.pathfinder.behavior.LookBehavior;
 import com.zenith.feature.pathfinder.behavior.PathingBehavior;
@@ -12,11 +12,11 @@ import com.zenith.feature.pathfinder.goals.Goal;
 import com.zenith.feature.pathfinder.goals.GoalBlock;
 import com.zenith.feature.pathfinder.goals.GoalXZ;
 import com.zenith.feature.pathfinder.process.*;
-import com.zenith.feature.world.InputRequest;
+import com.zenith.feature.player.InputRequest;
 import com.zenith.mc.block.Block;
-import com.zenith.util.Timer;
-import com.zenith.util.Timers;
 import com.zenith.util.math.MathHelper;
+import com.zenith.util.timer.Timer;
+import com.zenith.util.timer.Timers;
 import lombok.Data;
 import lombok.Getter;
 import org.cloudburstmc.math.vector.Vector3d;
@@ -27,7 +27,7 @@ import java.util.concurrent.Executors;
 import java.util.function.Predicate;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 /**
  *
@@ -39,8 +39,7 @@ import static com.zenith.Shared.*;
  */
 
 @Data
-public class Baritone {
-    public static final Baritone INSTANCE = new Baritone();
+public class Baritone implements Pathfinder {
     public static final int MOVEMENT_PRIORITY = 200;
     private final PathingBehavior pathingBehavior = new PathingBehavior(this);
     private final InputOverrideHandler inputOverrideHandler = new InputOverrideHandler(this);
@@ -62,7 +61,7 @@ public class Baritone {
     private final Timer teleportDelayTimer = Timers.timer();
     private final IngamePathRenderer ingamePathRenderer = new IngamePathRenderer();
 
-    private Baritone() {
+    public Baritone() {
         pathingControlManager.registerProcess(customGoalProcess);
         pathingControlManager.registerProcess(followProcess);
         pathingControlManager.registerProcess(getToBlockProcess);
@@ -78,7 +77,7 @@ public class Baritone {
     }
 
     public boolean isActive() {
-        return getPathingBehavior().getGoal() != null;
+        return getPathingBehavior().getGoal() != null || getPathingControlManager().isActive();
     }
 
     public boolean isGoalActive(@NonNull Goal goal) {
@@ -86,23 +85,23 @@ public class Baritone {
         return activeGoal != null && activeGoal.equals(goal);
     }
 
-    public void pathTo(int x, int z) {
-        pathTo(new GoalXZ(x, z));
+    @Override
+    public PathingRequestFuture pathTo(int x, int z) {
+        return pathTo(new GoalXZ(x, z));
     }
 
-    public void pathTo(@NonNull GoalXZ goalXZ) {
-        getCustomGoalProcess().setGoalAndPath(goalXZ);
+    @Override
+    public PathingRequestFuture pathTo(int x, int y, int z) {
+        return pathTo(new GoalBlock(x, y, z));
     }
 
-    public void pathTo(int x, int y, int z) {
-        pathTo(new GoalBlock(x, y, z));
+    @Override
+    public PathingRequestFuture pathTo(@NonNull Goal goal) {
+        return getCustomGoalProcess().setGoalAndPath(goal);
     }
 
-    public void pathTo(@NonNull GoalBlock goalBlock) {
-        getCustomGoalProcess().setGoalAndPath(goalBlock);
-    }
-
-    public void thisWay(final int dist) {
+    @Override
+    public PathingRequestFuture thisWay(final int dist) {
         Vector3d vector3d = MathHelper.calculateRayEndPos(
             CACHE.getPlayerCache().getX(),
             CACHE.getPlayerCache().getY(),
@@ -111,54 +110,60 @@ public class Baritone {
             0,
             dist
         );
-        pathTo(MathHelper.floorI(vector3d.getX()), MathHelper.floorI(vector3d.getZ()));
+        return pathTo(MathHelper.floorI(vector3d.getX()), MathHelper.floorI(vector3d.getZ()));
     }
 
-    public void getTo(final Block block) {
-        getGetToBlockProcess().getToBlock(block);
+    @Override
+    public PathingRequestFuture getTo(final Block block) {
+        return getGetToBlockProcess().getToBlock(block);
     }
 
-    public void mine(Block... blocks) {
-        getMineProcess().mine(blocks);
+    @Override
+    public PathingRequestFuture mine(Block... blocks) {
+        return getMineProcess().mine(blocks);
     }
 
-    public void follow(Predicate<EntityLiving> entityPredicate) {
-        getFollowProcess().follow(entityPredicate);
+    @Override
+    public PathingRequestFuture follow(Predicate<EntityLiving> entityPredicate) {
+        return getFollowProcess().follow(entityPredicate);
     }
 
-    public void follow(EntityLiving target) {
-        getFollowProcess().follow(target);
+    @Override
+    public PathingRequestFuture follow(EntityLiving target) {
+        return getFollowProcess().follow(target);
     }
 
-    public void leftClickBlock(int x, int y, int z) {
-        getInteractWithProcess().leftClickBlock(x, y, z);
+    @Override
+    public PathingRequestFuture leftClickBlock(int x, int y, int z) {
+        return getInteractWithProcess().leftClickBlock(x, y, z);
     }
 
-    public void rightClickBlock(int x, int y, int z) {
-        getInteractWithProcess().rightClickBlock(x, y, z);
+    @Override
+    public PathingRequestFuture rightClickBlock(int x, int y, int z) {
+        return getInteractWithProcess().rightClickBlock(x, y, z);
     }
 
-    public void leftClickEntity(EntityLiving entity) {
-        getInteractWithProcess().leftClickEntity(entity);
+    @Override
+    public PathingRequestFuture leftClickEntity(EntityLiving entity) {
+        return getInteractWithProcess().leftClickEntity(entity);
     }
 
-    public void rightClickEntity(EntityLiving entity) {
-        getInteractWithProcess().rightClickEntity(entity);
+    @Override
+    public PathingRequestFuture rightClickEntity(EntityLiving entity) {
+        return getInteractWithProcess().rightClickEntity(entity);
     }
 
-    public void goal(@NonNull Goal goal) {
-        getCustomGoalProcess().setGoalAndPath(goal);
-    }
-
+    @Override
     public void stop() {
         getPathingBehavior().cancelEverything();
     }
 
+    @Override
     public @Nullable Goal currentGoal() {
         return pathingBehavior.getGoal();
     }
 
-    public void onClientBotTick(ClientBotTick event) {
+    private void onClientBotTick(ClientBotTick event) {
         if (!CACHE.getPlayerCache().isAlive()) return;
         if (CACHE.getChunkCache().getCache().size() < 8) return;
         if (!teleportDelayTimer.tick(CONFIG.client.extra.pathfinder.teleportDelayMs, false)) return;
@@ -170,9 +175,10 @@ public class Baritone {
         inputOverrideHandler.onTick();
         ingamePathRenderer.onTick();
 
-        if (pathingBehavior.isPathing()) {
+        if (pathingBehavior.isPathing() || (pathingControlManager.isActive() && lookBehavior.currentRotation != null)) {
             var rotation = lookBehavior.currentRotation;
             var req = InputRequest.builder()
+                .owner(this)
                 .input(inputOverrideHandler.currentInput)
                 .priority(MOVEMENT_PRIORITY);
             if (rotation != null) {
@@ -184,15 +190,15 @@ public class Baritone {
         }
     }
 
-    public void onClientBotTickPost(ClientBotTick event) {
+    private void onClientBotTickPost(ClientBotTick event) {
         pathingControlManager.postTick();
     }
 
-    public void onClientBotTickStopped(ClientBotTick.Stopped event) {
+    private void onClientBotTickStopped(ClientBotTick.Stopped event) {
         getPathingBehavior().cancelEverything();
     }
 
-    public void onClientBotTickStarting(ClientBotTick.Starting event) {
+    private void onClientBotTickStarting(ClientBotTick.Starting event) {
         getPathingBehavior().cancelEverything();
     }
 

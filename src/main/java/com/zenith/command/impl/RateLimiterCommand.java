@@ -1,17 +1,17 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 
 import static com.mojang.brigadier.arguments.DoubleArgumentType.doubleArg;
 import static com.mojang.brigadier.arguments.DoubleArgumentType.getDouble;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 
@@ -81,7 +81,7 @@ public class RateLimiterCommand extends Command {
     }
 
     @Override
-    public void postPopulate(Embed embed) {
+    public void defaultEmbed(Embed embed) {
         embed
             .addField("Login", toggleStr(CONFIG.server.loginRateLimiter.enabled))
             .addField("Login Rate Limit", CONFIG.server.loginRateLimiter.rateLimitSeconds + "s")

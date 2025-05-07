@@ -14,7 +14,7 @@ import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import net.kyori.adventure.text.renderer.TranslatableComponentRenderer;
 import net.kyori.adventure.text.serializer.ansi.ANSIComponentSerializer;
 import net.kyori.adventure.translation.GlobalTranslator;
-import net.kyori.adventure.translation.TranslationRegistry;
+import net.kyori.adventure.translation.TranslationStore;
 import net.kyori.ansi.ColorLevel;
 
 import java.text.MessageFormat;
@@ -122,7 +122,7 @@ public final class ComponentSerializer {
 
     private static void translatableMapper(TranslatableComponent translatableComponent, Consumer<Component> componentConsumer) {
         for (var source : GlobalTranslator.translator().sources()) {
-            if (source instanceof TranslationRegistry registry && registry.contains(translatableComponent.key())) {
+            if (source instanceof TranslationStore registry && registry.contains(translatableComponent.key())) {
                 componentConsumer.accept(GlobalTranslator.render(translatableComponent, Locale.ENGLISH));
                 return;
             }
@@ -130,7 +130,7 @@ public final class ComponentSerializer {
         var fallback = translatableComponent.fallback();
         if (fallback != null) {
             for (var source : GlobalTranslator.translator().sources()) {
-                if (source instanceof TranslationRegistry registry && registry.contains(fallback)) {
+                if (source instanceof TranslationStore registry && registry.contains(fallback)) {
                     componentConsumer.accept(GlobalTranslator.render(Component.translatable(fallback), Locale.ENGLISH));
                     return;
                 }
@@ -138,7 +138,7 @@ public final class ComponentSerializer {
         }
         if (translatableComponent.key().contains("%")) {
             var messageFormat = convertToMessageFormat(translatableComponent.key());
-            var tempRegistry = TranslationRegistry.create(Key.key("zenith:zenith"));
+            var tempRegistry = TranslationStore.messageFormat(Key.key("zenith:zenith"));
             tempRegistry.register(translatableComponent.key(), Locale.ENGLISH, messageFormat);
             componentConsumer.accept(TranslatableComponentRenderer.usingTranslationSource(tempRegistry).render(translatableComponent, Locale.ENGLISH));
             return;

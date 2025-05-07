@@ -1,9 +1,9 @@
 package com.zenith.network.server.handler.spectator.postoutgoing;
 
 import com.zenith.Proxy;
-import com.zenith.event.proxy.ProxySpectatorLoggedInEvent;
+import com.zenith.event.player.SpectatorLoggedInEvent;
 import com.zenith.feature.spectator.SpectatorSync;
-import com.zenith.network.registry.PostOutgoingPacketHandler;
+import com.zenith.network.codec.PostOutgoingPacketHandler;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
@@ -17,7 +17,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.EnumSet;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode.SPECTATOR;
 
 public class LoginSpectatorPostHandler implements PostOutgoingPacketHandler<ClientboundLoginPacket, ServerSession> {
@@ -45,7 +45,7 @@ public class LoginSpectatorPostHandler implements PostOutgoingPacketHandler<Clie
                 null
             )}
         ));
-        EVENT_BUS.postAsync(new ProxySpectatorLoggedInEvent(session));
+        EVENT_BUS.postAsync(new SpectatorLoggedInEvent(session));
         SpectatorSync.initSpectator(session, () -> CACHE.getAllDataSpectator(session.getSpectatorPlayerCache()));
         //send cached data
         var connections = Proxy.getInstance().getActiveConnections().getArray();
@@ -53,7 +53,7 @@ public class LoginSpectatorPostHandler implements PostOutgoingPacketHandler<Clie
             var connection = connections[i];
             if (connection.equals(session)) continue;
             connection.sendAsync(new ClientboundSystemChatPacket(
-                ComponentSerializer.minimessage("<green>" + session.getProfileCache().getProfile().getName() + " connected!"), false
+                ComponentSerializer.minimessage("<green>" + session.getName() + " connected!"), false
             ));
             if (connection.equals(Proxy.getInstance().getCurrentPlayer().get())) {
                 connection.sendAsync(new ClientboundSystemChatPacket(

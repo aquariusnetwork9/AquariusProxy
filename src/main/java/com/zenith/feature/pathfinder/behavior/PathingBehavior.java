@@ -27,8 +27,8 @@ import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.PATH_LOG;
+import static com.zenith.Globals.*;
+import static java.util.Objects.requireNonNullElse;
 
 @Getter
 public class PathingBehavior extends Behavior {
@@ -75,7 +75,6 @@ public class PathingBehavior extends Behavior {
         baritone.getPathingControlManager().cancelEverything();
     }
 
-//    @Override
     public void onTick() {
         dispatchEvents();
 
@@ -85,13 +84,6 @@ public class PathingBehavior extends Behavior {
         ticksElapsedSoFar++;
         dispatchEvents();
     }
-
-//    @Override
-//    public void onPlayerSprintState(SprintStateEvent event) {
-//        if (isPathing()) {
-//            event.setState(current.isSprinting());
-//        }
-//    }
 
     private void tickPath() {
         pausedThisTick = false;
@@ -135,7 +127,7 @@ public class PathingBehavior extends Behavior {
             if (current.failed() || current.finished()) {
                 current = null;
                 if (goal == null || goal.isInGoal(ctx.playerFeet())) {
-                    PATH_LOG.info("All done. At {}", goal);
+                    PATH_LOG.info("All done. At {}", requireNonNullElse(goal, "goal"));
                     queuePathEvent(PathEvent.AT_GOAL);
                     next = null;
 //                    if (Baritone.settings().disconnectOnArrival.value) {
@@ -506,7 +498,7 @@ public class PathingBehavior extends Behavior {
                 transformed = new GoalXZ(pos.x(), pos.z());
             }
         }
-        Favoring favoring = new Favoring(Baritone.INSTANCE.getPlayerContext(), previous, context);
+        Favoring favoring = new Favoring(BARITONE.getPlayerContext(), previous, context);
         BlockPos feet = ctx.playerFeet();
         var realStart = new BlockPos(start);
         var sub = feet.subtract(realStart);

@@ -1,18 +1,14 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
-import com.zenith.command.brigadier.CommandSource;
+import com.zenith.command.api.*;
 import com.zenith.discord.Embed;
 import com.zenith.util.MentionUtil;
 
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
@@ -57,7 +53,7 @@ public class ChatRelayCommand extends Command {
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
         return command("chatRelay")
-            .requires(c -> Command.validateCommandSource(c, asList(CommandSource.DISCORD, CommandSource.TERMINAL)))
+            .requires(c -> Command.validateCommandSource(c, asList(CommandSources.DISCORD, CommandSources.TERMINAL)))
             .then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.discord.chatRelay.enable = getToggle(c, "toggle");
                 if (CONFIG.discord.chatRelay.enable && CONFIG.discord.chatRelay.channelId.isEmpty()) {
@@ -176,7 +172,7 @@ public class ChatRelayCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("Chat Relay", toggleStr(CONFIG.discord.chatRelay.enable), false)
             .addField("Channel", getChannelMention(CONFIG.discord.chatRelay.channelId), false)

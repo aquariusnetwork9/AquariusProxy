@@ -3,7 +3,11 @@ package com.zenith.network.server;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.zenith.Proxy;
-import com.zenith.event.proxy.*;
+import com.zenith.event.client.ClientConnectEvent;
+import com.zenith.event.client.ClientDisconnectEvent;
+import com.zenith.event.client.ClientOnlineEvent;
+import com.zenith.event.queue.QueueCompleteEvent;
+import com.zenith.event.queue.QueueStartEvent;
 import com.zenith.feature.queue.Queue;
 import com.zenith.util.ComponentSerializer;
 import net.kyori.adventure.text.Component;
@@ -22,7 +26,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class ZenithServerInfoBuilder {
     public static final ZenithServerInfoBuilder INSTANCE = new ZenithServerInfoBuilder();
@@ -35,11 +39,11 @@ public class ZenithServerInfoBuilder {
     private ZenithServerInfoBuilder() {
         EVENT_BUS.subscribe(
             this,
-            of(ConnectEvent.class, e -> infoCache.invalidateAll()),
-            of(StartQueueEvent.class, e -> infoCache.invalidateAll()),
+            of(ClientConnectEvent.class, e -> infoCache.invalidateAll()),
+            of(QueueStartEvent.class, e -> infoCache.invalidateAll()),
             of(QueueCompleteEvent.class, e -> infoCache.invalidateAll()),
-            of(PlayerOnlineEvent.class, e -> infoCache.invalidateAll()),
-            of(DisconnectEvent.class, e -> infoCache.invalidateAll())
+            of(ClientOnlineEvent.class, e -> infoCache.invalidateAll()),
+            of(ClientDisconnectEvent.class, e -> infoCache.invalidateAll())
         );
     }
 
@@ -111,7 +115,7 @@ public class ZenithServerInfoBuilder {
             var result = new GameProfile[connections.length];
             for (int i = 0; i < connections.length; i++) {
                 var connection = connections[i];
-                result[i] = connection.profileCache.getProfile();
+                result[i] = connection.getProfileCache().getProfile();
             }
             return result;
         } catch (final Throwable e) {

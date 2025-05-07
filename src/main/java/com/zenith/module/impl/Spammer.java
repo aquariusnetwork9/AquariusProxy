@@ -2,10 +2,10 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
-import com.zenith.event.module.ClientTickEvent;
-import com.zenith.module.Module;
-import com.zenith.util.Timer;
-import com.zenith.util.Timers;
+import com.zenith.event.client.ClientTickEvent;
+import com.zenith.module.api.Module;
+import com.zenith.util.timer.Timer;
+import com.zenith.util.timer.Timers;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 import org.jspecify.annotations.Nullable;
@@ -16,8 +16,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.CONFIG;
 
 public class Spammer extends Module {
     private final Timer tickTimer = Timers.tickTimer();

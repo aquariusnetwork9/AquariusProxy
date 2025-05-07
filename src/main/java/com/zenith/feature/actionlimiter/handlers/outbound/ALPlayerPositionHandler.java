@@ -1,11 +1,13 @@
 package com.zenith.feature.actionlimiter.handlers.outbound;
 
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.math.MathHelper;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PositionElement;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
 
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.CONFIG;
 
 public class ALPlayerPositionHandler implements PacketHandler<ClientboundPlayerPositionPacket, ServerSession> {
     @Override
@@ -16,13 +18,17 @@ public class ALPlayerPositionHandler implements PacketHandler<ClientboundPlayerP
             session.disconnect("ActionLimiter: Movement not allowed");
             return null;
         }
-        // todo: can the server ever send some other packet with identifying coordinates
-        //  before this?
-
-        if (MathHelper.distance2d(CONFIG.client.extra.actionLimiter.movementHomeX,
-                                  CONFIG.client.extra.actionLimiter.movementHomeZ,
-                                  packet.getX(),
-                                  packet.getZ()) > CONFIG.client.extra.actionLimiter.movementDistance) {
+        if (MathHelper.distance2d(
+            CONFIG.client.extra.actionLimiter.movementHomeX,
+            CONFIG.client.extra.actionLimiter.movementHomeZ,
+            packet.getRelatives().contains(PositionElement.X)
+                ? packet.getX() + CACHE.getPlayerCache().getX()
+                : packet.getX(),
+            packet.getRelatives().contains(PositionElement.Z)
+                ? packet.getZ() + CACHE.getPlayerCache().getZ()
+                : packet.getZ()
+            ) > CONFIG.client.extra.actionLimiter.movementDistance
+            ) {
             session.disconnect("ActionLimiter: Movement not allowed");
             return null;
         }

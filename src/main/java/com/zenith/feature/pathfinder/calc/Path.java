@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import static com.zenith.Shared.PATH_LOG;
+import static com.zenith.Globals.PATH_LOG;
 
 public class Path extends PathBase {
 

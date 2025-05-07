@@ -3,11 +3,7 @@ package com.zenith.command.impl;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
-import com.zenith.command.brigadier.CommandSource;
+import com.zenith.command.api.*;
 import com.zenith.discord.DiscordBot;
 
 import java.util.ArrayList;
@@ -15,7 +11,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.string;
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 import static com.zenith.discord.DiscordBot.escape;
 
 public class KickCommand extends Command {
@@ -38,13 +34,13 @@ public class KickCommand extends Command {
     public LiteralArgumentBuilder<CommandContext> register() {
         return command("kick").requires(Command::validateAccountOwner)
             .executes(c -> {
-                final boolean kickCurrentPlayer = c.getSource().getSource() != CommandSource.IN_GAME_PLAYER;
+                final boolean kickCurrentPlayer = c.getSource().getSource() != CommandSources.PLAYER;
                 final List<String> kickedPlayers = new ArrayList<>();
                 var connections = Proxy.getInstance().getActiveConnections().getArray();
                 for (int i = 0; i < connections.length; i++) {
                     var connection = connections[i];
                     if (connection.equals(Proxy.getInstance().getCurrentPlayer().get()) && !kickCurrentPlayer) continue;
-                    kickedPlayers.add(connection.getProfileCache().getProfile().getName());
+                    kickedPlayers.add(connection.getName());
                     connection.disconnect(CONFIG.server.extra.whitelist.kickmsg);
                 }
                 c.getSource().getEmbed()
@@ -57,7 +53,7 @@ public class KickCommand extends Command {
                 var connections = Proxy.getInstance().getActiveConnections().getArray();
                 for (int i = 0; i < connections.length; i++) {
                     var connection = connections[i];
-                    if (connection.getProfileCache().getProfile().getName().equalsIgnoreCase(playerName)) {
+                    if (connection.getName().equalsIgnoreCase(playerName)) {
                         connection.disconnect(CONFIG.server.extra.whitelist.kickmsg);
                         c.getSource().getEmbed()
                             .title("Kicked " + escape(playerName))

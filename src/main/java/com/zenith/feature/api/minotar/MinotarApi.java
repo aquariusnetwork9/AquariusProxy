@@ -8,7 +8,7 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 
-import static com.zenith.Shared.DEFAULT_LOG;
+import static com.zenith.Globals.DEFAULT_LOG;
 
 public class MinotarApi extends Api {
     public static final MinotarApi INSTANCE = new MinotarApi();

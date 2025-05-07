@@ -1,15 +1,16 @@
 package com.zenith.feature.pathfinder.movement;
 
-import com.zenith.feature.items.ContainerClickAction;
+import com.zenith.feature.inventory.InventoryActionRequest;
+import com.zenith.feature.inventory.actions.SetHeldItem;
 import com.zenith.feature.pathfinder.*;
 import com.zenith.feature.pathfinder.movement.MovementState.MovementTarget;
 import com.zenith.feature.pathfinder.util.RotationUtils;
 import com.zenith.feature.pathfinder.util.ToolSet;
-import com.zenith.feature.world.Rotation;
-import com.zenith.feature.world.RotationHelper;
-import com.zenith.feature.world.World;
-import com.zenith.feature.world.raycast.BlockRaycastResult;
-import com.zenith.feature.world.raycast.RaycastHelper;
+import com.zenith.feature.player.Rotation;
+import com.zenith.feature.player.RotationHelper;
+import com.zenith.feature.player.World;
+import com.zenith.feature.player.raycast.BlockRaycastResult;
+import com.zenith.feature.player.raycast.RaycastHelper;
 import com.zenith.mc.block.*;
 import com.zenith.util.math.MathHelper;
 import com.zenith.util.math.MutableVec3d;
@@ -18,7 +19,7 @@ import org.cloudburstmc.math.vector.Vector3i;
 
 import java.util.Optional;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.feature.pathfinder.Ternary.*;
 import static com.zenith.feature.pathfinder.movement.ActionCosts.COST_INF;
 import static com.zenith.feature.pathfinder.movement.Movement.HORIZONTALS_BUT_ALSO_DOWN_____SO_EVERY_DIRECTION_EXCEPT_UP;
@@ -595,7 +596,11 @@ public final class MovementHelper {
 //            ctx.player().getInventory().selected = ts.getBestSlot(b.getBlock(), preferSilkTouch);
 //        }
         int hotbarSlotId = ts.getBestSlot(b, preferSilkTouch);
-        INVENTORY.invActionReq(Baritone.INSTANCE, ContainerClickAction.setCarriedItem(hotbarSlotId), Baritone.MOVEMENT_PRIORITY);
+        INVENTORY.submit(InventoryActionRequest.builder()
+            .owner(BARITONE)
+            .actions(new SetHeldItem(hotbarSlotId))
+            .priority(Baritone.MOVEMENT_PRIORITY)
+            .build());
     }
 
     public static void moveTowards(MovementState state, BlockPos pos) {
@@ -774,7 +779,7 @@ public final class MovementHelper {
     }
 
     public static PlaceResult attemptToPlaceABlock(MovementState state, BlockPos placeAt, boolean preferDown, boolean wouldSneak) {
-        PlayerContext ctx = Baritone.INSTANCE.getPlayerContext();
+        PlayerContext ctx = BARITONE.getPlayerContext();
         Optional<Rotation> direct = RotationUtils.reachable(ctx, placeAt, wouldSneak); // we assume that if there is a block there, it must be replacable
         boolean found = false;
         if (direct.isPresent()) {
@@ -784,7 +789,7 @@ public final class MovementHelper {
         for (int i = 0; i < 5; i++) {
             BlockPos against1 = placeAt.relative(HORIZONTALS_BUT_ALSO_DOWN_____SO_EVERY_DIRECTION_EXCEPT_UP[i]);
             if (MovementHelper.canPlaceAgainst(against1)) {
-                if (!Baritone.INSTANCE.getInventoryBehavior().selectThrowawayForLocation(false, placeAt.x(), placeAt.y(), placeAt.z())) { // get ready to place a throwaway block
+                if (!BARITONE.getInventoryBehavior().selectThrowawayForLocation(false, placeAt.x(), placeAt.y(), placeAt.z())) { // get ready to place a throwaway block
                     PATH_LOG.info("No throwaway blocks found in inventory :(");
                     state.setStatus(MovementStatus.UNREACHABLE);
                     return PlaceResult.NO_OPTION;
@@ -830,7 +835,7 @@ public final class MovementHelper {
                 if (wouldSneak) {
                     state.setInput(PathInput.SNEAK, true);
                 }
-                Baritone.INSTANCE.getInventoryBehavior().selectThrowawayForLocation(true, placeAt.x(), placeAt.y(), placeAt.z());
+                BARITONE.getInventoryBehavior().selectThrowawayForLocation(true, placeAt.x(), placeAt.y(), placeAt.z());
                 return PlaceResult.READY_TO_PLACE;
             }
         }
@@ -838,7 +843,7 @@ public final class MovementHelper {
             if (wouldSneak) {
                 state.setInput(PathInput.SNEAK, true);
             }
-            Baritone.INSTANCE.getInventoryBehavior().selectThrowawayForLocation(true, placeAt.x(), placeAt.y(), placeAt.z());
+            BARITONE.getInventoryBehavior().selectThrowawayForLocation(true, placeAt.x(), placeAt.y(), placeAt.z());
             return PlaceResult.ATTEMPTING;
         }
         return PlaceResult.NO_OPTION;

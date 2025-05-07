@@ -9,7 +9,7 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 
-import static com.zenith.Shared.DEFAULT_LOG;
+import static com.zenith.Globals.DEFAULT_LOG;
 
 public class CraftheadApi extends Api {
     public static final CraftheadApi INSTANCE = new CraftheadApi();

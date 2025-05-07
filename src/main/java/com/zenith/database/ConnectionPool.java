@@ -4,12 +4,13 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.postgresql.ds.PGSimpleDataSource;
 
+import java.io.Closeable;
 import java.sql.Connection;
 import java.time.Duration;
 
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 
-public final class ConnectionPool {
+public final class ConnectionPool implements Closeable {
 
     private final HikariDataSource writePool;
 
@@ -42,5 +43,10 @@ public final class ConnectionPool {
         } catch (final Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public void close() {
+        this.writePool.close();
     }
 }

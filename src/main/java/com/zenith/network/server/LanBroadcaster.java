@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class LanBroadcaster {
 

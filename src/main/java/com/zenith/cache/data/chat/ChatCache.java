@@ -17,8 +17,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-import static com.zenith.Shared.CACHE_LOG;
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CACHE_LOG;
+import static com.zenith.Globals.CONFIG;
 
 @Data
 @Accessors(chain = true)

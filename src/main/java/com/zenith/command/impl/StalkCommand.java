@@ -2,18 +2,18 @@ package com.zenith.command.impl;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.string;
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.PLAYER_LISTS;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.PLAYER_LISTS;
+import static com.zenith.command.api.CommandOutputHelper.playerListToString;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
-import static com.zenith.command.util.CommandOutputHelper.playerListToString;
 import static com.zenith.discord.DiscordBot.escape;
 
 public class StalkCommand extends Command {
@@ -65,7 +65,7 @@ public class StalkCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("Stalk", toggleStr(CONFIG.client.extra.stalk.enabled), false)
             .description("**Stalk List**\n" + playerListToString(PLAYER_LISTS.getStalkList()))

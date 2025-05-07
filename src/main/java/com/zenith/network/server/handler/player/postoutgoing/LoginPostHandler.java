@@ -4,8 +4,8 @@ import com.viaversion.vialoader.netty.VLPipeline;
 import com.viaversion.viaversion.api.Via;
 import com.zenith.Proxy;
 import com.zenith.cache.DataCache;
-import com.zenith.event.proxy.ProxyClientLoggedInEvent;
-import com.zenith.network.registry.PostOutgoingPacketHandler;
+import com.zenith.event.player.PlayerLoginEvent;
+import com.zenith.network.codec.PostOutgoingPacketHandler;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import com.zenith.via.ZenithViaInitializer;
@@ -14,7 +14,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.Clientbound
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.jspecify.annotations.NonNull;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class LoginPostHandler implements PostOutgoingPacketHandler<ClientboundLoginPacket, ServerSession> {
     @Override
@@ -28,7 +28,7 @@ public class LoginPostHandler implements PostOutgoingPacketHandler<ClientboundLo
             return; // servers can send multiple login packets during world or skin switches
         checkDisableServerVia(session);
         session.setLoggedIn(); // allows server packets to start being sent to player
-        EVENT_BUS.postAsync(new ProxyClientLoggedInEvent(session));
+        EVENT_BUS.postAsync(new PlayerLoginEvent.Post(session));
         DataCache.sendCacheData(CACHE.getAllData(), session);
         session.initializeTeam();
         session.syncTeamMembers();
@@ -66,7 +66,7 @@ public class LoginPostHandler implements PostOutgoingPacketHandler<ClientboundLo
                 && channel.hasAttr(ZenithViaInitializer.VIA_USER)
                 && channel.pipeline().get(VLPipeline.VIA_CODEC_NAME) != null
             ) {
-                SERVER_LOG.debug("Disabling ViaVersion for player: {}", session.getProfileCache().getProfile().getName());
+                SERVER_LOG.debug("Disabling ViaVersion for player: {}", session.getName());
                 try {
                     var viaUser = channel.attr(ZenithViaInitializer.VIA_USER).get();
                     // remove via codec from channel pipeline
@@ -74,7 +74,7 @@ public class LoginPostHandler implements PostOutgoingPacketHandler<ClientboundLo
                     // dispose via connection state
                     Via.getManager().getConnectionManager().onDisconnect(viaUser);
                 } catch (final Throwable e) {
-                    SERVER_LOG.error("Error disabling ViaVersion for player: {}", session.getProfileCache().getProfile().getName(), e);
+                    SERVER_LOG.error("Error disabling ViaVersion for player: {}", session.getName(), e);
                 }
             }
         }

@@ -6,7 +6,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.zenith.Shared.CLIENT_LOG;
+import static com.zenith.Globals.CLIENT_LOG;
 
 public record ChatType(int id, String translationKey, List<String> parameters) {
     public Component render(@Nullable Component sender, @Nullable Component content, @Nullable Component unsignedContent, @Nullable Component target) {

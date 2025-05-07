@@ -1,10 +1,11 @@
 package com.zenith.network.client.handler.postoutgoing;
 
+import com.zenith.feature.spectator.SpectatorSync;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundMoveVehiclePacket;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class PostOutgoingMoveVehicleHandler implements ClientEventLoopPacketHandler<ServerboundMoveVehiclePacket, ClientSession> {
     @Override
@@ -12,6 +13,7 @@ public class PostOutgoingMoveVehicleHandler implements ClientEventLoopPacketHand
         CACHE.getPlayerCache().setX(packet.getX());
         CACHE.getPlayerCache().setY(packet.getY());
         CACHE.getPlayerCache().setZ(packet.getZ());
+        SpectatorSync.syncPlayerPositionWithSpectators();
         return true;
     }
 }

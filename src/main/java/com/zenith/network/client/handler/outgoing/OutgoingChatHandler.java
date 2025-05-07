@@ -2,14 +2,14 @@ package com.zenith.network.client.handler.outgoing;
 
 import com.zenith.event.module.OutboundChatEvent;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.network.codec.PacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 
 import java.util.BitSet;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.EVENT_BUS;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.EVENT_BUS;
 
 public class OutgoingChatHandler implements PacketHandler<ServerboundChatPacket, ClientSession> {
     @Override

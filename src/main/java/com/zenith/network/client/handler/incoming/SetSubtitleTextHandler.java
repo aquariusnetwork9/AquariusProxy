@@ -1,16 +1,16 @@
 package com.zenith.network.client.handler.incoming;
 
 import com.zenith.Proxy;
-import com.zenith.event.proxy.QueuePositionUpdateEvent;
+import com.zenith.event.queue.QueuePositionUpdateEvent;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import com.zenith.util.ComponentSerializer;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.title.ClientboundSetSubtitleTextPacket;
 
 import java.util.Optional;
 
-import static com.zenith.Shared.CLIENT_LOG;
-import static com.zenith.Shared.EVENT_BUS;
+import static com.zenith.Globals.CLIENT_LOG;
+import static com.zenith.Globals.EVENT_BUS;
 
 public class SetSubtitleTextHandler implements ClientEventLoopPacketHandler<ClientboundSetSubtitleTextPacket, ClientSession> {
     @Override

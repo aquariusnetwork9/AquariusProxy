@@ -1,20 +1,20 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import com.zenith.module.impl.KillAura;
-import com.zenith.util.Config;
+import com.zenith.util.config.Config;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 
 import java.util.stream.Collectors;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 
@@ -170,7 +170,7 @@ public class KillAuraCommand extends Command {
     }
 
     @Override
-    public void postPopulate(Embed builder) {
+    public void defaultEmbed(Embed builder) {
         builder
             .addField("KillAura", toggleStr(CONFIG.client.extra.killAura.enabled), false)
             .addField("Target Players", toggleStr(CONFIG.client.extra.killAura.targetPlayers), false)

@@ -1,16 +1,16 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
-import com.zenith.util.ConfigColor;
+import com.zenith.util.config.ConfigColor;
 
 import java.util.Arrays;
 
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 
 public class ThemeCommand extends Command {
@@ -111,7 +111,7 @@ public class ThemeCommand extends Command {
     }
 
     @Override
-    public void postPopulate(Embed embed) {
+    public void defaultEmbed(Embed embed) {
         embed
             .primaryColor()
             .addField("Primary", CONFIG.theme.primary.name().toLowerCase(), false)

@@ -2,21 +2,21 @@ package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
-import com.zenith.feature.world.Input;
-import com.zenith.feature.world.InputRequest;
-import com.zenith.util.Config.Client.Extra.Click.HoldRightClickMode;
+import com.zenith.feature.player.Input;
+import com.zenith.feature.player.InputRequest;
+import com.zenith.util.config.Config.Client.Extra.Click.HoldRightClickMode;
 
 import static com.mojang.brigadier.arguments.FloatArgumentType.floatArg;
 import static com.mojang.brigadier.arguments.FloatArgumentType.getFloat;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.INPUTS;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.INPUTS;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 
@@ -60,11 +60,12 @@ public class ClickCommand extends Command {
             }))
             .then(literal("left").requires((ctx) -> isClientConnected()).executes(c -> {
                 INPUTS.submit(InputRequest.builder()
-                                  .input(Input.builder()
-                                             .leftClick(true)
-                                             .build())
-                                  .priority(100000)
-                                  .build());
+                        .owner(this)
+                        .input(Input.builder()
+                            .leftClick(true)
+                            .build())
+                        .priority(100000)
+                        .build());
                 c.getSource().getEmbed()
                     .title("Left Clicked")
                     .primaryColor();
@@ -86,16 +87,17 @@ public class ClickCommand extends Command {
                                     return OK;
                                 })))))
             .then(literal("right").requires((ctx) -> isClientConnected()).executes(c -> {
-                INPUTS.submit(InputRequest.builder()
-                                  .input(Input.builder()
-                                             .rightClick(true)
-                                             .build())
-                                  .priority(100000)
-                                  .build());
-                c.getSource().getEmbed()
-                    .title("Right Clicked")
-                    .primaryColor();
-                return OK;
+                    INPUTS.submit(InputRequest.builder()
+                        .owner(this)
+                        .input(Input.builder()
+                            .rightClick(true)
+                            .build())
+                        .priority(100000)
+                        .build());
+                    c.getSource().getEmbed()
+                        .title("Right Clicked")
+                        .primaryColor();
+                    return OK;
             })
                       .then(literal("hold")
                                 .executes(c -> {
@@ -189,7 +191,7 @@ public class ClickCommand extends Command {
     }
 
     @Override
-    public void postPopulate(Embed embed) {
+    public void defaultEmbed(Embed embed) {
         embed
             .addField("Click Hold", CONFIG.client.extra.click.holdLeftClick ? "Left" : CONFIG.client.extra.click.holdRightClick ? "Right" : "off", false)
             .addField("Click Hold Force Rotation", toggleStr(CONFIG.client.extra.click.hasRotation) + (

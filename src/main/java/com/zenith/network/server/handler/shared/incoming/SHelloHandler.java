@@ -1,14 +1,14 @@
 package com.zenith.network.server.handler.shared.incoming;
 
 import com.zenith.network.UserAuthTask;
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.ClientboundHelloPacket;
 import org.geysermc.mcprotocollib.protocol.packet.login.serverbound.ServerboundHelloPacket;
 import org.jspecify.annotations.NonNull;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.EXECUTOR;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.EXECUTOR;
 
 public class SHelloHandler implements PacketHandler<ServerboundHelloPacket, ServerSession> {
     @Override

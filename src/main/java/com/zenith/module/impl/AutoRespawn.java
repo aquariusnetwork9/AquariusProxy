@@ -2,9 +2,9 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
-import com.zenith.event.module.ClientBotTick;
-import com.zenith.event.proxy.DeathEvent;
-import com.zenith.module.Module;
+import com.zenith.event.client.ClientBotTick;
+import com.zenith.event.client.ClientDeathEvent;
+import com.zenith.module.api.Module;
 import org.geysermc.mcprotocollib.protocol.data.game.ClientCommand;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundClientCommandPacket;
 
@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class AutoRespawn extends Module {
     private static final int tickEventRespawnDelay = 100;
@@ -26,7 +26,7 @@ public class AutoRespawn extends Module {
     public List<EventConsumer<?>> registerEvents() {
         return List.of(
             of(ClientBotTick.class, this::handleClientTickEvent),
-            of(DeathEvent.class, this::handleDeathEvent)
+            of(ClientDeathEvent.class, this::handleDeathEvent)
         );
     }
 
@@ -36,7 +36,7 @@ public class AutoRespawn extends Module {
     }
 
 
-    public void handleDeathEvent(final DeathEvent event) {
+    public void handleDeathEvent(final ClientDeathEvent event) {
         tickCounter = -tickEventRespawnDelay - (CONFIG.client.extra.autoRespawn.delayMillis / 50);
         EXECUTOR.schedule(this::checkAndRespawn, Math.max(CONFIG.client.extra.autoRespawn.delayMillis, 1000), TimeUnit.MILLISECONDS);
     }

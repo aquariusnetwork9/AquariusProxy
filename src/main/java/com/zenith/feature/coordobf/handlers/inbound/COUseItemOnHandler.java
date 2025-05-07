@@ -1,14 +1,14 @@
 package com.zenith.feature.coordobf.handlers.inbound;
 
-import com.zenith.feature.world.World;
+import com.zenith.feature.player.World;
 import com.zenith.mc.dimension.DimensionRegistry;
-import com.zenith.module.impl.CoordObfuscator;
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.module.impl.CoordObfuscation;
+import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundUseItemOnPacket;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.MODULE;
 
 public class COUseItemOnHandler implements PacketHandler<ServerboundUseItemOnPacket, ServerSession> {
     @Override
@@ -26,7 +26,7 @@ public class COUseItemOnHandler implements PacketHandler<ServerboundUseItemOnPac
                 }
             }
         }
-        CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
+        CoordObfuscation coordObf = MODULE.get(CoordObfuscation.class);
         return new ServerboundUseItemOnPacket(
             coordObf.getCoordOffset(session).reverseOffsetX(packet.getX()),
             packet.getY(),

@@ -1,13 +1,13 @@
 package com.zenith.network.client.handler.incoming.entity;
 
-import com.zenith.event.proxy.TotemPopEvent;
+import com.zenith.event.module.TotemPopEvent;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EntityEvent;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundEntityEventPacket;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.EVENT_BUS;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.EVENT_BUS;
 
 public class EntityEventHandler implements ClientEventLoopPacketHandler<ClientboundEntityEventPacket, ClientSession> {
     @Override

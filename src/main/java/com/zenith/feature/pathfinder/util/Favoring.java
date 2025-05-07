@@ -1,6 +1,6 @@
 package com.zenith.feature.pathfinder.util;
 
-import com.zenith.Shared;
+import com.zenith.Globals;
 import com.zenith.feature.pathfinder.PlayerContext;
 import com.zenith.feature.pathfinder.calc.IPath;
 import com.zenith.feature.pathfinder.movement.CalculationContext;
@@ -16,7 +16,7 @@ public class Favoring {
 //        for (Avoidance avoid : Avoidance.create(ctx)) {
 //            avoid.applySpherical(favorings);
 //        }
-        Shared.PATH_LOG.debug("Favoring size: {}", favorings.size());
+        Globals.PATH_LOG.debug("Favoring size: {}", favorings.size());
     }
 
     public Favoring(IPath previous, CalculationContext context) { // create one just from previous path, no mob avoidances

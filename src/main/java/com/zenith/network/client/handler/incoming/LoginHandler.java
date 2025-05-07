@@ -2,21 +2,14 @@ package com.zenith.network.client.handler.incoming;
 
 import com.zenith.Proxy;
 import com.zenith.cache.CacheResetType;
-import com.zenith.event.proxy.PlayerOnlineEvent;
+import com.zenith.event.client.ClientOnlineEvent;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.PacketHandler;
-import org.geysermc.mcprotocollib.protocol.data.game.entity.player.HandPreference;
-import org.geysermc.mcprotocollib.protocol.data.game.setting.ChatVisibility;
-import org.geysermc.mcprotocollib.protocol.data.game.setting.ParticleStatus;
-import org.geysermc.mcprotocollib.protocol.data.game.setting.SkinPart;
-import org.geysermc.mcprotocollib.protocol.packet.common.serverbound.ServerboundClientInformationPacket;
+import com.zenith.network.codec.PacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatSessionUpdatePacket;
 import org.jspecify.annotations.NonNull;
 
-import java.util.List;
-
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static java.util.Arrays.asList;
 
 public class LoginHandler implements PacketHandler<ClientboundLoginPacket, ClientSession> {
@@ -68,22 +61,10 @@ public class LoginHandler implements PacketHandler<ClientboundLoginPacket, Clien
                 CLIENT_LOG.warn("Server enforces secure chat, but zenith chat signing is disabled");
             }
         }
-
-        session.sendAsync(new ServerboundClientInformationPacket(
-            "en_US",
-            25,
-            ChatVisibility.FULL,
-            true,
-            List.of(SkinPart.values()),
-            HandPreference.RIGHT_HAND,
-            false,
-            false,
-            ParticleStatus.MINIMAL
-        ));
         if (!Proxy.getInstance().isOn2b2t()) {
             if (!session.isOnline()) {
                 session.setOnline(true);
-                EVENT_BUS.post(new PlayerOnlineEvent());
+                EVENT_BUS.post(new ClientOnlineEvent());
             }
         }
         return packet;

@@ -2,10 +2,10 @@ package com.zenith.network.client.handler.postoutgoing;
 
 import com.zenith.feature.spectator.SpectatorSync;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundSetCarriedItemPacket;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class PostOutgoingSetCarriedItemHandler implements ClientEventLoopPacketHandler<ServerboundSetCarriedItemPacket, ClientSession> {
     @Override

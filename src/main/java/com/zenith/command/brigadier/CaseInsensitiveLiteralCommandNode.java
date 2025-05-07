@@ -11,9 +11,9 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
-import com.zenith.command.util.CommandErrorHandler;
-import com.zenith.command.util.CommandExecutionErrorHandler;
-import com.zenith.command.util.CommandSuccessHandler;
+import com.zenith.command.api.CommandErrorHandler;
+import com.zenith.command.api.CommandExecutionErrorHandler;
+import com.zenith.command.api.CommandSuccessHandler;
 import lombok.Getter;
 
 import java.util.Collection;

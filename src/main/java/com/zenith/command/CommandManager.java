@@ -7,12 +7,13 @@ import com.mojang.brigadier.context.ParsedCommandNode;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestion;
 import com.mojang.brigadier.tree.LiteralCommandNode;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandSources;
+import com.zenith.command.brigadier.BrigadierToMCProtocolLibConverter;
 import com.zenith.command.brigadier.CaseInsensitiveLiteralCommandNode;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
-import com.zenith.command.brigadier.CommandSource;
 import com.zenith.command.impl.*;
-import com.zenith.command.util.BrigadierToMCProtocolLibConverter;
 import lombok.Getter;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandNode;
 import org.jspecify.annotations.NonNull;
@@ -21,7 +22,8 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.TERMINAL_LOG;
+import static com.zenith.Globals.saveConfigAsync;
 import static java.util.Arrays.asList;
 
 @Getter
@@ -212,19 +214,8 @@ public class CommandManager {
         dispatcher.execute(parse);
     }
 
-    public String getCommandPrefix(final CommandSource source) {
-        // todo: tie this to each output instead because multiple outputs can be used regardless of source
-        //  insert a string that gets replaced?
-        //      abstract the embed builder output to a mutable intermediary?
-        return switch (source) {
-            case DISCORD -> CONFIG.discord.prefix;
-            case IN_GAME_PLAYER, SPECTATOR -> CONFIG.inGameCommands.slashCommands ? "/" : CONFIG.inGameCommands.prefix;
-            case TERMINAL -> "";
-        };
-    }
-
     public List<String> getCommandCompletions(final String input) {
-        final ParseResults<CommandContext> parse = this.dispatcher.parse(downcaseFirstWord(input), CommandContext.create(input, CommandSource.TERMINAL));
+        final ParseResults<CommandContext> parse = this.dispatcher.parse(downcaseFirstWord(input), CommandContext.create(input, CommandSources.TERMINAL));
         try {
             var suggestions = this.dispatcher.getCompletionSuggestions(parse).get(2L, TimeUnit.SECONDS);
             return suggestions.getList().stream()

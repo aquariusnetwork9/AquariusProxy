@@ -1,26 +1,25 @@
 package com.zenith.feature.pathfinder.behavior;
 
 import com.zenith.cache.data.inventory.Container;
-import com.zenith.feature.items.ContainerClickAction;
+import com.zenith.feature.inventory.InventoryActionRequest;
+import com.zenith.feature.inventory.actions.MoveToHotbarSlot;
+import com.zenith.feature.inventory.actions.SetHeldItem;
+import com.zenith.feature.inventory.util.InventoryUtil;
 import com.zenith.feature.pathfinder.Baritone;
-import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.item.ItemData;
 import com.zenith.mc.item.ItemRegistry;
-import com.zenith.mc.item.ToolTag;
 import com.zenith.mc.item.ToolType;
-import com.zenith.module.impl.PlayerSimulation;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
-import org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerActionType;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.MoveToHotbarAction;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 
 import java.util.List;
 import java.util.function.Predicate;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static java.util.Arrays.asList;
 
 public class InventoryBehavior extends Behavior {
@@ -45,7 +44,7 @@ public class InventoryBehavior extends Behavior {
         if (throwawayIndex > -1 && throwawayIndex < 36) { // aka there are none on the hotbar, but there are some in main inventory
             requestSwapWithHotBar(throwawayIndex, 8);
         }
-        int pickIndex = bestToolAgainst(BlockRegistry.STONE);
+        int pickIndex = InventoryUtil.bestToolAgainst(BlockRegistry.STONE);
         if (pickIndex > -1 && pickIndex < 36) {
             requestSwapWithHotBar(pickIndex, 0);
         }
@@ -96,11 +95,11 @@ public class InventoryBehavior extends Behavior {
 //            PATH_LOG.info("Inventory move requested but delaying until stationary");
 //            return false;
 //        }
-        INVENTORY.invActionReq(
-            this,
-            new ContainerClickAction(inInventory, ContainerActionType.MOVE_TO_HOTBAR_SLOT, MoveToHotbarAction.from(inHotbar)),
-            Baritone.MOVEMENT_PRIORITY
-        );
+        INVENTORY.submit(InventoryActionRequest.builder()
+             .owner(this)
+             .actions(new MoveToHotbarSlot(inInventory, MoveToHotbarAction.from(inHotbar)))
+             .priority(Baritone.MOVEMENT_PRIORITY)
+             .build());
         ticksSinceLastInventoryMove = 0;
         lastTickRequestedMove = null;
         return true;
@@ -133,52 +132,6 @@ public class InventoryBehavior extends Behavior {
             }
         }
         return -1;
-    }
-
-    private int searchInventory(Predicate<ItemStack> predicate) {
-        List<ItemStack> playerInventory = CACHE.getPlayerCache().getPlayerInventory();
-        // first check hotbar
-        for (int i = 36; i < 44; i++) {
-            ItemStack itemStack = playerInventory.get(i);
-            if (itemStack == Container.EMPTY_STACK) continue;
-            if (predicate.test(itemStack)) {
-                return i;
-            }
-        }
-
-        // then main inventory
-        for (int i = 9; i < 36; i++) {
-            ItemStack itemStack = playerInventory.get(i);
-            if (itemStack == Container.EMPTY_STACK) continue;
-            if (predicate.test(itemStack)) {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    private int bestToolAgainst(Block against) {
-        int bestInd = -1;
-        double bestSpeed = -1;
-        List<ItemStack> playerInventory = CACHE.getPlayerCache().getPlayerInventory();
-        for (int i = 44; i >= 9; i--) {
-            ItemStack itemStack = playerInventory.get(i);
-            if (itemStack == Container.EMPTY_STACK) continue;
-//            if (Baritone.settings().itemSaver.value && (stack.getDamageValue() + Baritone.settings().itemSaverThreshold.value) >= stack.getMaxDamage() && stack.getMaxDamage() > 1) {
-//                continue;
-//            }
-            ItemData itemData = ItemRegistry.REGISTRY.get(itemStack.getId());
-            ToolTag toolTag = itemData.toolTag();
-            if (toolTag == null) continue;
-            if (toolTag.type() != ToolType.PICKAXE) continue;
-            double speed = MODULE.get(PlayerSimulation.class).getInteractions().blockBreakSpeed(against, itemStack);
-            if (speed > bestSpeed) {
-                bestSpeed = speed;
-                bestInd = i;
-            }
-        }
-        return bestInd;
     }
 
     public boolean hasGenericThrowaway() {
@@ -223,7 +176,11 @@ public class InventoryBehavior extends Behavior {
                 if (select) {
                     int hotbarIndex = i - 36;
                     if (CACHE.getPlayerCache().getHeldItemSlot() != hotbarIndex) {
-                        INVENTORY.invActionReq(this, ContainerClickAction.setCarriedItem(hotbarIndex), Baritone.MOVEMENT_PRIORITY);
+                        INVENTORY.submit(InventoryActionRequest.builder()
+                            .owner(this)
+                            .actions(new SetHeldItem(hotbarIndex))
+                            .priority(Baritone.MOVEMENT_PRIORITY)
+                            .build());
                     }
                 }
                 return true;
@@ -241,14 +198,22 @@ public class InventoryBehavior extends Behavior {
                 if (item == Container.EMPTY_STACK) {
                     int hotbarIndex = i - 36;
                     if (CACHE.getPlayerCache().getHeldItemSlot() != hotbarIndex) {
-                        INVENTORY.invActionReq(this, ContainerClickAction.setCarriedItem(hotbarIndex), Baritone.MOVEMENT_PRIORITY);
+                        INVENTORY.submit(InventoryActionRequest.builder()
+                            .owner(this)
+                            .actions(new SetHeldItem(hotbarIndex))
+                            .priority(Baritone.MOVEMENT_PRIORITY)
+                            .build());
                     }
                 } else {
                     ItemData itemData = ItemRegistry.REGISTRY.get(item.getId());
                     if (itemData.toolTag() != null && itemData.toolTag().type() == ToolType.PICKAXE) {
                         int hotbarIndex = i - 36;
                         if (CACHE.getPlayerCache().getHeldItemSlot() != hotbarIndex) {
-                            INVENTORY.invActionReq(this, ContainerClickAction.setCarriedItem(hotbarIndex), Baritone.MOVEMENT_PRIORITY);
+                            INVENTORY.submit(InventoryActionRequest.builder()
+                                .owner(this)
+                                .actions(new SetHeldItem(hotbarIndex))
+                                .priority(Baritone.MOVEMENT_PRIORITY)
+                                .build());
                         }
                         return true;
                     }
@@ -264,7 +229,11 @@ public class InventoryBehavior extends Behavior {
                     if (select) {
                         requestSwapWithHotBar(i, 7);
                         if (CACHE.getPlayerCache().getHeldItemSlot() != 7) {
-                            INVENTORY.invActionReq(this, ContainerClickAction.setCarriedItem(7), Baritone.MOVEMENT_PRIORITY);
+                            INVENTORY.submit(InventoryActionRequest.builder()
+                                .owner(this)
+                                .actions(new SetHeldItem(7))
+                                .priority(Baritone.MOVEMENT_PRIORITY)
+                                .build());
                         }
                     }
                     return true;

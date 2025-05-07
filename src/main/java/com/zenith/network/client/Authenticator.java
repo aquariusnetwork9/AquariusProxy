@@ -1,7 +1,7 @@
 package com.zenith.network.client;
 
 import com.google.gson.JsonObject;
-import com.zenith.event.proxy.MsaDeviceCodeLoginEvent;
+import com.zenith.event.client.MsaDeviceCodeLoginEvent;
 import com.zenith.util.WebBrowserHelper;
 import com.zenith.util.math.MathHelper;
 import lombok.Getter;
@@ -32,8 +32,8 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-import static com.zenith.Shared.*;
-import static com.zenith.util.Config.Authentication.AccountType.OFFLINE;
+import static com.zenith.Globals.*;
+import static com.zenith.util.config.Config.Authentication.AccountType.OFFLINE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 @Getter

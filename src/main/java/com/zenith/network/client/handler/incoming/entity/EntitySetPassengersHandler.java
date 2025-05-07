@@ -2,13 +2,13 @@ package com.zenith.network.client.handler.incoming.entity;
 
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundSetPassengersPacket;
 import org.jspecify.annotations.NonNull;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.CLIENT_LOG;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.CLIENT_LOG;
 
 public class EntitySetPassengersHandler implements ClientEventLoopPacketHandler<ClientboundSetPassengersPacket, ClientSession> {
     @Override

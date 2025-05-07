@@ -2,7 +2,7 @@ package com.zenith.mc.block;
 
 import java.util.List;
 
-import static com.zenith.Shared.BLOCK_DATA;
+import static com.zenith.Globals.BLOCK_DATA;
 
 /**
  * @param id palette blockstate id

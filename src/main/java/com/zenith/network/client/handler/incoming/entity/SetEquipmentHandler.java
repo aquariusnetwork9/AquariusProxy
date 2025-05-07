@@ -2,18 +2,17 @@ package com.zenith.network.client.handler.incoming.entity;
 
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.Equipment;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundSetEquipmentPacket;
 import org.jspecify.annotations.NonNull;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class SetEquipmentHandler implements ClientEventLoopPacketHandler<ClientboundSetEquipmentPacket, ClientSession> {
     @Override
     public boolean applyAsync(@NonNull ClientboundSetEquipmentPacket packet, @NonNull ClientSession session) {
         var entity = CACHE.getEntityCache().get(packet.getEntityId());
-        if (entity == null) return false;
         if (entity instanceof EntityLiving e) {
             var equipmentMap = e.getEquipment();
             var packetEquipment = packet.getEquipment();

@@ -1,9 +1,9 @@
 package com.zenith.terminal;
 
 import com.zenith.Proxy;
-import com.zenith.command.brigadier.CommandContext;
-import com.zenith.command.brigadier.CommandSource;
-import com.zenith.command.util.CommandOutputHelper;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandOutputHelper;
+import com.zenith.command.api.CommandSources;
 import com.zenith.terminal.logback.TerminalConsoleAppender;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
@@ -14,7 +14,7 @@ import org.jline.terminal.impl.DumbTerminal;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class TerminalManager {
     private LineReader lineReader;
@@ -46,26 +46,28 @@ public class TerminalManager {
                 new TerminalAutoCompletionWidget(lineReader);
             }
             TerminalConsoleAppender.setReader(lineReader);
-            var terminalThread = new Thread(interactiveRunnable, "ZenithProxy Terminal");
+            var terminalThread = new Thread(this::readTerminal, "ZenithProxy Terminal");
             terminalThread.setDaemon(true);
             terminal.handle(Terminal.Signal.INT, signal -> terminalThread.interrupt());
             terminalThread.start();
         }
     }
 
-    private final Runnable interactiveRunnable = () -> {
+    private void readTerminal() {
+        int eofCount = 0;
         while (true) {
             try {
-                String line;
-                try {
-                    line = lineReader.readLine("> ");
-                } catch (final EndOfFileException e) {
-                    continue;
-                }
+                String line = lineReader.readLine("> ");
                 if (line == null || line.isBlank()) {
                     continue;
                 }
                 handleTerminalCommand(line);
+                eofCount = 0;
+            } catch (final EndOfFileException e) {
+                if (eofCount++ > 20) {
+                    TERMINAL_LOG.warn("Detected misconfigured terminal input, disabling interactive terminal");
+                    return;
+                }
             } catch (final UserInterruptException e) {
                 // ignore. terminal is closing
                 TERMINAL_LOG.info("Exiting...");
@@ -88,9 +90,9 @@ public class TerminalManager {
     }
 
     private void executeDiscordCommand(final String command) {
-        final var commandContext = CommandContext.create(command, CommandSource.TERMINAL);
+        final var commandContext = CommandContext.create(command, CommandSources.TERMINAL);
         COMMAND.execute(commandContext);
-        if (CONFIG.interactiveTerminal.logToDiscord && !commandContext.isSensitiveInput()) CommandOutputHelper.logInputToDiscord(command, CommandSource.TERMINAL);
+        if (CONFIG.interactiveTerminal.logToDiscord && !commandContext.isSensitiveInput()) CommandOutputHelper.logInputToDiscord(command, CommandSources.TERMINAL);
         var embed = commandContext.getEmbed();
         if (CONFIG.interactiveTerminal.logToDiscord && DISCORD.isRunning() && !commandContext.isSensitiveInput()) {
             CommandOutputHelper.logEmbedOutputToDiscord(embed);

@@ -3,20 +3,15 @@ package com.zenith.module.impl;
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
 import com.zenith.cache.data.entity.EntityPlayer;
-import com.zenith.event.module.VisualRangeEnterEvent;
-import com.zenith.event.module.VisualRangeLeaveEvent;
-import com.zenith.event.module.VisualRangeLogoutEvent;
-import com.zenith.event.proxy.NewPlayerInVisualRangeEvent;
-import com.zenith.event.proxy.PlayerLeftVisualRangeEvent;
-import com.zenith.event.proxy.PlayerLogoutInVisualRangeEvent;
-import com.zenith.module.Module;
+import com.zenith.event.module.*;
+import com.zenith.module.api.Module;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandPacket;
 
 import java.time.Instant;
 import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class VisualRange extends Module {
 
@@ -25,9 +20,9 @@ public class VisualRange extends Module {
     @Override
     public List<EventConsumer<?>> registerEvents() {
         return List.of(
-            of(NewPlayerInVisualRangeEvent.class, this::handleNewPlayerInVisualRangeEvent),
-            of(PlayerLeftVisualRangeEvent.class, this::handlePlayerLeftVisualRangeEvent),
-            of(PlayerLogoutInVisualRangeEvent.class, this::handlePlayerLogoutInVisualRangeEvent),
+            of(ServerPlayerInVisualRangeEvent.class, this::handleNewPlayerInVisualRangeEvent),
+            of(ServerPlayerLeftVisualRangeEvent.class, this::handlePlayerLeftVisualRangeEvent),
+            of(ServerPlayerLogoutInVisualRangeEvent.class, this::handlePlayerLogoutInVisualRangeEvent),
             of(VisualRangeEnterEvent.class, this::enterWhisperHandler)
         );
     }
@@ -37,7 +32,7 @@ public class VisualRange extends Module {
         return CONFIG.client.extra.visualRange.enabled;
     }
 
-    public void handleNewPlayerInVisualRangeEvent(NewPlayerInVisualRangeEvent event) {
+    public void handleNewPlayerInVisualRangeEvent(ServerPlayerInVisualRangeEvent event) {
         var isFriend = PLAYER_LISTS.getFriendsList().contains(event.playerEntity().getUuid());
         if (CONFIG.client.extra.visualRange.replayRecording) {
             switch (CONFIG.client.extra.visualRange.replayRecordingMode) {
@@ -65,7 +60,7 @@ public class VisualRange extends Module {
         sendClientPacketAsync(new ServerboundChatCommandPacket("w " + event.playerEntry().getName() + " " + CONFIG.client.extra.visualRange.enterWhisperMessage));
     }
 
-    public void handlePlayerLeftVisualRangeEvent(final PlayerLeftVisualRangeEvent event) {
+    public void handlePlayerLeftVisualRangeEvent(final ServerPlayerLeftVisualRangeEvent event) {
         var isFriend = PLAYER_LISTS.getFriendsList().contains(event.playerEntity().getUuid());
         if (CONFIG.client.extra.visualRange.replayRecording) {
             switch (CONFIG.client.extra.visualRange.replayRecordingMode) {
@@ -118,7 +113,7 @@ public class VisualRange extends Module {
             .allMatch(entity -> entity.equals(CACHE.getPlayerCache().getThePlayer()));
     }
 
-    public void handlePlayerLogoutInVisualRangeEvent(final PlayerLogoutInVisualRangeEvent event) {
+    public void handlePlayerLogoutInVisualRangeEvent(final ServerPlayerLogoutInVisualRangeEvent event) {
         if (!CONFIG.client.extra.visualRange.logoutAlert) return;
         var isFriend = PLAYER_LISTS.getFriendsList().contains(event.playerEntity().getUuid());
         if (isFriend && CONFIG.client.extra.visualRange.ignoreFriends) {

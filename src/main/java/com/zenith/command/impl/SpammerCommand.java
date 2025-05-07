@@ -3,10 +3,10 @@ package com.zenith.command.impl;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import com.zenith.module.impl.Spammer;
 
@@ -15,8 +15,8 @@ import java.util.List;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 
@@ -144,11 +144,10 @@ public class SpammerCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
-        addListDescription(builder)
-            .description("""
+    public void defaultEmbed(final Embed builder) {
+        addListDescription(builder.description("""
                  **WARNING:** This module can and will get you muted on 2b2t or other servers. Use at your own risk.
-                 """)
+                 """))
             .addField("Spammer", toggleStr(CONFIG.client.extra.spammer.enabled), false)
             .addField("Whisper", toggleStr(CONFIG.client.extra.spammer.whisper), false)
             .addField("While Player Connected", toggleStr(CONFIG.client.extra.spammer.whilePlayerConnected), false)
@@ -163,6 +162,10 @@ public class SpammerCommand extends Command {
         for (int index = 0; index < CONFIG.client.extra.spammer.messages.size(); index++) {
             messages.add("`" + index + ":` " + CONFIG.client.extra.spammer.messages.get(index));
         }
-        return embedBuilder.description(String.join("\n", messages));
+        String str = String.join("\n", messages);
+        if (embedBuilder.isDescriptionPresent())
+            return embedBuilder.description(embedBuilder.description() + str);
+        else
+            return embedBuilder.description(str);
     }
 }

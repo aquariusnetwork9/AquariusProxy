@@ -2,16 +2,16 @@ package com.zenith.network.client.handler.incoming;
 
 import com.zenith.feature.api.sessionserver.SessionServerApi;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.PacketHandler;
-import com.zenith.util.Config;
+import com.zenith.network.codec.PacketHandler;
+import com.zenith.util.config.Config;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.ClientboundHelloPacket;
 import org.geysermc.mcprotocollib.protocol.packet.login.serverbound.ServerboundKeyPacket;
 
 import javax.crypto.SecretKey;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.EXECUTOR;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.EXECUTOR;
 import static com.zenith.util.DisconnectMessages.AUTH_REQUIRED;
 
 public class CHelloHandler implements PacketHandler<ClientboundHelloPacket, ClientSession> {

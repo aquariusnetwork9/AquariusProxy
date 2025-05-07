@@ -6,7 +6,7 @@ import org.jdbi.v3.core.Jdbi;
 
 import java.util.function.Supplier;
 
-import static com.zenith.Shared.DATABASE_LOG;
+import static com.zenith.Globals.DATABASE_LOG;
 
 public record QueryExecutor(Jdbi jdbi) {
     public void execute(final Supplier<HandleConsumer> queryProvider) {

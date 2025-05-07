@@ -2,18 +2,14 @@ package com.zenith.command.impl;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
-import com.zenith.command.brigadier.CommandSource;
+import com.zenith.command.api.*;
 
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.string;
-import static com.zenith.Shared.COMMAND;
+import static com.zenith.Globals.COMMAND;
 
 public class HelpCommand extends Command {
     @Override
@@ -38,7 +34,7 @@ public class HelpCommand extends Command {
                     .title("Commands")
                     .primaryColor();
                 final String commandUsages = getCommandUsages(c.getSource().getSource(), CommandCategory.CORE);
-                final String prefix = COMMAND.getCommandPrefix(c.getSource().getSource());
+                final String prefix = c.getSource().getSource().commandPrefix();
                 c.getSource().getEmbed()
                     .description("[Commands Wiki](https://github.com/rfresh2/ZenithProxy/wiki/Commands)\n\n"
                                      + "**More Info:** "
@@ -76,7 +72,7 @@ public class HelpCommand extends Command {
 
     private void populateCategory(final CommandContext c, final CommandCategory category) {
         final String commandUsages = getCommandUsages(c.getSource(), category);
-        final String prefix = COMMAND.getCommandPrefix(c.getSource());
+        final String prefix = c.getSource().commandPrefix();
         c.getEmbed()
             .description("[Commands Wiki](https://github.com/rfresh2/ZenithProxy/wiki/Commands)\n\n"
                              + "**More Info:** "

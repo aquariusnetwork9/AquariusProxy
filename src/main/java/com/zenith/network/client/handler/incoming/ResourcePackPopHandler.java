@@ -1,10 +1,10 @@
 package com.zenith.network.client.handler.incoming;
 
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.network.codec.PacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundResourcePackPopPacket;
 
-import static com.zenith.Shared.CACHE;
+import static com.zenith.Globals.CACHE;
 
 public class ResourcePackPopHandler implements PacketHandler<ClientboundResourcePackPopPacket, ClientSession> {
     public static final ResourcePackPopHandler INSTANCE = new ResourcePackPopHandler();

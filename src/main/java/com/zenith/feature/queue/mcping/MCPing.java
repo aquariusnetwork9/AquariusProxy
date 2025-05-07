@@ -2,7 +2,6 @@ package com.zenith.feature.queue.mcping;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.zenith.feature.queue.mcping.data.MCResponse;
 import com.zenith.feature.queue.mcping.rawData.Player;
 import com.zenith.feature.queue.mcping.rawData.Players;
@@ -10,7 +9,8 @@ import com.zenith.feature.queue.mcping.rawData.Version;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.dns.*;
 import io.netty.resolver.dns.DnsNameResolver;
@@ -22,7 +22,7 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 
-import static com.zenith.Shared.OBJECT_MAPPER;
+import static com.zenith.Globals.OBJECT_MAPPER;
 
 public class MCPing {
     public static final MCPing INSTANCE = new MCPing();
@@ -31,7 +31,7 @@ public class MCPing {
      */
     public static final int PROTOCOL_VERSION_DISCOVERY = -1;
     private static final String IP_REGEX = "\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b";
-    private static final EventLoopGroup EVENT_LOOP_GROUP = new NioEventLoopGroup(1, new ThreadFactoryBuilder().setNameFormat("MCPing-%d").build());
+    private static final EventLoopGroup EVENT_LOOP_GROUP = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
     private MCPing() {}
 
     public int getProtocolVersion(String hostname, int port, int timeout, boolean resolveDns) throws IOException {

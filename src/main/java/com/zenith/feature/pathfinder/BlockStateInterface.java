@@ -1,10 +1,10 @@
 package com.zenith.feature.pathfinder;
 
-import com.zenith.feature.world.World;
+import com.zenith.feature.player.World;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockPos;
 
-import static com.zenith.Shared.BLOCK_DATA;
+import static com.zenith.Globals.BLOCK_DATA;
 
 public class BlockStateInterface {
     public static final BlockStateInterface INSTANCE = new BlockStateInterface();

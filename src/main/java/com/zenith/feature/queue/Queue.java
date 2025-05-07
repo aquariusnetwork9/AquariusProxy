@@ -1,5 +1,6 @@
 package com.zenith.feature.queue;
 
+import com.zenith.Proxy;
 import com.zenith.feature.api.vcapi.VcApi;
 import com.zenith.feature.api.vcapi.model.QueueEtaEquationResponse;
 import com.zenith.feature.queue.mcping.MCPing;
@@ -15,13 +16,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class Queue {
     private static QueueStatus queueStatus = new QueueStatus(0, 0, 0);
     private static final Pattern digitPattern = Pattern.compile("\\d+");
     private volatile static Instant lastUpdate = Instant.EPOCH;
-    private static QueueEtaEquationResponse queueEtaEquation = new QueueEtaEquationResponse(343.0, 0.743);
+    private static QueueEtaEquationResponse queueEtaEquation = new QueueEtaEquationResponse(199.0, 0.758);
     private static Instant lastQueueEtaEquationUpdate = Instant.EPOCH;
 
     public static void start() {
@@ -141,5 +142,12 @@ public class Queue {
                 TimeUnit.MINUTES
             );
         }
+    }
+
+    public static String queuePositionStr() {
+        if (Proxy.getInstance().isPrio())
+            return Proxy.getInstance().getQueuePosition() + " / " + getQueueStatus().prio() + " - ETA: " + getQueueEta(Proxy.getInstance().getQueuePosition());
+        else
+            return Proxy.getInstance().getQueuePosition() + " / " + getQueueStatus().regular() + " - ETA: " + getQueueEta(Proxy.getInstance().getQueuePosition());
     }
 }

@@ -6,28 +6,33 @@ import com.viaversion.nbt.tag.CompoundTag;
 import com.viaversion.nbt.tag.IntTag;
 import com.viaversion.nbt.tag.ListTag;
 import com.viaversion.nbt.tag.Tag;
-import com.zenith.feature.world.World;
+import com.zenith.feature.player.World;
 import com.zenith.mc.block.BlockRegistry;
-import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.mc.item.ItemRegistry;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ReferenceSet;
 import org.cloudburstmc.math.vector.Vector3i;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.ChunkSection;
+import org.geysermc.mcprotocollib.protocol.data.game.chunk.DataPalette;
+import org.geysermc.mcprotocollib.protocol.data.game.chunk.palette.PaletteType;
+import org.geysermc.mcprotocollib.protocol.data.game.chunk.palette.SingletonPalette;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponent;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentType;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponents;
 import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockEntityInfo;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundLevelChunkWithLightPacket;
+import org.geysermc.mcprotocollib.protocol.data.game.level.particle.ItemParticleData;
+import org.geysermc.mcprotocollib.protocol.data.game.level.particle.Particle;
+import org.geysermc.mcprotocollib.protocol.data.game.level.particle.VibrationParticleData;
+import org.geysermc.mcprotocollib.protocol.data.game.level.particle.positionsource.BlockPositionSource;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.security.SecureRandom;
+import java.util.*;
 
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.SERVER_LOG;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.SERVER_LOG;
 
 /**
  * Important to deep copy all objects that are offset by this class
@@ -38,11 +43,18 @@ public record CoordOffset(
     int x,
     int z
 ) {
+    static final SecureRandom RANDOM = new SecureRandom();
+    public static final double EPSILON = 0.0001;
+    public double obfuscateDouble(double d) {
+        // obfuscate double precision to prevent possible exploits
+        // this will cause values to be slightly off, but not enough to be an issue
+        return d + RANDOM.nextDouble(-EPSILON, EPSILON);
+    }
     public int offsetX(final int x) {
         return x + (x() * 16);
     }
     public double offsetX(final double x) {
-        return x + (x() * 16);
+        return obfuscateDouble(x + (x() * 16));
     }
     public int offsetChunkX(final int x) {
         return x + x();
@@ -51,7 +63,7 @@ public record CoordOffset(
         return z + (z() * 16);
     }
     public double offsetZ(final double z) {
-        return z + (z() * 16);
+        return obfuscateDouble(z + (z() * 16));
     }
     public int offsetChunkZ(final int z) {
         return z + z();
@@ -79,22 +91,6 @@ public record CoordOffset(
     }
     public Vector3i reverseOffsetVector(final Vector3i vec) {
         return vec.sub(x() * 16, 0, z() * 16);
-    }
-    public int safeOffsetX(final int x) {
-        // todo: verify X is not near or at 0, 0
-        //  need a better way to check this
-        if (Math.abs(x) < 16) {
-            return x;
-        }
-        return offsetX(x);
-    }
-    public int safeOffsetZ(final int z) {
-        // todo: verify Z is not near or at 0, 0
-        //  need a better way to check this
-        if (Math.abs(z) < 16) {
-            return z;
-        }
-        return offsetZ(z);
     }
     public MNBT offsetNbt(final MNBT nbt) {
         try {
@@ -166,8 +162,7 @@ public record CoordOffset(
         DataComponentTypes.BLOCK_ENTITY_DATA,
         DataComponentTypes.LODESTONE_TRACKER,
         DataComponentTypes.CHARGED_PROJECTILES,
-        DataComponentTypes.BUNDLE_CONTENTS,
-        DataComponentTypes.CONTAINER // we could retain this but we'd need to recursively strip components from its itemstacks
+        DataComponentTypes.BUNDLE_CONTENTS
     );
 
     // 2b2t seems to remove most tags already but just to be safe
@@ -184,49 +179,112 @@ public record CoordOffset(
         }
         if (itemStack.getDataComponents() != null) {
             Map<DataComponentType<?>, DataComponent<?, ?>> components = new HashMap<>(itemStack.getDataComponents().getDataComponents());
-            components.entrySet()
-                .removeIf(entry ->
-                              componentsToStrip.contains(entry.getKey()));
-
+            for (var it = components.entrySet().iterator(); it.hasNext(); ) {
+                var entry = it.next();
+                if (componentsToStrip.contains(entry.getKey())) {
+                    it.remove();
+                    continue;
+                }
+                if (entry.getKey() == DataComponentTypes.CONTAINER) {
+                    var containerDataComponent = entry.getValue();
+                    var containerDataComponentValue = containerDataComponent.getValue();
+                    if (containerDataComponentValue != null) {
+                        var itemStacks = (List<ItemStack>) containerDataComponent.getValue();
+                        var copiedItemStacks = new ArrayList<ItemStack>(itemStacks.size());
+                        for (var itemStackValue : itemStacks) {
+                            // recursively sanitize item stacks in the container
+                            var newStack = sanitizeItemStack(itemStackValue);
+                            if (newStack != null) {
+                                copiedItemStacks.add(newStack);
+                            }
+                        }
+                        var newDataComponent = DataComponentTypes.CONTAINER.getDataComponentFactory()
+                            .create(DataComponentTypes.CONTAINER, copiedItemStacks);
+                        entry.setValue(newDataComponent);
+                    }
+                }
+            }
             return new ItemStack(itemStack.getId(), itemStack.getAmount(), new DataComponents(components));
         }
         return itemStack;
     }
 
-    public boolean shouldAddBedrockLayerToChunkData() {
-        DimensionData currentDimension = World.getCurrentDimension();
-        return CONFIG.client.extra.coordObfuscation.obfuscateBedrock && currentDimension != DimensionRegistry.THE_END;
-    }
-    // all of this is terribly inefficient with memory copies but seems unavoidable if we apply this at the packet handler
-    public ChunkSection[] addBedrockLayerToChunkData(final ClientboundLevelChunkWithLightPacket p) {
+    public ChunkSection[] obfuscateChunkSections(final ChunkSection[] originalSections) {
         var currentDimension = World.getCurrentDimension();
-        // generally this will always be true unless we're serving chunks from cache
-        // deep copy sections so we don't stomp on other sessions being sent this packet
-        var sections = p.getSections();
+        var shouldAddBedrockLayer = CONFIG.client.extra.coordObfuscation.obfuscateBedrock
+            && (currentDimension.id() == DimensionRegistry.OVERWORLD.id() || currentDimension.id() == DimensionRegistry.THE_NETHER.id());
+        var shouldReplaceBiomes = CONFIG.client.extra.coordObfuscation.obfuscateBiomes;
 
-        // set all blocks to bedrock within minY and minY + 5
-        var bottomSection = new ChunkSection(sections[0]);
-        sections[0] = bottomSection;
-        for (int x = 0; x < 16; x++) {
-            for (int z = 0; z < 16; z++) {
-                for (int y = 0; y < 5; y++) {
-                    bottomSection.setBlock(x, y, z, BlockRegistry.BEDROCK.minStateId());
-                }
-            }
-        }
-        if (currentDimension.id() == DimensionRegistry.THE_NETHER.id()) {
-            // set nether ceiling layers to bedrock
-            ChunkSection topSection = new ChunkSection(sections[7]);
-            sections[7] = topSection;
-            for (int x = 0; x < 16; x++) {
-                for (int z = 0; z < 16; z++) {
-                    for (int y = 11; y < 16; y++) {
-                        topSection.setBlock(x, y, z, BlockRegistry.BEDROCK.minStateId());
+        if (!shouldAddBedrockLayer && !shouldReplaceBiomes) return originalSections;
+
+        var nether = currentDimension.id() == DimensionRegistry.THE_NETHER.id();
+        // not a deep copy of the sections, only a shallow copy of the array
+        var sections = Arrays.copyOf(originalSections, originalSections.length);
+        for (int i = 0; i < sections.length; i++) {
+            var bedrockInThisSection = shouldAddBedrockLayer && (i == 0 || (nether && i == 7));
+            if (bedrockInThisSection || shouldReplaceBiomes) {
+                var newSection = new ChunkSection(sections[i]);
+                if (bedrockInThisSection) {
+                    if (i == 0) {
+                        for (int x = 0; x < 16; x++) {
+                            for (int z = 0; z < 16; z++) {
+                                for (int y = 0; y < 5; y++) {
+                                    newSection.setBlock(x, y, z, BlockRegistry.BEDROCK.minStateId());
+                                }
+                            }
+                        }
+                    } else if (nether && i == 7) {
+                        for (int x = 0; x < 16; x++) {
+                            for (int z = 0; z < 16; z++) {
+                                for (int y = 11; y < 16; y++) {
+                                    newSection.setBlock(x, y, z, BlockRegistry.BEDROCK.minStateId());
+                                }
+                            }
+                        }
                     }
                 }
+                if (shouldReplaceBiomes) {
+                    newSection.setBiomeData(defaultBiomePalette);
+                }
+                sections[i] = newSection;
             }
         }
-
         return sections;
+    }
+
+    public DataPalette[] obfuscateBiomePalettes(final DataPalette[] originalPalettes) {
+        if (!CONFIG.client.extra.coordObfuscation.obfuscateBiomes) return originalPalettes;
+        var palettes = new DataPalette[originalPalettes.length];
+        Arrays.fill(palettes, defaultBiomePalette);
+        return palettes;
+    }
+
+    static DataPalette defaultBiomePalette = new DataPalette(new SingletonPalette(39), null, PaletteType.BIOME);
+
+    public Particle offsetParticle(Particle particle) {
+        if (particle == null) return particle;
+        if (particle.getData() instanceof ItemParticleData itemParticleData) {
+            particle = new Particle(
+                particle.getType(),
+                new ItemParticleData(
+                    sanitizeItemStack(itemParticleData.getItemStack())
+                )
+            );
+        } else if (particle.getData() instanceof VibrationParticleData vibrationParticleData) {
+            var positionSrc = vibrationParticleData.getPositionSource();
+            if (positionSrc instanceof BlockPositionSource bps) {
+                positionSrc = new BlockPositionSource(
+                    offsetVector(bps.getPosition())
+                );
+            }
+            particle = new Particle(
+                particle.getType(),
+                new VibrationParticleData(
+                    positionSrc,
+                    vibrationParticleData.getArrivalTicks()
+                )
+            );
+        }
+        return particle;
     }
 }

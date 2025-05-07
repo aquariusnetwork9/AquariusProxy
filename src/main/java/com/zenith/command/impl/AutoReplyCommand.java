@@ -3,18 +3,18 @@ package com.zenith.command.impl;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
-import com.zenith.discord.DiscordBot;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import com.zenith.module.impl.AutoReply;
+import com.zenith.util.ChatUtil;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 
@@ -53,7 +53,7 @@ public class AutoReplyCommand extends Command {
                 return OK;
             })))
             .then(literal("message").then(argument("messageStr", greedyString()).executes(c -> {
-                String message = DiscordBot.sanitizeRelayInputMessage(StringArgumentType.getString(c, "messageStr"));
+                String message = ChatUtil.sanitizeChatMessage(StringArgumentType.getString(c, "messageStr"));
                 if (message.length() > 236)
                     message = message.substring(0, 236);
                 CONFIG.client.extra.autoReply.message = message;
@@ -64,7 +64,7 @@ public class AutoReplyCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("AutoReply", toggleStr(CONFIG.client.extra.autoReply.enabled), false)
             .addField("Cooldown Seconds", CONFIG.client.extra.autoReply.cooldownSeconds, false)

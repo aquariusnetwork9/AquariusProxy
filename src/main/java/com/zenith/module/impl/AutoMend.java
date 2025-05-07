@@ -1,7 +1,7 @@
 package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
-import com.zenith.event.module.ClientBotTick;
+import com.zenith.event.client.ClientBotTick;
 import com.zenith.mc.enchantment.EnchantmentRegistry;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
@@ -9,7 +9,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponen
 import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class AutoMend extends AbstractInventoryModule {
 

@@ -1,12 +1,12 @@
 package com.zenith.network.server.handler.shared.incoming;
 
 import com.zenith.network.UserAuthTask;
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ServerboundCookieResponsePacket;
 import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.ClientboundHelloPacket;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class SCookieResponseHandler implements PacketHandler<ServerboundCookieResponsePacket, ServerSession> {
     @Override

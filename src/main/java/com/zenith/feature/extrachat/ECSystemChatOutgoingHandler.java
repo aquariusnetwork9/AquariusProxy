@@ -1,6 +1,6 @@
 package com.zenith.feature.extrachat;
 
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import net.kyori.adventure.text.Component;
@@ -9,7 +9,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.Clientbound
 
 import java.util.Objects;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static java.util.Objects.nonNull;
 
 public class ECSystemChatOutgoingHandler implements PacketHandler<ClientboundSystemChatPacket, ServerSession> {

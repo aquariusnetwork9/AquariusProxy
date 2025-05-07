@@ -2,12 +2,12 @@ package com.zenith.network.client.handler.incoming;
 
 import com.zenith.Proxy;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.network.codec.PacketHandler;
 import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundTransferPacket;
 
-import static com.zenith.Shared.CLIENT_LOG;
-import static com.zenith.Shared.EXECUTOR;
+import static com.zenith.Globals.CLIENT_LOG;
+import static com.zenith.Globals.EXECUTOR;
 
 public class CTransferHandler implements PacketHandler<ClientboundTransferPacket, ClientSession> {
     @Override

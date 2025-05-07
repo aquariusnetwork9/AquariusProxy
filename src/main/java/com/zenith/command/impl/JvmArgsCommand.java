@@ -1,17 +1,17 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
-import static com.zenith.Shared.LAUNCH_CONFIG;
-import static com.zenith.Shared.saveLaunchConfig;
+import static com.zenith.Globals.LAUNCH_CONFIG;
+import static com.zenith.Globals.saveLaunchConfig;
 import static com.zenith.discord.DiscordBot.escape;
 
 public class JvmArgsCommand extends Command {

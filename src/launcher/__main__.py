@@ -9,9 +9,10 @@ import github_api
 import launch_platform
 from launch_config import LaunchConfig, read_launch_config_file
 from launcher import launcher_exec
-from setup import setup_execute, rescue_invalid_system
+from setup import setup_execute, rescue_invalid_system, setup_unattended
 from update_launcher import update_launcher_exec
 from update_zenith import update_zenith_exec
+from utils import critical_error
 
 ssl._create_default_https_context = lambda: ssl.create_default_context(cafile=certifi.where())
 
@@ -32,30 +33,43 @@ if launch_platform.is_pyinstaller_bundle():
 no_launcher_update = False
 # to go straight to setup and exit
 setup_only = False
+# Initialize configs from env variables
+unattended = False
 for arg in sys.argv:
     if arg == "--no-launcher-update":
         no_launcher_update = True
     if arg == "--setup":
         setup_only = True
+    if arg == "--unattended":
+        unattended = True
 
 if setup_only:
     setup_execute(config)
     sys.exit(0)
 
+if unattended:
+    setup_unattended(config)
+
 try:
     while True:
         json_data = read_launch_config_file()
         if json_data is None:
+            if unattended:
+                critical_error("launch_config.json not found and unattended setup is enabled")
             print("Running setup...")
             setup_execute(config)
             continue
         config.load_launch_config_data(json_data)
         if not config.validate_launch_config():
+            if unattended:
+                critical_error("launch_config.json has invalid values and unattended setup is enabled")
             print("launch_config.json has invalid values, running setup...")
             setup_execute(config)
             continue
         print("Loaded launch_config.json successfully")
         if not launch_platform.validate_system_with_config(config):
+            if unattended:
+                critical_error("System validation failed and unattended setup is enabled")
             rescue_invalid_system(config)
             continue
         if no_launcher_update:

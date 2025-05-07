@@ -1,8 +1,8 @@
 package com.zenith.docs;
 
-import com.zenith.Shared;
-import com.zenith.command.Command;
-import com.zenith.command.brigadier.CommandCategory;
+import com.zenith.Globals;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -16,7 +16,7 @@ public class CommandDocsGenerator {
 
     @Test
     public void generateDocs() {
-        var outputFile = new File("build/Commands.md");
+        var outputFile = new File("../build/Commands.md");
         if (outputFile.exists()) {
             outputFile.delete();
         }
@@ -31,7 +31,7 @@ public class CommandDocsGenerator {
         sb.append("N/A (e.g. `help`)").append("\n\n");
         var categoryOrder = asList(CommandCategory.CORE, CommandCategory.MANAGE, CommandCategory.INFO, CommandCategory.MODULE);
 
-        var commands = Shared.COMMAND.getCommands().stream()
+        var commands = Globals.COMMAND.getCommands().stream()
             .map(Command::commandUsage)
             .toList();
         categoryOrder.forEach(category -> {

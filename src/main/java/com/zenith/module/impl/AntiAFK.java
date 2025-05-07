@@ -2,21 +2,21 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.google.common.collect.Iterators;
-import com.zenith.event.module.ClientBotTick;
-import com.zenith.event.proxy.DeathEvent;
-import com.zenith.feature.world.*;
+import com.zenith.event.client.ClientBotTick;
+import com.zenith.event.client.ClientDeathEvent;
+import com.zenith.feature.player.*;
 import com.zenith.mc.block.BlockPos;
-import com.zenith.module.Module;
-import com.zenith.util.Timer;
-import com.zenith.util.Timers;
+import com.zenith.module.api.Module;
 import com.zenith.util.math.MathHelper;
+import com.zenith.util.timer.Timer;
+import com.zenith.util.timer.Timers;
 
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static java.util.Arrays.asList;
 
 public class AntiAFK extends Module {
@@ -44,7 +44,7 @@ public class AntiAFK extends Module {
             of(ClientBotTick.class, this::handleClientTickEvent),
             of(ClientBotTick.Starting.class, this::handleClientBotTickStarting),
             of(ClientBotTick.Stopped.class, this::handleClientBotTickStopped),
-            of(DeathEvent.class, this::handleDeathEvent)
+            of(ClientDeathEvent.class, this::handleDeathEvent)
         );
     }
 
@@ -75,14 +75,15 @@ public class AntiAFK extends Module {
 
     private void sneakTick() {
         INPUTS.submit(InputRequest.builder()
-                          .input(Input.builder()
-                                     .sneaking(true)
-                                     .build())
-                          .priority(MOVEMENT_PRIORITY - 1)
-                          .build());
+            .owner(this)
+            .input(Input.builder()
+                .sneaking(true)
+                .build())
+            .priority(MOVEMENT_PRIORITY - 1)
+            .build());
     }
 
-    public void handleDeathEvent(final DeathEvent event) {
+    public void handleDeathEvent(final ClientDeathEvent event) {
         synchronized (this) {
             reset();
         }
@@ -108,22 +109,24 @@ public class AntiAFK extends Module {
     private void rotateTick() {
         if (rotateTimer.tick(CONFIG.client.extra.antiafk.actions.rotateDelayTicks)) {
             INPUTS.submit(InputRequest.builder()
-                              .yaw(-180 + (360 * ThreadLocalRandom.current().nextFloat()))
-                              .pitch(-90 + (180 * ThreadLocalRandom.current().nextFloat()))
-                              .priority(MOVEMENT_PRIORITY - 1)
-                              .build());
+                .owner(this)
+                .yaw(-180 + (360 * ThreadLocalRandom.current().nextFloat()))
+                .pitch(-90 + (180 * ThreadLocalRandom.current().nextFloat()))
+                .priority(MOVEMENT_PRIORITY - 1)
+                .build());
         }
     }
 
     private void jumpTick() {
         if (jumpTimer.tick(CONFIG.client.extra.antiafk.actions.jumpDelayTicks)) {
-            if (CONFIG.client.extra.antiafk.actions.jumpOnlyInWater && !MODULE.get(PlayerSimulation.class).isTouchingWater()) return;
+            if (CONFIG.client.extra.antiafk.actions.jumpOnlyInWater && !BOT.isTouchingWater()) return;
             INPUTS.submit(InputRequest.builder()
-                              .input(Input.builder()
-                                         .jumping(true)
-                                         .build())
-                              .priority(MOVEMENT_PRIORITY + 1)
-                              .build());
+                .owner(this)
+                .input(Input.builder()
+                    .jumping(true)
+                    .build())
+                .priority(MOVEMENT_PRIORITY + 1)
+                .build());
         }
     }
 
@@ -143,16 +146,17 @@ public class AntiAFK extends Module {
             if (reachedPathingGoal()) {
                 shouldWalk = false;
             } else {
-                var shouldSneak = !MODULE.get(PlayerSimulation.class).isTouchingWater()
+                var shouldSneak = !BOT.isTouchingWater()
                     && (CONFIG.client.extra.antiafk.actions.safeWalk || CONFIG.client.extra.antiafk.actions.sneak);
                 INPUTS.submit(InputRequest.builder()
-                                  .input(Input.builder()
-                                             .pressingForward(true)
-                                             .sneaking(shouldSneak)
-                                             .build())
-                                  .yaw(RotationHelper.yawToXZ(currentPathingGoal.x() + 0.5, currentPathingGoal.z() + 0.5))
-                                  .priority(MOVEMENT_PRIORITY)
-                                  .build());
+                    .owner(this)
+                    .input(Input.builder()
+                        .pressingForward(true)
+                        .sneaking(shouldSneak)
+                        .build())
+                    .yaw(RotationHelper.yawToXZ(currentPathingGoal.x() + 0.5, currentPathingGoal.z() + 0.5))
+                    .priority(MOVEMENT_PRIORITY)
+                    .build());
             }
         }
     }
@@ -168,13 +172,14 @@ public class AntiAFK extends Module {
             // todo: add a way to request a swing without requiring movement to be stopped
             //  would need some way to mark this input as partial, and logic for combining inputs
             INPUTS.submit(InputRequest.builder()
-                              .input(Input.builder()
-                                         .leftClick(true)
-                                         .clickTarget(ClickTarget.None.INSTANCE)
-                                         .sneaking((CONFIG.client.extra.antiafk.actions.walk && CONFIG.client.extra.antiafk.actions.safeWalk) || CONFIG.client.extra.antiafk.actions.sneak)
-                                         .build())
-                              .priority(MOVEMENT_PRIORITY * 10)
-                              .build());
+                .owner(this)
+                .input(Input.builder()
+                    .leftClick(true)
+                    .clickTarget(ClickTarget.None.INSTANCE)
+                    .sneaking((CONFIG.client.extra.antiafk.actions.walk && CONFIG.client.extra.antiafk.actions.safeWalk) || CONFIG.client.extra.antiafk.actions.sneak)
+                    .build())
+                .priority(MOVEMENT_PRIORITY * 10)
+                .build());
         }
     }
 

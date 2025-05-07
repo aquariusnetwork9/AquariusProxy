@@ -1,21 +1,21 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import com.zenith.module.impl.ReplayMod;
-import com.zenith.util.Config.Client.Extra.ReplayMod.AutoRecordMode;
+import com.zenith.util.config.Config.Client.Extra.ReplayMod.AutoRecordMode;
 
 import java.util.Arrays;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 
@@ -98,7 +98,7 @@ public class ReplayCommand extends Command {
                 return OK;
             })))
             .then(literal("autoRecord")
-                      .then(literal("mode").then(argument("mode", enumStrings(AutoRecordMode.values())).executes(c -> {
+                      .then(literal("mode").then(argument("mode", enumStrings(AutoRecordMode.names())).executes(c -> {
                           var modeStr = getString(c, "mode").toLowerCase();
                           var foundMode = Arrays.stream(AutoRecordMode.values())
                               .filter(mode -> mode.getName().toLowerCase().equals(modeStr))
@@ -106,7 +106,7 @@ public class ReplayCommand extends Command {
                           if (foundMode.isEmpty()) {
                               c.getSource().getEmbed()
                                   .title("Invalid Mode")
-                                  .description("Available Modes: " + Arrays.toString(AutoRecordMode.values()));
+                                  .description("Available Modes: " + Arrays.toString(AutoRecordMode.names()));
                               return OK;
                           } else {
                               MODULE.get(ReplayMod.class).disable();
@@ -125,7 +125,7 @@ public class ReplayCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed embed) {
+    public void defaultEmbed(final Embed embed) {
         embed
             .primaryColor()
             .addField("Discord Upload", toggleStr(CONFIG.client.extra.replayMod.sendRecordingsToDiscord), false)

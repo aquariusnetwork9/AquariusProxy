@@ -1,17 +1,17 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import com.zenith.module.impl.ActionLimiter;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 
@@ -43,7 +43,8 @@ public class ActionLimiterCommand extends Command {
                 "allowUseItem on/off",
                 "allowBookSigning on/off",
                 "allowChat on/off",
-                "allowServerCommands on/off"
+                "allowServerCommands on/off",
+                "allowRespawn on/off"
             )
             .aliases(
                 "al"
@@ -94,11 +95,14 @@ public class ActionLimiterCommand extends Command {
             })))
             .then(literal("allowServerCommands").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.actionLimiter.allowServerCommands = getToggle(c, "toggle");
+            })))
+            .then(literal("allowRespawn").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.actionLimiter.allowRespawn = getToggle(c, "toggle");
             })));
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .title("Action Limiter")
             .addField("Action Limiter", toggleStr(CONFIG.client.extra.actionLimiter.enabled))
@@ -114,6 +118,7 @@ public class ActionLimiterCommand extends Command {
             .addField("Allow Book Signing", toggleStr(CONFIG.client.extra.actionLimiter.allowBookSigning))
             .addField("Allow Chat", toggleStr(CONFIG.client.extra.actionLimiter.allowChat))
             .addField("Allow Server Commands", toggleStr(CONFIG.client.extra.actionLimiter.allowServerCommands))
+            .addField("Allow Respawn", toggleStr(CONFIG.client.extra.actionLimiter.allowRespawn))
             .primaryColor();
     }
 }

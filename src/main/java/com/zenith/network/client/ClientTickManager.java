@@ -1,20 +1,20 @@
 package com.zenith.network.client;
 
 import com.zenith.Proxy;
-import com.zenith.event.module.ClientBotTick;
-import com.zenith.event.module.ClientTickEvent;
-import com.zenith.event.proxy.DisconnectEvent;
-import com.zenith.event.proxy.PlayerOnlineEvent;
-import com.zenith.event.proxy.ProxyClientConnectedEvent;
-import com.zenith.event.proxy.ProxyClientDisconnectedEvent;
+import com.zenith.event.client.ClientBotTick;
+import com.zenith.event.client.ClientDisconnectEvent;
+import com.zenith.event.client.ClientOnlineEvent;
+import com.zenith.event.client.ClientTickEvent;
+import com.zenith.event.player.PlayerConnectedEvent;
+import com.zenith.event.player.PlayerDisconnectedEvent;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.CLIENT_LOG;
-import static com.zenith.Shared.EVENT_BUS;
+import static com.zenith.Globals.CLIENT_LOG;
+import static com.zenith.Globals.EVENT_BUS;
 import static java.util.Objects.nonNull;
 
 public class ClientTickManager {
@@ -24,14 +24,14 @@ public class ClientTickManager {
     public ClientTickManager() {
         EVENT_BUS.subscribe(
             this,
-            of(PlayerOnlineEvent.class, this::handlePlayerOnlineEvent),
-            of(ProxyClientConnectedEvent.class, this::handleProxyClientConnectedEvent),
-            of(ProxyClientDisconnectedEvent.class, this::handleProxyClientDisconnectedEvent),
-            of(DisconnectEvent.class, this::handleDisconnectEvent)
+            of(ClientOnlineEvent.class, this::handlePlayerOnlineEvent),
+            of(PlayerConnectedEvent.class, this::handleProxyClientConnectedEvent),
+            of(PlayerDisconnectedEvent.class, this::handleProxyClientDisconnectedEvent),
+            of(ClientDisconnectEvent.class, this::handleDisconnectEvent)
         );
     }
 
-    public void handlePlayerOnlineEvent(final PlayerOnlineEvent event) {
+    public void handlePlayerOnlineEvent(final ClientOnlineEvent event) {
         Proxy.getInstance().getClient().executeInEventLoop(() -> {
             if (!Proxy.getInstance().hasActivePlayer()) {
                 startBotTicks();
@@ -39,17 +39,17 @@ public class ClientTickManager {
         });
     }
 
-    public void handleDisconnectEvent(final DisconnectEvent event) {
+    public void handleDisconnectEvent(final ClientDisconnectEvent event) {
         stopBotTicks();
     }
 
-    public void handleProxyClientConnectedEvent(final ProxyClientConnectedEvent event) {
+    public void handleProxyClientConnectedEvent(final PlayerConnectedEvent event) {
         Proxy.getInstance().getClient().executeInEventLoop(() -> {
             stopBotTicks();
         });
     }
 
-    public void handleProxyClientDisconnectedEvent(final ProxyClientDisconnectedEvent event) {
+    public void handleProxyClientDisconnectedEvent(final PlayerDisconnectedEvent event) {
         Proxy.getInstance().getClient().executeInEventLoop(() -> {
             if (nonNull(Proxy.getInstance().getClient()) && Proxy.getInstance().getClient().isOnline()) {
                 startBotTicks();
@@ -62,7 +62,7 @@ public class ClientTickManager {
             CLIENT_LOG.debug("Starting Client Ticks");
             EVENT_BUS.post(ClientTickEvent.Starting.INSTANCE);
             var eventLoop = Proxy.getInstance().getClient().getClientEventLoop();
-            this.clientTickFuture = eventLoop.scheduleWithFixedDelay(tickRunnable, 0, 50, TimeUnit.MILLISECONDS);
+            this.clientTickFuture = eventLoop.scheduleWithFixedDelay(this::tick, 0, 50, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -70,7 +70,7 @@ public class ClientTickManager {
     private static final long LONG_TICK_WARNING_INTERVAL_MS = TimeUnit.SECONDS.toMillis(60);
     private long lastLongTickWarning = 0L;
 
-    private final Runnable tickRunnable = () -> {
+    private void tick() {
         try {
             long before = System.currentTimeMillis();
             EVENT_BUS.post(ClientTickEvent.INSTANCE);

@@ -1,11 +1,11 @@
 package com.zenith.network.server.handler.player.incoming;
 
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 import org.jspecify.annotations.NonNull;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class ChatHandler implements PacketHandler<ServerboundChatPacket, ServerSession> {
     @Override

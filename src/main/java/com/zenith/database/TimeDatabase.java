@@ -1,7 +1,7 @@
 package com.zenith.database;
 
-import com.zenith.event.proxy.DatabaseTickEvent;
-import com.zenith.feature.world.World;
+import com.zenith.event.db.DatabaseTickEvent;
+import com.zenith.feature.player.World;
 import com.zenith.mc.dimension.DimensionRegistry;
 
 import java.time.Instant;
@@ -10,7 +10,7 @@ import java.time.ZoneOffset;
 import java.util.concurrent.TimeUnit;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class TimeDatabase extends LockingDatabase {
     public TimeDatabase(final QueryExecutor queryExecutor, final RedisClient redisClient) {

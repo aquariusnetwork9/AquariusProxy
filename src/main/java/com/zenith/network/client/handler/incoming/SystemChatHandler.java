@@ -1,16 +1,16 @@
 package com.zenith.network.client.handler.incoming;
 
 import com.zenith.Proxy;
-import com.zenith.event.proxy.QueueSkipEvent;
-import com.zenith.event.proxy.SelfDeathMessageEvent;
-import com.zenith.event.proxy.chat.DeathMessageChatEvent;
-import com.zenith.event.proxy.chat.PublicChatEvent;
-import com.zenith.event.proxy.chat.SystemChatEvent;
-import com.zenith.event.proxy.chat.WhisperChatEvent;
+import com.zenith.event.chat.DeathMessageChatEvent;
+import com.zenith.event.chat.PublicChatEvent;
+import com.zenith.event.chat.SystemChatEvent;
+import com.zenith.event.chat.WhisperChatEvent;
+import com.zenith.event.queue.QueueSkipEvent;
+import com.zenith.event.server.ClientDeathMessageEvent;
 import com.zenith.feature.deathmessages.DeathMessageParseResult;
 import com.zenith.feature.deathmessages.DeathMessagesParser;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import com.zenith.util.ComponentSerializer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -21,7 +21,7 @@ import org.jspecify.annotations.NonNull;
 import java.util.Objects;
 import java.util.Optional;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static java.util.Objects.nonNull;
 
 public class SystemChatHandler implements ClientEventLoopPacketHandler<ClientboundSystemChatPacket, ClientSession> {
@@ -32,9 +32,14 @@ public class SystemChatHandler implements ClientEventLoopPacketHandler<Clientbou
     public boolean applyAsync(@NonNull ClientboundSystemChatPacket packet, @NonNull ClientSession session) {
         try {
             if (CONFIG.client.extra.logChatMessages) {
-                String serializedChat = ComponentSerializer.serializeJson(packet.getContent());
-                if (Proxy.getInstance().isInQueue()) serializedChat = serializedChat.replace("\\n\\n", "");
-                CHAT_LOG.info(serializedChat);
+                var component = packet.getContent();
+                if (Proxy.getInstance().isInQueue()) {
+                    component = component.replaceText(b -> b
+                        .matchLiteral("\n\n")
+                        .replacement("")
+                    );
+                }
+                CHAT_LOG.info(component);
             }
             final Component component = packet.getContent();
             final String messageString = ComponentSerializer.serializePlain(component);
@@ -88,7 +93,7 @@ public class SystemChatHandler implements ClientEventLoopPacketHandler<Clientbou
             deathMessage = deathMessagesHelper.parse(component, messageString);
             if (deathMessage.isPresent()) {
                 if (deathMessage.get().victim().equals(CACHE.getProfileCache().getProfile().getName())) {
-                    EVENT_BUS.postAsync(new SelfDeathMessageEvent(messageString));
+                    EVENT_BUS.postAsync(new ClientDeathMessageEvent(messageString));
                 }
             } else {
                 CLIENT_LOG.warn("Failed to parse death message: {}", messageString);

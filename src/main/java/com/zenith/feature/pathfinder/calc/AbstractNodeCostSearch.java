@@ -8,7 +8,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 import java.util.Optional;
 
-import static com.zenith.Shared.PATH_LOG;
+import static com.zenith.Globals.PATH_LOG;
 
 public abstract class AbstractNodeCostSearch {
     protected final BlockPos realStart;

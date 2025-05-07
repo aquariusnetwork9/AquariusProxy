@@ -2,19 +2,19 @@ package com.zenith.mc.entity;
 
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.mc.block.LocalizedCollisionBox;
-import com.zenith.util.Maps;
+import com.zenith.util.struct.Maps;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 
 public class EntityDataManager {
-    private final Reference2ObjectMap<EntityType, EntityData> entityTypeToData = new Reference2ObjectOpenHashMap<>(EntityRegistry.REGISTRY.size(), Maps.FAST_LOAD_FACTOR);
+    private static final Reference2ObjectMap<EntityType, EntityData> entityTypeToData = new Reference2ObjectOpenHashMap<>(EntityRegistry.REGISTRY.size(), Maps.FAST_LOAD_FACTOR);
 
-    public EntityDataManager() {
+    static {
         init();
     }
 
-    private void init() {
+    private static void init() {
         for (var entry : EntityRegistry.REGISTRY.getIdMap().int2ObjectEntrySet()) {
             var entity = entry.getValue();
             entityTypeToData.put(entity.mcplType(), entity);

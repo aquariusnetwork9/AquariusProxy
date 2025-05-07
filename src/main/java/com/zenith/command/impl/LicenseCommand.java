@@ -1,12 +1,12 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 
-import static com.zenith.Shared.LAUNCH_CONFIG;
+import static com.zenith.Globals.LAUNCH_CONFIG;
 
 public class LicenseCommand extends Command {
     @Override
@@ -25,7 +25,7 @@ public class LicenseCommand extends Command {
                 .getEmbed()
                 .title("ZenithProxy License Info")
                 .description("""
-                    ZenithProxy is licensed under [the GNU Affero General Public License](https://github.com/rfresh2/ZenithProxy/blob/1.21.0/licenses/AGPL.md).
+                    ZenithProxy is licensed under [the GNU Affero General Public License](https://www.gnu.org/licenses/agpl-3.0.en.html).
                     
                     This means that you are free to use, modify, and distribute ZenithProxy (including hosting as a free or paid service) as long as:
                     1. You make the source code available to users

@@ -6,7 +6,7 @@ import com.zenith.util.Wait;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static com.zenith.Shared.DEFAULT_LOG;
+import static com.zenith.Globals.DEFAULT_LOG;
 
 public class ConnectConcurrencyTest {
 

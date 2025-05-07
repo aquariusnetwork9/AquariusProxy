@@ -15,7 +15,7 @@ public class MinetoolsApi extends Api {
     }
 
     public Optional<MinetoolsUuidResponse> getProfileFromUsername(final String username) {
-        return get("/uuid/" + username, MinetoolsUuidResponse.class);
+        return get("/uuid/" + username, MinetoolsUuidResponse.class).filter(r -> !"ERR".equals(r.status()));
     }
 
     public Optional<MinetoolsProfileResponse> getProfileFromUUID(final UUID uuid) {

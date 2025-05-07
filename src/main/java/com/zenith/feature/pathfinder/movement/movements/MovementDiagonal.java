@@ -5,16 +5,16 @@ import com.zenith.feature.pathfinder.BlockStateInterface;
 import com.zenith.feature.pathfinder.MutableMoveResult;
 import com.zenith.feature.pathfinder.PathInput;
 import com.zenith.feature.pathfinder.movement.*;
-import com.zenith.feature.world.World;
+import com.zenith.feature.player.Bot;
+import com.zenith.feature.player.World;
 import com.zenith.mc.block.*;
-import com.zenith.module.impl.PlayerSimulation;
 import com.zenith.util.math.MathHelper;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 import static com.zenith.feature.pathfinder.movement.ActionCosts.*;
 
 public class MovementDiagonal extends Movement {
@@ -37,7 +37,7 @@ public class MovementDiagonal extends Movement {
     protected boolean safeToCancel(MovementState state) {
         //too simple. backfill does not work after cornering with this
         //return context.precomputedData.canWalkOn(ctx, ctx.playerFeet().down());
-        PlayerSimulation player = ctx.player();
+        Bot player = ctx.player();
         double offset = 0.25;
         double x = player.getX();
         double y = player.getY() - 1;

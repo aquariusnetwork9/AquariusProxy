@@ -4,12 +4,12 @@ import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.cache.data.entity.PotionEffect;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.ClientEventLoopPacketHandler;
+import com.zenith.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundUpdateMobEffectPacket;
 import org.jspecify.annotations.NonNull;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.CLIENT_LOG;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.CLIENT_LOG;
 
 public class UpdateMobEffectHandler implements ClientEventLoopPacketHandler<ClientboundUpdateMobEffectPacket, ClientSession> {
     @Override
@@ -28,11 +28,11 @@ public class UpdateMobEffectHandler implements ClientEventLoopPacketHandler<Clie
                 ));
             } else {
                 CLIENT_LOG.debug("Received ServerEntityEffectPacket for invalid entity (id={})", packet.getEntityId());
-                return false;
+                return true;
             }
         } catch (ClassCastException e)  {
             CLIENT_LOG.debug("Received ServerEntityEffectPacket for non-equipment entity (id={})", packet.getEntityId(), e);
-            return false;
+            return true;
         }
         return true;
     }

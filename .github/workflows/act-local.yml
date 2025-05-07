@@ -17,7 +17,7 @@ jobs:
       - name: Setup GraalVM
         uses: graalvm/setup-graalvm@v1
         with:
-          java-version: '23'
+          java-version: '24'
           distribution: 'graalvm'
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -46,8 +46,8 @@ jobs:
 
       - name: Download GraalVM Profile
         run: |
-          wget https://cdn.2b2t.vc/baritone.iprof
-          echo "GRAALVM_PGO_PATH=$(pwd)/baritone.iprof" >> "$GITHUB_ENV"
+          wget https://cdn.2b2t.vc/profile.iprof
+          echo "GRAALVM_PGO_PATH=$(pwd)/profile.iprof" >> "$GITHUB_ENV"
 
       #      - name: Enable GraalVM Profile Instrumenting
       #        run: |

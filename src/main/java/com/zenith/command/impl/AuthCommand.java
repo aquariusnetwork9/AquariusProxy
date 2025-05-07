@@ -2,16 +2,12 @@ package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
-import com.zenith.command.brigadier.CommandSource;
+import com.zenith.command.api.*;
 import com.zenith.discord.Embed;
-import com.zenith.util.Config;
+import com.zenith.util.config.Config;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
@@ -181,15 +177,15 @@ public class AuthCommand extends Command {
     }
 
     private boolean validateTerminalSource(CommandContext c) {
-        return Command.validateCommandSource(c, CommandSource.TERMINAL);
+        return Command.validateCommandSource(c, CommandSources.TERMINAL);
     }
 
     private boolean validateDiscordOrTerminalSource(CommandContext c) {
-        return Command.validateCommandSource(c, asList(CommandSource.TERMINAL, CommandSource.DISCORD));
+        return Command.validateCommandSource(c, asList(CommandSources.TERMINAL, CommandSources.DISCORD));
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("Account Type", authTypeToString(CONFIG.authentication.accountType), false)
             .addField("Attempts", CONFIG.authentication.msaLoginAttemptsBeforeCacheWipe, false)

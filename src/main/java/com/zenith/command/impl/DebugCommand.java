@@ -4,17 +4,17 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
 import com.zenith.cache.data.PlayerCache;
 import com.zenith.cache.data.chunk.ChunkCache;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import org.geysermc.mcprotocollib.protocol.codec.MinecraftTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundRemoveMobEffectPacket;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.CONFIG;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
@@ -40,7 +40,6 @@ public class DebugCommand extends Command {
                 "packetLog filter <string>",
                 "kickDisconnect on/off",
                 "dc",
-                "ncpStrictInventory on/off",
                 "debugLogs on/off",
                 "chunkCacheFullbright on/off"
             )
@@ -142,12 +141,6 @@ public class DebugCommand extends Command {
                 c.getSource().setNoOutput(true);
                 Proxy.getInstance().kickDisconnect(MANUAL_DISCONNECT, null);
             }))
-            .then(literal("ncpStrictInventory").then(argument("toggle", toggle()).executes(c -> {
-                CONFIG.debug.ncpStrictInventory = getToggle(c, "toggle");
-                c.getSource().getEmbed()
-                    .title("NCP Strict Inventory " + toggleStrCaps(CONFIG.debug.ncpStrictInventory));
-                return OK;
-            })))
             .then(literal("debugLogs").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.debug.debugLogs = getToggle(c, "toggle");
                 c.getSource().getEmbed()
@@ -155,9 +148,9 @@ public class DebugCommand extends Command {
                 return OK;
             })))
             .then(literal("chunkCacheFullbright").then(argument("toggle", toggle()).executes(c -> {
-                CONFIG.debug.server.cache.fullbrightChunkSkylight = getToggle(c, "toggle");
+                CONFIG.debug.server.cache.fullbrightChunkBlocklight = getToggle(c, "toggle");
                 c.getSource().getEmbed()
-                    .title("Chunk Cache Fullbright " + toggleStrCaps(CONFIG.debug.server.cache.fullbrightChunkSkylight));
+                    .title("Chunk Cache Fullbright " + toggleStrCaps(CONFIG.debug.server.cache.fullbrightChunkBlocklight));
                 return OK;
             })))
             .then(literal("binaryNbtComponentSerializer").then(argument("toggle", toggle()).executes(c -> {
@@ -169,16 +162,15 @@ public class DebugCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("Packet Log", toggleStr(CONFIG.debug.packetLog.enabled), false)
             .addField("Client Packet Log", toggleStr(CONFIG.debug.packetLog.clientPacketLog.received), false)
             .addField("Server Packet Log", toggleStr(CONFIG.debug.packetLog.serverPacketLog.received), false)
             .addField("Packet Log Filter", CONFIG.debug.packetLog.packetFilter, false)
             .addField("Kick Disconnect", toggleStr(CONFIG.debug.kickDisconnect), false)
-            .addField("NCP Strict Inventory", toggleStr(CONFIG.debug.ncpStrictInventory), false)
             .addField("Debug Logs", toggleStr(CONFIG.debug.debugLogs), false)
-            .addField("Chunk Cache Fullbright", toggleStr(CONFIG.debug.server.cache.fullbrightChunkSkylight), false)
+            .addField("Chunk Cache Fullbright", toggleStr(CONFIG.debug.server.cache.fullbrightChunkBlocklight), false)
             .primaryColor();
     }
 }

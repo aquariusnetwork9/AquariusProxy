@@ -1,11 +1,7 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
-import com.zenith.command.brigadier.CommandSource;
+import com.zenith.command.api.*;
 import com.zenith.discord.Embed;
 import com.zenith.util.MentionUtil;
 import net.dv8tion.jda.api.JDABuilder;
@@ -16,7 +12,7 @@ import net.dv8tion.jda.internal.utils.ShutdownReason;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
@@ -56,7 +52,7 @@ public class DiscordManageCommand extends Command {
     public LiteralArgumentBuilder<CommandContext> register() {
         return command("discord")
             .requires(Command::validateAccountOwner)
-            .requires(c -> Command.validateCommandSource(c, asList(CommandSource.DISCORD, CommandSource.TERMINAL)))
+            .requires(c -> Command.validateCommandSource(c, asList(CommandSources.DISCORD, CommandSources.TERMINAL)))
             .then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.discord.enable = getToggle(c, "toggle");
                 c.getSource().getEmbed()
@@ -200,11 +196,11 @@ public class DiscordManageCommand extends Command {
     }
 
     private static boolean validateTerminalSource(CommandContext c) {
-        return Command.validateCommandSource(c, CommandSource.TERMINAL);
+        return Command.validateCommandSource(c, CommandSources.TERMINAL);
     }
 
     @Override
-    public void postPopulate(final Embed builder) {
+    public void defaultEmbed(final Embed builder) {
         builder
             .addField("Discord Bot", toggleStr(CONFIG.discord.enable) + " (" + DISCORD.getJdaStatus() + ")", false)
             .addField("Relay", toggleStr(CONFIG.discord.chatRelay.enable), false)

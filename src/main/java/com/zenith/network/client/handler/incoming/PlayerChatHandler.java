@@ -1,9 +1,9 @@
 package com.zenith.network.client.handler.incoming;
 
-import com.zenith.event.proxy.chat.PublicChatEvent;
-import com.zenith.event.proxy.chat.WhisperChatEvent;
+import com.zenith.event.chat.PublicChatEvent;
+import com.zenith.event.chat.WhisperChatEvent;
 import com.zenith.network.client.ClientSession;
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.network.codec.PacketHandler;
 import com.zenith.util.ComponentSerializer;
 import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
@@ -11,7 +11,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.Clientbound
 
 import java.util.Optional;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class PlayerChatHandler implements PacketHandler<ClientboundPlayerChatPacket, ClientSession> {
 
@@ -26,7 +26,7 @@ public class PlayerChatHandler implements PacketHandler<ClientboundPlayerChatPac
                 packet.getUnsignedContent(),
                 packet.getTargetName());
             if (CONFIG.client.extra.logChatMessages) {
-                CLIENT_LOG.info("{}", ComponentSerializer.serializeJson(chatComponent));
+                CLIENT_LOG.info(chatComponent);
             }
             boolean isWhisper = false;
             Optional<PlayerListEntry> whisperTarget = Optional.empty();

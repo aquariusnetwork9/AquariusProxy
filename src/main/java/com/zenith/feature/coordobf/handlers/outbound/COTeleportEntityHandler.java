@@ -1,26 +1,33 @@
 package com.zenith.feature.coordobf.handlers.outbound;
 
-import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityStandard;
-import com.zenith.module.impl.CoordObfuscator;
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.module.impl.CoordObfuscation;
+import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundTeleportEntityPacket;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.MODULE;
 
 public class COTeleportEntityHandler implements PacketHandler<ClientboundTeleportEntityPacket, ServerSession> {
     @Override
     public ClientboundTeleportEntityPacket apply(final ClientboundTeleportEntityPacket packet, final ServerSession session) {
-        Entity entity = CACHE.getEntityCache().get(packet.getId());
+        var coordObf = MODULE.get(CoordObfuscation.class);
+        var entity = CACHE.getEntityCache().get(packet.getId());
+        if (entity == null && !coordObf.getSpectatorEntityIds().contains(packet.getId())) {
+            return null;
+        }
         if (entity instanceof EntityStandard e) {
             if (e.getEntityType() == EntityType.EYE_OF_ENDER) {
                 return null;
             }
         }
-        CoordObfuscator coordObf = MODULE.get(CoordObfuscator.class);
+
+        if (entity != null && !entity.getPassengerIds().isEmpty()
+            && entity.getPassengerIds().contains(CACHE.getPlayerCache().getEntityId())) {
+            coordObf.playerMovePos(session, packet.getX(), packet.getZ());
+        }
         return new ClientboundTeleportEntityPacket(
             packet.getId(),
             coordObf.getCoordOffset(session).offsetX(packet.getX()),

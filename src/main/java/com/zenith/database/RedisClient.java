@@ -1,26 +1,23 @@
 package com.zenith.database;
 
-import com.zenith.event.proxy.RedisRestartEvent;
+import com.zenith.event.db.RedisRestartEvent;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import lombok.Getter;
 import org.redisson.Redisson;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.redisson.client.codec.StringCodec;
 import org.redisson.config.Config;
 
 import java.time.Instant;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 import static java.util.Objects.isNull;
 
 @Getter
 public class RedisClient {
 
-    private RedissonClient redissonClient;
-
-    public RedisClient() {
-        redissonClient = buildRedisClient();
-    }
+    private RedissonClient redissonClient = buildRedisClient();
 
     public RLock getLock(final String lockKey) {
         synchronized (this) {
@@ -76,6 +73,7 @@ public class RedisClient {
             .setConnectionPoolSize(1)
             .setConnectionMinimumIdleSize(1);
         config.setLockWatchdogTimeout(15000);
+        config.setCodec(StringCodec.INSTANCE);
         return Redisson.create(config);
     }
 }

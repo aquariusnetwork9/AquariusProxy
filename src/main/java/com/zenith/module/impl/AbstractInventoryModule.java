@@ -2,21 +2,24 @@ package com.zenith.module.impl;
 
 import com.google.common.collect.Lists;
 import com.zenith.cache.data.inventory.Container;
-import com.zenith.feature.items.ContainerClickAction;
-import com.zenith.module.Module;
+import com.zenith.feature.inventory.InventoryActionRequest;
+import com.zenith.feature.inventory.actions.DropMouseStack;
+import com.zenith.feature.inventory.actions.InventoryAction;
+import com.zenith.feature.inventory.actions.MoveToHotbarSlot;
+import com.zenith.feature.inventory.actions.SetHeldItem;
+import com.zenith.module.api.Module;
 import lombok.Getter;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ClickItemAction;
-import org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerActionType;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.MoveToHotbarAction;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.INVENTORY;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.INVENTORY;
 import static java.util.Objects.nonNull;
 
 /**
@@ -82,11 +85,11 @@ public abstract class AbstractInventoryModule extends Module {
         // find next food and switch it to our hotbar slot
         final List<ItemStack> inventory = CACHE.getPlayerCache().getPlayerInventory();
         if (CACHE.getPlayerCache().getInventoryCache().getMouseStack() != Container.EMPTY_STACK) {
-            INVENTORY.invActionReq(
-                this,
-                new ContainerClickAction(-999, ContainerActionType.CLICK_ITEM, ClickItemAction.LEFT_CLICK),
-                inventoryActionPriority
-            );
+            INVENTORY.submit(InventoryActionRequest.builder()
+                    .owner(this)
+                    .actions(new DropMouseStack(ClickItemAction.LEFT_CLICK))
+                    .priority(inventoryActionPriority)
+                    .build());
             debug("Dropping item in mouse stack to allow for inventory swap");
             return true;
         }
@@ -94,18 +97,18 @@ public abstract class AbstractInventoryModule extends Module {
             ItemStack itemStack = inventory.get(i);
             if (nonNull(itemStack) && itemPredicate(itemStack)) {
                 var actionSlot = getActionSlot();
-                var actions = Lists.newArrayList(new ContainerClickAction(i, ContainerActionType.MOVE_TO_HOTBAR_SLOT, actionSlot));
+                List<InventoryAction> actions = Lists.newArrayList(new MoveToHotbarSlot(i, actionSlot));
                 debug("[{}] Swapping item to slot {}", getClass().getSimpleName(), actionSlot.getId());
                 if (actionSlot != MoveToHotbarAction.OFF_HAND
                     && CACHE.getPlayerCache().getHeldItemSlot() != targetMainHandHotbarSlot
                 ) {
-                    actions.add(ContainerClickAction.setCarriedItem(targetMainHandHotbarSlot));
+                    actions.add(new SetHeldItem(targetMainHandHotbarSlot));
                 }
-                INVENTORY.invActionReq(
-                    this,
-                    actions,
-                    inventoryActionPriority
-                );
+                INVENTORY.submit(InventoryActionRequest.builder()
+                    .owner(this)
+                    .actions(actions)
+                    .priority(inventoryActionPriority)
+                    .build());
                 return true;
             }
         }

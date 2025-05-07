@@ -2,22 +2,22 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
+import com.zenith.event.client.ClientTickEvent;
 import com.zenith.event.module.ClientSwingEvent;
-import com.zenith.event.module.ClientTickEvent;
 import com.zenith.event.module.EntityFishHookSpawnEvent;
-import com.zenith.event.proxy.ProxyClientConnectedEvent;
-import com.zenith.module.Module;
-import com.zenith.util.Timer;
-import com.zenith.util.Timers;
+import com.zenith.event.player.PlayerConnectedEvent;
+import com.zenith.module.api.Module;
 import com.zenith.util.math.MathHelper;
+import com.zenith.util.timer.Timer;
+import com.zenith.util.timer.Timers;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.CONFIG;
 
 public class AntiKick extends Module {
     private double lastPosX = 0;
@@ -30,7 +30,7 @@ public class AntiKick extends Module {
     @Override
     public List<EventConsumer<?>> registerEvents() {
         return List.of(
-            of(ProxyClientConnectedEvent.class, this::onProxyClientConnectedEvent),
+            of(PlayerConnectedEvent.class, this::onProxyClientConnectedEvent),
             of(ClientTickEvent.class, this::onClientTick),
             of(EntityFishHookSpawnEvent.class, this::onEntityFishHookSpawnEvent),
             of(ClientSwingEvent.class, this::onClientSwingEvent)
@@ -53,7 +53,7 @@ public class AntiKick extends Module {
         this.lastPosTime = this.lastFishingTime = this.lastSwingTime = Instant.now();
     }
 
-    public void onProxyClientConnectedEvent(final ProxyClientConnectedEvent event) {
+    public void onProxyClientConnectedEvent(final PlayerConnectedEvent event) {
         reset();
     }
 

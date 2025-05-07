@@ -2,20 +2,16 @@ package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
-import com.zenith.command.brigadier.CommandSource;
+import com.zenith.command.api.*;
 import com.zenith.discord.Embed;
 
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 import static com.zenith.discord.DiscordBot.escape;
-import static com.zenith.util.Config.Authentication.AccountType.OFFLINE;
+import static com.zenith.util.config.Config.Authentication.AccountType.OFFLINE;
 
 public class UnsupportedCommand extends Command {
     @Override
@@ -45,7 +41,7 @@ public class UnsupportedCommand extends Command {
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
         return command("unsupported")
-            .requires(c -> Command.validateCommandSource(c, CommandSource.TERMINAL))
+            .requires(c -> Command.validateCommandSource(c, CommandSources.TERMINAL))
             .then(literal("whitelist").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.server.extra.whitelist.enable = getToggle(c, "toggle");
                 c.getSource().getEmbed()
@@ -83,7 +79,7 @@ public class UnsupportedCommand extends Command {
     }
 
     @Override
-    public void postPopulate(Embed builder) {
+    public void defaultEmbed(Embed builder) {
         builder
             .addField("Whitelist", toggleStr(CONFIG.server.extra.whitelist.enable))
             .addField("Spectator Whitelist", toggleStr(CONFIG.server.spectator.whitelistEnabled))

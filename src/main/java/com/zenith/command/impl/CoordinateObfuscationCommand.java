@@ -1,18 +1,18 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
+import com.zenith.command.api.Command;
+import com.zenith.command.api.CommandCategory;
+import com.zenith.command.api.CommandContext;
+import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
-import com.zenith.module.impl.CoordObfuscator;
-import com.zenith.util.Config.Client.Extra.CoordObfuscation.ObfuscationMode;
+import com.zenith.module.impl.CoordObfuscation;
+import com.zenith.util.config.Config.Client.Extra.CoordObfuscation.ObfuscationMode;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
-import static com.zenith.Shared.CONFIG;
-import static com.zenith.Shared.MODULE;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 
@@ -45,15 +45,19 @@ public class CoordinateObfuscationCommand extends Command {
                 """)
             .usageLines(
                 "on/off",
-                "mode <mode>",
+                "mode <random/constant/atLocation>",
                 "regenOnTpMinDistance <blocks>",
                 "randomBound <chunks>",
                 "randomMinOffset <blocks>",
                 "randomMinSpawnDistance <blocks>",
-                "constantOffset <x blocks> <z blocks>",
+                "constantOffset <x> <z>",
                 "constantOffsetNetherTranslate on/off",
                 "constantOffsetMinSpawnDistance <blocks>",
                 "atLocation <x> <z>",
+                "obfuscateBedrock on/off",
+                "obfuscateBiomes on/off",
+                "obfuscateLighting on/off",
+                "eyeOfEnderDisconnect on/off",
                 "validateSetup on/off"
             )
             .build();
@@ -65,86 +69,85 @@ public class CoordinateObfuscationCommand extends Command {
             .then(argument("toggle", toggle()).executes(c -> {
                 var b = getToggle(c, "toggle");
                 if (b && CONFIG.client.extra.coordObfuscation.validateSetup) {
-                    var result = MODULE.get(CoordObfuscator.class).validateSetup();
+                    var result = MODULE.get(CoordObfuscation.class).validateSetup();
                     if (!result.valid()) {
-                        var description = String.join("\n", result.invalidReasons());
-                        if (description.length() > 4000) {
-                            description = description.substring(0, 4000) + "...";
+                        StringBuilder description = new StringBuilder();
+                        for (var reason : result.invalidReasons()) {
+                            if (description.length() + reason.length() > 4000) {
+                                break;
+                            }
+                            description.append(reason).append("\n");
                         }
                         c.getSource().getEmbed()
                             .title("Validation Error")
-                            .description(description)
+                            .description(description.toString())
+                            .addField("Info", "Don't care? Disable this check: `coordobf validateSetup off`")
                             .errorColor();
                         return ERROR;
                     }
                 }
                 CONFIG.client.extra.coordObfuscation.enabled = b;
-                MODULE.get(CoordObfuscator.class).syncEnabledFromConfig();
+                MODULE.get(CoordObfuscation.class).syncEnabledFromConfig();
                 return OK;
             }))
             .then(literal("mode")
                       .then(literal("constant").executes(c -> {
                           CONFIG.client.extra.coordObfuscation.mode = ObfuscationMode.CONSTANT_OFFSET;
-                          return OK;
                       }))
                       .then(literal("random").executes(c -> {
                           CONFIG.client.extra.coordObfuscation.mode = ObfuscationMode.RANDOM_OFFSET;
-                          return OK;
                       }))
                       .then(literal("atLocation").executes(c -> {
                           CONFIG.client.extra.coordObfuscation.mode = ObfuscationMode.AT_LOCATION;
-                          return OK;
                       })))
             .then(literal("regenOnTpMinDistance").then(argument("blocks", integer(64)).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin = c.getArgument("blocks", Integer.class);
-                return OK;
             })))
             .then(literal("randomBound").then(argument("randomBound", integer(0, 1000000)).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.randomBound = c.getArgument("randomBound", Integer.class);
-                return OK;
             })))
             .then(literal("randomMinOffset").then(argument("minOffset", integer(0, 30000000)).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.randomMinOffset = c.getArgument("minOffset", Integer.class);
-                return OK;
             })))
             .then(literal("randomMinSpawnDistance").then(argument("minSpawnDistance", integer(0, 30000000)).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.randomMinSpawnDistance = c.getArgument("minSpawnDistance", Integer.class);
-                return OK;
             })))
             .then(literal("constantOffset").then(argument("xOffset", integer(-30000000, 30000000)).then(argument("zOffset", integer(-30000000, 30000000)).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.constantOffsetX = c.getArgument("xOffset", Integer.class);
                 CONFIG.client.extra.coordObfuscation.constantOffsetZ = c.getArgument("zOffset", Integer.class);
-                return OK;
             }))))
             .then(literal("constantOffsetNetherTranslate").then(argument("toggleArg", toggle()).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.constantOffsetNetherTranslate = getToggle(c, "toggleArg");
-                return OK;
             })))
             .then(literal("constantOffsetMinSpawnDistance").then(argument("chunks", integer(0, 30000000)).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.constantOffsetMinSpawnDistance = getInteger(c, "chunks");
-                return OK;
             })))
             .then(literal("atLocation").then(argument("x", integer(-30000000, 30000000)).then(argument("z", integer(-30000000, 30000000)).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.atLocationX = c.getArgument("x", Integer.class);
                 CONFIG.client.extra.coordObfuscation.atLocationZ = c.getArgument("z", Integer.class);
-                return OK;
             }))))
+            .then(literal("obfuscateBedrock").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.coordObfuscation.obfuscateBedrock = getToggle(c, "toggle");
+            })))
+            .then(literal("obfuscateBiomes").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.coordObfuscation.obfuscateBiomes = getToggle(c, "toggle");
+            })))
             .then(literal("validateSetup").then(argument("toggleArg", toggle()).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.validateSetup = getToggle(c, "toggleArg");
-                c.getSource().getEmbed()
-                    .addField("Validate Setup", toggleStr(CONFIG.client.extra.coordObfuscation.validateSetup), false);
-                return OK;
             })))
             .then(literal("exemptProxyAccount").then(argument("toggleArg", toggle()).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.exemptProxyAccount = getToggle(c, "toggleArg");
-                c.getSource().getEmbed()
-                    .addField("Exempt Proxy Account", toggleStr(CONFIG.client.extra.coordObfuscation.exemptProxyAccount), false);
-                return OK;
+            })))
+            .then(literal("debugPacketLog").then(argument("toggleArg", toggle()).executes(c -> {
+                CONFIG.client.extra.coordObfuscation.debugPacketLog = getToggle(c, "toggleArg");
+            })))
+            .then(literal("eyeOfEnderDisconnect").then(argument("toggleArg", toggle()).executes(c -> {
+                CONFIG.client.extra.coordObfuscation.disconnectWhileEyeOfEnderPresent = getToggle(c, "toggleArg");
             })));
     }
 
     @Override
-    public void postPopulate(final Embed embed) {
+    public void defaultEmbed(final Embed embed) {
         embed
             .title("Coordinate Obfuscation")
             .addField("Coordinate Obfuscation", toggleStr(CONFIG.client.extra.coordObfuscation.enabled))
@@ -158,8 +161,17 @@ public class CoordinateObfuscationCommand extends Command {
             .addField("Constant Offset Nether Translate", toggleStr(CONFIG.client.extra.coordObfuscation.constantOffsetNetherTranslate))
             .addField("Constant Offset Minimum Spawn Distance", CONFIG.client.extra.coordObfuscation.constantOffsetMinSpawnDistance)
             .addField("At Location", CONFIG.client.extra.coordObfuscation.atLocationX + ", " + CONFIG.client.extra.coordObfuscation.atLocationZ)
+            .addField("Obfuscate Bedrock", toggleStr(CONFIG.client.extra.coordObfuscation.obfuscateBedrock))
+            .addField("Obfuscate Biomes", toggleStr(CONFIG.client.extra.coordObfuscation.obfuscateBiomes))
+            .addField("Eye of Ender Disconnect", toggleStr(CONFIG.client.extra.coordObfuscation.disconnectWhileEyeOfEnderPresent))
             .primaryColor();
-        MODULE.get(CoordObfuscator.class).onConfigChange();
+        MODULE.get(CoordObfuscation.class).onConfigChange();
+    }
+
+    @Override
+    public void defaultExecutionErrorHandler(CommandContext commandContext) {
+        commandContext.getEmbed()
+            .errorColor();
     }
 
     public String modeToString(ObfuscationMode mode) {

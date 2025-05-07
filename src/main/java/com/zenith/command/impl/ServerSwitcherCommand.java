@@ -3,20 +3,16 @@ package com.zenith.command.impl;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.zenith.Proxy;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
-import com.zenith.command.brigadier.CommandSource;
+import com.zenith.command.api.*;
 import com.zenith.discord.Embed;
 import com.zenith.network.server.ServerSession;
-import com.zenith.util.Config.Server.Extra.ServerSwitcher.ServerSwitcherServer;
+import com.zenith.util.config.Config.Server.Extra.ServerSwitcher.ServerSwitcherServer;
 
 import java.util.stream.Collectors;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 
@@ -64,7 +60,7 @@ public class ServerSwitcherCommand extends Command {
                     .title("Server List");
                 return OK;
             }))
-            .then(argument("name", wordWithChars()).requires(context -> validateCommandSource(context, CommandSource.IN_GAME_PLAYER)).executes(c -> {
+            .then(argument("name", wordWithChars()).requires(context -> validateCommandSource(context, CommandSources.PLAYER)).executes(c -> {
                 var name = getString(c, "name");
                 var server = CONFIG.server.extra.serverSwitcher.servers.stream()
                     .filter(s -> s.name().equalsIgnoreCase(name))
@@ -99,7 +95,7 @@ public class ServerSwitcherCommand extends Command {
     }
 
     @Override
-    public void postPopulate(final Embed embed) {
+    public void defaultEmbed(final Embed embed) {
         var str = CONFIG.server.extra.serverSwitcher.servers.stream()
             .map(s -> s.name() + " -> " + s.address() + ":" + s.port())
             .collect(Collectors.joining("\n"));

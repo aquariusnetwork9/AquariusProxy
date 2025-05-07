@@ -3,16 +3,13 @@ package com.zenith.command.impl;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.zenith.Proxy;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
-import com.zenith.command.brigadier.CommandSource;
+import com.zenith.command.api.*;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.EXECUTOR;
+import static com.zenith.Globals.PLAYER_LISTS;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -34,7 +31,7 @@ public class SpectatorSwapCommand extends Command {
 
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
-        return command("swap").requires(c -> Command.validateCommandSource(c, asList(CommandSource.IN_GAME_PLAYER, CommandSource.SPECTATOR)))
+        return command("swap").requires(c -> Command.validateCommandSource(c, asList(CommandSources.PLAYER, CommandSources.SPECTATOR)))
             .executes(c -> {
                 swap(c, false);
             })
@@ -45,7 +42,7 @@ public class SpectatorSwapCommand extends Command {
 
     private void swap(com.mojang.brigadier.context.CommandContext<CommandContext> c, boolean force) {
         ServerSession activePlayer = Proxy.getInstance().getActivePlayer();
-        if (c.getSource().getSource() == CommandSource.IN_GAME_PLAYER) {
+        if (c.getSource().getSource() == CommandSources.PLAYER) {
             var player = activePlayer;
             if (player == null) {
                 c.getSource().getEmbed()
@@ -62,8 +59,8 @@ public class SpectatorSwapCommand extends Command {
                     .addField("Error", "Client version must be at least 1.20.6", false);
                 return;
             }
-            player.transferToSpectator(CONFIG.server.getProxyAddressForTransfer(), CONFIG.server.getProxyPortForTransfer());
-        } else if (c.getSource().getSource() == CommandSource.SPECTATOR) {
+            player.transferToSpectator();
+        } else if (c.getSource().getSource() == CommandSources.SPECTATOR) {
             var session = c.getSource().getInGamePlayerInfo().session();
             var spectatorProfile = session.getProfileCache().getProfile();
             c.getSource().setNoOutput(true);
@@ -82,14 +79,14 @@ public class SpectatorSwapCommand extends Command {
                         session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>Controlling player is using an unsupported Client MC Version"), false));
                         return;
                     }
-                    activePlayer.transferToSpectator(CONFIG.server.getProxyAddressForTransfer(), CONFIG.server.getProxyPortForTransfer());
-                    EXECUTOR.schedule(() -> session.transferToControllingPlayer(CONFIG.server.getProxyAddressForTransfer(), CONFIG.server.getProxyPortForTransfer()), 1, SECONDS);
+                    activePlayer.transferToSpectator();
+                    EXECUTOR.schedule(() -> session.transferToControllingPlayer(), 1, SECONDS);
                 } else {
                     session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>Someone is already controlling the player!"), false));
                 }
                 return;
             }
-            session.transferToControllingPlayer(CONFIG.server.getProxyAddressForTransfer(), CONFIG.server.getProxyPortForTransfer());
+            session.transferToControllingPlayer();
         }
     }
 }

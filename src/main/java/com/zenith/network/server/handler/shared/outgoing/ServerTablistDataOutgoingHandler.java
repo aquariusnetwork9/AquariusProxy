@@ -1,14 +1,14 @@
 package com.zenith.network.server.handler.shared.outgoing;
 
 import com.zenith.Proxy;
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundTabListPacket;
 
-import static com.zenith.Shared.*;
+import static com.zenith.Globals.*;
 
 public class ServerTablistDataOutgoingHandler implements PacketHandler<ClientboundTabListPacket, ServerSession> {
     // todo: allow users to configure the contents of this

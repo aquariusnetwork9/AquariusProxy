@@ -2,17 +2,12 @@ package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
-import com.zenith.command.Command;
-import com.zenith.command.CommandUsage;
-import com.zenith.command.brigadier.CommandCategory;
-import com.zenith.command.brigadier.CommandContext;
-import com.zenith.command.brigadier.CommandSource;
-import com.zenith.command.util.CommandOutputHelper;
+import com.zenith.command.api.*;
 import com.zenith.discord.DiscordBot;
 import com.zenith.discord.Embed;
 import com.zenith.feature.api.sessionserver.SessionServerApi;
+import com.zenith.feature.player.World;
 import com.zenith.feature.whitelist.PlayerListsManager;
-import com.zenith.feature.world.World;
 import com.zenith.network.server.ServerSession;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
@@ -25,8 +20,8 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.Clientbound
 import java.util.EnumSet;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.word;
-import static com.zenith.Shared.CACHE;
-import static com.zenith.Shared.EXECUTOR;
+import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.EXECUTOR;
 import static java.util.Arrays.asList;
 
 public class SkinCommand extends Command {
@@ -48,7 +43,7 @@ public class SkinCommand extends Command {
 
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
-        return command("skin").requires(c -> Command.validateCommandSource(c, CommandSource.IN_GAME_PLAYER))
+        return command("skin").requires(c -> Command.validateCommandSource(c, CommandSources.PLAYER))
             .then(argument("playerName", word()).executes(c -> {
                 var playerName = c.getArgument("playerName", String.class);
                 c.getSource().setNoOutput(true);

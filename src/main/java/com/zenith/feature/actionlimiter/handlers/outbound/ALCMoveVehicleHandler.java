@@ -1,11 +1,11 @@
 package com.zenith.feature.actionlimiter.handlers.outbound;
 
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.math.MathHelper;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundMoveVehiclePacket;
 
-import static com.zenith.Shared.CONFIG;
+import static com.zenith.Globals.CONFIG;
 
 public class ALCMoveVehicleHandler implements PacketHandler<ClientboundMoveVehiclePacket, ServerSession> {
     @Override

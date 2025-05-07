@@ -6,19 +6,19 @@ import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.translation.GlobalTranslator;
-import net.kyori.adventure.translation.TranslationRegistry;
+import net.kyori.adventure.translation.TranslationStore;
 
 import java.text.MessageFormat;
 import java.util.Iterator;
 import java.util.Locale;
 
-import static com.zenith.Shared.OBJECT_MAPPER;
+import static com.zenith.Globals.OBJECT_MAPPER;
 
 @UtilityClass
 public class TranslationRegistryInitializer {
     @SneakyThrows
     public static void registerAllTranslations() {
-        TranslationRegistry translationRegistry = TranslationRegistry.create(Key.key("minecraft"));
+        var translationRegistry = TranslationStore.messageFormat(Key.key("minecraft"));
         try (JsonParser langParse = OBJECT_MAPPER.createParser(TranslationRegistryInitializer.class.getResourceAsStream("/mcdata/language.json"))) {
             ObjectNode node = langParse.getCodec().readTree(langParse);
             for (Iterator<String> fieldIterator = node.fieldNames(); fieldIterator.hasNext(); ) {

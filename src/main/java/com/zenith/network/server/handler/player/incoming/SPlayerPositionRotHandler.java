@@ -1,20 +1,17 @@
 package com.zenith.network.server.handler.player.incoming;
 
-import com.zenith.network.registry.PacketHandler;
+import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
-import org.geysermc.mcprotocollib.auth.GameProfile;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundMovePlayerPosRotPacket;
 
-import java.util.Optional;
-
-import static com.zenith.Shared.SERVER_LOG;
+import static com.zenith.Globals.SERVER_LOG;
 
 public class SPlayerPositionRotHandler implements PacketHandler<ServerboundMovePlayerPosRotPacket, ServerSession> {
     @Override
     public ServerboundMovePlayerPosRotPacket apply(final ServerboundMovePlayerPosRotPacket packet, final ServerSession session) {
         if (session.isSpawned()) return packet;
         else {
-            SERVER_LOG.debug("[{}] Cancelling pre-spawn position packet: {}", Optional.ofNullable(session.getProfileCache().getProfile()).map(GameProfile::getName).orElse("?"), packet);
+            SERVER_LOG.debug("[{}] Cancelling pre-spawn position packet: {}", session.getName(), packet);
             return null;
         }
     }
