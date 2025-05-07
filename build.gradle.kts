@@ -55,7 +55,7 @@ dependencies {
         exclude(group = "net.java.dev.jna")
         exclude(group = "com.google.crypto.tink")
     }
-    api("com.github.rfresh2:MCProtocolLib:1.21.4.18") {
+    api("com.github.rfresh2:MCProtocolLib:1.21.4.19") {
         exclude(group = "io.netty")
     }
     val nettyVersion = "4.1.119.Final"

@@ -992,7 +992,10 @@ public class PlayerSimulation extends Module {
     }
 
     public void handleExplosion(final ClientboundExplodePacket packet) {
-        this.velocity.add(packet.getPlayerKnockbackX(), packet.getPlayerKnockbackY(), packet.getPlayerKnockbackZ());
+        var knockback = packet.getPlayerKnockback();
+        if (knockback != null) {
+            this.velocity.add(knockback.getX(), knockback.getY(), knockback.getZ());
+        }
     }
 
     public void syncFromCache(boolean full) {
