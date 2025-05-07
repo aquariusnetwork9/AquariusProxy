@@ -148,9 +148,9 @@ public class DebugCommand extends Command {
                 return OK;
             })))
             .then(literal("chunkCacheFullbright").then(argument("toggle", toggle()).executes(c -> {
-                CONFIG.debug.server.cache.fullbrightChunkSkylight = getToggle(c, "toggle");
+                CONFIG.debug.server.cache.fullbrightChunkBlocklight = getToggle(c, "toggle");
                 c.getSource().getEmbed()
-                    .title("Chunk Cache Fullbright " + toggleStrCaps(CONFIG.debug.server.cache.fullbrightChunkSkylight));
+                    .title("Chunk Cache Fullbright " + toggleStrCaps(CONFIG.debug.server.cache.fullbrightChunkBlocklight));
                 return OK;
             })))
             .then(literal("binaryNbtComponentSerializer").then(argument("toggle", toggle()).executes(c -> {
@@ -170,7 +170,7 @@ public class DebugCommand extends Command {
             .addField("Packet Log Filter", CONFIG.debug.packetLog.packetFilter, false)
             .addField("Kick Disconnect", toggleStr(CONFIG.debug.kickDisconnect), false)
             .addField("Debug Logs", toggleStr(CONFIG.debug.debugLogs), false)
-            .addField("Chunk Cache Fullbright", toggleStr(CONFIG.debug.server.cache.fullbrightChunkSkylight), false)
+            .addField("Chunk Cache Fullbright", toggleStr(CONFIG.debug.server.cache.fullbrightChunkBlocklight), false)
             .primaryColor();
     }
 }
