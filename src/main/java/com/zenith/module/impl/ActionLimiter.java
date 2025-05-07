@@ -15,6 +15,7 @@ import it.unimi.dsi.fastutil.objects.ReferenceSet;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundCommandSuggestionsPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundMoveMinecartPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundMoveVehiclePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundTeleportEntityPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
@@ -63,6 +64,7 @@ public class ActionLimiter extends Module {
                 .outbound(ClientboundLoginPacket.class, new ALLoginHandler())
                 .outbound(ClientboundPlayerPositionPacket.class, new ALPlayerPositionHandler())
                 .outbound(ClientboundTeleportEntityPacket.class, new ALTeleportEntityHandler())
+                .outbound(ClientboundMoveMinecartPacket.class, new ALMoveMinecartHandler())
                 .build())
             .build();
     }

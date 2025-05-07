@@ -197,6 +197,7 @@ public final class PacketCodecRegistries {
                 .inbound(ClientboundMoveEntityPosRotPacket.class, new MoveEntityPosRotHandler())
                 .inbound(ClientboundUpdateAttributesPacket.class, new UpdateAttributesHandler())
                 .inbound(ClientboundMoveEntityRotPacket.class, new MoveEntityRotHandler())
+                .inbound(ClientboundMoveMinecartPacket.class, new MoveMinecartHandler())
                 .inbound(ClientboundMoveVehiclePacket.class, new MoveVehicleHandler())
                 .inbound(ClientboundSetPassengersPacket.class, new EntitySetPassengersHandler())
                 .inbound(ClientboundTeleportEntityPacket.class, new TeleportEntityHandler())
