@@ -45,7 +45,10 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.spaw
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.spawn.ClientboundAddExperienceOrbPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerSetContentPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerSetSlotPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundSetCursorItemPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundSetPlayerInventoryPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.*;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundPickItemFromBlockPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundAcceptTeleportationPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundMoveVehiclePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundSignUpdatePacket;
@@ -129,6 +132,7 @@ public class CoordObfuscation extends Module {
                 .inbound(ServerboundSignUpdatePacket.class, new COSignUpdateHandler())
                 .inbound(ServerboundUseItemPacket.class, new COUseItemHandler())
                 .inbound(ServerboundUseItemOnPacket.class, new COUseItemOnHandler())
+                .inbound(ServerboundPickItemFromBlockPacket.class, new COPickItemFromBlockHandler())
                 .outbound(ClientboundStartConfigurationPacket.class, new COCStartConfigurationHandler())
                 .outbound(ClientboundAddEntityPacket.class, new COAddEntityHandler())
                 .outbound(ClientboundAddExperienceOrbPacket.class, new COAddExperienceOrbHandler())
@@ -164,6 +168,10 @@ public class CoordObfuscation extends Module {
                 .outbound(ClientboundSoundPacket.class, new COSoundHandler())
                 .outbound(ClientboundTagQueryPacket.class, new COTagQueryHandler())
                 .outbound(ClientboundTeleportEntityPacket.class, new COTeleportEntityHandler())
+                .outbound(ClientboundEntityPositionSyncPacket.class, new COEntityPositionSyncHandler())
+                .outbound(ClientboundMoveMinecartPacket.class, new COMoveMinecartHandler())
+                .outbound(ClientboundSetCursorItemPacket.class, new COSetCursorItemHandler())
+                .outbound(ClientboundSetPlayerInventoryPacket.class, new COSetPlayerInventoryHandler())
                 .build())
             .build();
     }

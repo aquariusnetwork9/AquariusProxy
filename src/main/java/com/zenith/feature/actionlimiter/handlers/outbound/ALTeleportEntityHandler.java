@@ -3,6 +3,7 @@ package com.zenith.feature.actionlimiter.handlers.outbound;
 import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.math.MathHelper;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PositionElement;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundTeleportEntityPacket;
 
 import static com.zenith.Globals.CACHE;
@@ -20,8 +21,12 @@ public class ALTeleportEntityHandler implements PacketHandler<ClientboundTelepor
             if (MathHelper.distance2d(
                 CONFIG.client.extra.actionLimiter.movementHomeX,
                 CONFIG.client.extra.actionLimiter.movementHomeZ,
-                packet.getX(),
-                packet.getZ()
+                packet.getRelatives().contains(PositionElement.X)
+                    ? packet.getX() + CACHE.getPlayerCache().getX()
+                    : packet.getX(),
+                packet.getRelatives().contains(PositionElement.Z)
+                    ? packet.getZ() + CACHE.getPlayerCache().getZ()
+                    : packet.getZ()
             ) > CONFIG.client.extra.actionLimiter.movementDistance
             ) {
                 session.disconnect("ActionLimiter: Movement not allowed");
