@@ -4,7 +4,6 @@ import com.zenith.cache.data.mcpl.CachedChunkSectionCountProvider;
 import com.zenith.feature.replay.ReplayMetadata;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.PooledByteBufAllocator;
 import lombok.SneakyThrows;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.MinecraftConstants;
@@ -27,7 +26,7 @@ import static com.zenith.Globals.GSON;
 public class ReplayReader {
     private final File mcprFile;
     private final File packetLogOutputFile;
-    private static final ByteBufAllocator ALLOC = PooledByteBufAllocator.DEFAULT;
+    private static final ByteBufAllocator ALLOC = ByteBufAllocator.DEFAULT;
 
     public ReplayReader(File replayFile, File packetLogOutputFile) {
         this.mcprFile = replayFile;
