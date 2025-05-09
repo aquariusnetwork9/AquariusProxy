@@ -7,7 +7,6 @@ import com.zenith.feature.spectator.SpectatorPacketProvider;
 import com.zenith.module.impl.ReplayMod;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.PooledByteBufAllocator;
 import lombok.Getter;
 import net.kyori.adventure.key.Key;
 import org.geysermc.mcprotocollib.network.Session;
@@ -43,7 +42,7 @@ public class ReplayRecording implements Closeable {
     private ZipOutputStream zipOutputStream;
     private OutputStream writerStream;
     @Getter private File replayFile;
-    private static final ByteBufAllocator ALLOC = PooledByteBufAllocator.DEFAULT;
+    private static final ByteBufAllocator ALLOC = ByteBufAllocator.DEFAULT;
     private boolean preConnectSyncNeeded = false;
     @Getter private long startT;
     private final ExecutorService executor = Executors.newFixedThreadPool(

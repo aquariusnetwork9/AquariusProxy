@@ -142,6 +142,10 @@ If you do not use one, **ZenithProxy will be killed after you exit your SSH sess
 * [screen](https://linuxize.com/post/how-to-use-linux-screen/)
 * [pm2](https://pm2.keymetrics.io/docs/usage/quick-start/)
 
+### Docker
+
+Instructions and info: https://github.com/rfresh2/ZenithProxyDocker
+
 ## Configuration
 
 ### Release Channels
