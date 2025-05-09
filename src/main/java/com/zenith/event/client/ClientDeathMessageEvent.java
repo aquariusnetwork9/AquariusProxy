@@ -1,3 +1,3 @@
-package com.zenith.event.server;
+package com.zenith.event.client;
 
 public record ClientDeathMessageEvent(String message) { }

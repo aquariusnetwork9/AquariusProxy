@@ -10,7 +10,6 @@ import com.zenith.event.plugin.PluginLoadedEvent;
 import com.zenith.event.queue.QueueCompleteEvent;
 import com.zenith.event.queue.QueuePositionUpdateEvent;
 import com.zenith.event.queue.QueueStartEvent;
-import com.zenith.event.server.ClientDeathMessageEvent;
 import com.zenith.event.server.ServerPlayerConnectedEvent;
 import com.zenith.event.server.ServerPlayerDisconnectedEvent;
 import com.zenith.event.server.ServerRestartingEvent;
