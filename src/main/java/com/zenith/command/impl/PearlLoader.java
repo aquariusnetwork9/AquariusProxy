@@ -34,6 +34,7 @@ public class PearlLoader extends Command {
                 "load <id>",
                 "list"
             )
+            .aliases("pl")
             .build();
     }
 
