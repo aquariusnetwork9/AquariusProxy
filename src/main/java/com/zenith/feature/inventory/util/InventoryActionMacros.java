@@ -42,17 +42,25 @@ public class InventoryActionMacros {
     }
 
     public static List<InventoryAction> withdraw(int containerId, Predicate<ItemStack> predicate) {
+        return withdraw(containerId, predicate, Integer.MAX_VALUE);
+    }
+
+    public static List<InventoryAction> withdraw(int containerId, Predicate<ItemStack> predicate, int maxSlotsWithdrawn) {
         var container = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
         int openContainerId = container.getContainerId();
         if (openContainerId != containerId) {
             return Collections.emptyList();
         }
+        int count = 0;
         List<InventoryAction> actions = new ArrayList<>();
         final int containerTopInvEndIndex = container.getSize() - 36;
         for (int i = 0; i < containerTopInvEndIndex; i++) {
             if (container.getItemStack(i) == Container.EMPTY_STACK) continue;
             if (!predicate.test(container.getItemStack(i))) continue;
             actions.add(new ShiftClick(containerId, i, ShiftClickItemAction.LEFT_CLICK));
+            if (++count >= maxSlotsWithdrawn) {
+                break;
+            }
         }
         return actions;
     }
@@ -62,17 +70,25 @@ public class InventoryActionMacros {
     }
 
     public static List<InventoryAction> deposit(int containerId, Predicate<ItemStack> predicate) {
+        return deposit(containerId, predicate, Integer.MAX_VALUE);
+    }
+
+    public static List<InventoryAction> deposit(int containerId, Predicate<ItemStack> predicate, int maxSlotsDeposited) {
         var container = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
         int openContainerId = container.getContainerId();
         if (openContainerId != containerId) {
             return Collections.emptyList();
         }
+        int count = 0;
         List<InventoryAction> actions = new ArrayList<>();
         final int containerTopInvEndIndex = container.getSize() - 36;
         for (int i = container.getSize() - 1; i >= containerTopInvEndIndex; i--) {
             if (container.getItemStack(i) == Container.EMPTY_STACK) continue;
             if (!predicate.test(container.getItemStack(i))) continue;
             actions.add(new ShiftClick(containerId, i, ShiftClickItemAction.LEFT_CLICK));
+            if (++count >= maxSlotsDeposited) {
+                break;
+            }
         }
         return actions;
     }
