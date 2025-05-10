@@ -21,7 +21,7 @@ public class ClickItem implements InventoryAction {
     private final int containerId;
     private final int slotId;
     private final ClickItemAction clickItemAction;
-    private final ContainerActionType actionType = ContainerActionType.CLICK_ITEM;
+    private static final ContainerActionType containerActionType = ContainerActionType.CLICK_ITEM;
 
     public ClickItem(final int slotId, final ClickItemAction clickItemAction) {
         this(0, slotId, clickItemAction);
@@ -34,7 +34,7 @@ public class ClickItem implements InventoryAction {
         ItemStack predictedMouseStack = Container.EMPTY_STACK;
         final ItemStack clickStack = container.getItemStack(slotId);
         if (isStackEmpty(mouseStack) && isStackEmpty(clickStack)) {
-            CLIENT_LOG.debug("[{}] [{}, {}, {}] Both mouse stack and click stack empty", type(), slotId, actionType, clickItemAction);
+            CLIENT_LOG.debug("Both mouse stack and click stack empty: {}", this);
             return null;
         }
         final Int2ObjectMap<ItemStack> changedSlots = new Int2ObjectArrayMap<>();
@@ -72,7 +72,7 @@ public class ClickItem implements InventoryAction {
             containerId,
             CACHE.getPlayerCache().getActionId().incrementAndGet(),
             slotId,
-            actionType,
+            containerActionType,
             clickItemAction,
             predictedMouseStack,
             changedSlots

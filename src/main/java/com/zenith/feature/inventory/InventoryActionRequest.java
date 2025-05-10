@@ -41,6 +41,10 @@ public class InventoryActionRequest {
         return actions.get(index);
     }
 
+    public String getOwnerName() {
+        return owner == null ? "Unknown" : owner.getClass().getSimpleName();
+    }
+
     public static Builder builder() {
         return new Builder();
     }

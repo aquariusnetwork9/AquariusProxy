@@ -19,8 +19,8 @@ import static com.zenith.Globals.CLIENT_LOG;
 public class ShiftClick implements InventoryAction {
     private final int containerId;
     private final int slotId;
-    private final ContainerActionType actionType = ContainerActionType.SHIFT_CLICK_ITEM;
     private final ShiftClickItemAction action;
+    private static final ContainerActionType containerActionType = ContainerActionType.SHIFT_CLICK_ITEM;
 
     public ShiftClick(final int slotId, final ShiftClickItemAction action) {
         this(0, slotId, action);
@@ -30,12 +30,12 @@ public class ShiftClick implements InventoryAction {
     public MinecraftPacket packet() {
         var container = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
         if (!isStackEmpty(CACHE.getPlayerCache().getInventoryCache().getMouseStack())) {
-            CLIENT_LOG.debug("[{}, {}, {}] Can't shift click, mouse stack is not empty", slotId, actionType, action);
+            CLIENT_LOG.debug("Can't shift click, mouse stack is not empty: {}", this);
             return null;
         }
         var itemStack = container.getItemStack(slotId);
         if (isStackEmpty(itemStack)) {
-            CLIENT_LOG.debug("[{}, {}, {}] Can't shift click, item stack is empty", slotId, actionType, action);
+            CLIENT_LOG.debug("Can't shift click, item stack is empty: {}", this);
             return null;
         }
 
@@ -65,7 +65,7 @@ public class ShiftClick implements InventoryAction {
             containerId,
             CACHE.getPlayerCache().getActionId().incrementAndGet(),
             slotId,
-            actionType,
+            containerActionType,
             action,
             Container.EMPTY_STACK,
             changedSlots

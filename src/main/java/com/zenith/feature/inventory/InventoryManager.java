@@ -61,8 +61,8 @@ public class InventoryManager {
         if (action != null) {
             if (action.containerId() != CACHE.getPlayerCache().getInventoryCache().getOpenContainerId()) {
                 CLIENT_LOG.debug("[Inventory Manager] Skipping action {} requester: {} requested container: {} != {}",
-                    action.type(),
-                    currentActionRequest.getOwner() != null ? currentActionRequest.getOwner().getClass().getSimpleName() : "Unknown",
+                    action,
+                    currentActionRequest.getOwnerName(),
                     action.containerId(),
                     CACHE.getPlayerCache().getInventoryCache().getOpenContainerId());
             } else {
@@ -70,8 +70,8 @@ public class InventoryManager {
                 if (packet != null) {
                     // todo: setting for toggling inv debug logging
                     CLIENT_LOG.debug("[Inventory Manager] Executing action: {} requester: {}",
-                        action.type(),
-                        currentActionRequest.getOwner() != null ? currentActionRequest.getOwner().getClass().getSimpleName() : "Unknown");
+                        action,
+                        currentActionRequest.getOwnerName());
                     Proxy.getInstance().getClient().sendAwait(packet);
                     InventoryAction actionNextTick = currentActionRequest.peek();
                     if (action instanceof SetHeldItem || actionNextTick instanceof SetHeldItem) {

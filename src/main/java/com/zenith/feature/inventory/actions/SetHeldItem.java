@@ -14,11 +14,11 @@ public class SetHeldItem implements InventoryAction {
     @Override
     public MinecraftPacket packet() {
         if (CACHE.getPlayerCache().getHeldItemSlot() == hotbarSlotId) {
-            CLIENT_LOG.debug("[{}] Slot already held: {}", type(), hotbarSlotId);
+            CLIENT_LOG.debug("Slot already held: {}", this);
             return null;
         }
         if (hotbarSlotId < 0 || hotbarSlotId > 8) {
-            CLIENT_LOG.debug("[{}] Invalid slot ID: {}", type(), hotbarSlotId);
+            CLIENT_LOG.debug("Invalid slot ID: {}", this);
             return null;
         }
         return new ServerboundSetCarriedItemPacket(hotbarSlotId);
