@@ -143,6 +143,7 @@ public class Proxy {
         }
         initEventHandlers();
         try {
+            if (System.getenv("ZENITH_DEV") != null) CONFIG.debug.debugLogs = true;
             if (CONFIG.debug.clearOldLogs) EXECUTOR.schedule(Proxy::clearOldLogs, 10L, TimeUnit.SECONDS);
             if (CONFIG.interactiveTerminal.enable) TERMINAL.start();
             MODULE.init();
