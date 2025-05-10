@@ -22,7 +22,7 @@ public class Queue {
     private static QueueStatus queueStatus = new QueueStatus(0, 0, 0);
     private static final Pattern digitPattern = Pattern.compile("\\d+");
     private volatile static Instant lastUpdate = Instant.EPOCH;
-    private static QueueEtaEquationResponse queueEtaEquation = new QueueEtaEquationResponse(199.0, 0.758);
+    private static QueueEtaEquationResponse queueEtaEquation = new QueueEtaEquationResponse(199.0, 0.840);
     private static Instant lastQueueEtaEquationUpdate = Instant.EPOCH;
 
     public static void start() {
