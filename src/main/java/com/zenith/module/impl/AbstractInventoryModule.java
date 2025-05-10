@@ -1,6 +1,5 @@
 package com.zenith.module.impl;
 
-import com.google.common.collect.Lists;
 import com.zenith.cache.data.inventory.Container;
 import com.zenith.feature.inventory.InventoryActionRequest;
 import com.zenith.feature.inventory.actions.DropMouseStack;
@@ -16,6 +15,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.inventory.MoveToHotbarActio
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.jspecify.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.zenith.Globals.CACHE;
@@ -82,23 +82,17 @@ public abstract class AbstractInventoryModule extends Module {
     // assumes we've already tested that the item is not equipped
     // returns true if we performed an item swap
     public boolean switchToItem() {
-        // find next food and switch it to our hotbar slot
+        // find next and switch it to our hotbar slot
         final List<ItemStack> inventory = CACHE.getPlayerCache().getPlayerInventory();
-        if (CACHE.getPlayerCache().getInventoryCache().getMouseStack() != Container.EMPTY_STACK) {
-            INVENTORY.submit(InventoryActionRequest.builder()
-                    .owner(this)
-                    .actions(new DropMouseStack(ClickItemAction.LEFT_CLICK))
-                    .priority(inventoryActionPriority)
-                    .build());
-            debug("Dropping item in mouse stack to allow for inventory swap");
-            return true;
-        }
         for (int i = 44; i >= 9; i--) {
             ItemStack itemStack = inventory.get(i);
             if (nonNull(itemStack) && itemPredicate(itemStack)) {
+                List<InventoryAction> actions = new ArrayList<>();
+                if (CACHE.getPlayerCache().getInventoryCache().getMouseStack() != Container.EMPTY_STACK) {
+                    actions.add(new DropMouseStack(ClickItemAction.LEFT_CLICK));
+                }
                 var actionSlot = getActionSlot();
-                List<InventoryAction> actions = Lists.newArrayList(new MoveToHotbarSlot(i, actionSlot));
-                debug("[{}] Swapping item to slot {}", getClass().getSimpleName(), actionSlot.getId());
+                actions.add(new MoveToHotbarSlot(i, actionSlot));
                 if (actionSlot != MoveToHotbarAction.OFF_HAND
                     && CACHE.getPlayerCache().getHeldItemSlot() != targetMainHandHotbarSlot
                 ) {
