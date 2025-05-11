@@ -10,6 +10,7 @@ import com.zenith.feature.player.World;
 import com.zenith.mc.block.BlockPos;
 import com.zenith.mc.block.Direction;
 import com.zenith.mc.block.LocalizedCollisionBox;
+import lombok.ToString;
 import org.jspecify.annotations.Nullable;
 
 import java.util.*;
@@ -17,6 +18,7 @@ import java.util.*;
 import static com.zenith.Globals.BARITONE;
 import static com.zenith.Globals.BOT;
 
+@ToString
 public abstract class Movement implements IMovement {
     public static final Direction[] HORIZONTALS_BUT_ALSO_DOWN_____SO_EVERY_DIRECTION_EXCEPT_UP = {Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST, Direction.DOWN};
 

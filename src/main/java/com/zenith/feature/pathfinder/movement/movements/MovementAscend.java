@@ -9,11 +9,13 @@ import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockPos;
 import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.block.Direction;
+import lombok.ToString;
 
 import java.util.Set;
 
 import static com.zenith.feature.pathfinder.movement.ActionCosts.*;
 
+@ToString(callSuper = true)
 public class MovementAscend extends Movement {
 
     private int ticksWithoutPlacement = 0;

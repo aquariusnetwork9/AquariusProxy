@@ -12,6 +12,7 @@ import com.zenith.feature.player.World;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockPos;
 import com.zenith.mc.block.Direction;
+import lombok.ToString;
 import org.cloudburstmc.math.vector.Vector2f;
 import org.cloudburstmc.math.vector.Vector3d;
 import org.cloudburstmc.math.vector.Vector3i;
@@ -22,6 +23,7 @@ import java.util.Set;
 
 import static com.zenith.feature.pathfinder.movement.ActionCosts.COST_INF;
 
+@ToString(callSuper = true)
 public class MovementFall extends Movement {
 
     public MovementFall(BlockPos src, BlockPos dest) {

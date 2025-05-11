@@ -9,6 +9,7 @@ import com.zenith.feature.player.Bot;
 import com.zenith.feature.player.World;
 import com.zenith.mc.block.*;
 import com.zenith.util.math.MathHelper;
+import lombok.ToString;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +18,7 @@ import java.util.Set;
 import static com.zenith.Globals.CONFIG;
 import static com.zenith.feature.pathfinder.movement.ActionCosts.*;
 
+@ToString(callSuper = true)
 public class MovementDiagonal extends Movement {
 
     private static final double SQRT_2 = Math.sqrt(2);

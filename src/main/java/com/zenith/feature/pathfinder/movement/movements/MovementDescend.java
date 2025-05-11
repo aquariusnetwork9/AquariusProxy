@@ -12,12 +12,14 @@ import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockPos;
 import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.block.BlockTags;
+import lombok.ToString;
 import org.cloudburstmc.math.vector.Vector2f;
 
 import java.util.Set;
 
 import static com.zenith.feature.pathfinder.movement.ActionCosts.*;
 
+@ToString(callSuper = true)
 public class MovementDescend extends Movement {
 
     private int numTicks = 0;
