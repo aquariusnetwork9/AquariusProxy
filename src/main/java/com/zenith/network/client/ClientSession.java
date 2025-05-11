@@ -36,7 +36,8 @@ import static java.util.Objects.isNull;
 @Getter
 @Setter
 public class ClientSession extends TcpClientSession {
-    private final EventLoop eventLoop = new DefaultEventLoop(new DefaultThreadFactory("Client Event Loop", true));
+    // client tick eventloop, separate from the netty event loop
+    private final EventLoop clientEventLoop = new DefaultEventLoop(new DefaultThreadFactory("Client Event Loop", true));
     protected long ping = 0L;
     protected long lastPingId = 0L;
     protected long lastPingSentTime = 0L;
@@ -196,15 +197,11 @@ public class ClientSession extends TcpClientSession {
         return ProtocolVersion.getProtocol(protocolVersionId);
     }
 
-    public EventLoop getClientEventLoop() {
-        return eventLoop;
-    }
-
     public void executeInEventLoop(Runnable runnable) {
-        if (eventLoop.inEventLoop() || eventLoop.isShuttingDown()) {
+        if (clientEventLoop.inEventLoop() || clientEventLoop.isShuttingDown()) {
             runnable.run();
         } else {
-            eventLoop.execute(runnable);
+            clientEventLoop.execute(runnable);
         }
     }
 }
