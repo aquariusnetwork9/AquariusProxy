@@ -57,21 +57,21 @@ public class LocalCoordinates implements Coordinates {
     }
 
     public static LocalCoordinates parse(StringReader reader) throws CommandSyntaxException {
-        int i = reader.getCursor();
-        double d = readDouble(reader, i);
+        int startIndex = reader.getCursor();
+        double arg0 = readDouble(reader, startIndex);
         if (reader.canRead() && reader.peek() == ' ') {
             reader.skip();
-            double e = readDouble(reader, i);
+            double arg1 = readDouble(reader, startIndex);
             if (reader.canRead() && reader.peek() == ' ') {
                 reader.skip();
-                double f = readDouble(reader, i);
-                return new LocalCoordinates(d, e, f);
+                double arg2 = readDouble(reader, startIndex);
+                return new LocalCoordinates(arg0, arg1, arg2);
             } else {
-                reader.setCursor(i);
+                reader.setCursor(startIndex);
                 throw Vec3Argument.ERROR_NOT_COMPLETE.createWithContext(reader);
             }
         } else {
-            reader.setCursor(i);
+            reader.setCursor(startIndex);
             throw Vec3Argument.ERROR_NOT_COMPLETE.createWithContext(reader);
         }
     }

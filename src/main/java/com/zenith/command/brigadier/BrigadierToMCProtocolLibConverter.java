@@ -137,6 +137,9 @@ public class BrigadierToMCProtocolLibConverter {
                 case Vec3Argument it -> {
                     parser = CommandParser.VEC3;
                 }
+                case ItemArgument it -> {
+                    parser = CommandParser.ITEM_STACK;
+                }
                 default -> {}
             }
         }
