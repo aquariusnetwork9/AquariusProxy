@@ -7,16 +7,19 @@ import com.zenith.feature.pathfinder.PathInput;
 import com.zenith.feature.pathfinder.movement.*;
 import com.zenith.feature.player.Rotation;
 import com.zenith.feature.player.RotationHelper;
+import com.zenith.feature.player.World;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockPos;
 import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.block.BlockTags;
+import lombok.ToString;
 import org.cloudburstmc.math.vector.Vector2f;
 
 import java.util.Set;
 
 import static com.zenith.feature.pathfinder.movement.ActionCosts.*;
 
+@ToString(callSuper = true)
 public class MovementDescend extends Movement {
 
     private int numTicks = 0;
@@ -126,9 +129,9 @@ public class MovementDescend extends Movement {
         int effectiveStartHeight = y;
         for (int fallHeight = 3; true; fallHeight++) {
             int newY = y - fallHeight;
-            if (newY < 0) {
+            if (newY < World.getCurrentDimension().minY()) {
                 // when pathing in the end, where you could plausibly fall into the void
-                // this check prevents it from getting the block at y=-1 and crashing
+                // this check prevents it from getting the block at y=(min height - 1) and crashing
                 return false;
             }
             boolean reachedMinimum = fallHeight >= context.minFallHeight;

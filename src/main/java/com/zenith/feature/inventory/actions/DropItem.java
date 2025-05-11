@@ -19,8 +19,8 @@ import static com.zenith.Globals.CLIENT_LOG;
 public class DropItem implements InventoryAction {
     private final int containerId;
     private final int slotId;
-    private final ContainerActionType actionType = ContainerActionType.DROP_ITEM;
     private final DropItemAction dropItemAction;
+    private static final ContainerActionType containerActionType = ContainerActionType.DROP_ITEM;
 
     public DropItem(final int slotId, final DropItemAction dropItemAction) {
         this(0, slotId, dropItemAction);
@@ -31,12 +31,12 @@ public class DropItem implements InventoryAction {
         var container = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
         var mouseStack = CACHE.getPlayerCache().getInventoryCache().getMouseStack();
         if (!isStackEmpty(mouseStack)) {
-            CLIENT_LOG.debug("[{}, {}, {}] Can't drop as mouse stack not empty", slotId, actionType, dropItemAction);
+            CLIENT_LOG.debug("Can't drop because mouse stack is not empty: {}", this);
             return null; // can't drop if mouse stack is not empty
         }
         final ItemStack clickStack = container.getItemStack(slotId);
         if (isStackEmpty(clickStack)) {
-            CLIENT_LOG.debug("[{}, {}, {}] Can't drop empty click stack", slotId, actionType, dropItemAction);
+            CLIENT_LOG.debug("Can't drop empty click stack: {}", this);
             return null; // can't drop if clickStack is empty
         }
         final Int2ObjectMap<ItemStack> changedSlots = new Int2ObjectArrayMap<>();
@@ -51,7 +51,7 @@ public class DropItem implements InventoryAction {
             case DROP_SELECTED_STACK -> // drop the entire stack from the selected slot
                 changedSlots.put(slotId, Container.EMPTY_STACK);
             default -> {
-                CLIENT_LOG.debug("[{}, {}, {}] Unhandled drop item action", slotId, actionType, dropItemAction);
+                CLIENT_LOG.debug("Unhandled drop item action: {}", this);
                 return null;
             }
         }
@@ -59,7 +59,7 @@ public class DropItem implements InventoryAction {
             containerId,
             CACHE.getPlayerCache().getActionId().incrementAndGet(),
             slotId,
-            actionType,
+            containerActionType,
             dropItemAction,
             Container.EMPTY_STACK,
             changedSlots

@@ -119,16 +119,10 @@ public class ClientTickManager {
 
     public void stopBotTicks() {
         if (doBotTicks.compareAndSet(true, false)) {
-            var eventLoop = Proxy.getInstance().getClient().getClientEventLoop();
-            if (!eventLoop.isShuttingDown()) {
-                eventLoop.execute(() -> {
-                    CLIENT_LOG.debug("Stopped Bot Ticks");
-                    EVENT_BUS.post(ClientBotTick.Stopped.INSTANCE);
-                });
-            } else {
+            Proxy.getInstance().getClient().executeInEventLoop(() -> {
                 CLIENT_LOG.debug("Stopped Bot Ticks");
                 EVENT_BUS.post(ClientBotTick.Stopped.INSTANCE);
-            }
+            });
         }
     }
 }

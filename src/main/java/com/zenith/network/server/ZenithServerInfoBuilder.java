@@ -8,6 +8,7 @@ import com.zenith.event.client.ClientDisconnectEvent;
 import com.zenith.event.client.ClientOnlineEvent;
 import com.zenith.event.queue.QueueCompleteEvent;
 import com.zenith.event.queue.QueueStartEvent;
+import com.zenith.event.server.MotdBuildEvent;
 import com.zenith.feature.queue.Queue;
 import com.zenith.util.ComponentSerializer;
 import net.kyori.adventure.text.Component;
@@ -141,6 +142,14 @@ public class ZenithServerInfoBuilder {
     private static final String motdQueueEta = "<reset>- <red>ETA <white>[<aqua><eta><white>]";
 
     public Component getMotd() {
+        var event = new MotdBuildEvent();
+        EVENT_BUS.post(event);
+        return event.getMotd() != null
+            ? event.getMotd()
+            : buildDefaultMotd();
+    }
+
+    public Component buildDefaultMotd() {
         var prio = Proxy.getInstance().isPrio();
         var qPos = Proxy.getInstance().getQueuePosition();
         var qUndefined = qPos == Integer.MAX_VALUE;

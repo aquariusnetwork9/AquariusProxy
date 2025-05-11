@@ -216,9 +216,11 @@ public class PathExecutor {
             if (ticksOnCurrent > predictedMovementFinishTicks) {
                 if (path.getGoal().isInGoal(movement.getDest()) && ctx.player().getInteractions().isDestroying(movement.getDest().x(), movement.getDest().y(), movement.getDest().z())) {
                     if (ticksOnCurrent > predictedMovementFinishTicks + (20 * 300)) {
-                        PATH_LOG.info("This movement to goal has taken too long ({} ticks, expected {}" + 500 + "). Cancelling.",
-                                      ticksOnCurrent,
-                                      predictedMovementFinishTicks);
+                        PATH_LOG.info("This movement: {} to goal has taken too long ({} ticks, expected {}" + 500 + "). Cancelling.",
+                            movement.getClass().getSimpleName(),
+                            ticksOnCurrent,
+                            predictedMovementFinishTicks);
+                        PATH_LOG.debug("{}", movement);
                         cancel();
                         return true;
                     }
@@ -227,9 +229,11 @@ public class PathExecutor {
                     // as you break the blocks required, the remaining cost goes down, to the point where
                     // ticksOnCurrent is greater than recalculateCost + 100
                     // this is why we cache cost at the beginning, and don't recalculate for this comparison every tick
-                    PATH_LOG.info("This movement has taken too long ({} ticks, expected {}). Cancelling.",
+                    PATH_LOG.info("This movement: {} has taken too long ({} ticks, expected {}). Cancelling.",
+                                  movement.getClass().getSimpleName(),
                                   ticksOnCurrent,
                                   currentMovementOriginalCostEstimate);
+                    PATH_LOG.debug("{}", movement);
                     cancel();
                     return true;
                 }

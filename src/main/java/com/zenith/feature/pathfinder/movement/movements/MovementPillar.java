@@ -12,6 +12,7 @@ import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockPos;
 import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.block.BlockTags;
+import lombok.ToString;
 import org.cloudburstmc.math.vector.Vector3d;
 
 import java.util.Set;
@@ -20,6 +21,7 @@ import static com.zenith.Globals.BARITONE;
 import static com.zenith.Globals.BLOCK_DATA;
 import static com.zenith.feature.pathfinder.movement.ActionCosts.*;
 
+@ToString(callSuper = true)
 public class MovementPillar extends Movement {
 
     public MovementPillar(BlockPos start, BlockPos end) {

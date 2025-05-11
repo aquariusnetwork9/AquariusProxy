@@ -26,7 +26,16 @@ import static java.util.Arrays.asList;
 
 public class ReleaseChannelCommand extends Command {
     private static final List<String> PLATFORMS = asList("java", "linux");
-    private static final List<String> MINECRAFT_VERSIONS = asList("1.12.2", "1.20.1", "1.20.4", "1.20.6", "1.21.0", "1.21.3", "1.21.4");
+    private static final List<String> MINECRAFT_VERSIONS = asList(
+        "1.12.2",
+        "1.20.1",
+        "1.20.4",
+        "1.20.6",
+        "1.21.0",
+        "1.21.3",
+        "1.21.4",
+        "1.21.5"
+    );
 
     @Override
     public CommandUsage commandUsage() {
@@ -60,19 +69,31 @@ public class ReleaseChannelCommand extends Command {
                     .primaryColor();
             }))
             .then(literal("set")
-                      .then(argument("channel", wordWithChars())
-                                .then(argument("minecraft_version", wordWithChars()).executes(c -> {
-                                    final String channel = StringArgumentType.getString(c, "channel");
-                                    final String minecraft_version = StringArgumentType.getString(c, "minecraft_version");
-                                    setChannel(c, channel, minecraft_version, false);
-                                    return OK;
-                                })
-                                          .then(literal("pre").executes(c -> {
-                                              final String channel = StringArgumentType.getString(c, "channel");
-                                              final String minecraft_version = StringArgumentType.getString(c, "minecraft_version");
-                                              setChannel(c, channel, minecraft_version, true);
-                                              return OK;
-                                          })))));
+                .then(argument("channel", wordWithChars())
+                    .then(argument("minecraft_version", wordWithChars()).executes(c -> {
+                            final String channel = StringArgumentType.getString(c, "channel");
+                            final String minecraft_version = StringArgumentType.getString(c, "minecraft_version");
+                            setChannel(c, channel, minecraft_version, false, false);
+                            return OK;
+                        })
+                        .then(literal("force").executes(c -> {
+                            final String channel = StringArgumentType.getString(c, "channel");
+                            final String minecraft_version = StringArgumentType.getString(c, "minecraft_version");
+                            setChannel(c, channel, minecraft_version, false, true);
+                            return OK;
+                        }))
+                        .then(literal("pre").executes(c -> {
+                            final String channel = StringArgumentType.getString(c, "channel");
+                            final String minecraft_version = StringArgumentType.getString(c, "minecraft_version");
+                            setChannel(c, channel, minecraft_version, true, false);
+                            return OK;
+                        })
+                            .then(literal("force").executes(c -> {
+                                final String channel = StringArgumentType.getString(c, "channel");
+                                final String minecraft_version = StringArgumentType.getString(c, "minecraft_version");
+                                setChannel(c, channel, minecraft_version, true, true);
+                                return OK;
+                            }))))));
     }
 
     @Override
@@ -81,7 +102,7 @@ public class ReleaseChannelCommand extends Command {
             .addField("Current Release Channel", LAUNCH_CONFIG.release_channel, false);
     }
 
-    private void setChannel(com.mojang.brigadier.context.CommandContext<CommandContext> c, String channel, String minecraft_version, boolean pre) {
+    private void setChannel(com.mojang.brigadier.context.CommandContext<CommandContext> c, String channel, String minecraft_version, boolean pre, boolean force) {
         if (!PLATFORMS.contains(channel)) {
             c.getSource().getEmbed()
                 .title("Invalid Platform!")
@@ -89,7 +110,7 @@ public class ReleaseChannelCommand extends Command {
                 .errorColor();
             return;
         }
-        if (!MINECRAFT_VERSIONS.contains(minecraft_version)) {
+        if (!force && !MINECRAFT_VERSIONS.contains(minecraft_version)) {
             c.getSource().getEmbed()
                 .title("Invalid Minecraft Version!")
                 .description("Available versions: " + MINECRAFT_VERSIONS)

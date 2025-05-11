@@ -204,6 +204,11 @@ public record BlockPos(int x, int y, int z) implements Comparable<BlockPos> {
         return (int) longHash(x, y, z);
     }
 
+    @Override
+    public String toString() {
+        return "[" + x + ", " + y + ", " + z + "]";
+    }
+
     public static long longHash(BlockPos pos) {
         return longHash(pos.x, pos.y, pos.z);
     }

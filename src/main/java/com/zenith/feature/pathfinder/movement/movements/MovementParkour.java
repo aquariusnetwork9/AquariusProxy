@@ -7,6 +7,7 @@ import com.zenith.feature.pathfinder.movement.*;
 import com.zenith.feature.pathfinder.movement.MovementHelper.PlaceResult;
 import com.zenith.feature.player.World;
 import com.zenith.mc.block.*;
+import lombok.ToString;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -15,6 +16,7 @@ import static com.zenith.Globals.BARITONE;
 import static com.zenith.Globals.CONFIG;
 import static com.zenith.feature.pathfinder.movement.ActionCosts.*;
 
+@ToString(callSuper = true)
 public class MovementParkour extends Movement {
 
     private static final BlockPos[] EMPTY = new BlockPos[]{};
