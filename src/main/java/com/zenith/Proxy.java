@@ -11,6 +11,7 @@ import com.zenith.event.queue.QueueCompleteEvent;
 import com.zenith.event.queue.QueuePositionUpdateEvent;
 import com.zenith.event.queue.QueueSkipEvent;
 import com.zenith.event.queue.QueueStartEvent;
+import com.zenith.event.server.ServerIconBuildEvent;
 import com.zenith.feature.api.crafthead.CraftheadApi;
 import com.zenith.feature.api.mcsrvstatus.MCSrvStatusApi;
 import com.zenith.feature.api.minotar.MinotarApi;
@@ -619,17 +620,21 @@ public class Proxy {
         if (!CONFIG.authentication.username.equals("Unknown")) { // else use default icon
             try {
                 final GameProfile profile = CACHE.getProfileCache().getProfile();
+                byte[] icon;
                 if (profile != null && profile.getId() != null) {
                     // do uuid lookup
                     final UUID uuid = profile.getId();
-                    this.serverIcon = MinotarApi.INSTANCE.getAvatar(uuid).or(() -> CraftheadApi.INSTANCE.getAvatar(uuid))
+                    icon = MinotarApi.INSTANCE.getAvatar(uuid).or(() -> CraftheadApi.INSTANCE.getAvatar(uuid))
                         .orElseThrow(() -> new IOException("Unable to download server icon for \"" + uuid + "\""));
                 } else {
                     // do username lookup
                     final String username = CONFIG.authentication.username;
-                    this.serverIcon = MinotarApi.INSTANCE.getAvatar(username).or(() -> CraftheadApi.INSTANCE.getAvatar(username))
+                    icon = MinotarApi.INSTANCE.getAvatar(username).or(() -> CraftheadApi.INSTANCE.getAvatar(username))
                         .orElseThrow(() -> new IOException("Unable to download server icon for \"" + username + "\""));
                 }
+                var event = new ServerIconBuildEvent(icon);
+                EVENT_BUS.post(event.getIcon());
+                this.serverIcon = icon;
                 if (DISCORD.isRunning()) {
                     if (CONFIG.discord.manageNickname)
                         DISCORD.setBotNickname(CONFIG.authentication.username + " | ZenithProxy");
