@@ -142,11 +142,9 @@ public class ZenithServerInfoBuilder {
     private static final String motdQueueEta = "<reset>- <red>ETA <white>[<aqua><eta><white>]";
 
     public Component getMotd() {
-        var event = new MotdBuildEvent();
+        var event = new MotdBuildEvent(buildDefaultMotd());
         EVENT_BUS.post(event);
-        return event.getMotd() != null
-            ? event.getMotd()
-            : buildDefaultMotd();
+        return event.getMotd();
     }
 
     public Component buildDefaultMotd() {
