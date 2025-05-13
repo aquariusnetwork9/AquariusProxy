@@ -87,7 +87,7 @@ public class RateLimiterCommand extends Command {
             .addField("Login Rate Limit", CONFIG.server.loginRateLimiter.rateLimitSeconds + "s")
             .addField("Packet", toggleStr(CONFIG.server.packetRateLimiter.enabled))
             .addField("Packet Interval", CONFIG.server.packetRateLimiter.intervalSeconds + "s")
-            .addField("Packet Rate Limit", toggleStr(CONFIG.server.packetRateLimiter.enabled))
+            .addField("Packet Rate Limit", CONFIG.server.packetRateLimiter.maxPacketsPerInterval)
             .primaryColor();
     }
 }
