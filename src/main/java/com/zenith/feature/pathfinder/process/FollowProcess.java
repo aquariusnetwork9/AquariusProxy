@@ -7,16 +7,24 @@ import com.zenith.feature.pathfinder.PathingCommand;
 import com.zenith.feature.pathfinder.PathingCommandType;
 import com.zenith.feature.pathfinder.PathingRequestFuture;
 import com.zenith.feature.pathfinder.goals.Goal;
+import com.zenith.feature.pathfinder.goals.GoalBlock;
 import com.zenith.feature.pathfinder.goals.GoalComposite;
 import com.zenith.feature.pathfinder.goals.GoalNear;
+import com.zenith.mc.item.ItemData;
 import com.zenith.util.timer.Timer;
 import com.zenith.util.timer.Timers;
 import lombok.Data;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.MetadataTypes;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
+import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.function.Predicate;
 
 import static com.zenith.Globals.*;
@@ -58,6 +66,34 @@ public final class FollowProcess extends BaritoneProcessHelper implements IBarit
         this.followTarget = target;
         this.future = new PathingRequestFuture();
         return this.future;
+    }
+
+    // todo: verify we actually picked up the items
+    //  and notify the future as not accepted if not
+
+    public PathingRequestFuture pickup(Predicate<ItemStack> itemFilter) {
+        PATH_LOG.info("Picking up item predicate");
+        var followTarget = new ItemFollowTarget(itemFilter);
+        return follow(followTarget);
+    }
+
+    public PathingRequestFuture pickup(ItemData... items) {
+        PATH_LOG.info("Picking up items: {}", Arrays.stream(items).map(ItemData::name).toList());
+        var followTarget = new ItemFollowTarget(i -> {
+            for (var item : items) {
+                if (item.id() == i.getId()) {
+                    return true;
+                }
+            }
+            return false;
+        });
+        return follow(followTarget);
+    }
+
+    public PathingRequestFuture pickup() {
+        PATH_LOG.info("Picking up all items");
+        var followTarget = new ItemFollowTarget((i) -> true);
+        return follow(followTarget);
     }
 
     @Override
@@ -107,6 +143,9 @@ public final class FollowProcess extends BaritoneProcessHelper implements IBarit
 
     public interface FollowTarget {
         PathingCommand pathingCommand();
+    }
+
+    public interface EntityFollowTarget extends FollowTarget {
         default boolean followable(EntityLiving entity) {
             if (entity == null) {
                 return false;
@@ -119,7 +158,7 @@ public final class FollowProcess extends BaritoneProcessHelper implements IBarit
     }
 
     @Data
-    public static class SingleEntityTarget implements FollowTarget {
+    public static class SingleEntityTarget implements EntityFollowTarget {
         private final int entityId;
         private final WeakReference<EntityLiving> entityRef;
 
@@ -140,7 +179,7 @@ public final class FollowProcess extends BaritoneProcessHelper implements IBarit
         }
     }
 
-    public record EntityPredicateTarget(Predicate<EntityLiving> predicate) implements FollowTarget {
+    public record EntityPredicateTarget(Predicate<EntityLiving> predicate) implements EntityFollowTarget {
 
         @Override
         public PathingCommand pathingCommand() {
@@ -162,4 +201,29 @@ public final class FollowProcess extends BaritoneProcessHelper implements IBarit
         }
     }
 
+    public record ItemFollowTarget(Predicate<ItemStack> filter) implements FollowTarget {
+
+        @Override
+        public PathingCommand pathingCommand() {
+            var itemEntities = CACHE.getEntityCache().getEntities().values().stream()
+                .filter(e -> e.getEntityType() == EntityType.ITEM)
+                .filter(e -> e instanceof EntityLiving)
+                .map(e -> (EntityLiving) e)
+                .toList();
+            List<GoalBlock> goals = new ArrayList<>();
+            for (var itemEntity : itemEntities) {
+                var itemStack = itemEntity.getMetadataValue(8, MetadataTypes.ITEM, ItemStack.class);
+                if (itemStack == null) continue;
+                if (filter.test(itemStack)) {
+                    goals.add(new GoalBlock(itemEntity.blockPos()));
+                }
+            }
+            if (goals.isEmpty()) return null;
+            var type = goals.stream()
+                .anyMatch(g -> g.getGoalPos().squaredDistance(CACHE.getPlayerCache().getThePlayer().blockPos()) <= Math.pow(25, 2))
+                ? PathingCommandType.REVALIDATE_GOAL_AND_PATH
+                : PathingCommandType.SOFT_REPATH;
+            return new PathingCommand(new GoalComposite(goals.toArray(new Goal[0])), type);
+        }
+    }
 }

@@ -29,6 +29,8 @@ import static com.zenith.command.brigadier.BlockPosArgument.blockPos;
 import static com.zenith.command.brigadier.BlockPosArgument.getBlockPos;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
+import static com.zenith.command.brigadier.ItemArgument.getItem;
+import static com.zenith.command.brigadier.ItemArgument.item;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 import static com.zenith.command.brigadier.Vec2Argument.getVec2;
@@ -55,6 +57,8 @@ public class PathfinderCommand extends Command {
                 "mine <block>",
                 "click <left/right> <x> <y> <z>",
                 "click <left/right> entity <type>",
+                "pickup",
+                "pickup <item>",
                 "status",
                 "settings"
             )
@@ -155,6 +159,37 @@ public class PathfinderCommand extends Command {
                         .primaryColor();
                     return OK;
                 }))))
+            .then(literal("pickup")
+                .executes(c -> {
+                    BARITONE.pickup()
+                        .addExecutedListener(f -> {
+                            c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
+                                .title("Items Picked Up!")
+                                .primaryColor());
+                        });
+                    c.getSource().getEmbed()
+                        .title("Picking up all items")
+                        .primaryColor();
+                }))
+                .then(argument("item", item()).executes(c -> {
+                    var item = getItem(c, "item");
+                    if (item == null) {
+                        c.getSource().getEmbed()
+                            .title("Item Not found");
+                        return ERROR;
+                    }
+                    BARITONE.pickup(item)
+                        .addExecutedListener(f -> {
+                            c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
+                                .title("Item Picked Up!")
+                                .primaryColor());
+                        });
+                    c.getSource().getEmbed()
+                        .title("Picking up item")
+                        .addField("Item", escape(item.name()))
+                        .primaryColor();
+                    return OK;
+                }))
             .then(literal("thisway").then(argument("dist", integer()).executes(c -> {
                 int dist = getInteger(c, "dist");
                 BARITONE.thisWay(dist)
