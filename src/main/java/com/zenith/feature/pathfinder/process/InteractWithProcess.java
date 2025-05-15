@@ -11,6 +11,7 @@ import com.zenith.feature.player.*;
 import com.zenith.feature.player.raycast.RaycastHelper;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.LocalizedCollisionBox;
+import com.zenith.util.math.MathHelper;
 import lombok.Data;
 import org.cloudburstmc.math.vector.Vector2f;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
@@ -111,7 +112,8 @@ public class InteractWithProcess extends BaritoneProcessHelper {
                 return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
             }
             // todo: some antistuck func here
-            return new PathingCommand(new GoalNear(x, y, z, 1), PathingCommandType.REVALIDATE_GOAL_AND_PATH);
+            int rangeSq = MathHelper.clamp(((int) Math.pow(BOT.getBlockReachDistance(), 2)) - 1, 1, 4);
+            return new PathingCommand(new GoalNear(x, y, z, rangeSq), PathingCommandType.REVALIDATE_GOAL_AND_PATH);
         }
 
         @Override
@@ -193,7 +195,8 @@ public class InteractWithProcess extends BaritoneProcessHelper {
                 return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
             }
             // todo: some antistuck func here
-            return new PathingCommand(new GoalNear(entity.blockPos(), 1), PathingCommandType.REVALIDATE_GOAL_AND_PATH);
+            int rangeSq = MathHelper.clamp(((int) Math.pow(BOT.getEntityInteractDistance(), 2)) - 1, 1, 4);
+            return new PathingCommand(new GoalNear(entity.blockPos(), rangeSq), PathingCommandType.REVALIDATE_GOAL_AND_PATH);
         }
 
         @Override
