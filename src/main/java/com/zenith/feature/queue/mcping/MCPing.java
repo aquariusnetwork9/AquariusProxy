@@ -52,7 +52,7 @@ public class MCPing {
         return parsePing(json);
     }
 
-    private InetSocketAddress resolveAddress(final String hostname, final int defaultPort) {
+    public InetSocketAddress resolveAddress(final String hostname, final int defaultPort) {
         final String srvRecord = "_minecraft._tcp." + hostname;
         String resolvedHostname = hostname;
         int resolvedPort = defaultPort;
