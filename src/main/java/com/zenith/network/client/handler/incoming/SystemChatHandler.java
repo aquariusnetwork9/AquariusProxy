@@ -39,7 +39,10 @@ public class SystemChatHandler implements ClientEventLoopPacketHandler<Clientbou
                         .replacement("")
                     );
                 }
-                CHAT_LOG.info(component);
+                // Don't print "Position in queue: " message from 2b queue
+                if (!Proxy.getInstance().isOn2b2t() || !Proxy.getInstance().isInQueue() || !ComponentSerializer.serializePlain(component).startsWith("Position in queue: ")) {
+                    CHAT_LOG.info(component);
+                }
             }
             final Component component = packet.getContent();
             final String messageString = ComponentSerializer.serializePlain(component);
