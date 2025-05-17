@@ -701,7 +701,6 @@ public class Proxy {
     }
 
     public void handleQueuePositionUpdateEvent(QueuePositionUpdateEvent event) {
-        TERMINAL_LOG.info("Position in queue: {}", event.position());
         this.queuePosition = event.position();
     }
 

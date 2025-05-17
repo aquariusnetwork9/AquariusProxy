@@ -16,6 +16,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
+import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Objects;
@@ -31,19 +32,7 @@ public class SystemChatHandler implements ClientEventLoopPacketHandler<Clientbou
     @Override
     public boolean applyAsync(@NonNull ClientboundSystemChatPacket packet, @NonNull ClientSession session) {
         try {
-            if (CONFIG.client.extra.logChatMessages) {
-                var component = packet.getContent();
-                if (Proxy.getInstance().isInQueue()) {
-                    component = component.replaceText(b -> b
-                        .matchLiteral("\n\n")
-                        .replacement("")
-                    );
-                }
-                // Don't print "Position in queue: " message from 2b queue
-                if (!Proxy.getInstance().isOn2b2t() || !Proxy.getInstance().isInQueue() || !ComponentSerializer.serializePlain(component).startsWith("Position in queue: ")) {
-                    CHAT_LOG.info(component);
-                }
-            }
+            logSystemChat(packet);
             final Component component = packet.getContent();
             final String messageString = ComponentSerializer.serializePlain(component);
             Optional<DeathMessageParseResult> deathMessage = Optional.empty();
@@ -88,6 +77,20 @@ public class SystemChatHandler implements ClientEventLoopPacketHandler<Clientbou
             CLIENT_LOG.error("Caught exception in ChatHandler. Packet: {}", packet, e);
         }
         return true;
+    }
+
+    private static void logSystemChat(final @NotNull ClientboundSystemChatPacket packet) {
+        if (!CONFIG.client.extra.logChatMessages) return;
+        var component = packet.getContent();
+        if (Proxy.getInstance().isInQueue()) {
+            if (CONFIG.client.extra.logOnlyQueuePositionUpdates) return;
+            // strip empty lines spam in 2b2t queue messages
+            component = component.replaceText(b -> b
+                .matchLiteral("\n\n")
+                .replacement("")
+            );
+        }
+        CHAT_LOG.info(component);
     }
 
     private Optional<DeathMessageParseResult> parseDeathMessage2b2t(final Component component, Optional<DeathMessageParseResult> deathMessage, final String messageString) {
