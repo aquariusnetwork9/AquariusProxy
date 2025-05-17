@@ -28,7 +28,7 @@ public class EmbedSerializer {
         var c = Component.text()
             .appendNewline();
         if (embed.isTitlePresent()) {
-            c.append(Component.text(embed.title()).decorate(TextDecoration.BOLD));
+            c.append(serializeText(embed.title()).decorate(TextDecoration.BOLD));
             if (embed.isDescriptionPresent() || embed.isUrlPresent() || !embed.fields().isEmpty())
                 c.appendNewline();
         }
@@ -70,7 +70,9 @@ public class EmbedSerializer {
         });
     }
 
-    public static Component serializeText(final String text) {
+    public static Component serializeText(String text) {
+        /** replace escaped underscores from {@link DiscordBot#escape(String)} **/
+        text = text.replaceAll("\\\\_", "_");
         var matcher = DISCORD_FORMATTING_REGEX.matcher(text);
         var component = Component.text();
         var lastEnd = 0;
