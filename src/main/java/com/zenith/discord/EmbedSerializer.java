@@ -20,8 +20,9 @@ public class EmbedSerializer {
     // `code` -> code
     // ```code block``` -> code block
     // [link](url) -> text with click event
+    // ||spoiler|| -> spoiler
     // there's more we don't currently use that aren't implemented here
-    private static final Pattern DISCORD_FORMATTING_REGEX = Pattern.compile("(\\*\\*(.+?)\\*\\*)|(```(.+?)```)|(`(.+?)`)|(\\[(.+?)]\\((.+?)\\))");
+    private static final Pattern DISCORD_FORMATTING_REGEX = Pattern.compile("(\\*\\*(.+?)\\*\\*)|(```(.+?)```)|(`(.+?)`)|(\\[(.+?)]\\((.+?)\\))|(\\|\\|(.+?)\\|\\|)");
 
     public static Component serialize(final Embed embed) {
         var c = Component.text()
@@ -87,8 +88,11 @@ public class EmbedSerializer {
                 component.append(Component.text(matcher.group(6)).color(NamedTextColor.GRAY));
             } else if (matcher.group(8) != null) {
                 component.append(Component.text(matcher.group(8)).color(NamedTextColor.BLUE)
-                                     .clickEvent(ClickEvent.openUrl(matcher.group(9)))
-                                     .hoverEvent(HoverEvent.showText(Component.text(matcher.group(9)))));
+                    .clickEvent(ClickEvent.openUrl(matcher.group(9)))
+                    .hoverEvent(HoverEvent.showText(Component.text(matcher.group(9)))));
+            } else if (matcher.group(11) != null) {
+                component.append(Component.text(matcher.group(11)))
+                                     .decorate(TextDecoration.ITALIC);
             }
             lastEnd = end;
         }
