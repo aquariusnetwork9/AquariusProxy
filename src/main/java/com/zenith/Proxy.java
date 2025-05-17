@@ -723,11 +723,9 @@ public class Proxy {
         if (!isOn2b2t()) return;
         if (event.prio() == CONFIG.authentication.prio) {
             if (isPrio.isEmpty()) {
-                CLIENT_LOG.info("Prio Detected: {}", event.prio());
                 this.isPrio = Optional.of(event.prio());
             }
         } else {
-            CLIENT_LOG.info("Prio Change Detected: {}", event.prio());
             EVENT_BUS.postAsync(new PrioStatusUpdateEvent(event.prio()));
             this.isPrio = Optional.of(event.prio());
             CONFIG.authentication.prio = event.prio();

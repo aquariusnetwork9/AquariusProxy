@@ -59,7 +59,6 @@ public class SystemChatHandler implements ClientEventLoopPacketHandler<Clientbou
             if (Proxy.getInstance().isOn2b2t()
                 && "Reconnecting to server 2b2t.".equals(messageString)
                 && NamedTextColor.GOLD.equals(component.style().color())) {
-                CLIENT_LOG.info("Queue Skip Detected");
                 EVENT_BUS.postAsync(QueueSkipEvent.INSTANCE);
             }
 

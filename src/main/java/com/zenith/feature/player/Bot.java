@@ -467,7 +467,7 @@ public final class Bot extends ModuleUtils {
 
     public synchronized void handlePlayerPosRotate(final int teleportId) {
         syncFromCache(true);
-        CLIENT_LOG.info("Server teleport {} to: {}, {}, {}", teleportId, this.x, this.y, this.z);
+        CLIENT_LOG.debug("Server teleport {} to: {}, {}, {}", teleportId, this.x, this.y, this.z);
         sendClientPacketAwait(new ServerboundAcceptTeleportationPacket(teleportId));
         sendClientPacketAwait(new ServerboundMovePlayerPosRotPacket(false, this.x, this.y, this.z, this.yaw, this.pitch));
         CLIENT_LOG.debug("Accepted teleport: {}", teleportId);
