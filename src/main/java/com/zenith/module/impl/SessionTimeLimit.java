@@ -3,6 +3,7 @@ package com.zenith.module.impl;
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
 import com.zenith.event.client.ClientTickEvent;
+import com.zenith.event.module.SessionTimeLimitWarningEvent;
 import com.zenith.feature.api.vcapi.VcApi;
 import com.zenith.module.api.Module;
 import com.zenith.network.server.ServerSession;
@@ -57,24 +58,27 @@ public class SessionTimeLimit extends Module {
         final Duration durationUntilKick = sessionTimeLimit.minus(Duration.ofSeconds(Proxy.getInstance().getOnlineTimeSecondsWithQueueSkip()));
         if (durationUntilKick.isNegative()) return; // sanity check just in case 2b's plugin changes
         debug("Sending 2b2t session time limit warning: {}m", durationUntilKick.toMinutes());
-        lastWarningSent = Instant.now();
-        var actionBarPacket = new ClientboundSetActionBarTextPacket(
-            ComponentSerializer.minimessage((durationUntilKick.toMinutes() <= 3 ? "<red>" : "<blue>") + sessionTimeLimit.toHours() + "hr kick in: " + durationUntilKick.toMinutes() + "m"));
-        playerConnection.sendAsync(actionBarPacket);
-        // each packet will reset text render timer for 3 seconds
-        for (int i = 1; i <= 7; i++) { // render the text for about 10 seconds total
-            playerConnection.sendScheduledAsync(actionBarPacket, i, TimeUnit.SECONDS);
+        if (CONFIG.client.extra.sessionTimeLimit.ingameNotification) {
+            lastWarningSent = Instant.now();
+            var actionBarPacket = new ClientboundSetActionBarTextPacket(
+                ComponentSerializer.minimessage((durationUntilKick.toMinutes() <= 3 ? "<red>" : "<blue>") + sessionTimeLimit.toHours() + "hr kick in: " + durationUntilKick.toMinutes() + "m"));
+            playerConnection.sendAsync(actionBarPacket);
+            // each packet will reset text render timer for 3 seconds
+            for (int i = 1; i <= 7; i++) { // render the text for about 10 seconds total
+                playerConnection.sendScheduledAsync(actionBarPacket, i, TimeUnit.SECONDS);
+            }
+            playerConnection.sendAsync(new ClientboundSoundPacket(
+                BuiltinSound.BLOCK_ANVIL_PLACE,
+                SoundCategory.AMBIENT,
+                CACHE.getPlayerCache().getX(),
+                CACHE.getPlayerCache().getY(),
+                CACHE.getPlayerCache().getZ(),
+                1.0f,
+                1.0f + (ThreadLocalRandom.current().nextFloat() / 10f), // slight pitch variations
+                0L
+            ));
         }
-        playerConnection.sendAsync(new ClientboundSoundPacket(
-            BuiltinSound.BLOCK_ANVIL_PLACE,
-            SoundCategory.AMBIENT,
-            CACHE.getPlayerCache().getX(),
-            CACHE.getPlayerCache().getY(),
-            CACHE.getPlayerCache().getZ(),
-            1.0f,
-            1.0f + (ThreadLocalRandom.current().nextFloat() / 10f), // slight pitch variations
-            0L
-        ));
+        EVENT_BUS.postAsync(new SessionTimeLimitWarningEvent(sessionTimeLimit, durationUntilKick));
     }
 
     private void updateSessionTimeLimit() {

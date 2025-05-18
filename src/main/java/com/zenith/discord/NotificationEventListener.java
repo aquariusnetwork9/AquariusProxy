@@ -94,7 +94,8 @@ public class NotificationEventListener {
             of(PluginLoadFailureEvent.class, this::handlePluginLoadFailure),
             of(PluginLoadedEvent.class, this::handlePluginLoadedEvent),
             of(SpawnPatrolTargetAcquiredEvent.class, this::handleSpawnPatrolTargetAcquiredEvent),
-            of(SpawnPatrolTargetKilledEvent.class, this::handleSpawnPatrolTargetKilledEvent)
+            of(SpawnPatrolTargetKilledEvent.class, this::handleSpawnPatrolTargetKilledEvent),
+            of(SessionTimeLimitWarningEvent.class, this::handleSessionTimeLimitEvent)
         );
     }
 
@@ -104,6 +105,19 @@ public class NotificationEventListener {
                 ? CONFIG.discord.accountOwnerRoleId
                 : CONFIG.discord.notificationMentionRoleId
         );
+    }
+
+    private void handleSessionTimeLimitEvent(SessionTimeLimitWarningEvent event) {
+        if (!CONFIG.client.extra.sessionTimeLimit.discordNotification) return;
+        var embed = Embed.builder()
+            .title("Session Time Limit Warning")
+            .description(event.sessionTimeLimit().toHoursPart() + "h kick in: " + event.durationUntilKick().toMinutes() + "m")
+            .primaryColor();
+        if (CONFIG.client.extra.sessionTimeLimit.discordNotificationMention) {
+            sendEmbedMessage(notificationMention(), embed);
+        } else {
+            sendEmbedMessage(embed);
+        }
     }
 
     private void handleSpawnPatrolTargetKilledEvent(SpawnPatrolTargetKilledEvent event) {

@@ -189,6 +189,9 @@ public final class Config {
 
             public static class SessionTimeLimit {
                 public boolean enabled = true;
+                public boolean ingameNotification = true;
+                public boolean discordNotification = false;
+                public boolean discordNotificationMention = true;
                 public boolean dynamic2b2tSessionTimeLimit = true;
             }
 
