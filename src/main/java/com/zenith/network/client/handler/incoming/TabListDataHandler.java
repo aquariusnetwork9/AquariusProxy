@@ -61,7 +61,7 @@ public class TabListDataHandler implements ClientEventLoopPacketHandler<Clientbo
                     // resetting connect time to calculate queue duration correctly
                     wasOnline = true;
                     wasOnlineDuration = Duration.ofSeconds(Proxy.getInstance().getOnlineTimeSeconds());
-                    CLIENT_LOG.info("Detected that the client was kicked to queue. Was online for {}", formatDuration(wasOnlineDuration));
+                    CLIENT_LOG.info("Kicked to queue. Online duration: {}", formatDuration(wasOnlineDuration));
                 }
                 EVENT_BUS.postAsync(new QueueStartEvent(wasOnline, wasOnlineDuration));
                 queueDuration = Optional.empty();
