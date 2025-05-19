@@ -443,7 +443,10 @@ public class Proxy {
             throw new IllegalStateException("Server already started!");
         if (!CONFIG.server.enabled) return;
         try (InputStream in = getClass().getClassLoader().getResourceAsStream("servericon.png")) {
-            this.serverIcon = in.readAllBytes();
+            byte[] iconBytes = in.readAllBytes();
+            var event = new ServerIconBuildEvent(iconBytes);
+            EVENT_BUS.post(event);
+            this.serverIcon = event.getIcon();
         }
         var address = CONFIG.server.bind.address;
         var port = CONFIG.server.bind.port;
