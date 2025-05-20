@@ -28,6 +28,7 @@ public class FriendCommand extends Command {
                 "list",
                 "clear"
             )
+            .aliases("f")
             .build();
     }
 
