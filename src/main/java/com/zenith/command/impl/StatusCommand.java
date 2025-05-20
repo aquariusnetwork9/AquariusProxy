@@ -173,6 +173,9 @@ public class StatusCommand extends Command {
         if (Proxy.getInstance().isConnected() && CACHE.getProfileCache().getProfile() != null) {
 
         }
+        if (CONFIG.authentication.username.equals("Unknown")) {
+            return "https://odpay.net/files/img/ZP/servericon.png";
+        }
         return Proxy.getInstance().getPlayerHeadURL(CONFIG.authentication.username).toString();
     }
 }
