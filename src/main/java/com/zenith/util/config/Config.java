@@ -69,6 +69,7 @@ public final class Config {
         public boolean maxPlaytimeReconnect = false;
         public long maxPlaytimeReconnectMins = 1440;
         public boolean automaticKeepAliveManagement = true;
+        public int defaultClientRenderDistance = 25;
         public final ClientTimeout timeout = new ClientTimeout();
         public final Ping ping = new Ping();
         public final ChatSigning chatSigning = new ChatSigning();

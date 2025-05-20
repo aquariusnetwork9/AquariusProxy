@@ -7,6 +7,7 @@ import com.zenith.cache.data.ServerProfileCache;
 import com.zenith.cache.data.cookie.CookieCache;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityCache;
+import com.zenith.cache.data.info.ClientInfoCache;
 import com.zenith.event.player.PlayerConnectionRemovedEvent;
 import com.zenith.event.player.PlayerDisconnectedEvent;
 import com.zenith.event.player.SpectatorDisconnectedEvent;
@@ -114,6 +115,7 @@ public class ServerSession extends TcpServerSession {
     protected PlayerCache spectatorPlayerCache = new PlayerCache(new EntityCache());
     protected SpectatorEntity spectatorEntity = SpectatorEntityRegistry.getSpectatorEntityWithDefault(CONFIG.server.spectator.spectatorEntity);
     private final long connectionTimeEpochMs = Instant.now().toEpochMilli();
+    protected ClientInfoCache clientInfoCache = new ClientInfoCache();
     @Getter(lazy = true) private final PacketRateLimiter packetRateLimiter = new PacketRateLimiter();
     public static final LoginRateLimiter LOGIN_RATE_LIMITER = new LoginRateLimiter();
 
@@ -230,6 +232,7 @@ public class ServerSession extends TcpServerSession {
                 Proxy.getInstance().getSpectatorConnections().forEach(s -> {
                     s.sendAsyncAlert("<red>" + getName() + " disconnected from controlling player");
                 });
+                Proxy.getInstance().getClient().sendAsync(CACHE.getClientInfoCache().getClientInfoPacket());
             } else {
                 SERVER_LOG.info("Spectator disconnected: UUID: {}, Username: {}, Address: {}, Reason {}",
                                 getUUID(),
