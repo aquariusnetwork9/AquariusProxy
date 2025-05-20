@@ -170,12 +170,8 @@ public class StatusCommand extends Command {
     }
 
     private static String getThumbnailImage() {
-        if (Proxy.getInstance().isConnected() && CACHE.getProfileCache().getProfile() != null) {
-
-        }
-        if (CONFIG.authentication.username.equals("Unknown")) {
-            return "https://odpay.net/files/img/ZP/servericon.png";
-        }
-        return Proxy.getInstance().getPlayerHeadURL(CONFIG.authentication.username).toString();
+        return "Unknown".equals(CONFIG.authentication.username)
+            ? "https://raw.githubusercontent.com/rfresh2/ZenithProxy/1.21.0/src/main/resources/servericon.png"
+            : Proxy.getInstance().getPlayerHeadURL(CONFIG.authentication.username).toString();
     }
 }
