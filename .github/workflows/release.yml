@@ -113,6 +113,7 @@ jobs:
           artifacts: "artifacts/*.jar"
           prerelease: true
           body: "File upload not for users. **Use the Launcher:** https://github.com/rfresh2/ZenithProxy/releases/tag/launcher-v3"
+          commit: ${{ github.sha }}
 
       - name: Publish Linux Artifact
         uses: ncipollo/release-action@v1
@@ -121,3 +122,4 @@ jobs:
           artifacts: "artifacts/ZenithProxy.zip"
           prerelease: true
           body: "File upload not for users. **Use the Launcher:** https://github.com/rfresh2/ZenithProxy/releases/tag/launcher-v3"
+          commit: ${{ github.sha }}
