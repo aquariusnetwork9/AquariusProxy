@@ -58,8 +58,8 @@ public class SessionTimeLimit extends Module {
         final Duration durationUntilKick = sessionTimeLimit.minus(Duration.ofSeconds(Proxy.getInstance().getOnlineTimeSecondsWithQueueSkip()));
         if (durationUntilKick.isNegative()) return; // sanity check just in case 2b's plugin changes
         debug("Sending 2b2t session time limit warning: {}m", durationUntilKick.toMinutes());
+        lastWarningSent = Instant.now();
         if (CONFIG.client.extra.sessionTimeLimit.ingameNotification) {
-            lastWarningSent = Instant.now();
             var actionBarPacket = new ClientboundSetActionBarTextPacket(
                 ComponentSerializer.minimessage((durationUntilKick.toMinutes() <= 3 ? "<red>" : "<blue>") + sessionTimeLimit.toHours() + "hr kick in: " + durationUntilKick.toMinutes() + "m"));
             playerConnection.sendAsync(actionBarPacket);
