@@ -30,6 +30,7 @@ public class DisguisedChatHandler implements PacketHandler<ClientboundDisguisedC
             if (CONFIG.client.extra.logChatMessages) {
                 CHAT_LOG.info(chatComponent);
             }
+            String messageContent = ComponentSerializer.serializePlain(packet.getMessage());
             boolean isWhisper = false;
             Optional<PlayerListEntry> whisperTarget = Optional.empty();
             if ("commands.message.display.incoming".equals(chatType.translationKey())) {
@@ -53,7 +54,7 @@ public class DisguisedChatHandler implements PacketHandler<ClientboundDisguisedC
                         senderPlayerEntry.get(),
                         whisperTarget.get(),
                         chatComponent,
-                        ComponentSerializer.serializePlain(chatComponent)));
+                        messageContent));
                 }
             } else {
                 if (senderPlayerEntry.isEmpty()) {
@@ -62,7 +63,7 @@ public class DisguisedChatHandler implements PacketHandler<ClientboundDisguisedC
                     EVENT_BUS.postAsync(new PublicChatEvent(
                         senderPlayerEntry.get(),
                         chatComponent,
-                        ComponentSerializer.serializePlain(chatComponent)
+                        messageContent
                     ));
                 }
             }

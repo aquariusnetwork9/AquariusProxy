@@ -5,6 +5,7 @@ import com.zenith.util.Wait;
 import java.lang.reflect.Field;
 
 import static com.zenith.Globals.*;
+import static java.lang.reflect.Modifier.isStatic;
 
 // Verifies that all fields in the loaded configs are not null
 // gson will deserialize invalid json values to null
@@ -48,6 +49,10 @@ public final class ConfigVerifier {
                 if (field.getType().isPrimitive()) {
                     continue;
                 }
+                // skip static fields
+                if (isStatic(field.getModifiers())) continue;
+                // skip non-accessible fields
+                if (!field.canAccess(obj)) continue;
                 Object value = field.get(obj);
                 if (value == null && !isNullableField(field)) {
                     DEFAULT_LOG.error("Field: '{}' in '{}' is null", field.getName(), clazz.getName());
