@@ -47,7 +47,7 @@ public class InventoryCommand extends Command {
                 "close",
                 "withdraw",
                 "deposit",
-                "click <slot>",
+                "click <left/right> <slot>",
                 "button <buttonId>",
                 "actionDelayTicks <ticks>",
                 "ncpStrict on/off",
@@ -280,27 +280,49 @@ public class InventoryCommand extends Command {
                 }
                 return OK;
             }))
-            .then(literal("click").then(argument("slot", integer(0, 100)).executes(c  -> {
-                if (!verifyAbleToDoInvActions(c.getSource().getEmbed())) return OK;
-                int slot = getInteger(c, "slot");
-                var container = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
-                var accepted = INVENTORY.submit(InventoryActionRequest.builder()
-                        .owner(this)
-                        .actions(new ClickItem(container.getContainerId(), slot, ClickItemAction.LEFT_CLICK))
-                        .priority(INV_ACTION_PRIORITY)
-                        .build())
-                    .get();
-                if (accepted) {
-                    logInv();
-                    c.getSource().setNoOutput(true);
-                } else {
-                    c.getSource().getEmbed()
-                        .title("Failed")
-                        .description("Another inventory action has taken priority this tick, try again")
-                        .errorColor();
-                }
-                return OK;
-            })))
+            .then(literal("click")
+                .then(literal("left").then(argument("slot", integer(0, 100)).executes(c  -> {
+                    if (!verifyAbleToDoInvActions(c.getSource().getEmbed())) return OK;
+                    int slot = getInteger(c, "slot");
+                    var container = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+                    var accepted = INVENTORY.submit(InventoryActionRequest.builder()
+                            .owner(this)
+                            .actions(new ClickItem(container.getContainerId(), slot, ClickItemAction.LEFT_CLICK))
+                            .priority(INV_ACTION_PRIORITY)
+                            .build())
+                        .get();
+                    if (accepted) {
+                        logInv();
+                        c.getSource().setNoOutput(true);
+                    } else {
+                        c.getSource().getEmbed()
+                            .title("Failed")
+                            .description("Another inventory action has taken priority this tick, try again")
+                            .errorColor();
+                    }
+                    return OK;
+                })))
+                .then(literal("right").then(argument("slot", integer(0, 100)).executes(c -> {
+                    if (!verifyAbleToDoInvActions(c.getSource().getEmbed())) return OK;
+                    int slot = getInteger(c, "slot");
+                    var container = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+                    var accepted = INVENTORY.submit(InventoryActionRequest.builder()
+                            .owner(this)
+                            .actions(new ClickItem(container.getContainerId(), slot, ClickItemAction.RIGHT_CLICK))
+                            .priority(INV_ACTION_PRIORITY)
+                            .build())
+                        .get();
+                    if (accepted) {
+                        logInv();
+                        c.getSource().setNoOutput(true);
+                    } else {
+                        c.getSource().getEmbed()
+                            .title("Failed")
+                            .description("Another inventory action has taken priority this tick, try again")
+                            .errorColor();
+                    }
+                    return OK;
+                }))))
             .then(literal("button").then(argument("buttonId", integer(0, 1000)).executes(c -> {
                 if (!verifyAbleToDoInvActions(c.getSource().getEmbed())) return OK;
                 if (getOpenContainerId() == 0) {
@@ -347,8 +369,8 @@ public class InventoryCommand extends Command {
                       }))
                       .then(literal("delaySeconds").then(argument("seconds", integer(1, 1000)).executes(c -> {
                           CONFIG.client.inventory.autoCloseOpenContainerAfterSeconds = getInteger(c, "seconds");
-                            settingsEmbed(c.getSource().getEmbed()
-                                .title("Auto Close Delay Set"));
+                          settingsEmbed(c.getSource().getEmbed()
+                              .title("Auto Close Delay Set"));
                       }))));
     }
 
