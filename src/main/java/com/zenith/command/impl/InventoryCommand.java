@@ -34,7 +34,9 @@ public class InventoryCommand extends Command {
         return CommandUsage.builder()
             .name("inventory")
             .category(CommandCategory.INFO)
-            .description("Show and interact with the player's inventory")
+            .description("""
+                Show and interact with the player's inventory or containers.
+                """)
             .usageLines(
                 "",
                 "show",
@@ -44,7 +46,13 @@ public class InventoryCommand extends Command {
                 "drop stack <slot>",
                 "close",
                 "withdraw",
-                "deposit"
+                "deposit",
+                "click <slot>",
+                "button <buttonId>",
+                "actionDelayTicks <ticks>",
+                "ncpStrict on/off",
+                "autoCloseOpenContainers on/off",
+                "autoCloseOpenContainers delaySeconds <seconds>"
             )
             .aliases("inv")
             .build();
@@ -323,30 +331,24 @@ public class InventoryCommand extends Command {
             })))
             .then(literal("actionDelayTicks").then(argument("ticks", integer(0, 100)).executes(c -> {
                 CONFIG.client.inventory.actionDelayTicks = getInteger(c, "ticks");
-                c.getSource().getEmbed()
-                    .title("Action Delay Ticks Set")
-                    .addField("Action Delay Ticks", CONFIG.client.inventory.actionDelayTicks)
-                    .primaryColor();
+                settingsEmbed(c.getSource().getEmbed()
+                    .title("Action Delay Ticks Set"));
             })))
             .then(literal("ncpStrict").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.inventory.ncpStrict = getToggle(c, "toggle");
-                c.getSource().getEmbed()
-                    .title("NCP Strict " + toggleStrCaps(CONFIG.client.inventory.ncpStrict))
-                    .primaryColor();
+                settingsEmbed(c.getSource().getEmbed()
+                    .title("NCP Strict " + toggleStrCaps(CONFIG.client.inventory.ncpStrict)));
             })))
             .then(literal("autoCloseOpenContainers")
                       .then(argument("toggle", toggle()).executes(c -> {
                             CONFIG.client.inventory.autoCloseOpenContainers = getToggle(c, "toggle");
-                            c.getSource().getEmbed()
-                                .title("Auto Close " + toggleStrCaps(CONFIG.client.inventory.autoCloseOpenContainers))
-                                .primaryColor();
+                            settingsEmbed(c.getSource().getEmbed()
+                                .title("Auto Close " + toggleStrCaps(CONFIG.client.inventory.autoCloseOpenContainers)));
                       }))
                       .then(literal("delaySeconds").then(argument("seconds", integer(1, 1000)).executes(c -> {
                           CONFIG.client.inventory.autoCloseOpenContainerAfterSeconds = getInteger(c, "seconds");
-                            c.getSource().getEmbed()
-                                .title("Auto Close Delay Set")
-                                .addField("Auto Close Delay Seconds", CONFIG.client.inventory.autoCloseOpenContainerAfterSeconds)
-                                .primaryColor();
+                            settingsEmbed(c.getSource().getEmbed()
+                                .title("Auto Close Delay Set"));
                       }))));
     }
 
@@ -494,5 +496,14 @@ public class InventoryCommand extends Command {
             return false;
         }
         return true;
+    }
+
+    private void settingsEmbed(Embed embed) {
+        embed
+            .addField("Action Delay Ticks", CONFIG.client.inventory.actionDelayTicks)
+            .addField("NCP Strict", CONFIG.client.inventory.ncpStrict)
+            .addField("Auto Close Open Containers", CONFIG.client.inventory.autoCloseOpenContainers)
+            .addField("Auto Close Open Containers Delay", CONFIG.client.inventory.autoCloseOpenContainerAfterSeconds + "s")
+            .primaryColor();
     }
 }
