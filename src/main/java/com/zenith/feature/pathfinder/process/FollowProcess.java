@@ -171,7 +171,7 @@ public final class FollowProcess extends BaritoneProcessHelper implements IBarit
         public PathingCommand pathingCommand() {
             EntityLiving entity = entityRef.get();
             if (entity == null) return null;
-            var goal = new GoalNear(entity.blockPos(), CONFIG.client.extra.pathfinder.followRadius);
+            var goal = new GoalNear(entity.blockPos(), (int) Math.pow(CONFIG.client.extra.pathfinder.followRadius, 2));
             var type = CACHE.getPlayerCache().distanceSqToSelf(entity) <= Math.pow(25, 2)
                 ? PathingCommandType.REVALIDATE_GOAL_AND_PATH
                 : PathingCommandType.SOFT_REPATH;
@@ -195,7 +195,7 @@ public final class FollowProcess extends BaritoneProcessHelper implements IBarit
                 ? PathingCommandType.REVALIDATE_GOAL_AND_PATH
                 : PathingCommandType.SOFT_REPATH;
             var goals = entities.stream()
-                .map(e -> new GoalNear(e.blockPos(), CONFIG.client.extra.pathfinder.followRadius))
+                .map(e -> new GoalNear(e.blockPos(), (int) Math.pow(CONFIG.client.extra.pathfinder.followRadius, 2)))
                 .toArray(Goal[]::new);
             return new PathingCommand(new GoalComposite(goals), type);
         }
