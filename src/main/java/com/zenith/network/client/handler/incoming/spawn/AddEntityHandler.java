@@ -15,15 +15,17 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
 
-import static com.zenith.Globals.CACHE;
-import static com.zenith.Globals.EVENT_BUS;
+import static com.zenith.Globals.*;
 
 public class AddEntityHandler implements ClientEventLoopPacketHandler<ClientboundAddEntityPacket, ClientSession> {
 
     @Override
     public boolean applyAsync(@NonNull ClientboundAddEntityPacket packet, @NonNull ClientSession session) {
         if (packet.getType() == EntityType.PLAYER) {
-            return addPlayer(packet, session);
+            if (!addPlayer(packet, session)) {
+                CLIENT_LOG.debug("Failed adding player entity (id={})", packet.getEntityId());
+            }
+            return true;
         } else {
             final EntityStandard entity = (EntityStandard) new EntityStandard()
                 .setEntityType(packet.getType())

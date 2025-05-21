@@ -70,7 +70,7 @@ public class SessionTimeLimitCommand extends Command {
     @Override
     public void defaultEmbed(Embed embed) {
         embed
-            .addField("Session TIme Limit", toggleStr(CONFIG.client.extra.sessionTimeLimit.enabled))
+            .addField("Session Time Limit", toggleStr(CONFIG.client.extra.sessionTimeLimit.enabled))
             .addField("Limit", formatDuration(MODULE.get(SessionTimeLimit.class).getSessionTimeLimit()))
             .addField("Ingame Notification", toggleStr(CONFIG.client.extra.sessionTimeLimit.ingameNotification))
             .addField("Discord Notification", toggleStr(CONFIG.client.extra.sessionTimeLimit.discordNotification))
