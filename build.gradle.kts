@@ -1,7 +1,3 @@
-import org.apache.tools.ant.taskdefs.condition.Os
-import java.io.ByteArrayOutputStream
-import java.nio.file.Files
-
 plugins {
     `java-library`
     id("org.graalvm.buildtools.native") version "0.10.6"
@@ -105,58 +101,16 @@ tasks {
         useJUnitPlatform()
         workingDir = layout.projectDirectory.dir("run").asFile
     }
-    val commitHashTask = register<Exec>("writeCommitHash") {
-        group = "build"
-        description = "Write commit hash / version to file"
-        workingDir = projectDir
-        commandLine = "git rev-parse --short=8 HEAD".split(" ")
-        isIgnoreExitValue = true
-        standardOutput = ByteArrayOutputStream()
-        doLast {
-            kotlin.runCatching {
-                val commitHash = standardOutput.toString().trim()
-                if (commitHash.length > 5) {
-                    file(layout.buildDirectory.asFile.get().absolutePath + "/resources/main/zenith_commit.txt").apply {
-                        parentFile.mkdirs()
-                        println("Writing commit hash: $commitHash")
-                        writeText(commitHash)
-                    }
-                } else {
-                    throw IllegalStateException("Invalid commit hash: $commitHash")
-                }
-            }.exceptionOrNull()?.let {
-                println("Unable to determine commit hash: ${it.message}")
-            }
-        }
-        outputs.upToDateWhen { false }
+    val commitHashTask = register<CommitHashTask>("writeCommitHash") {
+        outputFile = project.layout.buildDirectory.file("/resources/main/zenith_commit.txt")
     }
-    val releaseTagTask = register("releaseTag") {
-        group = "build"
-        description = "Write release tag to file"
-        doLast {
-            System.getenv("RELEASE_TAG")?.let {
-                file(layout.buildDirectory.asFile.get().absolutePath + "/resources/main/zenith_release.txt").apply {
-                    parentFile.mkdirs()
-                    println("Writing release tag: $it")
-                    writeText(it)
-                }
-            } ?: run {
-                println("Dev build detected, skipping release tag generation")
-            }
-        }
-        outputs.upToDateWhen { false }
+    val releaseTagTask = register<WriteMetadataTxtTask>("releaseTag") {
+        metadataValue = System.getenv("RELEASE_TAG") ?: ""
+        outputFile = project.layout.buildDirectory.file("resources/main/zenith_release.txt")
     }
-    val mcVersionTask = register("mcVersion") {
-        group = "build"
-        description = "Write release tag to file"
-        doLast {
-            file(layout.buildDirectory.asFile.get().absolutePath + "/resources/main/zenith_mc_version.txt").apply {
-                parentFile.mkdirs()
-                println("Writing MC Version: $version")
-                writeText(version.toString())
-            }
-        }
-        outputs.upToDateWhen { false }
+    val mcVersionTask = register<WriteMetadataTxtTask>("mcVersion") {
+        metadataValue = version.toString()
+        outputFile = project.layout.buildDirectory.file("resources/main/zenith_mc_version.txt")
     }
     val runGroup = "run"
     register("run", JavaExec::class.java) {
@@ -174,28 +128,12 @@ tasks {
         environment("ZENITH_DEV", "true")
         outputs.upToDateWhen { false }
     }
-    val javaPathTask = register("javaPath", Task::class.java) {
-        group = runGroup
-        doLast {
-            val execPath = javaLauncherProvider.get().executablePath
-            // create a file symlinked to the java executable for use in scripts
-            layout.buildDirectory.asFile.get().mkdirs()
-            if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-                val f: File = file (layout.buildDirectory.asFile.get().toString() + "/java_toolchain.bat")
-                if (f.exists()) {
-                    f.delete()
-                }
-                f.writeText("@" + execPath.asFile.toString() + " %*")
-            } else if (Os.isFamily(Os.FAMILY_UNIX)) {
-                val f: File = file (layout.buildDirectory.asFile.get().toString() + "/java_toolchain")
-                if (f.exists()) {
-                    f.delete()
-                }
-                Files.createSymbolicLink(f.toPath(), execPath.asFile.toPath())
-            }
-        }
+    val javaPathTask = register<JavaPathTask>("javaPath") {
+        javaLauncher = javaLauncherProvider
     }
-    processResources{ finalizedBy(commitHashTask, releaseTagTask, mcVersionTask) }
+    processResources {
+        dependsOn(releaseTagTask, mcVersionTask, commitHashTask)
+    }
     val devOutputDir = layout.buildDirectory.get().dir("dev").asFile
     jar {
         enabled = true
