@@ -77,14 +77,14 @@ jobs:
         env:
           MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
-        run: ./gradlew publishSnapshotPublicationToVcRepository
+        run: ./gradlew publishSnapshotPublicationToReleasesRepository
 
       - name: Publish Maven Artifact Release
         env:
           MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
           ZENITH_RELEASE_TAG: ${{ github.ref_name }}
-        run: ./gradlew publishReleasePublicationToVcRepository
+        run: ./gradlew publishReleasePublicationToReleasesRepository
 
   release-artifacts:
     needs:

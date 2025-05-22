@@ -300,8 +300,19 @@ graalvmNative {
 publishing {
     repositories {
         maven {
-            name = "vc"
+            name = "releases"
             url = uri("https://maven.2b2t.vc/releases")
+            credentials {
+                username = System.getenv("MAVEN_USERNAME")
+                password = System.getenv("MAVEN_PASSWORD")
+            }
+            authentication {
+                create<BasicAuthentication>("basic")
+            }
+        }
+        maven {
+            name = "snapshots"
+            url = uri("https://maven.2b2t.vc/snapshots")
             credentials {
                 username = System.getenv("MAVEN_USERNAME")
                 password = System.getenv("MAVEN_PASSWORD")

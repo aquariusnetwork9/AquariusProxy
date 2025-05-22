@@ -71,11 +71,11 @@ jobs:
           name: ZenithProxy-linux
           path: ZenithProxy.zip
 
-#      - name: Publish Maven Artifact Snapshot
-#        env:
-#          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
-#          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
-#        run: ./gradlew publishSnapshotPublicationToVcRepository
+      - name: Publish Maven Artifact Snapshot
+        env:
+          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+        run: ./gradlew publishSnapshotPublicationToSnapshotsRepository
 
   release-artifacts:
     needs:
