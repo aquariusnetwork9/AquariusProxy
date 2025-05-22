@@ -39,9 +39,7 @@ public class MapDataCache implements CachedData {
 
     @Override
     public void reset(CacheResetType type) {
-        if (type == CacheResetType.FULL || type == CacheResetType.LOGIN || type == CacheResetType.PROTOCOL_SWITCH) {
-            mapDataMap.clear();
-        }
+        mapDataMap.clear();
     }
 
     @Override
