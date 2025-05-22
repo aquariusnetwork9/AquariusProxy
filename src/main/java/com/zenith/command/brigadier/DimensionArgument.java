@@ -5,12 +5,9 @@ import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
-import com.zenith.Proxy;
 import com.zenith.command.api.CommandContext;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
-
-import static com.zenith.Globals.CACHE;
 
 public class DimensionArgument implements ArgumentType<DimensionData> {
     public static final SimpleCommandExceptionType INVALID_DIMENSION_EXCEPTION = new SimpleCommandExceptionType(
@@ -28,15 +25,7 @@ public class DimensionArgument implements ArgumentType<DimensionData> {
     @Override
     public DimensionData parse(final StringReader stringReader) throws CommandSyntaxException {
         final String dimensionString = readDimensionString(stringReader);
-        DimensionData dimensionData;
-        if (Proxy.getInstance().isConnected()) {
-            dimensionData = CACHE.getChunkCache().getDimensionRegistry().values().stream()
-                .filter(d -> d.name().equalsIgnoreCase(dimensionString))
-                .findFirst()
-                .orElse(null);
-        } else {
-            dimensionData = DimensionRegistry.REGISTRY.get(dimensionString);
-        }
+        DimensionData dimensionData = DimensionRegistry.REGISTRY.get(dimensionString);;
         if (dimensionData == null) {
             throw INVALID_DIMENSION_EXCEPTION.createWithContext(stringReader);
         }

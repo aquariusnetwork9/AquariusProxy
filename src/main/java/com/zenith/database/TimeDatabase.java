@@ -46,12 +46,12 @@ public class TimeDatabase extends LockingDatabase {
 
     @Override
     public boolean tryLock() {
-        if (World.getCurrentDimension().id() != DimensionRegistry.OVERWORLD.id()) return false;
+        if (World.getCurrentDimension() != DimensionRegistry.OVERWORLD.get()) return false;
         return super.tryLock();
     }
 
     private void handleDatabaseTick(DatabaseTickEvent event) {
-        if (World.getCurrentDimension().id() != DimensionRegistry.OVERWORLD.id()) {
+        if (World.getCurrentDimension() != DimensionRegistry.OVERWORLD.get()) {
             if (lockAcquired.get()) {
                 try {
                     lockExecutorService.submit(() -> {

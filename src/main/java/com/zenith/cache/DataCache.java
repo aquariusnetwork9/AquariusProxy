@@ -11,6 +11,7 @@ import com.zenith.cache.data.info.ClientInfoCache;
 import com.zenith.cache.data.map.MapDataCache;
 import com.zenith.cache.data.mcpl.CachedChunkSectionCountProvider;
 import com.zenith.cache.data.recipe.RecipeCache;
+import com.zenith.cache.data.registry.RegistriesCache;
 import com.zenith.cache.data.scoreboard.ScoreboardCache;
 import com.zenith.cache.data.stats.StatisticsCache;
 import com.zenith.cache.data.tab.TabListCache;
@@ -42,12 +43,17 @@ public class DataCache {
     protected final ConfigurationCache configurationCache = new ConfigurationCache();
     protected final CachedChunkSectionCountProvider sectionCountProvider = new CachedChunkSectionCountProvider();
     protected final ClientInfoCache clientInfoCache = new ClientInfoCache();
+    protected final RegistriesCache registriesCache = new RegistriesCache();
 
     public Collection<CachedData> getAllData() {
         // order is important, matches vanilla
         return List.of(
             profileCache, playerCache, chunkCache, statsCache, tabListCache, bossBarCache, entityCache,
-            chatCache, mapDataCache, recipeCache, teamCache, scoreboardCache, clientInfoCache
+            chatCache, mapDataCache, recipeCache, teamCache, scoreboardCache,
+            // special case caches that don't provide packets on world join
+            // only here so they are still reset
+            // todo: cleaner interface for caches that send at different times
+            clientInfoCache, configurationCache, registriesCache
         );
     }
 

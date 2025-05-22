@@ -1,5 +1,6 @@
-package com.zenith.cache.data.chat;
+package com.zenith.mc.chat_type;
 
+import com.zenith.mc.RegistryData;
 import net.kyori.adventure.text.Component;
 import org.jspecify.annotations.Nullable;
 
@@ -8,7 +9,7 @@ import java.util.List;
 
 import static com.zenith.Globals.CLIENT_LOG;
 
-public record ChatType(int id, String translationKey, List<String> parameters) {
+public record ChatType(int id, String name, String translationKey, List<String> parameters) implements RegistryData {
     public Component render(@Nullable Component sender, @Nullable Component content, @Nullable Component unsignedContent, @Nullable Component target) {
         try {
             if (unsignedContent != null) {

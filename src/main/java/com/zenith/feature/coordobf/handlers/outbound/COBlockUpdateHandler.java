@@ -20,7 +20,7 @@ public class COBlockUpdateHandler implements PacketHandler<ClientboundBlockUpdat
                 // cancel packet
                 return null;
             }
-            if (World.getCurrentDimension().id() == DimensionRegistry.THE_NETHER.id()) {
+            if (World.getCurrentDimension() == DimensionRegistry.THE_NETHER.get()) {
                 if (packet.getEntry().getY() >= 123) {
                     return null;
                 }

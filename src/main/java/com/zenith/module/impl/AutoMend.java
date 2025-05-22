@@ -52,7 +52,7 @@ public class AutoMend extends AbstractInventoryModule {
         if (dataComponents == null) return false;
         var enchantmentComponents = dataComponents.get(DataComponentTypes.ENCHANTMENTS);
         if (enchantmentComponents == null) return false;
-        if (!enchantmentComponents.getEnchantments().containsKey(EnchantmentRegistry.MENDING.id())) return false;
+        if (!enchantmentComponents.getEnchantments().containsKey(EnchantmentRegistry.MENDING.get().id())) return false;
         var damageComponent = dataComponents.get(DataComponentTypes.DAMAGE);
         if (damageComponent == null) return false;
         return damageComponent > 0;

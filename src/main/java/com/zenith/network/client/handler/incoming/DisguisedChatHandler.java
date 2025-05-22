@@ -1,8 +1,9 @@
 package com.zenith.network.client.handler.incoming;
 
-import com.zenith.cache.data.chat.ChatType;
 import com.zenith.event.chat.PublicChatEvent;
 import com.zenith.event.chat.WhisperChatEvent;
+import com.zenith.mc.chat_type.ChatType;
+import com.zenith.mc.chat_type.ChatTypeRegistry;
 import com.zenith.network.client.ClientSession;
 import com.zenith.network.codec.PacketHandler;
 import com.zenith.util.ComponentSerializer;
@@ -19,7 +20,7 @@ public class DisguisedChatHandler implements PacketHandler<ClientboundDisguisedC
     @Override
     public ClientboundDisguisedChatPacket apply(final ClientboundDisguisedChatPacket packet, final ClientSession session) {
         var senderPlayerEntry = CACHE.getTabListCache().getFromName(ComponentSerializer.serializePlain(packet.getName()));
-        ChatType chatType = CACHE.getChatCache().getChatTypeRegistry().getChatType(packet.getChatType().id());
+        ChatType chatType = ChatTypeRegistry.REGISTRY.get(packet.getChatType().id());
         if (chatType != null) {
             Component chatComponent = chatType.render(
                 packet.getName(),

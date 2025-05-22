@@ -317,7 +317,7 @@ public class CoordObfuscation extends Module {
 
         if (CONFIG.client.extra.coordObfuscation.constantOffsetNetherTranslate) {
             DimensionData dimension = World.getCurrentDimension();
-            if (dimension.id() == DimensionRegistry.THE_NETHER.id()) {
+            if (dimension == DimensionRegistry.THE_NETHER.get()) {
                 return new CoordOffset((CONFIG.client.extra.coordObfuscation.constantOffsetX / 16) / 8, (CONFIG.client.extra.coordObfuscation.constantOffsetZ / 16) / 8);
             }
         }

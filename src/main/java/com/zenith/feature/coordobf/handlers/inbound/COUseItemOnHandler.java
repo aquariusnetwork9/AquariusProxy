@@ -20,7 +20,7 @@ public class COUseItemOnHandler implements PacketHandler<ServerboundUseItemOnPac
                 // cancel packet
                 return null;
             }
-            if (dim.id() == DimensionRegistry.THE_NETHER.id()) {
+            if (dim == DimensionRegistry.THE_NETHER.get()) {
                 if (packet.getY() >= 123) {
                     return null;
                 }

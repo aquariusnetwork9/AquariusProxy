@@ -1030,7 +1030,7 @@ public final class Bot extends ModuleUtils {
     private void updateInWaterStateAndDoFluidPushing() {
         updateInWaterStateAndDoWaterCurrentPushing();
         var currentDim = CACHE.getChunkCache().getCurrentDimension();
-        double lavaSpeedMult = currentDim != null && currentDim.id() == DimensionRegistry.THE_NETHER.id()
+        double lavaSpeedMult = currentDim != null && currentDim == DimensionRegistry.THE_NETHER.get()
             ? 0.007
             : 0.0023333333333333335;
         if (updateFluidHeightAndDoFluidPushing(false, lavaSpeedMult)) {

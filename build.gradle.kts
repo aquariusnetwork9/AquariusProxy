@@ -275,6 +275,7 @@ graalvmNative {
                 "--initialize-at-build-time=org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockEntityType",
                 "--initialize-at-build-time=it.unimi.dsi.fastutil",
                 "--initialize-at-build-time=com.zenith.mc",
+                "--initialize-at-run-time=com.zenith.mc.chat_type",
                 "--initialize-at-run-time=sun.net.dns.ResolverConfigurationImpl", // fix for windows builds, exception when doing srv lookups with netty
             )
             val pgoPath = System.getenv("GRAALVM_PGO_PATH")

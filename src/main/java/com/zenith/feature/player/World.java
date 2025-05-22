@@ -40,7 +40,7 @@ public class World {
     // falls back to overworld if current dimension is null
     public DimensionData getCurrentDimension() {
         DimensionData currentDimension = CACHE.getChunkCache().getCurrentDimension();
-        if (currentDimension == null) return DimensionRegistry.OVERWORLD;
+        if (currentDimension == null) return DimensionRegistry.OVERWORLD.get();
         return currentDimension;
     }
 

@@ -87,7 +87,10 @@ public class ReplayRecording implements Closeable {
     // Start recording while we already have a logged in session
     private synchronized void lateStartRecording() {
         writePacket0(0, new ClientboundGameProfilePacket(CACHE.getProfileCache().getProfile(), false), Proxy.getInstance().getClient(), ProtocolState.LOGIN);
-        CACHE.getConfigurationCache().getPackets(
+        CACHE.getRegistriesCache().getRegistryPackets(
+            packet -> writePacket0(System.currentTimeMillis(), (MinecraftPacket) packet, Proxy.getInstance().getClient(), ProtocolState.CONFIGURATION),
+            Proxy.getInstance().getClient());
+        CACHE.getConfigurationCache().getConfigurationPackets(
             packet -> writePacket0(System.currentTimeMillis(), (MinecraftPacket) packet, Proxy.getInstance().getClient(), ProtocolState.CONFIGURATION),
             Proxy.getInstance().getClient());
         writePacket0(System.currentTimeMillis(), new ClientboundCustomPayloadPacket(Key.key("minecraft:brand"), CACHE.getChunkCache().getServerBrand()), Proxy.getInstance().getClient(), ProtocolState.CONFIGURATION);
@@ -232,7 +235,10 @@ public class ReplayRecording implements Closeable {
             recordSelfSpawn = true;
             if (preConnectSyncNeeded) {
                 writeToFile(0, new ClientboundGameProfilePacket(CACHE.getProfileCache().getProfile(), false), session, ProtocolState.LOGIN);
-                CACHE.getConfigurationCache().getPackets(
+                CACHE.getRegistriesCache().getRegistryPackets(
+                    packet2 -> writeToFile(System.currentTimeMillis(), (MinecraftPacket) packet2, Proxy.getInstance().getClient(), ProtocolState.CONFIGURATION),
+                    Proxy.getInstance().getClient());
+                CACHE.getConfigurationCache().getConfigurationPackets(
                     packet2 -> writeToFile(System.currentTimeMillis(), (MinecraftPacket) packet2, Proxy.getInstance().getClient(), ProtocolState.CONFIGURATION),
                     Proxy.getInstance().getClient());
                 writeToFile(System.currentTimeMillis(), new ClientboundCustomPayloadPacket(Key.key("minecraft:brand"), CACHE.getChunkCache().getServerBrand()), Proxy.getInstance().getClient(), ProtocolState.CONFIGURATION);

@@ -2,6 +2,7 @@ package com.zenith.network.client.handler.incoming;
 
 import com.zenith.event.chat.PublicChatEvent;
 import com.zenith.event.chat.WhisperChatEvent;
+import com.zenith.mc.chat_type.ChatTypeRegistry;
 import com.zenith.network.client.ClientSession;
 import com.zenith.network.codec.PacketHandler;
 import com.zenith.util.ComponentSerializer;
@@ -18,7 +19,7 @@ public class PlayerChatHandler implements PacketHandler<ClientboundPlayerChatPac
     @Override
     public ClientboundPlayerChatPacket apply(ClientboundPlayerChatPacket packet, ClientSession session) {
         var senderPlayerEntry = CACHE.getTabListCache().get(packet.getSender());
-        var chatType = CACHE.getChatCache().getChatTypeRegistry().getChatType(packet.getChatType().id());
+        var chatType = ChatTypeRegistry.REGISTRY.get(packet.getChatType().id());
         if (chatType != null) {
             Component chatComponent = chatType.render(
                 packet.getName(),

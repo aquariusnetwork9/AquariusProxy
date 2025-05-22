@@ -143,7 +143,7 @@ public class SpawnPatrol extends Module {
             boolean netherPathing = false;
             if (CONFIG.client.extra.spawnPatrol.nether && !BARITONE.getGetToBlockProcess().isActive() && !BARITONE.getFollowProcess().isActive()) {
                 DimensionData currentDimension = World.getCurrentDimension();
-                if (currentDimension.id() != DimensionRegistry.THE_NETHER.id()) {
+                if (currentDimension != DimensionRegistry.THE_NETHER.get()) {
                     BARITONE.getTo(BlockRegistry.NETHER_PORTAL);
                     netherPathing = true;
                 }
