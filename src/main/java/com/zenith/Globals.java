@@ -137,6 +137,10 @@ public class Globals {
         }
     }
 
+    public static boolean inDevEnv() {
+        return System.getenv("ZENITH_DEV") != null;
+    }
+
     public static @Nullable String getExecutableCommit() {
         return readResourceTxt("zenith_commit.txt");
     }
