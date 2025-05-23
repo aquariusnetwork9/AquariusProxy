@@ -27,7 +27,7 @@ public class ExtraChatCommand extends Command {
                 "hideDeathMessages on/off",
                 "showConnectionMessages on/off",
                 "logChatMessages on/off",
-                "logQueueMessages on/off"
+                "logOnlyQueuePositionUpdates on/off"
             )
             .build();
     }
