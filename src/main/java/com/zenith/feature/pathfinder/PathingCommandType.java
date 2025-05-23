@@ -1,7 +1,5 @@
 package com.zenith.feature.pathfinder;
 
-import okhttp3.internal.http2.Settings;
-
 public enum PathingCommandType {
     /**
      * Set the goal and path.
@@ -23,8 +21,7 @@ public enum PathingCommandType {
     /**
      * Set the goal and path.
      * <p>
-     * If {@link Settings#cancelOnGoalInvalidation} is {@code true}, revalidate the
-     * current goal, and cancel if it's no longer valid, or if the new goal is {@code null}.
+     * revalidate the current goal, and cancel if it's no longer valid, or if the new goal is {@code null}.
      */
     REVALIDATE_GOAL_AND_PATH,
 

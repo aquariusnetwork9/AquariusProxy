@@ -2,6 +2,7 @@ package com.zenith.feature.pathfinder.process;
 
 import com.zenith.feature.pathfinder.PathingCommand;
 import com.zenith.feature.pathfinder.PathingCommandType;
+import com.zenith.feature.pathfinder.behavior.PathingBehavior;
 import com.zenith.feature.pathfinder.goals.Goal;
 import com.zenith.feature.pathfinder.util.PathEvent;
 
@@ -43,12 +44,12 @@ public interface IBaritoneProcess {
      * @param calcFailed     {@code true} if this specific process was in control last tick,
      *                       and there was a {@link PathEvent#CALC_FAILED} event last tick
      * @param isSafeToCancel {@code true} if a {@link PathingCommandType#REQUEST_PAUSE} would happen this tick, and
-     *                       {@link IPathingBehavior} wouldn't actually tick. {@code false} if the PathExecutor reported
+     *                       {@link PathingBehavior} wouldn't actually tick. {@code false} if the PathExecutor reported
      *                       pausing would be unsafe at the end of the last tick. Effectively "could request cancel or
      *                       pause and have it happen right away"
      * @param currentGoal
      * @param prevCommand
-     * @return What the {@link IPathingBehavior} should do
+     * @return What the {@link PathingBehavior} should do
      */
     PathingCommand onTick(boolean calcFailed, boolean isSafeToCancel, final Goal currentGoal, final PathingCommand prevCommand);
 

@@ -14,6 +14,7 @@ val javaLauncherProvider = javaToolchains.launcherFor { languageVersion = javaVe
 java {
     toolchain { languageVersion = javaVersion }
     withSourcesJar()
+    withJavadocJar()
 }
 
 repositories {
@@ -142,6 +143,16 @@ tasks {
     }
     getByName("sourcesJar", Jar::class) {
         archiveClassifier = "sources"
+        destinationDirectory = devOutputDir
+    }
+    javadoc {
+        isFailOnError = false
+        options.encoding = "UTF-8"
+        (options as StandardJavadocDocletOptions).apply {
+            addStringOption("Xdoclint:none", "-quiet")
+        }
+    }
+    getByName("javadocJar", Jar::class) {
         destinationDirectory = devOutputDir
     }
     shadowJar {
