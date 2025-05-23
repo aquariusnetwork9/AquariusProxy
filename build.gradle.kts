@@ -102,7 +102,7 @@ tasks {
         workingDir = layout.projectDirectory.dir("run").asFile
     }
     val commitHashTask = register<CommitHashTask>("writeCommitHash") {
-        outputFile = project.layout.buildDirectory.file("/resources/main/zenith_commit.txt")
+        outputFile = project.layout.buildDirectory.file("resources/main/zenith_commit.txt")
     }
     val releaseTagTask = register<WriteMetadataTxtTask>("releaseTag") {
         metadataValue = System.getenv("RELEASE_TAG") ?: ""
