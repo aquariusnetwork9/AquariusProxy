@@ -38,7 +38,7 @@ abstract class CommitHashTask : DefaultTask() {
         kotlin.runCatching {
             val commitHash = out.toString().trim()
             if (commitHash.length > 5) {
-                File(layout.buildDirectory.asFile.get().absolutePath + "/resources/main/zenith_commit.txt").apply {
+                outputFile.get().asFile.apply {
                     parentFile.mkdirs()
                     println("Writing commit hash: $commitHash")
                     writeText(commitHash)
