@@ -25,13 +25,14 @@ repositories {
     mavenLocal()
 }
 
+val mcplVersion = "1.21.0.48"
 dependencies {
     api("com.github.rfresh2:JDA:5.5.12") {
         exclude(group = "club.minnced")
         exclude(group = "net.java.dev.jna")
         exclude(group = "com.google.crypto.tink")
     }
-    api("com.github.rfresh2:MCProtocolLib:1.21.0.48") {
+    api("com.github.rfresh2:MCProtocolLib:$mcplVersion") {
         exclude(group = "io.netty")
     }
     val nettyVersion = "4.2.1.Final"
@@ -150,6 +151,10 @@ tasks {
         options.encoding = "UTF-8"
         (options as StandardJavadocDocletOptions).apply {
             addStringOption("Xdoclint:none", "-quiet")
+            links(
+                "https://docs.oracle.com/en/java/javase/${javaReleaseVersion}/docs/api",
+                "https://maven.2b2t.vc/javadoc/releases/com/github/rfresh2/MCProtocolLib/$mcplVersion/raw"
+            )
         }
     }
     getByName("javadocJar", Jar::class) {
