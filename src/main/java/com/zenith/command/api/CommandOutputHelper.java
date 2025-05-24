@@ -27,12 +27,12 @@ public class CommandOutputHelper {
             DISCORD.sendEmbedMessage(embed);
     }
 
-    public void logInputToDiscord(String command, CommandSource source) {
+    public void logInputToDiscord(String command, CommandSource source, CommandContext ctx) {
         if (DISCORD.isRunning()) {
             Embed embed = Embed.builder().title(source.name() + " Command Executed")
                     .description(command);
-            if (source.name().equals("Controlling Player")) {
-                ServerSession executor = Proxy.getInstance().getActivePlayer();
+            if (source instanceof PlayerCommandSource playerCommandSource) {
+                ServerSession executor = ctx.getInGamePlayerInfo().session();
                 embed.footer("Executed by: " + executor.getName(), Proxy.getInstance().getPlayerHeadURL(executor.getUUID()).toString());
             }
             DISCORD.sendEmbedMessage(embed);

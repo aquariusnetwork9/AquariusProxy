@@ -50,7 +50,7 @@ public class InGameCommandManager {
             }
             if (CONFIG.inGameCommands.logToDiscord && DISCORD.isRunning() && !commandContext.isSensitiveInput()) {
                 // will also log to terminal
-                CommandOutputHelper.logInputToDiscord(command, CommandSources.PLAYER);
+                CommandOutputHelper.logInputToDiscord(command, CommandSources.PLAYER, commandContext);
                 CommandOutputHelper.logEmbedOutputToDiscord(embed);
                 CommandOutputHelper.logMultiLineOutputToDiscord(commandContext.getMultiLineOutput());
             } else {
@@ -79,7 +79,7 @@ public class InGameCommandManager {
         }
         if (CONFIG.inGameCommands.logToDiscord && DISCORD.isRunning() && !commandContext.isSensitiveInput()) {
             // will also log to terminal
-            CommandOutputHelper.logInputToDiscord(message, CommandSources.SPECTATOR);
+            CommandOutputHelper.logInputToDiscord(message, CommandSources.SPECTATOR, commandContext);
             CommandOutputHelper.logEmbedOutputToDiscord(embed);
             CommandOutputHelper.logMultiLineOutputToDiscord(commandContext.getMultiLineOutput());
         } else {
