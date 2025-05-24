@@ -336,6 +336,7 @@ public class Proxy {
                 stopServer();
                 tcpManager.close();
                 saveConfig();
+                if (CONFIG.database.enabled) DATABASE.stop();
                 DISCORD.stop(true);
             }).get(10L, TimeUnit.SECONDS);
         } catch (final Exception e) {
