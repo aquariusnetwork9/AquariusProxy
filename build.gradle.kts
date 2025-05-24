@@ -107,7 +107,7 @@ tasks {
         outputFile = project.layout.buildDirectory.file("resources/main/zenith_commit.txt")
     }
     val releaseTagTask = register<WriteMetadataTxtTask>("releaseTag") {
-        metadataValue = System.getenv("RELEASE_TAG") ?: ""
+        metadataValue = providers.environmentVariable("RELEASE_TAG").orElse("")
         outputFile = project.layout.buildDirectory.file("resources/main/zenith_release.txt")
     }
     val mcVersionTask = register<WriteMetadataTxtTask>("mcVersion") {
@@ -232,13 +232,13 @@ graalvmNative {
                 "--initialize-at-run-time=com.zenith.mc.chat_type",
                 "--initialize-at-run-time=sun.net.dns.ResolverConfigurationImpl", // fix for windows builds, exception when doing srv lookups with netty
             )
-            val pgoPath = System.getenv("GRAALVM_PGO_PATH")
+            val pgoPath = providers.environmentVariable("GRAALVM_PGO_PATH").orNull
             if (pgoPath != null) {
                 println("Using PGO profile: $pgoPath")
                 buildArgs.add("--pgo=$pgoPath")
                 buildArgs.add("-H:+PGOPrintProfileQuality")
             } else {
-                val pgoInstrument = System.getenv("GRAALVM_PGO_INSTRUMENT")
+                val pgoInstrument = providers.environmentVariable("GRAALVM_PGO_INSTRUMENT").orNull
                 if (pgoInstrument != null) {
                     println("Instrumenting PGO")
                     buildArgs.add("--pgo-instrument")
@@ -257,8 +257,8 @@ publishing {
             name = "releases"
             url = uri("https://maven.2b2t.vc/releases")
             credentials {
-                username = System.getenv("MAVEN_USERNAME")
-                password = System.getenv("MAVEN_PASSWORD")
+                username = providers.environmentVariable("MAVEN_USERNAME").orNull
+                password = providers.environmentVariable("MAVEN_PASSWORD").orNull
             }
             authentication {
                 create<BasicAuthentication>("basic")
@@ -268,8 +268,8 @@ publishing {
             name = "snapshots"
             url = uri("https://maven.2b2t.vc/snapshots")
             credentials {
-                username = System.getenv("MAVEN_USERNAME")
-                password = System.getenv("MAVEN_PASSWORD")
+                username = providers.environmentVariable("MAVEN_USERNAME").orNull
+                password = providers.environmentVariable("MAVEN_PASSWORD").orNull
             }
             authentication {
                 create<BasicAuthentication>("basic")
@@ -288,7 +288,7 @@ publishing {
         create<MavenPublication>("release") {
             groupId = "com.zenith"
             artifactId = "ZenithProxy"
-            version = System.getenv("ZENITH_RELEASE_TAG") ?: "0.0.0+${project.version}"
+            version =  providers.environmentVariable("ZENITH_RELEASE_TAG").orElse("0.0.0+${project.version}").get()
             val javaComponent = components["java"] as AdhocComponentWithVariants
             javaComponent.withVariantsFromConfiguration(configurations["shadowRuntimeElements"]) { skip() }
             from(javaComponent)
