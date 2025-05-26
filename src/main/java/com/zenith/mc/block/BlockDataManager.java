@@ -100,7 +100,7 @@ public class BlockDataManager {
                     DoubleNode doubleNode = (DoubleNode) it2.next();
                     cbArr[i++] = doubleNode.asDouble();
                 }
-                CollisionBox collisionBox = new CollisionBox(cbArr[0], cbArr[3], cbArr[1], cbArr[4], cbArr[2], cbArr[5]);
+                CollisionBox collisionBox = new CollisionBox(cbArr[0], cbArr[1], cbArr[2], cbArr[3], cbArr[4], cbArr[5]);
                 boxIdToBox.put(boxId, collisionBox);
             }
 
