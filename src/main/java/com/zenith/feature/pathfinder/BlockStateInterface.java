@@ -3,11 +3,12 @@ package com.zenith.feature.pathfinder;
 import com.zenith.feature.player.World;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockPos;
+import com.zenith.mc.block.properties.BlockStateProperties;
+import com.zenith.mc.block.properties.SlabType;
 
 import static com.zenith.Globals.BLOCK_DATA;
 
 public class BlockStateInterface {
-    public static final BlockStateInterface INSTANCE = new BlockStateInterface();
     private BlockStateInterface() {}
 
     public static boolean worldContainsLoadedChunk(int blockX, int blockZ) {
@@ -52,5 +53,17 @@ public class BlockStateInterface {
 
     public static boolean isPathfindable(final int blockStateId) {
         return BLOCK_DATA.isPathfindable(blockStateId);
+    }
+
+    public static boolean isBottomSlab(int blockStateId) {
+        var slabProp = World.getBlockStateProperty(blockStateId, BlockStateProperties.SLAB_TYPE);
+        if (slabProp == null) return false;
+        return slabProp == SlabType.BOTTOM;
+    }
+
+    public static boolean isDoubleSlab(int blockStateId) {
+        var slabProp = World.getBlockStateProperty(blockStateId, BlockStateProperties.SLAB_TYPE);
+        if (slabProp == null) return false;
+        return slabProp == SlabType.DOUBLE;
     }
 }

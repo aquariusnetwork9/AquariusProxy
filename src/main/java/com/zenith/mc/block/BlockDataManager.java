@@ -32,8 +32,6 @@ public class BlockDataManager {
     private static final Int2ObjectOpenHashMap<FluidState> blockStateIdToFluidState = new Int2ObjectOpenHashMap<>(100, Maps.FAST_LOAD_FACTOR);
     private static final IntOpenHashSet pathfindableStateIds = new IntOpenHashSet();
     private static final IntOpenHashSet replaceableStateIds = new IntOpenHashSet();
-    private static final IntOpenHashSet bottomSlabStateIds = new IntOpenHashSet();
-    private static final IntOpenHashSet doubleSlabStateIds = new IntOpenHashSet();
     static {
         init();
     }
@@ -77,22 +75,6 @@ public class BlockDataManager {
             ArrayNode replaceableArray = (ArrayNode) replaceableNode;
             replaceableArray.elements().forEachRemaining((stateId) -> {
                 replaceableStateIds.add(stateId.asInt());
-            });
-        }
-        try (JsonParser slabsParse = OBJECT_MAPPER.createParser(BlockDataManager.class.getResourceAsStream(
-            "/mcdata/slabBlockStateIds.json"))) {
-            TreeNode treeNode = slabsParse.getCodec().readTree(slabsParse);
-//            ArrayNode topSlabArray = (ArrayNode) treeNode.get("topSlabs");
-//            topSlabArray.elements().forEachRemaining((stateId) -> {
-//                topSlabStateIds.add(stateId.asInt());
-//            });
-            ArrayNode bottomSlabArray = (ArrayNode) treeNode.get("bottomSlabs");
-            bottomSlabArray.elements().forEachRemaining((stateId) -> {
-                bottomSlabStateIds.add(stateId.asInt());
-            });
-            ArrayNode doubleSlabArray = (ArrayNode) treeNode.get("doubleSlabs");
-            doubleSlabArray.elements().forEachRemaining((stateId) -> {
-                doubleSlabStateIds.add(stateId.asInt());
             });
         }
         DataPalette.GLOBAL_PALETTE_BITS_PER_ENTRY = MathHelper.log2Ceil(blockStateIdToBlock.size());
@@ -222,13 +204,5 @@ public class BlockDataManager {
         }
         var cb = collisionBoxes.getFirst();
         return cb.isFullBlock();
-    }
-
-    public boolean isBottomSlab(int blockStateId) {
-        return bottomSlabStateIds.contains(blockStateId);
-    }
-
-    public boolean isDoubleSlab(int blockStateId) {
-        return doubleSlabStateIds.contains(blockStateId);
     }
 }

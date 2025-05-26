@@ -48,7 +48,7 @@ public class MovementPillar extends Movement {
             if (fromDownBlock.blockTags().contains(BlockTags.CLIMBABLE)) {
                 return COST_INF; // can't pillar from a ladder or vine onto something that isn't also climbable
             }
-            if (BLOCK_DATA.isBottomSlab(fromDown)) {
+            if (BlockStateInterface.isBottomSlab(fromDown)) {
                 return COST_INF; // can't pillar up from a bottom slab onto a non ladder
             }
         }

@@ -130,7 +130,7 @@ public class MovementTraverse extends Movement {
                     }
                 }
                 // now that we've checked all possible directions to side place, we actually need to backplace
-                if (srcDownBlock == BlockRegistry.SOUL_SAND || (srcDownBlock.name().endsWith("_slab") && !BLOCK_DATA.isDoubleSlab(srcDown))) {
+                if (srcDownBlock == BlockRegistry.SOUL_SAND || (srcDownBlock.name().endsWith("_slab") && !BlockStateInterface.isDoubleSlab(srcDown))) {
                     return COST_INF; // can't sneak and backplace against soul sand or half slabs (regardless of whether it's top half or bottom half) =/
                 }
                 if (!standingOnABlock) { // standing on water / swimming

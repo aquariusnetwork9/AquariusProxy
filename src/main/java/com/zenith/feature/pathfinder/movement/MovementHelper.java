@@ -575,10 +575,6 @@ public final class MovementHelper {
         return 0; // we won't actually mine it, so don't check fallings above
     }
 
-    public static boolean isBottomSlab(int blockStateId) {
-        return BLOCK_DATA.isBottomSlab(blockStateId);
-    }
-
     /**
      * AutoTool for a specific block
      *
