@@ -256,7 +256,7 @@ public class DiscordBot {
     public void setBotDescription(String description) {
         if (!isRunning()) return;
         try {
-            jda.updateApplicationDescription(description).complete();
+            jda.getApplicationManager().setDescription(description).complete();
         } catch (final Exception e) {
             DISCORD_LOG.warn("Failed updating bot's description: {}", e.getMessage());
             DISCORD_LOG.debug("Failed updating bot's description", e);
