@@ -3,7 +3,7 @@ package com.zenith.feature.player;
 import com.zenith.cache.data.chunk.Chunk;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.mc.block.*;
-import com.zenith.mc.block.properties.BlockStateProperties;
+import com.zenith.mc.block.properties.api.BlockStateProperties;
 import com.zenith.mc.block.properties.api.Property;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;

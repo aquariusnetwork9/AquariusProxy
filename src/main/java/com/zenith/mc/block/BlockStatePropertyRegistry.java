@@ -4,7 +4,7 @@ package com.zenith.mc.block;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
-import static com.zenith.mc.block.properties.BlockStateProperties.*;
+import static com.zenith.mc.block.properties.api.BlockStateProperties.*;
 
 public final class BlockStatePropertyRegistry {
     public static final Int2ObjectMap<BlockStatePropertyDefinition> STATES = new Int2ObjectOpenHashMap<>(1060);

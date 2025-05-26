@@ -1,9 +1,7 @@
-package com.zenith.mc.block.properties;
+package com.zenith.mc.block.properties.api;
 
 import com.zenith.mc.block.Direction;
-import com.zenith.mc.block.properties.api.BooleanProperty;
-import com.zenith.mc.block.properties.api.EnumProperty;
-import com.zenith.mc.block.properties.api.IntegerProperty;
+import com.zenith.mc.block.properties.*;
 
 public class BlockStateProperties {
     public static final BooleanProperty ATTACHED = BooleanProperty.create("attached");

@@ -1,7 +1,7 @@
 package com.zenith.mc.block;
 
 import com.zenith.feature.player.World;
-import com.zenith.mc.block.properties.BlockStateProperties;
+import com.zenith.mc.block.properties.api.BlockStateProperties;
 import com.zenith.mc.block.properties.api.Property;
 import org.jspecify.annotations.Nullable;
 

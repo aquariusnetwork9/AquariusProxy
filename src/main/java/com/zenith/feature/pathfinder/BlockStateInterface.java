@@ -3,8 +3,8 @@ package com.zenith.feature.pathfinder;
 import com.zenith.feature.player.World;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockPos;
-import com.zenith.mc.block.properties.BlockStateProperties;
 import com.zenith.mc.block.properties.SlabType;
+import com.zenith.mc.block.properties.api.BlockStateProperties;
 
 import static com.zenith.Globals.BLOCK_DATA;
 
