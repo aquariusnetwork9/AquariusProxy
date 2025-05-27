@@ -98,11 +98,10 @@ public abstract class LockingDatabase extends Database {
             if (nonNull(lockExecutorService)) {
                 try {
                     lockExecutorService.submit(() -> {
-                        if (lockAcquired.compareAndSet(true, false)) {
+                        if (hasLock() || lockAcquired.get()) {
                             releaseLock();
                             onLockReleased();
                         }
-                        shutdownQueryExecutor();
                     }, true).get(5, TimeUnit.SECONDS);
                 } catch (final Exception e) {
                     DATABASE_LOG.warn("Failed releasing lock", e);
@@ -129,15 +128,11 @@ public abstract class LockingDatabase extends Database {
 
     public void onLockReleased() {
         DATABASE_LOG.info("{} Database Lock Released", getLockKey());
-        writeLockReleasedMetadata();
-        shutdownQueryExecutor();
-    }
-
-    public void shutdownQueryExecutor() {
-        if (queryExecutorFuture != null) {
+        if (nonNull(queryExecutorFuture)) {
             queryExecutorFuture.cancel(true);
             Wait.waitUntil(() -> queryExecutorFuture.isDone(), 5);
         }
+        writeLockReleasedMetadata();
     }
 
     private void writeLockAcquiredMetadata() {
@@ -211,11 +206,8 @@ public abstract class LockingDatabase extends Database {
                 redisClient.restart();
             }
             if (redisRestarted.getAndSet(false)) {
-                if (lockAcquired.compareAndSet(true, false)) {
-                    releaseLock();
-                    onLockReleased();
-                }
-                shutdownQueryExecutor();
+                releaseLock();
+                onLockReleased();
                 rLock = null;
             }
             if (rLock == null) {
@@ -232,11 +224,8 @@ public abstract class LockingDatabase extends Database {
                     // 5 second grace period to finish up remaining inserts
                     if (insertQueue.isEmpty()
                         || Proxy.getInstance().getDisconnectTime().isBefore(Instant.now().minusSeconds(5))) {
-                        if (lockAcquired.compareAndSet(true, false)) {
-                            releaseLock();
-                            onLockReleased();
-                        }
-                        shutdownQueryExecutor();
+                        releaseLock();
+                        onLockReleased();
                     }
                 }
                 return;
@@ -249,7 +238,6 @@ public abstract class LockingDatabase extends Database {
                     if (lockAcquired.compareAndSet(true, false)) {
                         onLockReleased();
                     }
-                    shutdownQueryExecutor();
                 }
             } else {
                 if (lockAcquired.compareAndSet(false, true)) {
@@ -259,11 +247,10 @@ public abstract class LockingDatabase extends Database {
         } catch (final Throwable e) {
             DATABASE_LOG.warn("Try lock process exception", e);
             try {
-                if (lockAcquired.compareAndSet(true, false)) {
+                if (hasLock() || lockAcquired.get()) {
                     releaseLock();
                     onLockReleased();
                 }
-                shutdownQueryExecutor();
             } catch (final Exception e2) {
                 DATABASE_LOG.error("Error releasing lock in try lock process exception", e2);
             }

@@ -55,11 +55,10 @@ public class TimeDatabase extends LockingDatabase {
             if (lockAcquired.get()) {
                 try {
                     lockExecutorService.submit(() -> {
-                        if (lockAcquired.compareAndSet(true, false)) {
+                        if (hasLock() || lockAcquired.get()) {
                             releaseLock();
                             onLockReleased();
                         }
-                        shutdownQueryExecutor();
                     }, true).get(5, TimeUnit.SECONDS);
                 } catch (final Exception e) {
                     DATABASE_LOG.warn("Failed releasing lock", e);
