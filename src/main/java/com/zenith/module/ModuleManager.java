@@ -41,8 +41,7 @@ public class ModuleManager {
             new Spammer(),
             new Spook(),
             new SpawnPatrol(),
-            new VisualRange(),
-            new Wander()
+            new VisualRange()
         ).forEach(m -> {
             addModule(m);
             m.syncEnabledFromConfig();

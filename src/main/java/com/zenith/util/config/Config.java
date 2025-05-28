@@ -137,7 +137,6 @@ public final class Config {
             public final AutoArmor autoArmor = new AutoArmor();
             public final AutoMend autoMend = new AutoMend();
             public final QueueWarning queueWarning = new QueueWarning();
-            public final Wander wander = new Wander();
             public final Click click = new Click();
             public final SessionTimeLimit sessionTimeLimit = new SessionTimeLimit();
             public final AutoOmen autoOmen = new AutoOmen();
@@ -214,12 +213,6 @@ public final class Config {
                     OFF_HAND,
                     ALTERNATE_HANDS
                 }
-            }
-
-            public static final class Wander {
-                public boolean enabled = false;
-                public int radius = 2000;
-                public int minRadius = 100;
             }
 
             public static class SpawnPatrol {
