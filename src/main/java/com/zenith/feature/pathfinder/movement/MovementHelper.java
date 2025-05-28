@@ -24,6 +24,7 @@ import static com.zenith.Globals.*;
 import static com.zenith.feature.pathfinder.Ternary.*;
 import static com.zenith.feature.pathfinder.movement.ActionCosts.COST_INF;
 import static com.zenith.feature.pathfinder.movement.Movement.HORIZONTALS_BUT_ALSO_DOWN_____SO_EVERY_DIRECTION_EXCEPT_UP;
+import static java.util.Objects.requireNonNullElse;
 
 public final class MovementHelper {
     private MovementHelper() {}
@@ -135,7 +136,7 @@ public final class MovementHelper {
 //        if (Baritone.settings().blocksToAvoid.value.contains(block)) {
 //            return NO;
 //        }
-        if (block.name().endsWith("_door") || block.name().endsWith("_fence")) {
+        if (block.name().endsWith("_door") || block.name().endsWith("fence_gate")) {
             // TODO this assumes that all doors in all mods are openable
             if (block == BlockRegistry.IRON_DOOR) {
                 return NO;
@@ -326,18 +327,20 @@ public final class MovementHelper {
         return (facing == playerFacing) == open;
     }
 
-//    static boolean isGatePassable(IPlayerContext ctx, BlockPos gatePos, BlockPos playerPos) {
-//        if (playerPos.equals(gatePos)) {
-//            return false;
-//        }
-//
-//        BlockState state = BlockStateInterface.get(ctx, gatePos);
-//        if (!(state.getBlock() instanceof FenceGateBlock)) {
-//            return true;
-//        }
-//
-//        return state.getValue(FenceGateBlock.OPEN);
-//    }
+    public static boolean isGatePassable(BlockPos gatePos, BlockPos playerPos) {
+        if (playerPos.equals(gatePos)) {
+            return false;
+        }
+
+        Block block = BlockStateInterface.getBlock(gatePos);
+        int state = BlockStateInterface.getId(gatePos);
+        if (!(block.name().endsWith("fence_gate"))) {
+            return true;
+        }
+
+        var openProperty = World.getBlockStateProperty(block, state, BlockStateProperties.OPEN);
+        return requireNonNullElse(openProperty, true);
+    }
 
     public static boolean avoidWalkingInto(Block block) {
         return World.isFluid(block)

@@ -17,6 +17,7 @@ import com.zenith.mc.block.BlockTags;
 import lombok.ToString;
 import org.cloudburstmc.math.vector.Vector3d;
 
+import java.util.Optional;
 import java.util.Set;
 
 import static com.zenith.Globals.*;
@@ -212,17 +213,17 @@ public class MovementTraverse extends Movement {
             }
         }
 
-//        if (pb0.getBlock() instanceof FenceGateBlock || pb1.getBlock() instanceof FenceGateBlock) {
-//            BlockPos blocked = !MovementHelper.isGatePassable(ctx, positionsToBreak[0], src.above()) ? positionsToBreak[0]
-//                : !MovementHelper.isGatePassable(ctx, positionsToBreak[1], src) ? positionsToBreak[1]
-//                : null;
-//            if (blocked != null) {
-//                Optional<Rotation> rotation = RotationUtils.reachable(ctx, blocked);
-//                if (rotation.isPresent()) {
-//                    return state.setTarget(new MovementState.MovementTarget(rotation.get(), true)).setInput(Input.CLICK_RIGHT, true);
-//                }
-//            }
-//        }
+        if (pb0Block.name().endsWith("fence_gate") || pb1Block.name().endsWith("fence_gate")) {
+            BlockPos blocked = !MovementHelper.isGatePassable(positionsToBreak[0], src.above()) ? positionsToBreak[0]
+                : !MovementHelper.isGatePassable(positionsToBreak[1], src) ? positionsToBreak[1]
+                : null;
+            if (blocked != null) {
+                Optional<Rotation> rotation = RotationUtils.reachable(ctx, blocked);
+                if (rotation.isPresent()) {
+                    return state.setTarget(new MovementState.MovementTarget(rotation.get(), true)).setInput(PathInput.RIGHT_CLICK_BLOCK, true);
+                }
+            }
+        }
 
         boolean isTheBridgeBlockThere = MovementHelper.canWalkOn(positionToPlace) || ladder || MovementHelper.canUseFrostWalker(ctx, positionToPlace);
         BlockPos feet = ctx.playerFeet();
