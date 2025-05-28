@@ -202,15 +202,15 @@ public class MovementTraverse extends Movement {
         Block fd = BlockStateInterface.getBlock(src.below());
         boolean ladder = fd.blockTags().contains(BlockTags.CLIMBABLE);
 
-//        if (pb0.block().name().endsWith("_door") || pb1.block().name().endsWith("_door")) {
-//            boolean notPassable = pb0.block().name().endsWith("_door") && !MovementHelper.isDoorPassable(ctx, src, dest) || pb1.getBlock() instanceof DoorBlock && !MovementHelper.isDoorPassable(ctx, dest, src);
-//            boolean canOpen = !(Blocks.IRON_DOOR.equals(pb0.getBlock()) || Blocks.IRON_DOOR.equals(pb1.getBlock()));
-//
-//            if (notPassable && canOpen) {
-//                return state.setTarget(new MovementState.MovementTarget(RotationUtils.calcRotationFromVec3d(ctx.playerHead(), VecUtils.calculateBlockCenter(ctx.world(), positionsToBreak[0]), ctx.playerRotations()), true))
-//                    .setInput(Input.CLICK_RIGHT, true);
-//            }
-//        }
+        if (pb0Block.name().endsWith("_door") || pb1Block.name().endsWith("_door")) {
+            boolean notPassable = pb0Block.name().endsWith("_door") && !MovementHelper.isDoorPassable(src, dest) || pb1Block.name().endsWith("_door") && !MovementHelper.isDoorPassable(dest, src);
+            boolean canOpen = !(BlockRegistry.IRON_DOOR.equals(pb0Block) || BlockRegistry.IRON_DOOR.equals(pb1Block));
+
+            if (notPassable && canOpen) {
+                return state.setTarget(new MovementState.MovementTarget(RotationUtils.calcRotationFromVec3d(ctx.playerHead(), VecUtils.calculateBlockCenter(positionsToBreak[0]), ctx.playerRotations()), true))
+                    .setInput(PathInput.RIGHT_CLICK_BLOCK, true);
+            }
+        }
 
 //        if (pb0.getBlock() instanceof FenceGateBlock || pb1.getBlock() instanceof FenceGateBlock) {
 //            BlockPos blocked = !MovementHelper.isGatePassable(ctx, positionsToBreak[0], src.above()) ? positionsToBreak[0]
