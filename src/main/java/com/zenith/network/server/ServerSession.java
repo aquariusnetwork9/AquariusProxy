@@ -426,7 +426,7 @@ public class ServerSession extends TcpServerSession {
 
     public void transferToSpectator() {
         cookieCache.getStoreSpectatorDestPacket(this::send, true);
-        transfer(CONFIG.server.getProxyAddressForTransfer(), CONFIG.server.getProxyPortForTransfer());
+        transfer(connectingServerAddress, connectingServerPort);
     }
 
     public void transferToControllingPlayer(final String address, final int port) {
@@ -436,6 +436,6 @@ public class ServerSession extends TcpServerSession {
 
     public void transferToControllingPlayer() {
         cookieCache.getStoreSpectatorDestPacket(this::send, false);
-        transfer(CONFIG.server.getProxyAddressForTransfer(), CONFIG.server.getProxyPortForTransfer());
+        transfer(connectingServerAddress, connectingServerPort);
     }
 }

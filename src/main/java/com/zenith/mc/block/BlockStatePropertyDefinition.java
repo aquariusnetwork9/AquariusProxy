@@ -62,7 +62,7 @@ public class BlockStatePropertyDefinition {
         var valueLists = new ArrayList<List<? extends Comparable<?>>>(propertyCount);
         for (int i = 0; i < properties.length; i++) {
             final Property<?> property = properties[i];
-            valueLists.add(new ArrayList<>(property.getPossibleValues()));
+            valueLists.add(property.getPossibleValues());
         }
         var indices = new int[propertyCount];
 
