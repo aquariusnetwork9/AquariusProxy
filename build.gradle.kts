@@ -25,7 +25,7 @@ repositories {
     mavenLocal()
 }
 
-val mcplVersion = "1.21.0.48"
+val mcplVersion = "1.21.0.50"
 dependencies {
     api("com.github.rfresh2:JDA:5.5.13") {
         exclude(group = "club.minnced")
@@ -68,8 +68,8 @@ dependencies {
     api("com.viaversion:vialoader:4.0.2")
     api("com.viaversion:viaversion:5.3.2")
     api("com.viaversion:viabackwards:5.3.2")
-    api("org.jline:jline:3.30.3")
-    api("org.jline:jline-terminal-jni:3.30.3")
+    api("org.jline:jline:3.30.4")
+    api("org.jline:jline-terminal-jni:3.30.4")
     api("ar.com.hjg:pngj:2.1.0")
     api("com.zaxxer:HikariCP:6.3.0")
     api("org.postgresql:postgresql:42.7.5")
