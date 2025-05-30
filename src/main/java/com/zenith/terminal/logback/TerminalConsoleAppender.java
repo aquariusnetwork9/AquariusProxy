@@ -10,6 +10,7 @@ import org.jline.terminal.impl.DumbTerminal;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 public class TerminalConsoleAppender extends ConsoleAppender<ILoggingEvent> {
     private static boolean initialized = false;
@@ -45,6 +46,9 @@ public class TerminalConsoleAppender extends ConsoleAppender<ILoggingEvent> {
             initialized = true;
             try {
                 terminal = TerminalBuilder.builder()
+                    .encoding(StandardCharsets.UTF_8)
+                    .stdoutEncoding(StandardCharsets.UTF_8)
+                    .stderrEncoding(StandardCharsets.UTF_8)
                     .jansi(true)
                     .systemOutput(TerminalBuilder.SystemOutput.SysOut)
                     .color(true)
