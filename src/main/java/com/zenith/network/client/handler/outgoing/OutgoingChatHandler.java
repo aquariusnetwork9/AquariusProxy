@@ -19,7 +19,9 @@ public class OutgoingChatHandler implements PacketHandler<ServerboundChatPacket,
             String message = packet.getMessage();
             String commandFull = message.substring(1, (Math.min(message.length(), 257)));
             String command = commandFull.split(" ")[0];
-            if (CACHE.getChatCache().canUseChatSigning() && "w".equals(command) || "whisper".equals(command) || "msg".equals(command) || "tell".equals(command)) {
+            if (CACHE.getChatCache().canUseChatSigning()
+                && ("w".equals(command) || "whisper".equals(command) || "msg".equals(command) || "tell".equals(command) || "minecraft:msg".equals(command))
+            ) {
                 session.send(new ServerboundChatCommandSignedPacket(commandFull));
             } else {
                 session.send(new ServerboundChatCommandPacket(commandFull));

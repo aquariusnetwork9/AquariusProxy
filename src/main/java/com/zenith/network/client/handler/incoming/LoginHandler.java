@@ -58,7 +58,7 @@ public class LoginHandler implements PacketHandler<ClientboundLoginPacket, Clien
                         chatSession.getPlayerCertificates().getPublicKey(),
                         chatSession.getPlayerCertificates().getPublicKeySignature()
                     ));
-                    CLIENT_LOG.info("Server enforces secure chat, zenith chat signing enabled");
+                    CLIENT_LOG.info("Server enforces secure chat, chat signing enabled");
                 } else {
                     CLIENT_LOG.warn("Server enforces secure chat, but we cannot sign chat messages");
                 }
@@ -67,7 +67,7 @@ public class LoginHandler implements PacketHandler<ClientboundLoginPacket, Clien
             }
         } else {
             if (packet.isEnforcesSecureChat()) {
-                CLIENT_LOG.warn("Server enforces secure chat, but zenith chat signing is disabled");
+                CLIENT_LOG.warn("Server enforces secure chat, but chat signing is disabled");
             }
             CACHE.getChatCache().setEnforcesSecureChat(packet.isEnforcesSecureChat());
         }
