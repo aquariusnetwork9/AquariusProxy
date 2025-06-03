@@ -161,9 +161,10 @@ Instructions and info: https://github.com/rfresh2/ZenithProxyDocker
 
 ### Discord Bot Setup
 
-* Create a discord bot here: https://discord.com/developers/
+* Create a discord bot here: https://discord.com/developers/applications
   * [Screenshots and how to get the bot's token](https://discordpy.readthedocs.io/en/stable/discord.html)
-* Enable `Message Content Intent` under the "Bot" tab. [Example](https://i.imgur.com/iznLeDV.png)
+* Make sure "Installation" tab settings have [Install Link set to None](https://i.imgur.com/d7uWW6F.png)
+* Enable `Message Content Intent` under the "Bot" tab. [Example](https://i.imgur.com/CgZvwma.png)
 * Invite the discord bot to a server:
   1. In the "OAuth2" tab, [generate an invite link with these permissions](https://imgur.com/rSn10ZN)
   2. Open the invite link in a web browser and select the server to invite the bot to
