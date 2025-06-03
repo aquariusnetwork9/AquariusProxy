@@ -16,7 +16,7 @@ public class OutgoingChatCommandSignedHandler implements PacketHandler<Serverbou
         CACHE.getChatCache().setLastChatTimestamp(packet.getTimeStamp());
         if (CACHE.getChatCache().canUseChatSigning()) {
             String command = packet.getCommand().split(" ")[0].toLowerCase();
-            if ("w".equals(command) || "whisper".equals(command) || "msg".equals(command) || "tell".equals(command)) {
+            if ("w".equals(command) || "whisper".equals(command) || "msg".equals(command) || "tell".equals(command) || "minecraft:msg".equals(command)) {
                 var signedWhisper = new ServerboundChatCommandSignedPacket(packet.getCommand(), packet.getTimeStamp(), 0, packet.getSignatures(), 0, BitSet.valueOf(new byte[20]));
                 CACHE.getChatCache().getChatSession().sign(signedWhisper);
                 return signedWhisper;
