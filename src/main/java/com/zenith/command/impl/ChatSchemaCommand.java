@@ -50,7 +50,7 @@ public class ChatSchemaCommand extends Command {
 
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
-        return command("chatSchema")
+        return command("chatSchema").requires(Command::validateAccountOwner)
             .then(literal("del")
                 .executes(c -> {
                     var serverAddress = CONFIG.client.server.address;
