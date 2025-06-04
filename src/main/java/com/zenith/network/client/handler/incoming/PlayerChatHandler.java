@@ -2,8 +2,8 @@ package com.zenith.network.client.handler.incoming;
 
 import com.zenith.event.chat.PublicChatEvent;
 import com.zenith.event.chat.WhisperChatEvent;
-import com.zenith.mc.chat_type.ChatTypeRegistry;
 import com.zenith.feature.chatschema.ChatSchemaParser;
+import com.zenith.mc.chat_type.ChatTypeRegistry;
 import com.zenith.network.client.ClientSession;
 import com.zenith.network.codec.PacketHandler;
 import com.zenith.util.ComponentSerializer;
@@ -35,12 +35,14 @@ public class PlayerChatHandler implements PacketHandler<ClientboundPlayerChatPac
             }
             String messageContent = ComponentSerializer.serializePlain(requireNonNullElse(packet.getUnsignedContent(), packetContentComponent));
             boolean isWhisper = false;
+            boolean outboundWhisper = false;
             Optional<PlayerListEntry> whisperTarget = Optional.empty();
             if ("commands.message.display.incoming".equals(chatType.translationKey())) {
                 isWhisper = true;
                 whisperTarget = CACHE.getTabListCache().get(CACHE.getProfileCache().getProfile().getId());
             } else if ("commands.message.display.outgoing".equals(chatType.translationKey())) {
                 isWhisper = true;
+                outboundWhisper = true;
                 whisperTarget = CACHE.getTabListCache().getFromName( // ???
                      ComponentSerializer.serializePlain(packet.getTargetName())
                 );
@@ -54,13 +56,12 @@ public class PlayerChatHandler implements PacketHandler<ClientboundPlayerChatPac
                         }
                         case WHISPER_INBOUND -> {
                             isWhisper = true;
-                            whisperTarget = CACHE.getTabListCache().get(CACHE.getProfileCache().getProfile().getId());
+                            whisperTarget = Optional.ofNullable(schemaParseResult.sender());
                         }
                         case WHISPER_OUTBOUND -> {
                             isWhisper = true;
-                            whisperTarget = CACHE.getTabListCache().getFromName( // ???
-                                ComponentSerializer.serializePlain(packet.getTargetName())
-                            );
+                            outboundWhisper = true;
+                            whisperTarget = Optional.ofNullable(schemaParseResult.receiver());
                         }
                     }
                 }
@@ -71,9 +72,8 @@ public class PlayerChatHandler implements PacketHandler<ClientboundPlayerChatPac
                 } else if (whisperTarget.isEmpty()) {
                     CLIENT_LOG.warn("No whisper target found for PlayerChatPacket whisper. chatType: {}, content: {}", chatType.translationKey(), ComponentSerializer.serializePlain(chatComponent));
                 } else {
-                    boolean outgoing = "commands.message.display.outgoing".equals(chatType.translationKey());
                     EVENT_BUS.postAsync(new WhisperChatEvent(
-                        outgoing,
+                        outboundWhisper,
                         senderPlayerEntry.get(),
                         whisperTarget.get(),
                         chatComponent,
