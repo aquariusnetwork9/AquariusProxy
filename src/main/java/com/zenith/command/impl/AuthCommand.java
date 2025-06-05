@@ -46,7 +46,9 @@ public class AuthCommand extends Command {
                 "openBrowser on/off",
                 "maxRefreshIntervalMins <minutes>",
                 "useClientConnectionProxy on/off",
-                "chatSigning on/off"
+                "chatSigning on/off",
+                "chatSigning force on/off",
+                "chatSigning whispers on/off"
             )
             .build();
     }
@@ -181,6 +183,13 @@ public class AuthCommand extends Command {
                         .title("Chat Signing Force " + toggleStrCaps(CONFIG.client.chatSigning.force))
                         .primaryColor();
                     return OK;
+                })))
+                .then(literal("whispers").then(argument("whisperToggle", toggle()).executes(c -> {
+                    CONFIG.client.chatSigning.signWhispers = getToggle(c, "whisperToggle");
+                    c.getSource().getEmbed()
+                        .title("Chat Signing Whispers " + toggleStrCaps(CONFIG.client.chatSigning.signWhispers))
+                        .primaryColor();
+                    return OK;
                 }))));
     }
 
@@ -203,7 +212,8 @@ public class AuthCommand extends Command {
             .addField("Max Refresh Interval", CONFIG.authentication.maxRefreshIntervalMins + " minutes")
             .addField("Use Client Connection Proxy", toggleStr(CONFIG.authentication.useClientConnectionProxy))
             .addField("Chat Signing", toggleStr(CONFIG.client.chatSigning.enabled))
-            .addField("Chat Signing Force", toggleStr(CONFIG.client.chatSigning.force));
+            .addField("Chat Signing Force", toggleStr(CONFIG.client.chatSigning.force))
+            .addField("Chat Signing Whispers", toggleStr(CONFIG.client.chatSigning.signWhispers));
     }
 
     private String authTypeToString(Config.Authentication.AccountType type) {

@@ -9,8 +9,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.Serverbound
 
 import java.util.BitSet;
 
-import static com.zenith.Globals.CACHE;
-import static com.zenith.Globals.EVENT_BUS;
+import static com.zenith.Globals.*;
 
 public class OutgoingChatHandler implements PacketHandler<ServerboundChatPacket, ClientSession> {
     @Override
@@ -19,7 +18,7 @@ public class OutgoingChatHandler implements PacketHandler<ServerboundChatPacket,
             String message = packet.getMessage();
             String commandFull = message.substring(1, (Math.min(message.length(), 257)));
             String command = commandFull.split(" ")[0];
-            if (CACHE.getChatCache().canUseChatSigning()
+            if (CACHE.getChatCache().canUseChatSigning() && CONFIG.client.chatSigning.signWhispers
                 && ("w".equals(command) || "whisper".equals(command) || "msg".equals(command) || "tell".equals(command) || "minecraft:msg".equals(command))
             ) {
                 session.send(new ServerboundChatCommandSignedPacket(commandFull));
