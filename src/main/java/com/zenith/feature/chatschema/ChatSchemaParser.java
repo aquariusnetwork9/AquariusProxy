@@ -1,9 +1,13 @@
 package com.zenith.feature.chatschema;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -16,6 +20,11 @@ public class ChatSchemaParser {
     private static final String receiverToken = "$r";
     private static final String messageToken = "$m";
     private static final String wildcardStringToken = "$w";
+
+    private static final LoadingCache<String, Pattern> compiledPatternsCache = CacheBuilder.newBuilder()
+        .maximumSize(10)
+        .expireAfterAccess(10, TimeUnit.MINUTES)
+        .build(CacheLoader.from(ChatSchemaParser::compilePattern));
 
     public static @Nullable ChatParseResult parse(String input) {
         return parse(input, getSchema());
@@ -36,7 +45,7 @@ public class ChatSchemaParser {
 
     private static ChatSchema getSchema() {
         return CONFIG.client.chatSchemas.serverSchemas.getOrDefault(
-            CONFIG.client.server.address,
+            CONFIG.client.server.address.toLowerCase().trim(),
             ChatSchema.DEFAULT_SCHEMA
         );
     }
@@ -62,7 +71,6 @@ public class ChatSchemaParser {
         }
     }
 
-    // todo: compiled patterns could be cached
     private static Pattern compilePattern(String schema) {
         StringBuilder pattern = new StringBuilder();
         pattern.append("\\Q");
@@ -90,7 +98,7 @@ public class ChatSchemaParser {
     }
 
     private static @Nullable ChatParseResult tryParseChat0(ChatType type, String rawInput, String schema) {
-        Pattern pattern = compilePattern(schema);
+        Pattern pattern = compiledPatternsCache.getUnchecked(schema);
         Matcher matcher = pattern.matcher(rawInput);
 
         if (!matcher.matches()) return null;
