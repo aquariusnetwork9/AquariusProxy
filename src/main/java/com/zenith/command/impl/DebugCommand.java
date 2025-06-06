@@ -179,6 +179,7 @@ public class DebugCommand extends Command {
             .addField("Kick Disconnect", toggleStr(CONFIG.debug.kickDisconnect), false)
             .addField("Debug Logs", toggleStr(CONFIG.debug.debugLogs), false)
             .addField("Chunk Cache Fullbright", toggleStr(CONFIG.debug.server.cache.fullbrightChunkBlocklight), false)
+            .addField("Default Client Render Distance", CONFIG.client.defaultClientRenderDistance, false)
             .primaryColor();
     }
 }

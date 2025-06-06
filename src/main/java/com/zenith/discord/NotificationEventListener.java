@@ -336,7 +336,7 @@ public class NotificationEventListener {
                      
                      Otherwise you may experience issues with 2b2t's anti-cheat, which changes its checks based on client MC version.
                      
-                     To configure ZenithProxy's client ViaVersion: `via zenithToServer version <version>`
+                     Or configure ZenithProxy's client ViaVersion: `via zenithToServer version <version>`
                      """.formatted(playerProtocolVersion.getName(), clientProtocolVersion.getName()))
                 .errorColor();
             sendEmbedMessage(embed);
