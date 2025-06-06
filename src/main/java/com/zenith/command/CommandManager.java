@@ -48,6 +48,7 @@ public class CommandManager {
         new AutoUpdateCommand(),
         new ChatHistoryCommand(),
         new ChatRelayCommand(),
+        new ChatSchemaCommand(),
         new ClickCommand(),
         new ClientConnectionCommand(),
         new CommandConfigCommand(),
@@ -110,7 +111,6 @@ public class CommandManager {
         new UnsupportedCommand(),
         new ViaVersionCommand(),
         new VisualRangeCommand(),
-        new WanderCommand(),
         new WhitelistCommand()
     );
     private final CommandDispatcher<CommandContext> dispatcher;

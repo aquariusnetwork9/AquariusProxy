@@ -6,8 +6,8 @@ import it.unimi.dsi.fastutil.doubles.DoubleOpenHashSet;
 
 public record GoalNear(int x, int y, int z, int rangeSq) implements Goal, PosGoal {
 
-    public GoalNear(BlockPos pos, int range) {
-        this(pos.x(), pos.y(), pos.z(), range * range);
+    public GoalNear(BlockPos pos, int rangeSq) {
+        this(pos.x(), pos.y(), pos.z(), rangeSq);
     }
 
     @Override

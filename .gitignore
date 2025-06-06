@@ -30,3 +30,8 @@ dataGenerator/run
 
 /dataGenerator/build
 /dataGenerator/.idea
+
+/.kotlin/
+buildSrc/.gradle
+buildSrc/.kotlin
+buildSrc/build

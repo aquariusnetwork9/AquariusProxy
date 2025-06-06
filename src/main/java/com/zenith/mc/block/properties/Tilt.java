@@ -1,0 +1,27 @@
+package com.zenith.mc.block.properties;
+
+import com.zenith.mc.block.properties.api.StringRepresentable;
+
+public enum Tilt implements StringRepresentable {
+   NONE("none", true),
+   UNSTABLE("unstable", false),
+   PARTIAL("partial", true),
+   FULL("full", true);
+
+   private final String name;
+   private final boolean causesVibration;
+
+   private Tilt(final String name, final boolean causesVibration) {
+      this.name = name;
+      this.causesVibration = causesVibration;
+   }
+
+   @Override
+   public String getSerializedName() {
+      return this.name;
+   }
+
+   public boolean causesVibration() {
+      return this.causesVibration;
+   }
+}

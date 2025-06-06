@@ -99,8 +99,8 @@ public class MovementAscend extends Movement {
             return COST_INF;
         }
         // we can jump from soul sand, but not from a bottom slab
-        boolean jumpingFromBottomSlab = MovementHelper.isBottomSlab(srcDown);
-        boolean jumpingToBottomSlab = MovementHelper.isBottomSlab(toPlace);
+        boolean jumpingFromBottomSlab = BlockStateInterface.isBottomSlab(srcDown);
+        boolean jumpingToBottomSlab = BlockStateInterface.isBottomSlab(toPlace);
         if (jumpingFromBottomSlab && !jumpingToBottomSlab) {
             return COST_INF;// the only thing we can ascend onto from a bottom slab is another bottom slab
         }
@@ -171,7 +171,7 @@ public class MovementAscend extends Movement {
             return state;
         }
         MovementHelper.moveTowards(state, dest);
-        if (MovementHelper.isBottomSlab(jumpingOnto) && !MovementHelper.isBottomSlab(BlockStateInterface.getId(src.below()))) {
+        if (BlockStateInterface.isBottomSlab(jumpingOnto) && !BlockStateInterface.isBottomSlab(BlockStateInterface.getId(src.below()))) {
             return state; // don't jump while walking from a non double slab into a bottom slab
         }
 

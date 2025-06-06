@@ -482,8 +482,8 @@ public final class Bot extends ModuleUtils {
     }
 
     public synchronized void handlePlayerPosRotate(final int teleportId) {
-        syncFromCache(false);
-        CLIENT_LOG.info("Server teleport {} to: {}, {}, {}", teleportId, this.x, this.y, this.z);
+        syncFromCache(true);
+        CLIENT_LOG.debug("Server teleport {} to: {}, {}, {}", teleportId, this.x, this.y, this.z);
         sendClientPacketAwait(new ServerboundMovePlayerPosRotPacket(false, false, this.x, this.y, this.z, this.yaw, this.pitch));
         sendClientPacketAwait(new ServerboundAcceptTeleportationPacket(teleportId));
         CLIENT_LOG.debug("Accepted teleport: {}", teleportId);
@@ -1054,7 +1054,7 @@ public final class Bot extends ModuleUtils {
     private void updateInWaterStateAndDoFluidPushing() {
         updateInWaterStateAndDoWaterCurrentPushing();
         var currentDim = CACHE.getChunkCache().getCurrentDimension();
-        double lavaSpeedMult = currentDim != null && currentDim.id() == DimensionRegistry.THE_NETHER.id()
+        double lavaSpeedMult = currentDim != null && currentDim == DimensionRegistry.THE_NETHER.get()
             ? 0.007
             : 0.0023333333333333335;
         if (updateFluidHeightAndDoFluidPushing(false, lavaSpeedMult)) {

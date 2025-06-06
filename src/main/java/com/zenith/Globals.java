@@ -19,7 +19,6 @@ import com.zenith.feature.player.InputManager;
 import com.zenith.feature.tps.TPSCalculator;
 import com.zenith.feature.whitelist.PlayerListsManager;
 import com.zenith.mc.block.BlockDataManager;
-import com.zenith.mc.dimension.DimensionDataManager;
 import com.zenith.mc.entity.EntityDataManager;
 import com.zenith.mc.language.TranslationRegistryInitializer;
 import com.zenith.mc.map.MapBlockColorManager;
@@ -71,7 +70,6 @@ public class Globals {
     public static final BlockDataManager BLOCK_DATA;
     public static final EntityDataManager ENTITY_DATA;
     public static final MapBlockColorManager MAP_BLOCK_COLOR;
-    public static final DimensionDataManager DIMENSION_DATA;
     public static final DatabaseManager DATABASE;
     public static final TPSCalculator TPS;
     public static final ModuleManager MODULE;
@@ -137,6 +135,10 @@ public class Globals {
             System.exit(1);
             return null;
         }
+    }
+
+    public static boolean inDevEnv() {
+        return System.getenv("ZENITH_DEV") != null;
     }
 
     public static @Nullable String getExecutableCommit() {
@@ -210,7 +212,6 @@ public class Globals {
                 .build()), DEFAULT_LOG);
             MC_VERSION = getMCVersionFile();
             DISCORD = new DiscordBot();
-            DIMENSION_DATA = new DimensionDataManager();
             CACHE = new DataCache();
             PLAYER_LISTS = new PlayerListsManager();
             BLOCK_DATA = new BlockDataManager();

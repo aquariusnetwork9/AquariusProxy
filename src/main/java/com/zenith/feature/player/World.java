@@ -3,12 +3,16 @@ package com.zenith.feature.player;
 import com.zenith.cache.data.chunk.Chunk;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.mc.block.*;
+import com.zenith.mc.block.properties.api.BlockStateProperties;
+import com.zenith.mc.block.properties.api.Property;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.util.math.MathHelper;
 import com.zenith.util.math.MutableVec3d;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
+import it.unimi.dsi.fastutil.objects.ReferenceSet;
+import it.unimi.dsi.fastutil.objects.ReferenceSets;
 import lombok.experimental.UtilityClass;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.ChunkSection;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
@@ -40,7 +44,7 @@ public class World {
     // falls back to overworld if current dimension is null
     public DimensionData getCurrentDimension() {
         DimensionData currentDimension = CACHE.getChunkCache().getCurrentDimension();
-        if (currentDimension == null) return DimensionRegistry.OVERWORLD;
+        if (currentDimension == null) return DimensionRegistry.OVERWORLD.get();
         return currentDimension;
     }
 
@@ -78,6 +82,41 @@ public class World {
 
     public BlockState getBlockState(final int x, final int y, final int z) {
         return new BlockState(getBlock(x, y, z), getBlockStateId(x, y, z), x, y, z);
+    }
+
+    /** Available properties: {@link BlockStateProperties} **/
+    public @Nullable <T extends Comparable<T>> T getBlockStateProperty(int blockStateId, Property<T> property) {
+        return getBlockStateProperty(getBlock(blockStateId), blockStateId, property);
+    }
+
+    /** Available properties: {@link BlockStateProperties} **/
+    public @Nullable <T extends Comparable<T>> T getBlockStateProperty(Block block, int blockStateId, Property<T> property) {
+        var stateDefinition = BlockStatePropertyRegistry.STATES.get(block.id());
+        if (stateDefinition == null) return null;
+        if (!stateDefinition.hasProperty(property)) return null;
+        return stateDefinition.getValue(property, blockStateId - block.minStateId());
+    }
+
+    /** Available properties: {@link BlockStateProperties} **/
+    public boolean hasBlockStateProperty(int blockStateId, Property<?> property) {
+        return hasBlockStateProperty(getBlock(blockStateId), property);
+    }
+
+    /** Available properties: {@link BlockStateProperties} **/
+    public boolean hasBlockStateProperty(Block block, Property<?> property) {
+        return getBlockStateProperties(block).contains(property);
+    }
+
+    /** Available properties: {@link BlockStateProperties} **/
+    public ReferenceSet<Property<?>> getBlockStateProperties(int blockStateId) {
+        return getBlockStateProperties(getBlock(blockStateId));
+    }
+
+    /** Available properties: {@link BlockStateProperties} **/
+    public ReferenceSet<Property<?>> getBlockStateProperties(Block block) {
+        var stateDefinition = BlockStatePropertyRegistry.STATES.get(block.id());
+        if (stateDefinition == null) return ReferenceSets.emptySet();
+        return stateDefinition.getProperties();
     }
 
     public Block getBlock(final BlockPos blockPos) {

@@ -212,12 +212,12 @@ public record CoordOffset(
     public ChunkSection[] obfuscateChunkSections(final ChunkSection[] originalSections) {
         var currentDimension = World.getCurrentDimension();
         var shouldAddBedrockLayer = CONFIG.client.extra.coordObfuscation.obfuscateBedrock
-            && (currentDimension.id() == DimensionRegistry.OVERWORLD.id() || currentDimension.id() == DimensionRegistry.THE_NETHER.id());
+            && (currentDimension == DimensionRegistry.OVERWORLD.get() || currentDimension == DimensionRegistry.THE_NETHER.get());
         var shouldReplaceBiomes = CONFIG.client.extra.coordObfuscation.obfuscateBiomes;
 
         if (!shouldAddBedrockLayer && !shouldReplaceBiomes) return originalSections;
 
-        var nether = currentDimension.id() == DimensionRegistry.THE_NETHER.id();
+        var nether = currentDimension == DimensionRegistry.THE_NETHER.get();
         // not a deep copy of the sections, only a shallow copy of the array
         var sections = Arrays.copyOf(originalSections, originalSections.length);
         for (int i = 0; i < sections.length; i++) {

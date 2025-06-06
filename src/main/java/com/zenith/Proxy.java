@@ -11,12 +11,14 @@ import com.zenith.event.queue.QueueCompleteEvent;
 import com.zenith.event.queue.QueuePositionUpdateEvent;
 import com.zenith.event.queue.QueueSkipEvent;
 import com.zenith.event.queue.QueueStartEvent;
+import com.zenith.event.server.ServerIconBuildEvent;
 import com.zenith.feature.api.crafthead.CraftheadApi;
 import com.zenith.feature.api.mcsrvstatus.MCSrvStatusApi;
 import com.zenith.feature.api.minotar.MinotarApi;
 import com.zenith.feature.autoupdater.AutoUpdater;
 import com.zenith.feature.autoupdater.NoOpAutoUpdater;
 import com.zenith.feature.autoupdater.RestAutoUpdater;
+import com.zenith.feature.chatschema.ChatSchemaParser;
 import com.zenith.feature.queue.Queue;
 import com.zenith.module.impl.AutoReconnect;
 import com.zenith.network.client.Authenticator;
@@ -24,6 +26,7 @@ import com.zenith.network.client.ClientSession;
 import com.zenith.network.server.LanBroadcaster;
 import com.zenith.network.server.ProxyServerListener;
 import com.zenith.network.server.ServerSession;
+import com.zenith.util.ImageInfo;
 import com.zenith.util.Wait;
 import com.zenith.util.struct.FastArrayList;
 import com.zenith.via.ZenithClientChannelInitializer;
@@ -137,13 +140,20 @@ public class Proxy {
             DEFAULT_LOG.warn("Detected unofficial ZenithProxy development build!");
         } else if (!LAUNCH_CONFIG.version.split("\\+")[0].equals(exeReleaseVersion.split("\\+")[0])) {
             DEFAULT_LOG.warn("launch_config.json version: {} and embedded ZenithProxy version: {} do not match!", LAUNCH_CONFIG.version, exeReleaseVersion);
-            if (LAUNCH_CONFIG.auto_update)
+            if (inDevEnv() && !ImageInfo.inImageRuntimeCode()) {
+                var correctedVersion = exeReleaseVersion.split("\\+")[0] + "+java." + exeReleaseVersion.split("\\+")[1];
+                LAUNCH_CONFIG.version = correctedVersion;
+                LAUNCH_CONFIG.local_version = correctedVersion;
+                saveLaunchConfig();
+                DEFAULT_LOG.warn("Updated version to match embedded ZenithProxy version: {}", exeReleaseVersion);
+            } else if (LAUNCH_CONFIG.auto_update && !inDevEnv()) {
                 DEFAULT_LOG.warn("AutoUpdater is enabled but will break!");
+            }
             DEFAULT_LOG.warn("Use the official launcher: https://github.com/rfresh2/ZenithProxy/releases/tag/launcher-v3");
         }
         initEventHandlers();
         try {
-            if (System.getenv("ZENITH_DEV") != null) CONFIG.debug.debugLogs = true;
+            if (inDevEnv()) CONFIG.debug.debugLogs = true;
             if (CONFIG.debug.clearOldLogs) EXECUTOR.schedule(Proxy::clearOldLogs, 10L, TimeUnit.SECONDS);
             if (CONFIG.interactiveTerminal.enable) TERMINAL.start();
             MODULE.init();
@@ -191,7 +201,7 @@ public class Proxy {
                     connected = true;
                 }
             }
-            if (LAUNCH_CONFIG.auto_update && System.getenv("ZENITH_DEV") == null) {
+            if (LAUNCH_CONFIG.auto_update && !inDevEnv()) {
                 autoUpdater = LAUNCH_CONFIG.release_channel.equals("git")
                     ? NoOpAutoUpdater.INSTANCE
                     : new RestAutoUpdater();
@@ -340,6 +350,7 @@ public class Proxy {
                 stopServer();
                 tcpManager.close();
                 saveConfig();
+                if (CONFIG.database.enabled) DATABASE.stop();
                 DISCORD.stop(true);
             }).get(10L, TimeUnit.SECONDS);
         } catch (final Exception e) {
@@ -455,7 +466,10 @@ public class Proxy {
             throw new IllegalStateException("Server already started!");
         if (!CONFIG.server.enabled) return;
         try (InputStream in = getClass().getClassLoader().getResourceAsStream("servericon.png")) {
-            this.serverIcon = in.readAllBytes();
+            byte[] iconBytes = in.readAllBytes();
+            var event = new ServerIconBuildEvent(iconBytes);
+            EVENT_BUS.post(event);
+            this.serverIcon = event.getIcon();
         }
         var address = CONFIG.server.bind.address;
         var port = CONFIG.server.bind.port;
@@ -513,7 +527,12 @@ public class Proxy {
                 CLIENT_LOG.error("Login failed", e);
                 if (e instanceof MinecraftRequestException mre) {
                     if (mre.getResponse().getStatusCode() == 404) {
-                        AUTH_LOG.error("[Help] Log into the account with the vanilla MC launcher and join a server. Then try again with ZenithProxy.");
+                        AUTH_LOG.error("""
+                          [Help]
+                          Log into the account with the vanilla MC launcher and join a server. Then try again with ZenithProxy.
+                          
+                          Another possible cause is your microsoft account needs to have a password set. Meaning are using email codes to log in instead of passwords.
+                          """);
                     }
                 }
                 return null;
@@ -632,17 +651,21 @@ public class Proxy {
         if (!CONFIG.authentication.username.equals("Unknown")) { // else use default icon
             try {
                 final GameProfile profile = CACHE.getProfileCache().getProfile();
+                byte[] icon;
                 if (profile != null && profile.getId() != null) {
                     // do uuid lookup
                     final UUID uuid = profile.getId();
-                    this.serverIcon = MinotarApi.INSTANCE.getAvatar(uuid).or(() -> CraftheadApi.INSTANCE.getAvatar(uuid))
+                    icon = MinotarApi.INSTANCE.getAvatar(uuid).or(() -> CraftheadApi.INSTANCE.getAvatar(uuid))
                         .orElseThrow(() -> new IOException("Unable to download server icon for \"" + uuid + "\""));
                 } else {
                     // do username lookup
                     final String username = CONFIG.authentication.username;
-                    this.serverIcon = MinotarApi.INSTANCE.getAvatar(username).or(() -> CraftheadApi.INSTANCE.getAvatar(username))
+                    icon = MinotarApi.INSTANCE.getAvatar(username).or(() -> CraftheadApi.INSTANCE.getAvatar(username))
                         .orElseThrow(() -> new IOException("Unable to download server icon for \"" + username + "\""));
                 }
+                var event = new ServerIconBuildEvent(icon);
+                EVENT_BUS.post(event.getIcon());
+                this.serverIcon = icon;
                 if (DISCORD.isRunning()) {
                     if (CONFIG.discord.manageNickname)
                         DISCORD.setBotNickname(CONFIG.authentication.username + " | ZenithProxy");
@@ -700,6 +723,11 @@ public class Proxy {
     public void handleConnectEvent(ClientConnectEvent event) {
         this.connectTime = Instant.now();
         if (isOn2b2t()) EXECUTOR.execute(Queue::updateQueueStatusNow);
+        else {
+            if (!ChatSchemaParser.hasCustomSchema()) {
+                CLIENT_LOG.warn("No custom chat schema found for server: {}, setting one may be required for chats and whispers to parse correctly: `help chatSchema`", ChatSchemaParser.getServerAddress());
+            }
+        }
     }
 
     public void handleStartQueueEvent(QueueStartEvent event) {
@@ -731,11 +759,9 @@ public class Proxy {
         if (!isOn2b2t()) return;
         if (event.prio() == CONFIG.authentication.prio) {
             if (isPrio.isEmpty()) {
-                CLIENT_LOG.info("Prio Detected: {}", event.prio());
                 this.isPrio = Optional.of(event.prio());
             }
         } else {
-            CLIENT_LOG.info("Prio Change Detected: {}", event.prio());
             EVENT_BUS.postAsync(new PrioStatusUpdateEvent(event.prio()));
             this.isPrio = Optional.of(event.prio());
             CONFIG.authentication.prio = event.prio();

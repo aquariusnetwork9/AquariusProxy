@@ -13,6 +13,8 @@ import org.geysermc.mcprotocollib.protocol.codec.MinecraftTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundRemoveMobEffectPacket;
 
+import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
+import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.zenith.Globals.CACHE;
 import static com.zenith.Globals.CONFIG;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
@@ -42,7 +44,8 @@ public class DebugCommand extends Command {
                 "kickDisconnect on/off",
                 "dc",
                 "debugLogs on/off",
-                "chunkCacheFullbright on/off"
+                "chunkCacheFullbright on/off",
+                "defaultClientRenderDistance <int>"
             )
             .build();
     }
@@ -164,6 +167,11 @@ public class DebugCommand extends Command {
                 CONFIG.deprecationWarning_1_21_4 = getToggle(c, "toggle");
                 c.getSource().getEmbed()
                     .title("Deprecation Warning " + toggleStrCaps(CONFIG.deprecationWarning_1_21_4));
+            })))
+            .then(literal("defaultClientRenderDistance").then(argument("dist", integer(1, 256)).executes(c -> {
+                CONFIG.client.defaultClientRenderDistance = getInteger(c, "dist");
+                c.getSource().getEmbed()
+                    .title("Default Client Render Distance Set");
             })));
     }
 
@@ -178,6 +186,7 @@ public class DebugCommand extends Command {
             .addField("Kick Disconnect", toggleStr(CONFIG.debug.kickDisconnect), false)
             .addField("Debug Logs", toggleStr(CONFIG.debug.debugLogs), false)
             .addField("Chunk Cache Fullbright", toggleStr(CONFIG.debug.server.cache.fullbrightChunkBlocklight), false)
+            .addField("Default Client Render Distance", CONFIG.client.defaultClientRenderDistance)
             .primaryColor();
     }
 }

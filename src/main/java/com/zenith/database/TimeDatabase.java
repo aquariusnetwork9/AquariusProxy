@@ -46,17 +46,19 @@ public class TimeDatabase extends LockingDatabase {
 
     @Override
     public boolean tryLock() {
-        if (World.getCurrentDimension().id() != DimensionRegistry.OVERWORLD.id()) return false;
+        if (World.getCurrentDimension() != DimensionRegistry.OVERWORLD.get()) return false;
         return super.tryLock();
     }
 
     private void handleDatabaseTick(DatabaseTickEvent event) {
-        if (World.getCurrentDimension().id() != DimensionRegistry.OVERWORLD.id()) {
+        if (World.getCurrentDimension() != DimensionRegistry.OVERWORLD.get()) {
             if (lockAcquired.get()) {
                 try {
                     lockExecutorService.submit(() -> {
-                        releaseLock();
-                        onLockReleased();
+                        if (hasLock() || lockAcquired.get()) {
+                            releaseLock();
+                            onLockReleased();
+                        }
                     }, true).get(5, TimeUnit.SECONDS);
                 } catch (final Exception e) {
                     DATABASE_LOG.warn("Failed releasing lock", e);

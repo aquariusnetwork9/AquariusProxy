@@ -22,7 +22,7 @@ public class COSectionBlocksUpdateHandler implements PacketHandler<ClientboundSe
             if (currentDimension == null) return null;
             int minY = currentDimension.minY();
             entries.removeIf(entry -> entry.getY() <= minY + 5);
-            if (currentDimension.id() == DimensionRegistry.THE_NETHER.id()) {
+            if (currentDimension == DimensionRegistry.THE_NETHER.get()) {
                 entries.removeIf(entry -> entry.getY() >= 123);
             }
             if (entries.isEmpty()) {

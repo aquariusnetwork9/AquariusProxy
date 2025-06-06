@@ -46,7 +46,9 @@ public class AuthCommand extends Command {
                 "openBrowser on/off",
                 "maxRefreshIntervalMins <minutes>",
                 "useClientConnectionProxy on/off",
-                "chatSigning on/off"
+                "chatSigning on/off",
+                "chatSigning force on/off",
+                "chatSigning whispers on/off"
             )
             .build();
     }
@@ -167,13 +169,28 @@ public class AuthCommand extends Command {
                     .primaryColor();
                 return OK;
             })))
-            .then(literal("chatSigning").then(argument("toggle", toggle()).executes(c -> {
-                CONFIG.client.chatSigning.enabled = getToggle(c, "toggle");
-                c.getSource().getEmbed()
-                    .title("Chat Signing " + toggleStrCaps(CONFIG.client.chatSigning.enabled))
-                    .primaryColor();
-                return OK;
-            })));
+            .then(literal("chatSigning")
+                .then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.chatSigning.enabled = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                        .title("Chat Signing " + toggleStrCaps(CONFIG.client.chatSigning.enabled))
+                        .primaryColor();
+                    return OK;
+                }))
+                .then(literal("force").then(argument("forceToggle", toggle()).executes(c -> {
+                    CONFIG.client.chatSigning.force = getToggle(c, "forceToggle");
+                    c.getSource().getEmbed()
+                        .title("Chat Signing Force " + toggleStrCaps(CONFIG.client.chatSigning.force))
+                        .primaryColor();
+                    return OK;
+                })))
+                .then(literal("whispers").then(argument("whisperToggle", toggle()).executes(c -> {
+                    CONFIG.client.chatSigning.signWhispers = getToggle(c, "whisperToggle");
+                    c.getSource().getEmbed()
+                        .title("Chat Signing Whispers " + toggleStrCaps(CONFIG.client.chatSigning.signWhispers))
+                        .primaryColor();
+                    return OK;
+                }))));
     }
 
     private boolean validateTerminalSource(CommandContext c) {
@@ -187,14 +204,16 @@ public class AuthCommand extends Command {
     @Override
     public void defaultEmbed(final Embed builder) {
         builder
-            .addField("Account Type", authTypeToString(CONFIG.authentication.accountType), false)
-            .addField("Attempts", CONFIG.authentication.msaLoginAttemptsBeforeCacheWipe, false)
-            .addField("Always Refresh On Login", toggleStr(CONFIG.authentication.alwaysRefreshOnLogin), false)
-            .addField("Mention", toggleStr(CONFIG.discord.mentionRoleOnDeviceCodeAuth), false)
-            .addField("Open Browser", toggleStr(CONFIG.authentication.openBrowserOnLogin), false)
-            .addField("Max Refresh Interval", CONFIG.authentication.maxRefreshIntervalMins + " minutes", false)
-            .addField("Use Client Connection Proxy", toggleStr(CONFIG.authentication.useClientConnectionProxy), false)
-            .addField("Chat Signing", toggleStr(CONFIG.client.chatSigning.enabled), false);
+            .addField("Account Type", authTypeToString(CONFIG.authentication.accountType))
+            .addField("Attempts", CONFIG.authentication.msaLoginAttemptsBeforeCacheWipe)
+            .addField("Always Refresh On Login", toggleStr(CONFIG.authentication.alwaysRefreshOnLogin))
+            .addField("Mention", toggleStr(CONFIG.discord.mentionRoleOnDeviceCodeAuth))
+            .addField("Open Browser", toggleStr(CONFIG.authentication.openBrowserOnLogin))
+            .addField("Max Refresh Interval", CONFIG.authentication.maxRefreshIntervalMins + " minutes")
+            .addField("Use Client Connection Proxy", toggleStr(CONFIG.authentication.useClientConnectionProxy))
+            .addField("Chat Signing", toggleStr(CONFIG.client.chatSigning.enabled))
+            .addField("Chat Signing Force", toggleStr(CONFIG.client.chatSigning.force))
+            .addField("Chat Signing Whispers", toggleStr(CONFIG.client.chatSigning.signWhispers));
     }
 
     private String authTypeToString(Config.Authentication.AccountType type) {

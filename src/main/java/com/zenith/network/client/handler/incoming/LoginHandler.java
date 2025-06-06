@@ -42,9 +42,14 @@ public class LoginHandler implements PacketHandler<ClientboundLoginPacket, Clien
         );
         CACHE.getChunkCache().setServerViewDistance(packet.getViewDistance());
         CACHE.getChunkCache().setServerSimulationDistance(packet.getSimulationDistance());
-        CACHE.getChatCache().setEnforcesSecureChat(packet.isEnforcesSecureChat());
-        if (packet.isEnforcesSecureChat()) {
-            if (CONFIG.client.chatSigning.enabled) {
+        if (CONFIG.client.chatSigning.enabled) {
+            if (!packet.isEnforcesSecureChat() && CONFIG.client.chatSigning.force) {
+                CLIENT_LOG.info("Force enabling chat signing even though server does not enforce it");
+            }
+            var useChatSigning = packet.isEnforcesSecureChat() || CONFIG.client.chatSigning.force;
+            CACHE.getChatCache().setEnforcesSecureChat(useChatSigning);
+
+            if (useChatSigning) {
                 if (CACHE.getChatCache().canUseChatSigning()) {
                     var chatSession = CACHE.getChatCache().startNewChatSession();
                     session.sendAsync(new ServerboundChatSessionUpdatePacket(
@@ -53,14 +58,20 @@ public class LoginHandler implements PacketHandler<ClientboundLoginPacket, Clien
                         chatSession.getPlayerCertificates().getPublicKey(),
                         chatSession.getPlayerCertificates().getPublicKeySignature()
                     ));
-                    CLIENT_LOG.info("Server enforces secure chat, zenith chat signing enabled");
+                    CLIENT_LOG.info("Server enforces secure chat, chat signing enabled");
                 } else {
                     CLIENT_LOG.warn("Server enforces secure chat, but we cannot sign chat messages");
                 }
             } else {
-                CLIENT_LOG.warn("Server enforces secure chat, but zenith chat signing is disabled");
+                CLIENT_LOG.info("Server does not enforce secure chat, chat signing disabled");
             }
+        } else {
+            if (packet.isEnforcesSecureChat()) {
+                CLIENT_LOG.warn("Server enforces secure chat, but chat signing is disabled");
+            }
+            CACHE.getChatCache().setEnforcesSecureChat(packet.isEnforcesSecureChat());
         }
+
         if (!Proxy.getInstance().isOn2b2t()) {
             if (!session.isOnline()) {
                 session.setOnline(true);

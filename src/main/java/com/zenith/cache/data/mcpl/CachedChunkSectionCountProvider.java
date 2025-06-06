@@ -1,10 +1,10 @@
 package com.zenith.cache.data.mcpl;
 
 import com.zenith.mc.dimension.DimensionData;
+import com.zenith.mc.dimension.DimensionRegistry;
 import org.geysermc.mcprotocollib.protocol.ChunkSectionCountProvider;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerSpawnInfo;
 
-import static com.zenith.Globals.CACHE;
 import static com.zenith.Globals.CACHE_LOG;
 
 /**
@@ -24,7 +24,7 @@ public class CachedChunkSectionCountProvider implements ChunkSectionCountProvide
     }
 
     public void updateDimension(final PlayerSpawnInfo spawnInfo) {
-        DimensionData newDim = CACHE.getChunkCache().getDimensionRegistry().get(spawnInfo.getDimension());
+        DimensionData newDim = DimensionRegistry.REGISTRY.get(spawnInfo.getDimension());
         if (newDim == null) {
             CACHE_LOG.error("No dimension found for {}", spawnInfo.getDimension());
             CACHE_LOG.error("Things are going to break...");

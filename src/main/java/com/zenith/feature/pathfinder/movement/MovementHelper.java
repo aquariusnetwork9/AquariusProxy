@@ -12,6 +12,7 @@ import com.zenith.feature.player.World;
 import com.zenith.feature.player.raycast.BlockRaycastResult;
 import com.zenith.feature.player.raycast.RaycastHelper;
 import com.zenith.mc.block.*;
+import com.zenith.mc.block.properties.api.BlockStateProperties;
 import com.zenith.util.math.MathHelper;
 import com.zenith.util.math.MutableVec3d;
 import org.cloudburstmc.math.vector.Vector3d;
@@ -23,6 +24,7 @@ import static com.zenith.Globals.*;
 import static com.zenith.feature.pathfinder.Ternary.*;
 import static com.zenith.feature.pathfinder.movement.ActionCosts.COST_INF;
 import static com.zenith.feature.pathfinder.movement.Movement.HORIZONTALS_BUT_ALSO_DOWN_____SO_EVERY_DIRECTION_EXCEPT_UP;
+import static java.util.Objects.requireNonNullElse;
 
 public final class MovementHelper {
     private MovementHelper() {}
@@ -134,7 +136,7 @@ public final class MovementHelper {
 //        if (Baritone.settings().blocksToAvoid.value.contains(block)) {
 //            return NO;
 //        }
-        if (block.name().endsWith("_door") || block.name().endsWith("_fence")) {
+        if (block.name().endsWith("_door") || block.name().endsWith("fence_gate")) {
             // TODO this assumes that all doors in all mods are openable
             if (block == BlockRegistry.IRON_DOOR) {
                 return NO;
@@ -186,7 +188,8 @@ public final class MovementHelper {
             }
             // the check in BlockSnow.isPassable is layers < 5
             // while actually, we want < 3 because 3 or greater makes it impassable in a 2 high ceiling
-            if (blockStateId > block.minStateId() + 2) {
+            var layersProperty = World.getBlockStateProperty(blockStateId, BlockStateProperties.LAYERS);
+            if (layersProperty != null && layersProperty >= 3) {
                 return false;
             }
             // ok, it's low enough we could walk through it, but is it supported?
@@ -208,7 +211,6 @@ public final class MovementHelper {
                 return false;
             }
             return World.isWater(block);
-//            return fluidState.getType() instanceof WaterFluid;
         }
 
         return BlockStateInterface.isPathfindable(blockStateId);
@@ -284,8 +286,8 @@ public final class MovementHelper {
             if (!BlockStateInterface.worldContainsLoadedChunk(x, z)) {
                 return true;
             }
-//            return false;
-            return blockStateId == block.minStateId();
+            var layersProperty = World.getBlockStateProperty(blockStateId, BlockStateProperties.LAYERS);
+            return layersProperty != null && layersProperty == 1;
         }
         if (block == BlockRegistry.LARGE_FERN || block == BlockRegistry.TALL_GRASS) {
             return true;
@@ -293,51 +295,52 @@ public final class MovementHelper {
         return false; // state.canBeReplaced();
     }
 
-//    static boolean isDoorPassable(IPlayerContext ctx, BlockPos doorPos, BlockPos playerPos) {
-//        if (playerPos.equals(doorPos)) {
-//            return false;
-//        }
-//
-//        BlockState state = BlockStateInterface.get(ctx, doorPos);
-//        if (!(state.getBlock() instanceof DoorBlock)) {
-//            return true;
-//        }
-//
-//        return isHorizontalBlockPassable(doorPos, state, playerPos, DoorBlock.OPEN);
-//    }
+    public static boolean isDoorPassable(BlockPos doorPos, BlockPos playerPos) {
+        if (playerPos.equals(doorPos)) {
+            return false;
+        }
 
-//    static boolean isGatePassable(IPlayerContext ctx, BlockPos gatePos, BlockPos playerPos) {
-//        if (playerPos.equals(gatePos)) {
-//            return false;
-//        }
-//
-//        BlockState state = BlockStateInterface.get(ctx, gatePos);
-//        if (!(state.getBlock() instanceof FenceGateBlock)) {
-//            return true;
-//        }
-//
-//        return state.getValue(FenceGateBlock.OPEN);
-//    }
+        var block = BlockStateInterface.getBlock(doorPos);
+        if (!block.name().endsWith("_door")) {
+            return true;
+        }
+        var blockStateId = BlockStateInterface.getId(doorPos);
+        var open = World.getBlockStateProperty(block, blockStateId, BlockStateProperties.OPEN);
+        if (open == null) {
+            return true; // not a door, so we can pass through
+        }
+        var propertyFacing = World.getBlockStateProperty(block, blockStateId, BlockStateProperties.HORIZONTAL_FACING);
+        if (propertyFacing == null) {
+            return true; // not a door, so we can pass through
+        }
+        var facing = propertyFacing.getAxis();
 
-//    static boolean isHorizontalBlockPassable(BlockPos blockPos, BlockState blockState, BlockPos playerPos, BooleanProperty propertyOpen) {
-//        if (playerPos.equals(blockPos)) {
-//            return false;
-//        }
-//
-//        Direction.Axis facing = blockState.getValue(HorizontalDirectionalBlock.FACING).getAxis();
-//        boolean open = blockState.getValue(propertyOpen);
-//
-//        Direction.Axis playerFacing;
-//        if (playerPos.north().equals(blockPos) || playerPos.south().equals(blockPos)) {
-//            playerFacing = Direction.Axis.Z;
-//        } else if (playerPos.east().equals(blockPos) || playerPos.west().equals(blockPos)) {
-//            playerFacing = Direction.Axis.X;
-//        } else {
-//            return true;
-//        }
-//
-//        return (facing == playerFacing) == open;
-//    }
+        Direction.Axis playerFacing;
+        if (playerPos.north().equals(doorPos) || playerPos.south().equals(doorPos)) {
+            playerFacing = Direction.Axis.Z;
+        } else if (playerPos.east().equals(doorPos) || playerPos.west().equals(doorPos)) {
+            playerFacing = Direction.Axis.X;
+        } else {
+            return true;
+        }
+
+        return (facing == playerFacing) == open;
+    }
+
+    public static boolean isGatePassable(BlockPos gatePos, BlockPos playerPos) {
+        if (playerPos.equals(gatePos)) {
+            return false;
+        }
+
+        Block block = BlockStateInterface.getBlock(gatePos);
+        int state = BlockStateInterface.getId(gatePos);
+        if (!(block.name().endsWith("fence_gate"))) {
+            return true;
+        }
+
+        var openProperty = World.getBlockStateProperty(block, state, BlockStateProperties.OPEN);
+        return requireNonNullElse(openProperty, true);
+    }
 
     public static boolean avoidWalkingInto(Block block) {
         return World.isFluid(block)
@@ -573,10 +576,6 @@ public final class MovementHelper {
         }
 
         return 0; // we won't actually mine it, so don't check fallings above
-    }
-
-    public static boolean isBottomSlab(int blockStateId) {
-        return BLOCK_DATA.isBottomSlab(blockStateId);
     }
 
     /**

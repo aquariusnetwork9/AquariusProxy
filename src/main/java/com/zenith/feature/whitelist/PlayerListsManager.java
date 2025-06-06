@@ -9,21 +9,18 @@ import com.zenith.util.Wait;
 import lombok.Getter;
 
 import java.time.Instant;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.zenith.Globals.*;
 
 @Getter
 public class PlayerListsManager {
+    private final List<PlayerList> playerLists = new ArrayList<>();
     private PlayerList whitelist;
     private PlayerList blacklist;
     private PlayerList spectatorWhitelist;
@@ -34,14 +31,19 @@ public class PlayerListsManager {
     private ScheduledFuture<?> refreshScheduledFuture;
 
     public void init() { // must be called after config is loaded
-        whitelist = new PlayerList("whitelist", CONFIG.server.extra.whitelist.whitelist);
-        blacklist = new PlayerList("blacklist", CONFIG.server.extra.whitelist.blacklist);
-        spectatorWhitelist = new PlayerList("spectatorWhitelist", CONFIG.server.spectator.whitelist);
-        friendsList = new PlayerList("friendsList", CONFIG.client.extra.friendsList);
-        ignoreList = new PlayerList("ignoreList", CONFIG.client.extra.chat.ignoreList);
-        stalkList = new PlayerList("stalkList", CONFIG.client.extra.stalk.stalking);
-        spawnPatrolIgnoreList = new PlayerList("spawnPatrolIgnoreList", CONFIG.client.extra.spawnPatrol.ignoreList);
+        whitelist = register(new PlayerList("whitelist", CONFIG.server.extra.whitelist.whitelist));
+        blacklist = register(new PlayerList("blacklist", CONFIG.server.extra.whitelist.blacklist));
+        spectatorWhitelist = register(new PlayerList("spectatorWhitelist", CONFIG.server.spectator.whitelist));
+        friendsList = register(new PlayerList("friendsList", CONFIG.client.extra.friendsList));
+        ignoreList = register(new PlayerList("ignoreList", CONFIG.client.extra.chat.ignoreList));
+        stalkList = register(new PlayerList("stalkList", CONFIG.client.extra.stalk.stalking));
+        spawnPatrolIgnoreList = register(new PlayerList("spawnPatrolIgnoreList", CONFIG.client.extra.spawnPatrol.ignoreList));
         startRefreshTask();
+    }
+
+    public PlayerList register(PlayerList playerList) {
+        playerLists.add(playerList);
+        return playerList;
     }
 
     public void startRefreshTask() {
@@ -60,8 +62,7 @@ public class PlayerListsManager {
     }
 
     private void refreshLists() {
-        var playerEntryList = Stream
-            .of(getWhitelist(), getBlacklist(), getSpectatorWhitelist(), getFriendsList(), getIgnoreList(), getStalkList())
+        var playerEntryList = getPlayerLists().stream()
             .map(PlayerList::entries)
             .flatMap(Collection::stream)
             .toList();

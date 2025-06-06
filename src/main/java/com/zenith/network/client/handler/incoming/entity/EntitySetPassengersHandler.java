@@ -40,7 +40,7 @@ public class EntitySetPassengersHandler implements ClientEventLoopPacketHandler<
             return true;
         } else {
             CLIENT_LOG.debug("Received ServerEntitySetPassengersPacket for invalid entity (id={})", packet.getEntityId());
-            return false;
+            return true;
         }
     }
 }

@@ -11,6 +11,7 @@ import org.redisson.api.RLock;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Queue;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -97,8 +98,10 @@ public abstract class LockingDatabase extends Database {
             if (nonNull(lockExecutorService)) {
                 try {
                     lockExecutorService.submit(() -> {
-                        releaseLock();
-                        onLockReleased();
+                        if (hasLock() || lockAcquired.get()) {
+                            releaseLock();
+                            onLockReleased();
+                        }
                     }, true).get(5, TimeUnit.SECONDS);
                 } catch (final Exception e) {
                     DATABASE_LOG.warn("Failed releasing lock", e);
@@ -115,7 +118,7 @@ public abstract class LockingDatabase extends Database {
 
     public void onLockAcquired() {
         DATABASE_LOG.info("{} Database Lock Acquired", getLockKey());
-        writeLockInfo();
+        writeLockAcquiredMetadata();
         Wait.wait(20); // buffer for any lock releasers to finish up remaining writes
         syncQueue();
         if (isNull(queryExecutorFuture) || queryExecutorFuture.isDone()) {
@@ -129,9 +132,10 @@ public abstract class LockingDatabase extends Database {
             queryExecutorFuture.cancel(true);
             Wait.waitUntil(() -> queryExecutorFuture.isDone(), 5);
         }
+        writeLockReleasedMetadata();
     }
 
-    public void writeLockInfo() {
+    private void writeLockAcquiredMetadata() {
         try {
             this.redisClient.getRedissonClient()
                 .getBucket(getLockKey() + "_lock_info")
@@ -142,7 +146,32 @@ public abstract class LockingDatabase extends Database {
                     "Version=" + LAUNCH_CONFIG.version
                 );
         } catch (final Exception e) {
-            DATABASE_LOG.warn("Error writing lock info for database: {}", getLockKey(), e);
+            DATABASE_LOG.warn("Error writing lock info to redis for database: {}", getLockKey(), e);
+        }
+        try (var handle = this.queryExecutor.jdbi().open()) {
+            handle.createUpdate("INSERT INTO database_writers (time, key, writing, player_name, version) VALUES (:time, :key, :writing, :player_name, :version);")
+                .bind("time", Instant.now().atOffset(ZoneOffset.UTC))
+                .bind("key", getLockKey())
+                .bind("writing", true)
+                .bind("player_name", CONFIG.authentication.username)
+                .bind("version", LAUNCH_CONFIG.version)
+                .execute();
+        } catch (final Exception e) {
+            DATABASE_LOG.warn("Error writing lock info to db for database: {}", getLockKey(), e);
+        }
+    }
+
+    private void writeLockReleasedMetadata() {
+        try (var handle = this.queryExecutor.jdbi().open()) {
+            handle.createUpdate("INSERT INTO database_writers (time, key, writing, player_name, version) VALUES (:time, :key, :writing, :player_name, :version);")
+                .bind("time", Instant.now().atOffset(ZoneOffset.UTC))
+                .bind("key", getLockKey())
+                .bind("writing", false)
+                .bind("player_name", CONFIG.authentication.username)
+                .bind("version", LAUNCH_CONFIG.version)
+                .execute();
+        } catch (final Exception e) {
+            DATABASE_LOG.warn("Error writing lock info to db for database: {}", getLockKey(), e);
         }
     }
 
@@ -218,8 +247,10 @@ public abstract class LockingDatabase extends Database {
         } catch (final Throwable e) {
             DATABASE_LOG.warn("Try lock process exception", e);
             try {
-                releaseLock();
-                onLockReleased();
+                if (hasLock() || lockAcquired.get()) {
+                    releaseLock();
+                    onLockReleased();
+                }
             } catch (final Exception e2) {
                 DATABASE_LOG.error("Error releasing lock in try lock process exception", e2);
             }

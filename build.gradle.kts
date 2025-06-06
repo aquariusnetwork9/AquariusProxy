@@ -1,7 +1,3 @@
-import org.apache.tools.ant.taskdefs.condition.Os
-import java.io.ByteArrayOutputStream
-import java.nio.file.Files
-
 plugins {
     `java-library`
     id("org.graalvm.buildtools.native") version "0.10.6"
@@ -18,6 +14,7 @@ val javaLauncherProvider = javaToolchains.launcherFor { languageVersion = javaVe
 java {
     toolchain { languageVersion = javaVersion }
     withSourcesJar()
+    withJavadocJar()
 }
 
 repositories {
@@ -28,16 +25,17 @@ repositories {
     mavenLocal()
 }
 
+val mcplVersion = "1.21.4.23"
 dependencies {
-    api("com.github.rfresh2:JDA:5.5.12") {
+    api("com.github.rfresh2:JDA:5.5.13") {
         exclude(group = "club.minnced")
         exclude(group = "net.java.dev.jna")
         exclude(group = "com.google.crypto.tink")
     }
-    api("com.github.rfresh2:MCProtocolLib:1.21.4.22") {
+    api("com.github.rfresh2:MCProtocolLib:$mcplVersion") {
         exclude(group = "io.netty")
     }
-    val nettyVersion = "4.2.1.Final"
+    val nettyVersion = "4.2.2.Final"
     api("io.netty:netty-buffer:$nettyVersion")
     api("io.netty:netty-codec-haproxy:$nettyVersion")
     api("io.netty:netty-codec-dns:$nettyVersion")
@@ -53,7 +51,7 @@ dependencies {
     api("io.netty:netty-resolver-dns-native-macos:$nettyVersion:osx-aarch_64")
     api("org.cloudburstmc.math:api:2.0")
     api("org.cloudburstmc.math:immutable:2.0")
-    api("org.redisson:redisson:3.46.0") {
+    api("org.redisson:redisson:3.48.0") {
         exclude(group = "io.netty")
     }
     api("com.github.rfresh2:SimpleEventBus:1.6")
@@ -70,12 +68,12 @@ dependencies {
     api("com.viaversion:vialoader:4.0.2")
     api("com.viaversion:viaversion:5.3.2")
     api("com.viaversion:viabackwards:5.3.2")
-    api("org.jline:jline:3.29.0")
-    api("org.jline:jline-terminal-jni:3.29.0")
+    api("org.jline:jline:3.30.4")
+    api("org.jline:jline-terminal-jni:3.30.4")
     api("ar.com.hjg:pngj:2.1.0")
     api("com.zaxxer:HikariCP:6.3.0")
-    api("org.postgresql:postgresql:42.7.5")
-    api("org.jdbi:jdbi3-postgres:3.48.0")
+    api("org.postgresql:postgresql:42.7.6")
+    api("org.jdbi:jdbi3-postgres:3.49.4")
     api("com.google.guava:guava:33.4.6-jre")
     api("ch.qos.logback:logback-classic:1.5.18")
     api("org.slf4j:slf4j-api:2.0.17")
@@ -84,7 +82,7 @@ dependencies {
     api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.19.0")
     api("org.jspecify:jspecify:1.0.0")
     api("net.kyori:adventure-text-logger-slf4j:4.21.0")
-    testImplementation("org.junit.jupiter:junit-jupiter:5.12.2")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.13.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     val lombokVersion = "1.18.38"
     compileOnly("org.projectlombok:lombok:$lombokVersion")
@@ -105,58 +103,16 @@ tasks {
         useJUnitPlatform()
         workingDir = layout.projectDirectory.dir("run").asFile
     }
-    val commitHashTask = register<Exec>("writeCommitHash") {
-        group = "build"
-        description = "Write commit hash / version to file"
-        workingDir = projectDir
-        commandLine = "git rev-parse --short=8 HEAD".split(" ")
-        isIgnoreExitValue = true
-        standardOutput = ByteArrayOutputStream()
-        doLast {
-            kotlin.runCatching {
-                val commitHash = standardOutput.toString().trim()
-                if (commitHash.length > 5) {
-                    file(layout.buildDirectory.asFile.get().absolutePath + "/resources/main/zenith_commit.txt").apply {
-                        parentFile.mkdirs()
-                        println("Writing commit hash: $commitHash")
-                        writeText(commitHash)
-                    }
-                } else {
-                    throw IllegalStateException("Invalid commit hash: $commitHash")
-                }
-            }.exceptionOrNull()?.let {
-                println("Unable to determine commit hash: ${it.message}")
-            }
-        }
-        outputs.upToDateWhen { false }
+    val commitHashTask = register<CommitHashTask>("writeCommitHash") {
+        outputFile = project.layout.buildDirectory.file("resources/main/zenith_commit.txt")
     }
-    val releaseTagTask = register("releaseTag") {
-        group = "build"
-        description = "Write release tag to file"
-        doLast {
-            System.getenv("RELEASE_TAG")?.let {
-                file(layout.buildDirectory.asFile.get().absolutePath + "/resources/main/zenith_release.txt").apply {
-                    parentFile.mkdirs()
-                    println("Writing release tag: $it")
-                    writeText(it)
-                }
-            } ?: run {
-                println("Dev build detected, skipping release tag generation")
-            }
-        }
-        outputs.upToDateWhen { false }
+    val releaseTagTask = register<WriteMetadataTxtTask>("releaseTag") {
+        metadataValue = providers.environmentVariable("RELEASE_TAG").orElse("")
+        outputFile = project.layout.buildDirectory.file("resources/main/zenith_release.txt")
     }
-    val mcVersionTask = register("mcVersion") {
-        group = "build"
-        description = "Write release tag to file"
-        doLast {
-            file(layout.buildDirectory.asFile.get().absolutePath + "/resources/main/zenith_mc_version.txt").apply {
-                parentFile.mkdirs()
-                println("Writing MC Version: $version")
-                writeText(version.toString())
-            }
-        }
-        outputs.upToDateWhen { false }
+    val mcVersionTask = register<WriteMetadataTxtTask>("mcVersion") {
+        metadataValue = version.toString()
+        outputFile = project.layout.buildDirectory.file("resources/main/zenith_mc_version.txt")
     }
     val runGroup = "run"
     register("run", JavaExec::class.java) {
@@ -174,28 +130,12 @@ tasks {
         environment("ZENITH_DEV", "true")
         outputs.upToDateWhen { false }
     }
-    val javaPathTask = register("javaPath", Task::class.java) {
-        group = runGroup
-        doLast {
-            val execPath = javaLauncherProvider.get().executablePath
-            // create a file symlinked to the java executable for use in scripts
-            layout.buildDirectory.asFile.get().mkdirs()
-            if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-                val f: File = file (layout.buildDirectory.asFile.get().toString() + "/java_toolchain.bat")
-                if (f.exists()) {
-                    f.delete()
-                }
-                f.writeText("@" + execPath.asFile.toString() + " %*")
-            } else if (Os.isFamily(Os.FAMILY_UNIX)) {
-                val f: File = file (layout.buildDirectory.asFile.get().toString() + "/java_toolchain")
-                if (f.exists()) {
-                    f.delete()
-                }
-                Files.createSymbolicLink(f.toPath(), execPath.asFile.toPath())
-            }
-        }
+    val javaPathTask = register<JavaPathTask>("javaPath") {
+        javaLauncher = javaLauncherProvider
     }
-    processResources{ finalizedBy(commitHashTask, releaseTagTask, mcVersionTask) }
+    processResources {
+        dependsOn(releaseTagTask, mcVersionTask, commitHashTask)
+    }
     val devOutputDir = layout.buildDirectory.get().dir("dev").asFile
     jar {
         enabled = true
@@ -204,6 +144,20 @@ tasks {
     }
     getByName("sourcesJar", Jar::class) {
         archiveClassifier = "sources"
+        destinationDirectory = devOutputDir
+    }
+    javadoc {
+        isFailOnError = false
+        options.encoding = "UTF-8"
+        (options as StandardJavadocDocletOptions).apply {
+            addStringOption("Xdoclint:none", "-quiet")
+            links(
+                "https://docs.oracle.com/en/java/javase/${javaReleaseVersion}/docs/api",
+                "https://maven.2b2t.vc/javadoc/releases/com/github/rfresh2/MCProtocolLib/$mcplVersion/raw"
+            )
+        }
+    }
+    getByName("javadocJar", Jar::class) {
         destinationDirectory = devOutputDir
     }
     shadowJar {
@@ -274,16 +228,18 @@ graalvmNative {
                 "--initialize-at-build-time=org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType",
                 "--initialize-at-build-time=org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockEntityType",
                 "--initialize-at-build-time=it.unimi.dsi.fastutil",
+                "--initialize-at-build-time=com.google.common.collect",
                 "--initialize-at-build-time=com.zenith.mc",
+                "--initialize-at-run-time=com.zenith.mc.chat_type",
                 "--initialize-at-run-time=sun.net.dns.ResolverConfigurationImpl", // fix for windows builds, exception when doing srv lookups with netty
             )
-            val pgoPath = System.getenv("GRAALVM_PGO_PATH")
+            val pgoPath = providers.environmentVariable("GRAALVM_PGO_PATH").orNull
             if (pgoPath != null) {
                 println("Using PGO profile: $pgoPath")
                 buildArgs.add("--pgo=$pgoPath")
                 buildArgs.add("-H:+PGOPrintProfileQuality")
             } else {
-                val pgoInstrument = System.getenv("GRAALVM_PGO_INSTRUMENT")
+                val pgoInstrument = providers.environmentVariable("GRAALVM_PGO_INSTRUMENT").orNull
                 if (pgoInstrument != null) {
                     println("Instrumenting PGO")
                     buildArgs.add("--pgo-instrument")
@@ -299,11 +255,22 @@ graalvmNative {
 publishing {
     repositories {
         maven {
-            name = "vc"
+            name = "releases"
             url = uri("https://maven.2b2t.vc/releases")
             credentials {
-                username = System.getenv("MAVEN_USERNAME")
-                password = System.getenv("MAVEN_PASSWORD")
+                username = providers.environmentVariable("MAVEN_USERNAME").orNull
+                password = providers.environmentVariable("MAVEN_PASSWORD").orNull
+            }
+            authentication {
+                create<BasicAuthentication>("basic")
+            }
+        }
+        maven {
+            name = "snapshots"
+            url = uri("https://maven.2b2t.vc/snapshots")
+            credentials {
+                username = providers.environmentVariable("MAVEN_USERNAME").orNull
+                password = providers.environmentVariable("MAVEN_PASSWORD").orNull
             }
             authentication {
                 create<BasicAuthentication>("basic")
@@ -322,7 +289,7 @@ publishing {
         create<MavenPublication>("release") {
             groupId = "com.zenith"
             artifactId = "ZenithProxy"
-            version = System.getenv("ZENITH_RELEASE_TAG") ?: "0.0.0+${project.version}"
+            version =  providers.environmentVariable("ZENITH_RELEASE_TAG").orElse("0.0.0+${project.version}").get()
             val javaComponent = components["java"] as AdhocComponentWithVariants
             javaComponent.withVariantsFromConfiguration(configurations["shadowRuntimeElements"]) { skip() }
             from(javaComponent)

@@ -14,6 +14,7 @@ import com.zenith.feature.pathfinder.goals.GoalXZ;
 import com.zenith.feature.pathfinder.process.*;
 import com.zenith.feature.player.InputRequest;
 import com.zenith.mc.block.Block;
+import com.zenith.mc.item.ItemData;
 import com.zenith.util.math.MathHelper;
 import com.zenith.util.timer.Timer;
 import com.zenith.util.timer.Timers;
@@ -131,6 +132,16 @@ public class Baritone implements Pathfinder {
     @Override
     public PathingRequestFuture follow(EntityLiving target) {
         return getFollowProcess().follow(target);
+    }
+
+    @Override
+    public PathingRequestFuture pickup(final ItemData... items) {
+        return getFollowProcess().pickup(items);
+    }
+
+    @Override
+    public PathingRequestFuture pickup() {
+        return getFollowProcess().pickup();
     }
 
     @Override

@@ -4,19 +4,27 @@ import com.zenith.event.module.OutboundChatEvent;
 import com.zenith.network.client.ClientSession;
 import com.zenith.network.codec.PacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandSignedPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 
 import java.util.BitSet;
 
-import static com.zenith.Globals.CACHE;
-import static com.zenith.Globals.EVENT_BUS;
+import static com.zenith.Globals.*;
 
 public class OutgoingChatHandler implements PacketHandler<ServerboundChatPacket, ClientSession> {
     @Override
     public ServerboundChatPacket apply(final ServerboundChatPacket packet, final ClientSession session) {// allow us to dispatch commands just with chat packets
         if (!packet.getMessage().isEmpty() && packet.getMessage().charAt(0) == '/') {
             String message = packet.getMessage();
-            session.send(new ServerboundChatCommandPacket(message.substring(1, (Math.min(message.length(), 257)))));
+            String commandFull = message.substring(1, (Math.min(message.length(), 257)));
+            String command = commandFull.split(" ")[0];
+            if (CACHE.getChatCache().canUseChatSigning() && CONFIG.client.chatSigning.signWhispers
+                && ("w".equals(command) || "whisper".equals(command) || "msg".equals(command) || "tell".equals(command) || "minecraft:msg".equals(command))
+            ) {
+                session.send(new ServerboundChatCommandSignedPacket(commandFull));
+            } else {
+                session.send(new ServerboundChatCommandPacket(commandFull));
+            }
             return null;
         }
         final OutboundChatEvent outboundChatEvent = new OutboundChatEvent(packet);

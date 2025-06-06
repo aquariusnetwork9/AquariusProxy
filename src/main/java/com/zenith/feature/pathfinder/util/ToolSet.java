@@ -108,6 +108,6 @@ public class ToolSet {
         if (dataComponents == null) return false;
         ItemEnchantments itemEnchantments = dataComponents.get(DataComponentTypes.ENCHANTMENTS);
         if (itemEnchantments == null) return false;
-        return itemEnchantments.getEnchantments().containsKey(EnchantmentRegistry.SILK_TOUCH.id());
+        return itemEnchantments.getEnchantments().containsKey(EnchantmentRegistry.SILK_TOUCH.get().id());
     }
 }

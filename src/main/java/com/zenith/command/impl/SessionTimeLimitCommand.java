@@ -25,7 +25,10 @@ public class SessionTimeLimitCommand extends Command {
             """)
             .usageLines(
                 "on/off",
-                "refresh"
+                "refresh",
+                "ingame on/off",
+                "discord on/off",
+                "discord mention on/off"
             )
             .build();
     }
@@ -45,13 +48,33 @@ public class SessionTimeLimitCommand extends Command {
                 c.getSource().getEmbed()
                     .title("Session Time Limit Refreshed");
                 return OK;
-            }));
+            }))
+            .then(literal("ingame").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.sessionTimeLimit.ingameNotification = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("Ingame Notification " + toggleStrCaps(CONFIG.client.extra.sessionTimeLimit.ingameNotification));
+            })))
+            .then(literal("discord")
+                .then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.sessionTimeLimit.discordNotification = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                        .title("Discord Notification " + toggleStrCaps(CONFIG.client.extra.sessionTimeLimit.discordNotification));
+                }))
+                .then(literal("mention").then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.sessionTimeLimit.discordNotificationMention = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                        .title("Discord Mention " + toggleStrCaps(CONFIG.client.extra.sessionTimeLimit.discordNotificationMention));
+                }))));
     }
 
     @Override
     public void defaultEmbed(Embed embed) {
         embed
-            .addField("Limit", formatDuration(MODULE.get(SessionTimeLimit.class).getSessionTimeLimit()), false)
+            .addField("Session Time Limit", toggleStr(CONFIG.client.extra.sessionTimeLimit.enabled))
+            .addField("Limit", formatDuration(MODULE.get(SessionTimeLimit.class).getSessionTimeLimit()))
+            .addField("Ingame Notification", toggleStr(CONFIG.client.extra.sessionTimeLimit.ingameNotification))
+            .addField("Discord Notification", toggleStr(CONFIG.client.extra.sessionTimeLimit.discordNotification))
+            .addField("Discord Mention", toggleStr(CONFIG.client.extra.sessionTimeLimit.discordNotificationMention))
             .primaryColor();
     }
 }

@@ -1,6 +1,7 @@
 package com.zenith.network.server.handler.shared.outgoing;
 
 import com.zenith.Proxy;
+import com.zenith.event.server.CustomTablistFooterBuildEvent;
 import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
@@ -40,7 +41,9 @@ public class ServerTablistDataOutgoingHandler implements PacketHandler<Clientbou
                 Placeholder.unparsed("online_time", Proxy.getInstance().getOnlineTimeString()),
                 Placeholder.unparsed("tps", TPS.getTPS())
             );
-            return footer.append(injectedFooter);
+            var event = new CustomTablistFooterBuildEvent(injectedFooter);
+            EVENT_BUS.post(event);
+            return footer.append(event.getFooterComponent());
         } catch (final Exception e) {
             SERVER_LOG.warn("Failed injecting proxy info to tablist footer", e);
             return footer;

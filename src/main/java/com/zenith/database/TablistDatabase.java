@@ -50,8 +50,8 @@ public class TablistDatabase extends LockingDatabase {
         // we aren't using the queue based insert system here so we need to check if we have the lock manually
         if (this.lockAcquired.get()) {
             syncTablist();
+            insertTablistText();
         }
-        insertTablistText();
     }
 
     private void insertTablistText() {

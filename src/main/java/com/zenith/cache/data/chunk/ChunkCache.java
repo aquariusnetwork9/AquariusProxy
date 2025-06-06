@@ -1,9 +1,7 @@
 package com.zenith.cache.data.chunk;
 
-import com.viaversion.nbt.io.MNBTIO;
 import com.viaversion.nbt.mini.MNBT;
 import com.viaversion.nbt.mini.MNBTWriter;
-import com.viaversion.nbt.tag.CompoundTag;
 import com.zenith.Proxy;
 import com.zenith.cache.CacheResetType;
 import com.zenith.cache.CachedData;
@@ -12,15 +10,12 @@ import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.BrandSerializer;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.longs.LongArrayList;
 import lombok.Getter;
 import lombok.Setter;
 import net.kyori.adventure.key.Key;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.network.tcp.TcpSession;
-import org.geysermc.mcprotocollib.protocol.data.game.RegistryEntry;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.ChunkBiomeData;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.ChunkSection;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.DataPalette;
@@ -43,31 +38,26 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static com.zenith.Globals.*;
-import static com.zenith.cache.data.chunk.Chunk.*;
+import static com.zenith.cache.data.chunk.Chunk.chunkPosToLong;
 import static java.util.Arrays.asList;
 import static java.util.Collections.synchronizedList;
 
 @Getter
 @Setter
 public class ChunkCache implements CachedData {
-    private static final double maxDistanceExpected = Math.pow(32, 2); // squared to speed up calc, no need to sqrt
     // todo: consider moving weather to a separate cache object
     private boolean isRaining = false;
     private float rainStrength = 0f;
     private float thunderStrength = 0f;
-    private int renderDistance = 25; // client-side setting as reported during login, not server. currently unused
     // iterators over this map are not thread safe.
     // to do iteration, copy the key or value set into a new list, then iterate over that copied list.
     // trade-off: faster and lower memory lookups (compared to ConcurrentHashMap), but slower and more memory intensive iteration
     protected final Long2ObjectOpenHashMap<Chunk> cache = new Long2ObjectOpenHashMap<>(81, 0.5f);
     protected @Nullable DimensionData currentDimension = null;
-    protected Int2ObjectOpenHashMap<DimensionData> dimensionRegistry = new Int2ObjectOpenHashMap<>(4);
     protected List<Key> worldNames = new ArrayList<>();
     protected int serverViewDistance = -1;
     protected int serverSimulationDistance = -1;
@@ -86,53 +76,20 @@ public class ChunkCache implements CachedData {
     protected WorldTimeData worldTimeData;
     protected byte[] serverBrand = null;
 
-    public ChunkCache() {
-        EXECUTOR.scheduleAtFixedRate(this::reapDeadChunks,
-                                     5L,
-                                     5L,
-                                     TimeUnit.MINUTES);
-        resetDimensionRegistry();
-    }
-
-    public void updateDimensionRegistry(final List<RegistryEntry> entries) {
-        if (entries == null || entries.isEmpty()) return;
-        dimensionRegistry.clear();
-        for (int id = 0; id < entries.size(); id++) {
-            RegistryEntry entry = entries.get(id);
-            if (!entry.getId().startsWith("minecraft:")) continue;
-            String name = entry.getId().split("minecraft:")[1];
-            MNBT tag = entry.getData();
-            DimensionData dimensionData;
-            if (tag == null) { // occurs when we report to the server we have the core pack
-                // just populate from our own registry
-                dimensionData = DIMENSION_DATA.getDimensionData(id);
-            } else {
-                CompoundTag nbt = (CompoundTag) MNBTIO.read(tag);
-                int height = nbt.getInt("height");
-                int minY = nbt.getInt("min_y");
-                dimensionData = new DimensionData(id, name, minY, minY + height, height);
-            }
-            if (dimensionData == null) {
-                CACHE_LOG.error("Undefined dimension registry data for name: {} and ID: {}", name, id);
-                dimensionData = DIMENSION_DATA.getDimensionData(0); // fill in with overworld data just so we don't crash ourselves
-            }
-            CACHE_LOG.debug("Adding dimension from registry: {} {} {} {}", name, id, dimensionData.height(), dimensionData.minY());
-            dimensionRegistry.put(id, dimensionData);
-        }
-    }
-
     public void setCurrentWorld(final int dimensionId, final Key worldName, long hashedSeed, boolean debug, boolean flat) {
         this.dimensionType = dimensionId;
         this.worldName = worldName;
         this.hashedSeed = hashedSeed;
         this.debug = debug;
         this.flat = flat;
-        var worldDimension = DIMENSION_DATA.getDimensionData(dimensionId);
+        var worldDimension = DimensionRegistry.REGISTRY.get(dimensionId);
         if (worldDimension == null) {
             CACHE_LOG.warn("Received unknown dimension ID: {}", dimensionId);
-            if (!dimensionRegistry.isEmpty()) {
-                worldDimension = DIMENSION_DATA.getDimensionData(0);
-                CACHE_LOG.warn("Defaulting to first dimension in registry: {}", worldDimension.name());
+            if (DimensionRegistry.REGISTRY.size() > 0) {
+                worldDimension = DimensionRegistry.REGISTRY.get(0);
+                if (worldDimension == null) {
+                    throw new RuntimeException("No dimensions in registry");
+                }
             } else {
                 throw new RuntimeException("No dimensions in registry");
             }
@@ -413,7 +370,7 @@ public class ChunkCache implements CachedData {
         this.rainStrength = 0.0f;
         if (type == CacheResetType.FULL) {
             this.dimensionType = 0;
-            resetDimensionRegistry();
+            worldNames = asList(Key.key("minecraft:overworld"), Key.key("minecraft:the_nether"), Key.key("minecraft:the_end"));
             this.worldName = null;
             this.hashedSeed = 0;
             this.debug = false;
@@ -425,15 +382,6 @@ public class ChunkCache implements CachedData {
             this.worldTimeData = null;
             this.serverBrand = null;
         }
-    }
-
-    public synchronized void resetDimensionRegistry() {
-        this.dimensionRegistry.clear();
-        DIMENSION_DATA.dimensionNames().forEach(name -> {
-            var data = DIMENSION_DATA.getDimensionData(name);
-            dimensionRegistry.put(data.id(), data);
-        });
-        worldNames = asList(Key.key("minecraft:overworld"), Key.key("minecraft:the_nether"), Key.key("minecraft:the_end"));
     }
 
     @Override
@@ -495,43 +443,14 @@ public class ChunkCache implements CachedData {
         this.cache.remove(chunkPosToLong(x, z));
     }
 
-    // reap any chunks we possibly didn't remove from the cache
-    // dead chunks could occur due to race conditions, packet ordering, or bad server
-    // doesn't need to be invoked frequently and this is not a condition that happens normally
-    // i'm adding this because we are very memory constrained
-    private void reapDeadChunks() {
-        if (!Proxy.getInstance().isConnected()) return;
-        final int playerX = ((int) CACHE.getPlayerCache().getX()) >> 4;
-        final int playerZ = ((int) CACHE.getPlayerCache().getZ()) >> 4;
-        var keys = new LongArrayList(this.cache.keySet());
-        var removedCount = new AtomicInteger(0);
-        keys.longStream()
-            .filter(key -> distanceOutOfRange(playerX, playerZ, longToChunkX(key), longToChunkZ(key)))
-            .forEach(key -> {
-                this.cache.remove(key);
-                removedCount.getAndIncrement();
-            });
-        if (removedCount.get() > 0) {
-            CLIENT_LOG.debug("Reaped {} dead chunks", removedCount.get());
-        }
-    }
-
-    private boolean distanceOutOfRange(final int x1, final int y1, final int x2, final int y2) {
-        return Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2) > maxDistanceExpected;
-    }
-
     public void updateCurrentDimension(final ClientboundRespawnPacket packet) {
         PlayerSpawnInfo info = packet.getCommonPlayerSpawnInfo();
         CACHE_LOG.debug("Updating current dimension to: {}", info.getDimension());
-        DimensionData newDim = dimensionRegistry.get(info.getDimension());
+        DimensionData newDim = DimensionRegistry.REGISTRY.get(info.getDimension());
         if (newDim == null) {
             CACHE_LOG.error("Respawn packet tried updating dimension to unregistered dimension: {}", info.getDimension());
             CACHE_LOG.error("Things are going to break...");
         } else {
-            var vanillaRegistryDim = DimensionRegistry.REGISTRY.get(newDim.id());
-            if (vanillaRegistryDim == null || !vanillaRegistryDim.name().equals(newDim.name())) {
-                CACHE_LOG.warn("Server is switching us to a non-vanilla dimension: {} {}", newDim.id(), newDim.name());
-            }
             this.currentDimension = newDim;
             this.worldName = Key.key("minecraft", currentDimension.name());
         }

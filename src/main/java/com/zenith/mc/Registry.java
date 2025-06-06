@@ -1,35 +1,36 @@
 package com.zenith.mc;
 
 import com.zenith.util.struct.Maps;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import lombok.Getter;
-import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
+
+import java.util.HashMap;
 
 @Getter
+@NullMarked
 public class Registry<T extends RegistryData> {
     private final Int2ObjectOpenHashMap<T> idMap;
+    private final HashMap<String, T> keyMap;
 
     public Registry(int size) {
         idMap = new Int2ObjectOpenHashMap<>(size, Maps.FAST_LOAD_FACTOR);
+        keyMap = new HashMap<>(size, Maps.FAST_LOAD_FACTOR);
     }
 
-    public T register(@NonNull T value) {
+    public T register(T value) {
         idMap.put(value.id(), value);
+        keyMap.put(value.name(), value);
         return value;
     }
 
-    public T get(int id) {
+    public @Nullable T get(int id) {
         return idMap.get(id);
     }
 
-    public T get(@NonNull String name) {
-        for (Int2ObjectMap.Entry<T> entry : idMap.int2ObjectEntrySet()) {
-            if (name.equals(entry.getValue().name())) {
-                return entry.getValue();
-            }
-        }
-        return null;
+    public @Nullable T get(String key) {
+        return keyMap.get(key);
     }
 
     public int size() {

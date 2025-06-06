@@ -17,6 +17,7 @@ import com.zenith.mc.block.BlockTags;
 import lombok.ToString;
 import org.cloudburstmc.math.vector.Vector3d;
 
+import java.util.Optional;
 import java.util.Set;
 
 import static com.zenith.Globals.*;
@@ -130,7 +131,7 @@ public class MovementTraverse extends Movement {
                     }
                 }
                 // now that we've checked all possible directions to side place, we actually need to backplace
-                if (srcDownBlock == BlockRegistry.SOUL_SAND || (srcDownBlock.name().endsWith("_slab") && !BLOCK_DATA.isDoubleSlab(srcDown))) {
+                if (srcDownBlock == BlockRegistry.SOUL_SAND || (srcDownBlock.name().endsWith("_slab") && !BlockStateInterface.isDoubleSlab(srcDown))) {
                     return COST_INF; // can't sneak and backplace against soul sand or half slabs (regardless of whether it's top half or bottom half) =/
                 }
                 if (!standingOnABlock) { // standing on water / swimming
@@ -202,27 +203,27 @@ public class MovementTraverse extends Movement {
         Block fd = BlockStateInterface.getBlock(src.below());
         boolean ladder = fd.blockTags().contains(BlockTags.CLIMBABLE);
 
-//        if (pb0.block().name().endsWith("_door") || pb1.block().name().endsWith("_door")) {
-//            boolean notPassable = pb0.block().name().endsWith("_door") && !MovementHelper.isDoorPassable(ctx, src, dest) || pb1.getBlock() instanceof DoorBlock && !MovementHelper.isDoorPassable(ctx, dest, src);
-//            boolean canOpen = !(Blocks.IRON_DOOR.equals(pb0.getBlock()) || Blocks.IRON_DOOR.equals(pb1.getBlock()));
-//
-//            if (notPassable && canOpen) {
-//                return state.setTarget(new MovementState.MovementTarget(RotationUtils.calcRotationFromVec3d(ctx.playerHead(), VecUtils.calculateBlockCenter(ctx.world(), positionsToBreak[0]), ctx.playerRotations()), true))
-//                    .setInput(Input.CLICK_RIGHT, true);
-//            }
-//        }
+        if (pb0Block.name().endsWith("_door") || pb1Block.name().endsWith("_door")) {
+            boolean notPassable = pb0Block.name().endsWith("_door") && !MovementHelper.isDoorPassable(src, dest) || pb1Block.name().endsWith("_door") && !MovementHelper.isDoorPassable(dest, src);
+            boolean canOpen = !(BlockRegistry.IRON_DOOR.equals(pb0Block) || BlockRegistry.IRON_DOOR.equals(pb1Block));
 
-//        if (pb0.getBlock() instanceof FenceGateBlock || pb1.getBlock() instanceof FenceGateBlock) {
-//            BlockPos blocked = !MovementHelper.isGatePassable(ctx, positionsToBreak[0], src.above()) ? positionsToBreak[0]
-//                : !MovementHelper.isGatePassable(ctx, positionsToBreak[1], src) ? positionsToBreak[1]
-//                : null;
-//            if (blocked != null) {
-//                Optional<Rotation> rotation = RotationUtils.reachable(ctx, blocked);
-//                if (rotation.isPresent()) {
-//                    return state.setTarget(new MovementState.MovementTarget(rotation.get(), true)).setInput(Input.CLICK_RIGHT, true);
-//                }
-//            }
-//        }
+            if (notPassable && canOpen) {
+                return state.setTarget(new MovementState.MovementTarget(RotationUtils.calcRotationFromVec3d(ctx.playerHead(), VecUtils.calculateBlockCenter(positionsToBreak[0]), ctx.playerRotations()), true))
+                    .setInput(PathInput.RIGHT_CLICK_BLOCK, true);
+            }
+        }
+
+        if (pb0Block.name().endsWith("fence_gate") || pb1Block.name().endsWith("fence_gate")) {
+            BlockPos blocked = !MovementHelper.isGatePassable(positionsToBreak[0], src.above()) ? positionsToBreak[0]
+                : !MovementHelper.isGatePassable(positionsToBreak[1], src) ? positionsToBreak[1]
+                : null;
+            if (blocked != null) {
+                Optional<Rotation> rotation = RotationUtils.reachable(ctx, blocked);
+                if (rotation.isPresent()) {
+                    return state.setTarget(new MovementState.MovementTarget(rotation.get(), true)).setInput(PathInput.RIGHT_CLICK_BLOCK, true);
+                }
+            }
+        }
 
         boolean isTheBridgeBlockThere = MovementHelper.canWalkOn(positionToPlace) || ladder || MovementHelper.canUseFrostWalker(ctx, positionToPlace);
         BlockPos feet = ctx.playerFeet();

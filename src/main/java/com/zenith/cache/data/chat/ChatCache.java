@@ -7,13 +7,11 @@ import lombok.experimental.Accessors;
 import net.raphimc.minecraftauth.step.java.StepPlayerCertificates;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.network.tcp.TcpSession;
-import org.geysermc.mcprotocollib.protocol.data.game.RegistryEntry;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandNode;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundCommandsPacket;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -29,7 +27,6 @@ public class ChatCache implements CachedData {
     protected boolean enforcesSecureChat = false;
     protected @Nullable ChatSession chatSession = new ChatSession(UUID.randomUUID());
     protected StepPlayerCertificates.@Nullable PlayerCertificates playerCertificates;
-    protected ChatTypeRegistry chatTypeRegistry = new ChatTypeRegistry();
 
     @Override
     public void getPackets(@NonNull final Consumer<Packet> consumer, final @NonNull TcpSession session) {
@@ -44,7 +41,6 @@ public class ChatCache implements CachedData {
         }
         if (type == CacheResetType.FULL) {
             this.enforcesSecureChat = false;
-            this.chatTypeRegistry.reset();
             this.lastChatTimestamp = System.currentTimeMillis();
         }
     }
@@ -65,9 +61,5 @@ public class ChatCache implements CachedData {
         }
         this.chatSession.setPlayerCertificates(this.playerCertificates);
         return this.chatSession;
-    }
-
-    public void initializeChatTypeRegistry(List<RegistryEntry> registryEntries) {
-        chatTypeRegistry.initialize(registryEntries);
     }
 }

@@ -7,6 +7,7 @@ import com.zenith.event.chat.SystemChatEvent;
 import com.zenith.event.chat.WhisperChatEvent;
 import com.zenith.event.client.ClientDeathMessageEvent;
 import com.zenith.event.queue.QueueSkipEvent;
+import com.zenith.feature.chatschema.ChatSchemaParser;
 import com.zenith.feature.deathmessages.DeathMessageParseResult;
 import com.zenith.feature.deathmessages.DeathMessagesParser;
 import com.zenith.network.client.ClientSession;
@@ -16,6 +17,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
+import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Objects;
@@ -31,53 +33,47 @@ public class SystemChatHandler implements ClientEventLoopPacketHandler<Clientbou
     @Override
     public boolean applyAsync(@NonNull ClientboundSystemChatPacket packet, @NonNull ClientSession session) {
         try {
-            if (CONFIG.client.extra.logChatMessages) {
-                var component = packet.getContent();
-                if (Proxy.getInstance().isInQueue()) {
-                    component = component.replaceText(b -> b
-                        .matchLiteral("\n\n")
-                        .replacement("")
-                    );
-                }
-                CHAT_LOG.info(component);
-            }
+            logSystemChat(packet);
             final Component component = packet.getContent();
-            final String messageString = ComponentSerializer.serializePlain(component);
-            Optional<DeathMessageParseResult> deathMessage = Optional.empty();
-            String senderName = null;
-            String whisperTarget = null;
-            if (!messageString.startsWith("<") && Proxy.getInstance().isOn2b2t())
-                deathMessage = parseDeathMessage2b2t(component, deathMessage, messageString);
-            if (messageString.startsWith("<")) {
-                senderName = extractSenderNameNormalChat(messageString);
-            } else if (deathMessage.isEmpty()) {
-                final String[] split = messageString.split(" ");
-                if (split.length > 2) {
-                    if (split[1].startsWith("whispers")) {
-                        senderName = extractSenderNameReceivedWhisper(split);
-                        whisperTarget = CONFIG.authentication.username;
-                    } else if (messageString.startsWith("to ")) {
-                        senderName = CONFIG.authentication.username;
-                        whisperTarget = extractReceiverNameSentWhisper(split);
+            String messageString = ComponentSerializer.serializePlain(component);
+
+            if (Proxy.getInstance().isOn2b2t()) {
+                if ("Reconnecting to server 2b2t.".equals(messageString)
+                    && NamedTextColor.GOLD.equals(component.style().color())) {
+                    EVENT_BUS.postAsync(QueueSkipEvent.INSTANCE);
+                }
+
+                var deathMessageParseResult = parseDeathMessage2b2t(component, messageString);
+                if (deathMessageParseResult.isPresent()) {
+                    EVENT_BUS.postAsync(new DeathMessageChatEvent(deathMessageParseResult.get(), component, messageString));
+                    return true;
+                }
+            }
+            var chatParseResult = ChatSchemaParser.parse(messageString);
+            if (chatParseResult != null) {
+                switch (chatParseResult.type()) {
+                    case PUBLIC_CHAT -> {
+                        EVENT_BUS.postAsync(new PublicChatEvent(chatParseResult.sender(), component, chatParseResult.messageContent()));
+                    }
+                    case WHISPER_INBOUND -> {
+                        EVENT_BUS.postAsync(new WhisperChatEvent(
+                            false,
+                            chatParseResult.sender(),
+                            chatParseResult.receiver(),
+                            component,
+                            chatParseResult.messageContent()
+                        ));
+                    }
+                    case WHISPER_OUTBOUND -> {
+                        EVENT_BUS.postAsync(new WhisperChatEvent(
+                            true,
+                            chatParseResult.sender(),
+                            chatParseResult.receiver(),
+                            component,
+                            chatParseResult.messageContent()
+                        ));
                     }
                 }
-            }
-            var sender = Optional.ofNullable(senderName).flatMap(t -> CACHE.getTabListCache().getFromName(t));
-            var playerWhisperTarget = Optional.ofNullable(whisperTarget).flatMap(t -> CACHE.getTabListCache().getFromName(t));
-            if (Proxy.getInstance().isOn2b2t()
-                && "Reconnecting to server 2b2t.".equals(messageString)
-                && NamedTextColor.GOLD.equals(component.style().color())) {
-                CLIENT_LOG.info("Queue Skip Detected");
-                EVENT_BUS.postAsync(QueueSkipEvent.INSTANCE);
-            }
-
-            if (sender.isPresent() && deathMessage.isEmpty() && playerWhisperTarget.isEmpty()) {
-                EVENT_BUS.postAsync(new PublicChatEvent(sender.get(), component, messageString));
-            } else if (sender.isPresent() && deathMessage.isEmpty() && playerWhisperTarget.isPresent()) {
-                var outgoing = sender.get().getName().equalsIgnoreCase(CONFIG.authentication.username);
-                EVENT_BUS.postAsync(new WhisperChatEvent(outgoing, sender.get(), playerWhisperTarget.get(), component, messageString));
-            } else if (sender.isEmpty() && deathMessage.isPresent() && playerWhisperTarget.isEmpty()) {
-                EVENT_BUS.postAsync(new DeathMessageChatEvent(deathMessage.get(), component, messageString));
             } else {
                 EVENT_BUS.postAsync(new SystemChatEvent(component, messageString));
             }
@@ -87,30 +83,33 @@ public class SystemChatHandler implements ClientEventLoopPacketHandler<Clientbou
         return true;
     }
 
-    private Optional<DeathMessageParseResult> parseDeathMessage2b2t(final Component component, Optional<DeathMessageParseResult> deathMessage, final String messageString) {
+    private static void logSystemChat(final @NotNull ClientboundSystemChatPacket packet) {
+        if (!CONFIG.client.extra.logChatMessages) return;
+        var component = packet.getContent();
+        if (Proxy.getInstance().isInQueue()) {
+            if (CONFIG.client.extra.logOnlyQueuePositionUpdates) return;
+            // strip empty lines spam in 2b2t queue messages
+            component = component.replaceText(b -> b
+                .matchLiteral("\n\n")
+                .replacement("")
+            );
+        }
+        CHAT_LOG.info(component);
+    }
+
+    private Optional<DeathMessageParseResult> parseDeathMessage2b2t(final Component component, final String messageString) {
         if (component.children().stream().anyMatch(child -> nonNull(child.color())
             && Objects.equals(child.color(), DEATH_MSG_COLOR_2b2t))) { // death message color on 2b
-            deathMessage = deathMessagesHelper.parse(component, messageString);
+            var deathMessage = deathMessagesHelper.parse(component, messageString);
             if (deathMessage.isPresent()) {
                 if (deathMessage.get().victim().equals(CACHE.getProfileCache().getProfile().getName())) {
                     EVENT_BUS.postAsync(new ClientDeathMessageEvent(messageString));
                 }
+                return deathMessage;
             } else {
                 CLIENT_LOG.warn("Failed to parse death message: {}", messageString);
             }
         }
-        return deathMessage;
-    }
-
-    private String extractSenderNameNormalChat(final String message) {
-        return message.substring(message.indexOf("<") + 1, message.indexOf(">"));
-    }
-
-    private String extractSenderNameReceivedWhisper(final String[] messageSplit) {
-        return messageSplit[0].trim();
-    }
-
-    private String extractReceiverNameSentWhisper(final String[] messageSplit) {
-        return messageSplit[1].replace(":", "");
+        return Optional.empty();
     }
 }

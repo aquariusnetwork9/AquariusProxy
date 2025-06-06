@@ -11,6 +11,7 @@ import com.zenith.event.server.ServerPlayerConnectedEvent;
 import com.zenith.event.server.ServerPlayerDisconnectedEvent;
 import com.zenith.feature.deathmessages.DeathMessageParseResult;
 import com.zenith.feature.deathmessages.KillerType;
+import com.zenith.util.ComponentSerializer;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.utils.Color;
@@ -114,7 +115,7 @@ public class ChatRelayEventListener {
         if (!CONFIG.discord.chatRelay.enable || CONFIG.discord.chatRelay.channelId.isEmpty()) return;
         if (CONFIG.discord.chatRelay.ignoreQueue && Proxy.getInstance().isInQueue()) return;
         try {
-            String message = event.message();
+            String message = ComponentSerializer.serializePlain(event.component());
             String ping = "";
             if (CONFIG.discord.chatRelay.mentionWhileConnected || isNull(Proxy.getInstance().getCurrentPlayer().get())) {
                 if (CONFIG.discord.chatRelay.mentionRoleOnWhisper && !event.outgoing()) {
@@ -125,7 +126,9 @@ public class ChatRelayEventListener {
                 }
             }
             message = message.replace(event.sender().getName(), "**" + event.sender().getName() + "**");
-            message = message.replace(event.receiver().getName(), "**" + event.receiver().getName() + "**");
+            if (!event.sender().getName().equals(event.receiver().getName())) {
+                message = message.replace(event.receiver().getName(), "**" + event.receiver().getName() + "**");
+            }
             UUID senderUUID = event.sender().getProfileId();
             final String avatarURL = Proxy.getInstance().getPlayerHeadURL(senderUUID).toString();
             var embed = Embed.builder()
@@ -165,17 +168,7 @@ public class ChatRelayEventListener {
         if (CONFIG.discord.chatRelay.ignoreQueue && Proxy.getInstance().isInQueue()) return;
         try {
             String message = event.message();
-            boolean customSenderFormatting = false;
-            Color color = Color.BLACK;
-            if (!event.isDefaultMessageSchema()) {
-                if (Proxy.getInstance().isOn2b2t()) {
-                    DISCORD_LOG.error("Received non-default schema chat message on 2b2t: {}", message);
-                }
-            } else {
-                message = event.extractMessageDefaultSchema();
-                customSenderFormatting = true;
-                if (message.startsWith(">")) color = Color.MEDIUM_SEA_GREEN;
-            }
+            Color color = message.startsWith(">") ? Color.MEDIUM_SEA_GREEN : Color.BLACK;
             String ping = "";
             if (CONFIG.discord.chatRelay.mentionWhileConnected || isNull(Proxy.getInstance().getCurrentPlayer().get())) {
                 if (CONFIG.discord.chatRelay.mentionRoleOnNameMention
@@ -185,9 +178,7 @@ public class ChatRelayEventListener {
                     ping = notificationMention();
                 }
             }
-            if (customSenderFormatting) {
-                message = "**" + event.sender().getName() + ":** " + message;
-            }
+            message = "**" + event.sender().getName() + ":** " + message;
             UUID senderUUID = event.sender().getProfileId();
             final String avatarURL = Proxy.getInstance().getPlayerHeadURL(senderUUID).toString();
             var embed = Embed.builder()

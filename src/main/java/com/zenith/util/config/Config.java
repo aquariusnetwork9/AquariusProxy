@@ -2,6 +2,7 @@ package com.zenith.util.config;
 
 import com.google.common.collect.Lists;
 import com.google.gson.annotations.SerializedName;
+import com.zenith.feature.chatschema.ChatSchema;
 import com.zenith.feature.whitelist.PlayerEntry;
 import com.zenith.module.impl.ActiveHours.ActiveTime;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
@@ -11,6 +12,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 
 
 public final class Config {
@@ -70,11 +72,17 @@ public final class Config {
         public boolean maxPlaytimeReconnect = false;
         public long maxPlaytimeReconnectMins = 1440;
         public boolean automaticKeepAliveManagement = true;
+        public int defaultClientRenderDistance = 25;
         public final ClientTimeout timeout = new ClientTimeout();
         public final Ping ping = new Ping();
         public final ChatSigning chatSigning = new ChatSigning();
         public final Extra extra = new Extra();
         public final Inventory inventory = new Inventory();
+        public final ChatSchemas chatSchemas = new ChatSchemas();
+
+        public static final class ChatSchemas {
+            public LinkedHashMap<String, ChatSchema> serverSchemas = new LinkedHashMap<>();
+        }
 
         public static final class Inventory {
             public int actionDelayTicks = 5;
@@ -85,6 +93,8 @@ public final class Config {
 
         public static final class ChatSigning {
             public boolean enabled = true;
+            public boolean force = false;
+            public boolean signWhispers = true;
         }
 
         public static final class ClientViaVersion {
@@ -130,13 +140,13 @@ public final class Config {
             public boolean prioStatusChangeMention = true;
             public boolean killMessage = true;
             public boolean logChatMessages = true;
+            public boolean logOnlyQueuePositionUpdates = true;
             public final CoordObfuscation coordObfuscation = new CoordObfuscation();
             public final ActionLimiter actionLimiter = new ActionLimiter();
             public final VisualRange visualRange = new VisualRange();
             public final AutoArmor autoArmor = new AutoArmor();
             public final AutoMend autoMend = new AutoMend();
             public final QueueWarning queueWarning = new QueueWarning();
-            public final Wander wander = new Wander();
             public final Click click = new Click();
             public final SessionTimeLimit sessionTimeLimit = new SessionTimeLimit();
             public final AutoOmen autoOmen = new AutoOmen();
@@ -189,6 +199,9 @@ public final class Config {
 
             public static class SessionTimeLimit {
                 public boolean enabled = true;
+                public boolean ingameNotification = true;
+                public boolean discordNotification = false;
+                public boolean discordNotificationMention = true;
                 public boolean dynamic2b2tSessionTimeLimit = true;
             }
 
@@ -210,12 +223,6 @@ public final class Config {
                     OFF_HAND,
                     ALTERNATE_HANDS
                 }
-            }
-
-            public static final class Wander {
-                public boolean enabled = false;
-                public int radius = 2000;
-                public int minRadius = 100;
             }
 
             public static class SpawnPatrol {
@@ -253,6 +260,7 @@ public final class Config {
                 public boolean leaveAlert = true;
                 public boolean logoutAlert = true;
                 public boolean enterWhisper = false;
+                public String enterWhisperCommand = "msg";
                 public String enterWhisperMessage = "Hello, I am using ZenithProxy! I have alerted my owner that you are here!";
                 public int enterWhisperCooldownSeconds = 30;
                 public boolean enterWhisperWhilePlayerConnected = false;

@@ -48,7 +48,7 @@ public class MovementPillar extends Movement {
             if (fromDownBlock.blockTags().contains(BlockTags.CLIMBABLE)) {
                 return COST_INF; // can't pillar from a ladder or vine onto something that isn't also climbable
             }
-            if (BLOCK_DATA.isBottomSlab(fromDown)) {
+            if (BlockStateInterface.isBottomSlab(fromDown)) {
                 return COST_INF; // can't pillar up from a bottom slab onto a non ladder
             }
         }
@@ -57,9 +57,9 @@ public class MovementPillar extends Movement {
 //        }
         int toBreak = context.getId(x, y + 2, z);
         Block toBreakBlock = BlockStateInterface.getBlock(toBreak);
-//        if (toBreakBlock instanceof FenceGateBlock) { // see issue #172
-//            return COST_INF;
-//        }
+        if (toBreakBlock.name().endsWith("fence_gate")) { // see issue #172
+            return COST_INF;
+        }
         if (MovementHelper.isWater(toBreakBlock) && MovementHelper.isWater(fromBlock)) { // TODO should this also be allowed if toBreakBlock is air?
             Block srcUp = context.getBlock(x, y + 1, z);
             if (MovementHelper.isWater(srcUp)) {

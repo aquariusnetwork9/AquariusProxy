@@ -1866,6 +1866,10 @@
       ]
     },
     {
+      "type": "com.zenith.feature.chatschema.ChatSchema",
+      "allDeclaredFields": true
+    },
+    {
       "type": "com.zenith.feature.queue.QueueStatus",
       "allDeclaredFields": true,
       "methods": [
@@ -2152,6 +2156,16 @@
     },
     {
       "type": "com.zenith.util.config.Config$Client",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.zenith.util.config.Config$Client$ChatSchemas",
       "allDeclaredFields": true,
       "methods": [
         {
@@ -4319,6 +4333,15 @@
     },
     {
       "type": "java.util.ImmutableCollections"
+    },
+    {
+      "type": "java.util.LinkedHashMap",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "java.util.LinkedHashSet",

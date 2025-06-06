@@ -44,9 +44,7 @@ public class ClientTickManager {
     }
 
     public void handleProxyClientConnectedEvent(final PlayerConnectedEvent event) {
-        Proxy.getInstance().getClient().executeInEventLoop(() -> {
-            stopBotTicks();
-        });
+        Proxy.getInstance().getClient().executeInEventLoop(this::stopBotTicks);
     }
 
     public void handleProxyClientDisconnectedEvent(final PlayerDisconnectedEvent event) {
@@ -67,8 +65,6 @@ public class ClientTickManager {
     }
 
     private static final long LONG_TICK_THRESHOLD_MS = 100L;
-    private static final long LONG_TICK_WARNING_INTERVAL_MS = TimeUnit.SECONDS.toMillis(60);
-    private long lastLongTickWarning = 0L;
 
     private void tick() {
         try {
@@ -80,12 +76,7 @@ public class ClientTickManager {
             long after = System.currentTimeMillis();
             long elapsedMs = after - before;
             if (elapsedMs > LONG_TICK_THRESHOLD_MS) {
-                if (System.currentTimeMillis() - lastLongTickWarning > LONG_TICK_WARNING_INTERVAL_MS) {
-                    CLIENT_LOG.warn("Slow Client Tick: {}ms", elapsedMs);
-                    lastLongTickWarning = System.currentTimeMillis();
-                } else {
-                    CLIENT_LOG.debug("Slow Client Tick: {}ms", elapsedMs);
-                }
+                CLIENT_LOG.debug("Slow Client Tick: {}ms", elapsedMs);
             }
         } catch (final Throwable e) {
             CLIENT_LOG.error("Error during client tick", e);

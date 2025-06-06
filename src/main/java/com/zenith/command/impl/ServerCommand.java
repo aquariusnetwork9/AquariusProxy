@@ -9,6 +9,7 @@ import com.zenith.command.api.CommandCategory;
 import com.zenith.command.api.CommandContext;
 import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
+import com.zenith.feature.queue.mcping.MCPing;
 
 import java.util.regex.Pattern;
 
@@ -99,8 +100,9 @@ public class ServerCommand extends Command {
                                   .title("Server Updated!");
                               return OK;
                           } else if (domainPattern.matcher(ip).matches()) {
-                              CONFIG.client.server.address = ip;
-                              CONFIG.client.server.port = 25565;
+                              var resolvedAddress = MCPing.INSTANCE.resolveAddress(ip, 25565);
+                              CONFIG.client.server.address = resolvedAddress.getHostString();
+                              CONFIG.client.server.port = resolvedAddress.getPort();
                               c.getSource().getEmbed()
                                   .title("Server Updated!");
                               return OK;

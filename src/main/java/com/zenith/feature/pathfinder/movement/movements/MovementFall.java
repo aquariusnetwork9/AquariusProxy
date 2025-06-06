@@ -11,7 +11,9 @@ import com.zenith.feature.player.RotationHelper;
 import com.zenith.feature.player.World;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockPos;
+import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.block.Direction;
+import com.zenith.mc.block.properties.api.BlockStateProperties;
 import lombok.ToString;
 import org.cloudburstmc.math.vector.Vector2f;
 import org.cloudburstmc.math.vector.Vector3d;
@@ -139,12 +141,13 @@ public class MovementFall extends Movement {
     }
 
     private Direction avoid() {
-//        for (int i = 0; i < 15; i++) {
-//            BlockState state = World.getBlockState(ctx.playerFeet().below(i));
-//            if (state.block() == BlockRegistry.LADDER) {
-//                return state.getValue(LadderBlock.FACING);
-//            }
-//        }
+        BlockPos pos = ctx.playerFeet();
+        for (int i = 0; i < 15; i++) {
+            var block = World.getBlock(pos.x(), pos.y() - i, pos.z());
+            if (block == BlockRegistry.LADDER) {
+                return World.getBlockStateProperty(block, World.getBlockStateId(pos.x(), pos.y() - i, pos.z()), BlockStateProperties.HORIZONTAL_FACING);
+            }
+        }
         return null;
     }
 

@@ -45,7 +45,7 @@ public class ItemArgument implements ArgumentType<ItemData> {
         return itemData;
     }
 
-    public static ItemData getItem(final CommandContext<com.zenith.command.api.CommandContext> context, String name) throws CommandSyntaxException {
+    public static ItemData getItem(final CommandContext<com.zenith.command.api.CommandContext> context, String name) {
         return context.getArgument(name, ItemData.class);
     }
 

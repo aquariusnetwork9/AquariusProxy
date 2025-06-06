@@ -140,6 +140,15 @@ public class BrigadierToMCProtocolLibConverter {
                 case ItemArgument it -> {
                     parser = CommandParser.ITEM_STACK;
                 }
+                case DimensionArgument it -> {
+                    parser = CommandParser.DIMENSION;
+                }
+                case BlockArgument it -> {
+                    parser = CommandParser.BLOCK_STATE;
+                }
+                case ResourceLocationArgument it -> {
+                    parser = CommandParser.RESOURCE_LOCATION;
+                }
                 default -> {}
             }
         }

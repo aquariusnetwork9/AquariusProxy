@@ -25,7 +25,7 @@ public interface ClientEventLoopPacketHandler<P extends Packet, S extends Client
     private void applyCatching(P packet, S session) {
         try {
             if (!applyAsync(packet, session)) {
-                CLIENT_LOG.warn("Client event loop packet handler failed: {}", packet.getClass().getSimpleName());
+                CLIENT_LOG.debug("Client event loop packet handler failed: {}", packet.getClass().getSimpleName());
             }
         } catch (final Throwable e) {
             CLIENT_LOG.error("Client event loop packet handler error", e);

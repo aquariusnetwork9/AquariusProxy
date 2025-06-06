@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.DoubleNode;
+import com.fasterxml.jackson.databind.node.IntNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.zenith.util.math.MathHelper;
 import com.zenith.util.struct.Maps;
@@ -32,8 +33,6 @@ public class BlockDataManager {
     private static final Int2ObjectOpenHashMap<FluidState> blockStateIdToFluidState = new Int2ObjectOpenHashMap<>(100, Maps.FAST_LOAD_FACTOR);
     private static final IntOpenHashSet pathfindableStateIds = new IntOpenHashSet();
     private static final IntOpenHashSet replaceableStateIds = new IntOpenHashSet();
-    private static final IntOpenHashSet bottomSlabStateIds = new IntOpenHashSet();
-    private static final IntOpenHashSet doubleSlabStateIds = new IntOpenHashSet();
     static {
         init();
     }
@@ -79,22 +78,6 @@ public class BlockDataManager {
                 replaceableStateIds.add(stateId.asInt());
             });
         }
-        try (JsonParser slabsParse = OBJECT_MAPPER.createParser(BlockDataManager.class.getResourceAsStream(
-            "/mcdata/slabBlockStateIds.json"))) {
-            TreeNode treeNode = slabsParse.getCodec().readTree(slabsParse);
-//            ArrayNode topSlabArray = (ArrayNode) treeNode.get("topSlabs");
-//            topSlabArray.elements().forEachRemaining((stateId) -> {
-//                topSlabStateIds.add(stateId.asInt());
-//            });
-            ArrayNode bottomSlabArray = (ArrayNode) treeNode.get("bottomSlabs");
-            bottomSlabArray.elements().forEachRemaining((stateId) -> {
-                bottomSlabStateIds.add(stateId.asInt());
-            });
-            ArrayNode doubleSlabArray = (ArrayNode) treeNode.get("doubleSlabs");
-            doubleSlabArray.elements().forEachRemaining((stateId) -> {
-                doubleSlabStateIds.add(stateId.asInt());
-            });
-        }
         DataPalette.GLOBAL_PALETTE_BITS_PER_ENTRY = MathHelper.log2Ceil(blockStateIdToBlock.size());
     }
 
@@ -103,22 +86,39 @@ public class BlockDataManager {
         try (JsonParser shapesParser = OBJECT_MAPPER.createParser(BlockDataManager.class.getResourceAsStream(
             "/mcdata/" + name + ".json"))) {
             final Int2ObjectOpenHashMap<List<CollisionBox>> shapeIdToCollisionBoxes = new Int2ObjectOpenHashMap<>(100);
+            final Int2ObjectOpenHashMap<CollisionBox> boxIdToBox = new Int2ObjectOpenHashMap<>(100);
             TreeNode node = shapesParser.getCodec().readTree(shapesParser);
+
+            ObjectNode boxesNode = (ObjectNode) node.get("boxes");
+            for (Iterator<String> it = boxesNode.fieldNames(); it.hasNext(); ) {
+                String boxIdName = it.next();
+                int boxId = Integer.parseInt(boxIdName);
+                ArrayNode cbArray = (ArrayNode) boxesNode.get(boxIdName);
+                double[] cbArr = new double[6];
+                int i = 0;
+                for (Iterator<JsonNode> it2 = cbArray.elements(); it2.hasNext(); ) {
+                    DoubleNode doubleNode = (DoubleNode) it2.next();
+                    cbArr[i++] = doubleNode.asDouble();
+                }
+                CollisionBox collisionBox = new CollisionBox(cbArr[0], cbArr[1], cbArr[2], cbArr[3], cbArr[4], cbArr[5]);
+                boxIdToBox.put(boxId, collisionBox);
+            }
+
             ObjectNode shapesNode = (ObjectNode) node.get("shapes");
             for (Iterator<String> it = shapesNode.fieldNames(); it.hasNext(); ) {
                 String shapeIdName = it.next();
                 int shapeId = Integer.parseInt(shapeIdName);
-                final List<CollisionBox> collisionBoxes = new ArrayList<>(2);
                 ArrayNode outerCbArray = (ArrayNode) shapesNode.get(shapeIdName);
-                for (Iterator<JsonNode> it2 = outerCbArray.elements(); it2.hasNext(); ) {
-                    ArrayNode innerCbArray = (ArrayNode) it2.next();
-                    double[] cbArr = new double[6];
-                    int i = 0;
-                    for (Iterator<JsonNode> it3 = innerCbArray.elements(); it3.hasNext(); ) {
-                        DoubleNode doubleNode = (DoubleNode) it3.next();
-                        cbArr[i++] = doubleNode.asDouble();
+                List<CollisionBox> collisionBoxes;
+                if (outerCbArray.isEmpty()) {
+                    collisionBoxes = Collections.emptyList();
+                } else {
+                    collisionBoxes = new ArrayList<>(outerCbArray.size());
+                    for (Iterator<JsonNode> it2 = outerCbArray.elements(); it2.hasNext(); ) {
+                        IntNode boxIdNode = (IntNode) it2.next();
+                        CollisionBox box = boxIdToBox.get(boxIdNode.asInt());
+                        collisionBoxes.add(box);
                     }
-                    collisionBoxes.add(new CollisionBox(cbArr[0], cbArr[3], cbArr[1], cbArr[4], cbArr[2], cbArr[5]));
                 }
                 shapeIdToCollisionBoxes.put(shapeId, collisionBoxes);
             }
@@ -222,13 +222,5 @@ public class BlockDataManager {
         }
         var cb = collisionBoxes.getFirst();
         return cb.isFullBlock();
-    }
-
-    public boolean isBottomSlab(int blockStateId) {
-        return bottomSlabStateIds.contains(blockStateId);
-    }
-
-    public boolean isDoubleSlab(int blockStateId) {
-        return doubleSlabStateIds.contains(blockStateId);
     }
 }

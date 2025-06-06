@@ -22,7 +22,7 @@ public class InventoryUtil {
     public static int searchPlayerInventory(Predicate<ItemStack> predicate) {
         List<ItemStack> playerInventory = CACHE.getPlayerCache().getPlayerInventory();
         // first check hotbar
-        for (int i = 36; i < 44; i++) {
+        for (int i = 36; i <= 44; i++) {
             ItemStack itemStack = playerInventory.get(i);
             if (itemStack == Container.EMPTY_STACK) continue;
             if (predicate.test(itemStack)) {
@@ -31,7 +31,7 @@ public class InventoryUtil {
         }
 
         // then main inventory
-        for (int i = 9; i < 36; i++) {
+        for (int i = 9; i <= 35; i++) {
             ItemStack itemStack = playerInventory.get(i);
             if (itemStack == Container.EMPTY_STACK) continue;
             if (predicate.test(itemStack)) {

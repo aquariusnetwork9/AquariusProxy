@@ -57,7 +57,7 @@ public class VisualRange extends Module {
         if (CONFIG.client.extra.visualRange.enterWhisperWhilePlayerConnected && Proxy.getInstance().hasActivePlayer()) return;
         if (Instant.now().minusSeconds(CONFIG.client.extra.visualRange.enterWhisperCooldownSeconds).isBefore(lastWhisper)) return;
         lastWhisper = Instant.now();
-        sendClientPacketAsync(new ServerboundChatCommandPacket("w " + event.playerEntry().getName() + " " + CONFIG.client.extra.visualRange.enterWhisperMessage));
+        sendClientPacketAsync(new ServerboundChatCommandPacket(CONFIG.client.extra.visualRange.enterWhisperCommand +  " " + event.playerEntry().getName() + " " + CONFIG.client.extra.visualRange.enterWhisperMessage));
     }
 
     public void handlePlayerLeftVisualRangeEvent(final ServerPlayerLeftVisualRangeEvent event) {

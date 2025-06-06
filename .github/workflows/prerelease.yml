@@ -71,11 +71,11 @@ jobs:
           name: ZenithProxy-linux
           path: ZenithProxy.zip
 
-#      - name: Publish Maven Artifact Snapshot
-#        env:
-#          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
-#          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
-#        run: ./gradlew publishSnapshotPublicationToVcRepository
+      - name: Publish Maven Artifact Snapshot
+        env:
+          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+        run: ./gradlew publishSnapshotPublicationToSnapshotsRepository
 
   release-artifacts:
     needs:
@@ -104,6 +104,7 @@ jobs:
           artifacts: "artifacts/*.jar"
           prerelease: true
           body: "File upload not for users. **Use the Launcher:** https://github.com/rfresh2/ZenithProxy/releases/tag/launcher-v3"
+          commit: ${{ github.sha }}
 
       - name: Publish Linux Artifact
         uses: ncipollo/release-action@v1
@@ -112,3 +113,4 @@ jobs:
           artifacts: "artifacts/ZenithProxy.zip"
           prerelease: true
           body: "File upload not for users. **Use the Launcher:** https://github.com/rfresh2/ZenithProxy/releases/tag/launcher-v3"
+          commit: ${{ github.sha }}

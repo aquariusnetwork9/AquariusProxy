@@ -94,7 +94,8 @@ public class NotificationEventListener {
             of(PluginLoadFailureEvent.class, this::handlePluginLoadFailure),
             of(PluginLoadedEvent.class, this::handlePluginLoadedEvent),
             of(SpawnPatrolTargetAcquiredEvent.class, this::handleSpawnPatrolTargetAcquiredEvent),
-            of(SpawnPatrolTargetKilledEvent.class, this::handleSpawnPatrolTargetKilledEvent)
+            of(SpawnPatrolTargetKilledEvent.class, this::handleSpawnPatrolTargetKilledEvent),
+            of(SessionTimeLimitWarningEvent.class, this::handleSessionTimeLimitEvent)
         );
     }
 
@@ -104,6 +105,19 @@ public class NotificationEventListener {
                 ? CONFIG.discord.accountOwnerRoleId
                 : CONFIG.discord.notificationMentionRoleId
         );
+    }
+
+    private void handleSessionTimeLimitEvent(SessionTimeLimitWarningEvent event) {
+        if (!CONFIG.client.extra.sessionTimeLimit.discordNotification) return;
+        var embed = Embed.builder()
+            .title("Session Time Limit Warning")
+            .description(event.sessionTimeLimit().toHoursPart() + "h kick in: " + event.durationUntilKick().toMinutes() + "m")
+            .primaryColor();
+        if (CONFIG.client.extra.sessionTimeLimit.discordNotificationMention) {
+            sendEmbedMessage(notificationMention(), embed);
+        } else {
+            sendEmbedMessage(embed);
+        }
     }
 
     private void handleSpawnPatrolTargetKilledEvent(SpawnPatrolTargetKilledEvent event) {
@@ -246,7 +260,7 @@ public class NotificationEventListener {
             .addField("Priority Queue", Queue.getQueueStatus().prio(), true);
         if (event.wasOnline()) {
             embed
-                .addField("Info", "Detected that the client was kicked to queue", false)
+                .addField("Info", "Kicked to queue", false)
                 .addField("Online Duration", formatDuration(event.wasOnlineDuration()), false);
         }
         if (CONFIG.discord.mentionRoleOnStartQueue) {
@@ -619,6 +633,14 @@ public class NotificationEventListener {
     public void handleProxyLoginFailedEvent(ClientLoginFailedEvent event) {
         var embed = Embed.builder()
             .title("Login Failed")
+            .description("""
+              [Help]
+              Try waiting and connecting again.
+              
+              If that fails, log into the account with the vanilla MC launcher and join a server. Then try again with ZenithProxy.
+              
+              Another possible cause is your microsoft account needing to have a password (re)set. Usually only possible if you are using email codes to log in instead of passwords.
+              """)
             .errorColor()
             .addField("Help", "Try waiting and connecting again.", false);
         if (CONFIG.discord.mentionRoleOnLoginFailed) {

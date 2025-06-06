@@ -27,6 +27,7 @@ public class LoginPostHandler implements PostOutgoingPacketHandler<ClientboundLo
         if (session.isLoggedIn())
             return; // servers can send multiple login packets during world or skin switches
         checkDisableServerVia(session);
+        Proxy.getInstance().getClient().sendAsync(session.getClientInfoCache().getClientInfoPacket());
         session.setLoggedIn(); // allows server packets to start being sent to player
         EVENT_BUS.postAsync(new PlayerLoginEvent.Post(session));
         DataCache.sendCacheData(CACHE.getAllData(), session);

@@ -20,14 +20,15 @@ public class EmbedSerializer {
     // `code` -> code
     // ```code block``` -> code block
     // [link](url) -> text with click event
+    // ||spoiler|| -> spoiler
     // there's more we don't currently use that aren't implemented here
-    private static final Pattern DISCORD_FORMATTING_REGEX = Pattern.compile("(\\*\\*(.+?)\\*\\*)|(```(.+?)```)|(`(.+?)`)|(\\[(.+?)]\\((.+?)\\))");
+    private static final Pattern DISCORD_FORMATTING_REGEX = Pattern.compile("(\\*\\*(.+?)\\*\\*)|(```(.+?)```)|(`(.+?)`)|(\\[(.+?)]\\((.+?)\\))|(\\|\\|(.+?)\\|\\|)");
 
     public static Component serialize(final Embed embed) {
         var c = Component.text()
             .appendNewline();
         if (embed.isTitlePresent()) {
-            c.append(Component.text(embed.title()).decorate(TextDecoration.BOLD));
+            c.append(serializeText(embed.title()).decorate(TextDecoration.BOLD));
             if (embed.isDescriptionPresent() || embed.isUrlPresent() || !embed.fields().isEmpty())
                 c.appendNewline();
         }
@@ -69,7 +70,9 @@ public class EmbedSerializer {
         });
     }
 
-    public static Component serializeText(final String text) {
+    public static Component serializeText(String text) {
+        /** replace escaped underscores from {@link DiscordBot#escape(String)} **/
+        text = text.replaceAll("\\\\_", "_");
         var matcher = DISCORD_FORMATTING_REGEX.matcher(text);
         var component = Component.text();
         var lastEnd = 0;
@@ -87,8 +90,11 @@ public class EmbedSerializer {
                 component.append(Component.text(matcher.group(6)).color(NamedTextColor.GRAY));
             } else if (matcher.group(8) != null) {
                 component.append(Component.text(matcher.group(8)).color(NamedTextColor.BLUE)
-                                     .clickEvent(ClickEvent.openUrl(matcher.group(9)))
-                                     .hoverEvent(HoverEvent.showText(Component.text(matcher.group(9)))));
+                    .clickEvent(ClickEvent.openUrl(matcher.group(9)))
+                    .hoverEvent(HoverEvent.showText(Component.text(matcher.group(9)))));
+            } else if (matcher.group(11) != null) {
+                component.append(Component.text(matcher.group(11)))
+                                     .decorate(TextDecoration.ITALIC);
             }
             lastEnd = end;
         }

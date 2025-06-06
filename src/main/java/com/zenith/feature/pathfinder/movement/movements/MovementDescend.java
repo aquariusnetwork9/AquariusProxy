@@ -181,7 +181,7 @@ public class MovementDescend extends Movement {
             if (!MovementHelper.canWalkOn(context, destX, newY, destZ, ontoBlock)) {
                 return false;
             }
-            if (MovementHelper.isBottomSlab(ontoBlock)) {
+            if (BlockStateInterface.isBottomSlab(ontoBlock)) {
                 return false; // falling onto a half slab is really glitchy, and can cause more fall damage than we'd expect
             }
             if (reachedMinimum) {
