@@ -227,19 +227,6 @@ public class Proxy {
                 DEFAULT_LOG.info("Proxy IP: {}", CONFIG.server.getProxyAddress());
                 DEFAULT_LOG.info("Use the `connect` command to log in!");
             }
-            if (CONFIG.deprecationWarning_1_21_4) {
-                DISCORD.sendEmbedMessage(Embed.builder()
-                    .title("1.21.4 Deprecated")
-                    .description("""
-                         **ZenithProxy for 1.21.4 has been deprecated and will no longer receive updates or support.**
-                         
-                         Update to 1.21.5: `channel set <java/linux> 1.21.5`
-                         
-                         To disable this warning: `debug deprecationWarning off`
-                         """)
-                    .errorColor()
-                );
-            }
             Wait.waitSpinLoop();
         } catch (Exception e) {
             DEFAULT_LOG.error("", e);

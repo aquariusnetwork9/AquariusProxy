@@ -33,7 +33,6 @@ public class DebugCommand extends Command {
             Debug settings for features in testing or for use in development.
             """)
             .usageLines(
-                "deprecationWarning on/off",
                 "sync inventory",
                 "sync chunks",
                 "clearEffects",
@@ -163,11 +162,6 @@ public class DebugCommand extends Command {
                     .title("Binary NBT Component Serializer " + toggleStrCaps(MinecraftTypes.useBinaryNbtComponentSerializer));
                 return OK;
             })))
-            .then(literal("deprecationWarning").then(argument("toggle", toggle()).executes(c -> {
-                CONFIG.deprecationWarning_1_21_4 = getToggle(c, "toggle");
-                c.getSource().getEmbed()
-                    .title("Deprecation Warning " + toggleStrCaps(CONFIG.deprecationWarning_1_21_4));
-            })))
             .then(literal("defaultClientRenderDistance").then(argument("dist", integer(1, 256)).executes(c -> {
                 CONFIG.client.defaultClientRenderDistance = getInteger(c, "dist");
                 c.getSource().getEmbed()
@@ -178,7 +172,6 @@ public class DebugCommand extends Command {
     @Override
     public void defaultEmbed(final Embed builder) {
         builder
-            .addField("Deprecation Warning", toggleStr(CONFIG.deprecationWarning_1_21_4), false)
             .addField("Packet Log", toggleStr(CONFIG.debug.packetLog.enabled), false)
             .addField("Client Packet Log", toggleStr(CONFIG.debug.packetLog.clientPacketLog.received), false)
             .addField("Server Packet Log", toggleStr(CONFIG.debug.packetLog.serverPacketLog.received), false)
@@ -186,7 +179,6 @@ public class DebugCommand extends Command {
             .addField("Kick Disconnect", toggleStr(CONFIG.debug.kickDisconnect), false)
             .addField("Debug Logs", toggleStr(CONFIG.debug.debugLogs), false)
             .addField("Chunk Cache Fullbright", toggleStr(CONFIG.debug.server.cache.fullbrightChunkBlocklight), false)
-            .addField("Default Client Render Distance", CONFIG.client.defaultClientRenderDistance)
             .primaryColor();
     }
 }
