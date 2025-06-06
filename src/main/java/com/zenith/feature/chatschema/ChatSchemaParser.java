@@ -45,14 +45,18 @@ public class ChatSchemaParser {
         return null;
     }
 
-    private static ChatSchema getSchema() {
+    public static ChatSchema getSchema() {
         return CONFIG.client.chatSchemas.serverSchemas.getOrDefault(
             getServerAddress(),
             ChatSchema.DEFAULT_SCHEMA
         );
     }
 
-    private static String getServerAddress() {
+    public static boolean hasCustomSchema() {
+        return CONFIG.client.chatSchemas.serverSchemas.containsKey(getServerAddress());
+    }
+
+    public static String getServerAddress() {
         var connectedRemoteAddress = ((InetSocketAddress) Proxy.getInstance().getClient().getRemoteAddress());
         if (connectedRemoteAddress != null) {
             return connectedRemoteAddress.getHostString().toLowerCase().trim();
@@ -61,7 +65,7 @@ public class ChatSchemaParser {
         }
     }
 
-    private static @Nullable ChatParseResult tryParsePublicChat(String rawInput, String publicChatSchema) {
+    public static @Nullable ChatParseResult tryParsePublicChat(String rawInput, String publicChatSchema) {
         return tryParseChat(ChatType.PUBLIC_CHAT, rawInput, publicChatSchema);
     }
 
@@ -73,7 +77,7 @@ public class ChatSchemaParser {
         return tryParseChat(ChatType.WHISPER_INBOUND, rawInput, inboundWhisperSchema);
     }
 
-    private static @Nullable ChatParseResult tryParseChat(ChatType type, String rawInput, String inputSchema) {
+    public static @Nullable ChatParseResult tryParseChat(ChatType type, String rawInput, String inputSchema) {
         try {
             return tryParseChat0(type, rawInput, inputSchema);
         } catch (Exception e) {

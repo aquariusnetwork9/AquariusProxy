@@ -18,6 +18,7 @@ import com.zenith.feature.api.minotar.MinotarApi;
 import com.zenith.feature.autoupdater.AutoUpdater;
 import com.zenith.feature.autoupdater.NoOpAutoUpdater;
 import com.zenith.feature.autoupdater.RestAutoUpdater;
+import com.zenith.feature.chatschema.ChatSchemaParser;
 import com.zenith.feature.queue.Queue;
 import com.zenith.module.impl.AutoReconnect;
 import com.zenith.network.client.Authenticator;
@@ -709,6 +710,11 @@ public class Proxy {
     public void handleConnectEvent(ClientConnectEvent event) {
         this.connectTime = Instant.now();
         if (isOn2b2t()) EXECUTOR.execute(Queue::updateQueueStatusNow);
+        else {
+            if (!ChatSchemaParser.hasCustomSchema()) {
+                CLIENT_LOG.warn("No custom chat schema found for server: {}, setting one may be required for chats and whispers to parse correctly: `help chatSchema`", ChatSchemaParser.getServerAddress());
+            }
+        }
     }
 
     public void handleStartQueueEvent(QueueStartEvent event) {
