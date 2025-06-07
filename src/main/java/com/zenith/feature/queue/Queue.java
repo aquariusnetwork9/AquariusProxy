@@ -24,6 +24,7 @@ public class Queue {
     private volatile static Instant lastUpdate = Instant.EPOCH;
     private static QueueEtaEquationResponse queueEtaEquation = new QueueEtaEquationResponse(199.0, 0.840);
     private static Instant lastQueueEtaEquationUpdate = Instant.EPOCH;
+    private static Instant lastQueueApiUpdate = Instant.EPOCH;
 
     public static void start() {
         EXECUTOR.scheduleAtFixedRate(
@@ -59,7 +60,7 @@ public class Queue {
         lastUpdate = Instant.now();
         if (!pingUpdate()) {
             if (!apiUpdate()) {
-                SERVER_LOG.error("Failed updating queue status. Is the network down?");
+                SERVER_LOG.debug("Failed updating queue status. Is the network down?");
             }
         }
     }
@@ -110,18 +111,20 @@ public class Queue {
             queueStatus = new QueueStatus(prio, regular, ZonedDateTime.now().toEpochSecond());
             return true;
         } catch (final Exception e) {
-            SERVER_LOG.error("Failed updating queue with ping", e);
+            SERVER_LOG.debug("Failed updating queue with ping. 2b2t is likely offline", e);
             return false;
         }
     }
 
     private static boolean apiUpdate() {
+        if (lastQueueApiUpdate.isAfter(Instant.now().minus(Duration.ofMinutes(5)))) return true;
+        lastQueueApiUpdate = Instant.now();
         try {
             var response = VcApi.INSTANCE.getQueue().orElseThrow();
             queueStatus = new QueueStatus(response.prio(), response.regular(), response.time().toEpochSecond());
             return true;
         } catch (final Exception e) {
-            SERVER_LOG.error("Failed updating queue status from API", e);
+            SERVER_LOG.debug("Failed updating queue status from API", e);
             return false;
         }
     }
