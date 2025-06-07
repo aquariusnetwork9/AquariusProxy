@@ -27,7 +27,7 @@ import static com.zenith.Globals.*;
 import static java.util.Objects.nonNull;
 
 public class SystemChatHandler implements ClientEventLoopPacketHandler<ClientboundSystemChatPacket, ClientSession> {
-    private static final TextColor DEATH_MSG_COLOR_2b2t = TextColor.color(170, 0, 0);
+    private static final TextColor DEATH_MSG_COLOR_2b2t = NamedTextColor.DARK_AQUA;
     private final DeathMessagesParser deathMessagesHelper = new DeathMessagesParser();
 
     @Override
