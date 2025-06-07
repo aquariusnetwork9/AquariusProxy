@@ -55,7 +55,7 @@ public class AutoReply extends Module {
                 if (isNull(repliedPlayersCache.getIfPresent(event.sender().getName()))) {
                     repliedPlayersCache.put(event.sender().getName(), event.sender().getName());
                     // 236 char max ( 256 - 4(command) - 16(max name length) )
-                    sendClientPacketAsync(new ServerboundChatPacket("/w " + event.sender().getName() + " " + CONFIG.client.extra.autoReply.message.substring(0, Math.min(CONFIG.client.extra.autoReply.message.length(), 236))));
+                    sendClientPacketAsync(new ServerboundChatPacket("/msg " + event.sender().getName() + " " + CONFIG.client.extra.autoReply.message.substring(0, Math.min(CONFIG.client.extra.autoReply.message.length(), 236))));
                     this.lastReply = Instant.now();
                 }
             }
