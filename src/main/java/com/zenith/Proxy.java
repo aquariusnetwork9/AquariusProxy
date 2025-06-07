@@ -82,7 +82,6 @@ public class Proxy {
     @Getter protected static final Proxy instance = new Proxy();
     protected ClientSession client;
     protected TcpServer server;
-    protected final Authenticator authenticator = new Authenticator();
     protected byte[] serverIcon;
     protected final AtomicReference<ServerSession> currentPlayer = new AtomicReference<>();
     protected final FastArrayList<ServerSession> activeConnections = new FastArrayList<>(ServerSession.class);
@@ -503,7 +502,7 @@ public class Proxy {
     public Future<MinecraftProtocol> loginTask() {
         return EXECUTOR.submit(() -> {
             try {
-                return this.authenticator.login();
+                return Authenticator.INSTANCE.login();
             } catch (final Exception e) {
                 if (e instanceof InterruptedException) {
                     return null;
