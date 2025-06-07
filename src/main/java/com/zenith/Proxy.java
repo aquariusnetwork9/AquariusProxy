@@ -102,20 +102,17 @@ public class Proxy {
         Locale.setDefault(Locale.ENGLISH);
         SLF4JBridgeHandler.removeHandlersForRootLogger();
         SLF4JBridgeHandler.install();
-        if (System.getProperty("io.netty.allocator.type") == null)
-            // new adaptive alloc in netty 4.2 is causing out of memory errors with graalvm and 200M heap size
-            // there could be some netty config props that could help
-            // but for now revert back to pooled type used in netty 4.1
-            System.setProperty("io.netty.allocator.type", "pooled");
-        if (System.getProperty("reactor.schedulers.defaultPoolSize") == null)
-            System.setProperty("reactor.schedulers.defaultPoolSize", "1");
-        if (System.getProperty("io.netty.allocator.numHeapArenas") == null)
-            System.setProperty("io.netty.allocator.numHeapArenas", "2");
-        if (System.getProperty("io.netty.allocator.numDirectArenas") == null)
-            System.setProperty("io.netty.allocator.numDirectArenas", "2");
-        if (System.getProperty("io.netty.leakDetection.level") == null)
-            System.setProperty("io.netty.leakDetection.level", "disabled");
+        setPropertySafe("io.netty.allocator.type", "pooled");
+        setPropertySafe("reactor.schedulers.defaultPoolSize", "1");
+        setPropertySafe("io.netty.allocator.numHeapArenas", "2");
+        setPropertySafe("io.netty.allocator.numDirectArenas", "2");
+        setPropertySafe("io.netty.leakDetection.level", "disabled");
+        setPropertySafe("io.netty.noUnsafe", "false");
         instance.start();
+    }
+
+    private static void setPropertySafe(String key, String value) {
+        if (System.getProperty(key) == null) System.setProperty(key, value);
     }
 
     public void initEventHandlers() {
