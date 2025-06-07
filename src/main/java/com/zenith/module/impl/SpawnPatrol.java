@@ -262,7 +262,7 @@ public class SpawnPatrol extends Module {
             CONFIG.client.extra.spawnPatrol.goalX,
             CONFIG.client.extra.spawnPatrol.goalY,
             CONFIG.client.extra.spawnPatrol.goalZ,
-            (int) Math.pow(10, 2));
+            CONFIG.client.extra.spawnPatrol.maxPatrolRange * CONFIG.client.extra.spawnPatrol.maxPatrolRange);
         if (goal.isInGoal(
             MathHelper.floorI(CACHE.getPlayerCache().getX()),
             MathHelper.floorI(CACHE.getPlayerCache().getY()),
@@ -277,11 +277,15 @@ public class SpawnPatrol extends Module {
     }
 
     private void pathRandom() {
-        double randomXOff = ((Math.random() - 0.5) * 500);
-        randomXOff += Math.signum(randomXOff) * 100;
-        double randomZOff = ((Math.random() - 0.5) * 500);
-        randomZOff += Math.signum(randomZOff) * 100;
-        var goal = new GoalXZ(MathHelper.floorI(randomXOff + CACHE.getPlayerCache().getX()), MathHelper.floorI(randomZOff + CACHE.getPlayerCache().getZ()));
+        double maxRadius = CONFIG.client.extra.spawnPatrol.maxPatrolRange;
+        double radius = Math.max(maxRadius / 2, maxRadius * Math.random());
+        double angle = Math.random() * 2 * Math.PI;
+        double randomXOff = Math.cos(angle) * radius;
+        double randomZOff = Math.sin(angle) * radius;
+        var goal = new GoalXZ(
+                MathHelper.floorI(randomXOff + CONFIG.client.extra.spawnPatrol.goalX),
+                MathHelper.floorI(randomZOff + CONFIG.client.extra.spawnPatrol.goalZ)
+        );
         info("Pathing to {}", goal);
         BARITONE.pathTo(goal);
     }
