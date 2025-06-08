@@ -8,9 +8,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Warning: unstable interface
- * MC 1.21.4+ uses integer recipe id's instead of identifiers
- *
- * To find recipes, query `Globals.CACHE.getRecipeCache().getRecipeRegistry()`
+ * May change in future MC versions.
  */
 @Data
 @ApiStatus.Experimental

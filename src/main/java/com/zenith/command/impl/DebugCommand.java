@@ -150,6 +150,12 @@ public class DebugCommand extends Command {
                     .title("Debug Logs " + toggleStrCaps(CONFIG.debug.debugLogs));
                 return OK;
             })))
+            .then(literal("terminalDebugLogs").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.debug.terminalDebugLogs = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("Terminal Debug Logs " + toggleStrCaps(CONFIG.debug.terminalDebugLogs));
+                return OK;
+            })))
             .then(literal("chunkCacheFullbright").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.debug.server.cache.fullbrightChunkBlocklight = getToggle(c, "toggle");
                 c.getSource().getEmbed()
@@ -178,6 +184,7 @@ public class DebugCommand extends Command {
             .addField("Packet Log Filter", CONFIG.debug.packetLog.packetFilter, false)
             .addField("Kick Disconnect", toggleStr(CONFIG.debug.kickDisconnect), false)
             .addField("Debug Logs", toggleStr(CONFIG.debug.debugLogs), false)
+            .addField("Terminal Debug Logs", toggleStr(CONFIG.debug.terminalDebugLogs), false)
             .addField("Chunk Cache Fullbright", toggleStr(CONFIG.debug.server.cache.fullbrightChunkBlocklight), false)
             .addField("Default Client Render Distance", CONFIG.client.defaultClientRenderDistance)
             .primaryColor();

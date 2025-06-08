@@ -547,6 +547,7 @@ public final class Config {
         public boolean clearOldLogs = false;
         public boolean kickDisconnect = false;
         public boolean debugLogs = false;
+        public boolean terminalDebugLogs = false;
 
         public static final class PacketLog {
             public boolean enabled = false;
