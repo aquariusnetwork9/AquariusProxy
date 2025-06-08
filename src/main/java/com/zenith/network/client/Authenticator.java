@@ -38,6 +38,8 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 @Getter
 public class Authenticator {
+    public static final Authenticator INSTANCE = new Authenticator();
+
     private ScheduledFuture<?> refreshTask;
     private int refreshTryCount = 0;
     @Getter(lazy = true) private final StepFullJavaSession deviceCodeAuthStep = MinecraftAuth.builder()

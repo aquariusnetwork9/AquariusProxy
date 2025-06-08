@@ -42,7 +42,8 @@ public class ChatSchemaCommand extends Command {
             .usageLines(
                 "set <publicChat/whisperInbound/whisperOutbound> <serverAddress> <schema>",
                 "preset <serverAddress> <2b2t/essentials>",
-                "del <serverAddress>"
+                "del <serverAddress>",
+                "list"
             )
             .build();
     }
@@ -113,7 +114,11 @@ public class ChatSchemaCommand extends Command {
                     CONFIG.client.chatSchemas.serverSchemas.put(serverAddress, schemaEssentials);
                     c.getSource().getEmbed()
                         .title("Essentials Schema Set");
-                }))));
+                }))))
+            .then(literal("list").executes(c -> {
+                c.getSource().getEmbed()
+                    .title("Chat Schemas");
+            }));
     }
 
     @Override
@@ -140,9 +145,9 @@ public class ChatSchemaCommand extends Command {
 
     private String printSchema(ChatSchema schema) {
         return """
-              * Public Chat: `%s`
-              * Whisper Inbound: `%s`
-              * Whisper Outbound: `%s`
+            * Public Chat: `%s`
+            * Whisper Inbound: `%s`
+            * Whisper Outbound: `%s`
             """.formatted(
             schema.publicChat(),
             schema.whisperInbound(),

@@ -35,7 +35,7 @@ dependencies {
     api("com.github.rfresh2:MCProtocolLib:$mcplVersion") {
         exclude(group = "io.netty")
     }
-    val nettyVersion = "4.2.1.Final"
+    val nettyVersion = "4.2.2.Final"
     api("io.netty:netty-buffer:$nettyVersion")
     api("io.netty:netty-codec-haproxy:$nettyVersion")
     api("io.netty:netty-codec-dns:$nettyVersion")
@@ -124,7 +124,10 @@ tasks {
         mainClass.set("com.zenith.Proxy")
         val args = mutableListOf("-Xmx300m", "-XX:+UseG1GC")
         if (javaLauncher.get().metadata.languageVersion.asInt() == 24)
-            args.addAll(listOf("-XX:+UnlockExperimentalVMOptions", "-XX:+UseCompactObjectHeaders"))
+            args.addAll(listOf(
+                "-XX:+UnlockExperimentalVMOptions", "-XX:+UseCompactObjectHeaders",
+                "--enable-native-access=ALL-UNNAMED", "--sun-misc-unsafe-memory-access=allow"
+            ))
         jvmArgs = args
         standardInput = System.`in`
         environment("ZENITH_DEV", "true")

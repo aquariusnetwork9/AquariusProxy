@@ -4,6 +4,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
 import com.zenith.command.api.*;
 import com.zenith.discord.Embed;
+import com.zenith.network.client.Authenticator;
 import com.zenith.util.config.Config;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
@@ -62,7 +63,7 @@ public class AuthCommand extends Command {
              */
             .then(literal("clear").executes(c -> {
                 Proxy.getInstance().cancelLogin();
-                Proxy.getInstance().getAuthenticator().clearAuthCache();
+                Authenticator.INSTANCE.clearAuthCache();
                 c.getSource().getEmbed()
                     .title("Authentication Cleared")
                     .description("Cached tokens and authentication state cleared. Full re-auth will occur on next login.")
@@ -103,7 +104,7 @@ public class AuthCommand extends Command {
                               .title("Authentication Type Set")
                               .primaryColor();
                           Proxy.getInstance().cancelLogin();
-                          Proxy.getInstance().getAuthenticator().clearAuthCache();
+                          Authenticator.INSTANCE.clearAuthCache();
                           return OK;
                       })))
             .then(literal("email").requires(this::validateTerminalSource)

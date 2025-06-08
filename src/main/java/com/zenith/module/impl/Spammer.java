@@ -71,8 +71,8 @@ public class Spammer extends Module {
         if (CONFIG.client.extra.spammer.whisper) {
             String player = getNextPlayer();
             if (player != null) {
-                debug("> /w {} {}", player, CONFIG.client.extra.spammer.messages.get(spamIndex));
-                sendClientPacketAsync(new ServerboundChatPacket("/w " + player + " " + CONFIG.client.extra.spammer.messages.get(spamIndex) + (CONFIG.client.extra.spammer.appendRandom ? " " + UUID.randomUUID().toString().substring(0, 6) : "")));
+                debug("> /msg {} {}", player, CONFIG.client.extra.spammer.messages.get(spamIndex));
+                sendClientPacketAsync(new ServerboundChatPacket("/msg " + player + " " + CONFIG.client.extra.spammer.messages.get(spamIndex) + (CONFIG.client.extra.spammer.appendRandom ? " " + UUID.randomUUID().toString().substring(0, 6) : "")));
             }
         } else {
             debug("> {}", CONFIG.client.extra.spammer.messages.get(spamIndex));

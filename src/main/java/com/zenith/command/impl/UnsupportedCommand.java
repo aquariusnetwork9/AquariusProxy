@@ -4,6 +4,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
 import com.zenith.command.api.*;
 import com.zenith.discord.Embed;
+import com.zenith.network.client.Authenticator;
 
 import static com.zenith.Globals.CONFIG;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
@@ -61,21 +62,21 @@ public class UnsupportedCommand extends Command {
                 return OK;
             })))
             .then(literal("auth")
-                      .then(literal("type").then(literal("offline").executes(c -> {
-                          CONFIG.authentication.accountType = OFFLINE;
-                            c.getSource().getEmbed()
-                                .title("Authentication Type Set");
-                          Proxy.getInstance().cancelLogin();
-                          Proxy.getInstance().getAuthenticator().clearAuthCache();
-                      })))
-                      .then(literal("offlineUsername").then(argument("username", wordWithChars()).executes(c -> {
-                            CONFIG.authentication.username = getString(c, "username");
-                            c.getSource().getEmbed()
-                                .title("Offline Username Set");
-                            Proxy.getInstance().cancelLogin();
-                            Proxy.getInstance().getAuthenticator().clearAuthCache();
-                            return OK;
-                      }))));
+                .then(literal("type").then(literal("offline").executes(c -> {
+                    CONFIG.authentication.accountType = OFFLINE;
+                    c.getSource().getEmbed()
+                        .title("Authentication Type Set");
+                    Proxy.getInstance().cancelLogin();
+                    Authenticator.INSTANCE.clearAuthCache();
+                })))
+                .then(literal("offlineUsername").then(argument("username", wordWithChars()).executes(c -> {
+                    CONFIG.authentication.username = getString(c, "username");
+                    c.getSource().getEmbed()
+                        .title("Offline Username Set");
+                    Proxy.getInstance().cancelLogin();
+                    Authenticator.INSTANCE.clearAuthCache();
+                    return OK;
+                }))));
     }
 
     @Override
