@@ -262,7 +262,7 @@ public class SpawnPatrol extends Module {
             CONFIG.client.extra.spawnPatrol.goalX,
             CONFIG.client.extra.spawnPatrol.goalY,
             CONFIG.client.extra.spawnPatrol.goalZ,
-            CONFIG.client.extra.spawnPatrol.maxPatrolRange * CONFIG.client.extra.spawnPatrol.maxPatrolRange);
+            (int) Math.pow(10, 2));
         if (goal.isInGoal(
             MathHelper.floorI(CACHE.getPlayerCache().getX()),
             MathHelper.floorI(CACHE.getPlayerCache().getY()),
@@ -277,8 +277,8 @@ public class SpawnPatrol extends Module {
     }
 
     private void pathRandom() {
-        double maxRadius = CONFIG.client.extra.spawnPatrol.maxPatrolRange;
-        double radius = Math.max(maxRadius / 2, maxRadius * Math.random());
+        double range = (double) CONFIG.client.extra.spawnPatrol.maxPatrolRange / 2;
+        double radius = (range * Math.random()) + range;
         double angle = Math.random() * 2 * Math.PI;
         double randomXOff = Math.cos(angle) * radius;
         double randomZOff = Math.sin(angle) * radius;
