@@ -13,6 +13,7 @@ import static com.zenith.Globals.*;
 import static com.zenith.feature.deathmessages.DeathMessageSchemaInstance.spaceSplit;
 
 public class DeathMessagesParser {
+    public static final DeathMessagesParser INSTANCE = new DeathMessagesParser();
     private static final List<DeathMessageSchemaInstance> deathMessageSchemaInstances = new ArrayList<>();
     private static final List<String> mobs = new ArrayList<>();
     static {

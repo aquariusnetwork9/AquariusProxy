@@ -28,7 +28,6 @@ import static java.util.Objects.nonNull;
 
 public class SystemChatHandler implements ClientEventLoopPacketHandler<ClientboundSystemChatPacket, ClientSession> {
     private static final TextColor DEATH_MSG_COLOR_2b2t = NamedTextColor.DARK_AQUA;
-    private final DeathMessagesParser deathMessagesHelper = new DeathMessagesParser();
 
     @Override
     public boolean applyAsync(@NonNull ClientboundSystemChatPacket packet, @NonNull ClientSession session) {
@@ -100,7 +99,7 @@ public class SystemChatHandler implements ClientEventLoopPacketHandler<Clientbou
     private Optional<DeathMessageParseResult> parseDeathMessage2b2t(final Component component, final String messageString) {
         if (component.children().stream().anyMatch(child -> nonNull(child.color())
             && Objects.equals(child.color(), DEATH_MSG_COLOR_2b2t))) { // death message color on 2b
-            var deathMessage = deathMessagesHelper.parse(component, messageString);
+            var deathMessage = DeathMessagesParser.INSTANCE.parse(component, messageString);
             if (deathMessage.isPresent()) {
                 if (deathMessage.get().victim().equals(CACHE.getProfileCache().getProfile().getName())) {
                     EVENT_BUS.postAsync(new ClientDeathMessageEvent(messageString));
