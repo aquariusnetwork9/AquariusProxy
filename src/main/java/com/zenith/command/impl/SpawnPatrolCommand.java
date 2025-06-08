@@ -31,6 +31,7 @@ public class SpawnPatrolCommand extends Command {
             .usageLines(
                 "on/off",
                 "goal <x> <y> <z>",
+                "maxPatrolRange <blocks>",
                 "targetOnlyNakeds on/off",
                 "stickyTargeting on/off",
                 "targetAttackers on/off",
@@ -64,6 +65,12 @@ public class SpawnPatrolCommand extends Command {
                 CONFIG.client.extra.spawnPatrol.goalZ = pos.z();
                 c.getSource().getEmbed()
                     .title("Goal Set");
+            })))
+            .then(literal("maxPatrolRange").then(argument("blocks", integer(10)).executes(c -> {
+                CONFIG.client.extra.spawnPatrol.maxPatrolRange = getInteger(c, "blocks");
+                c.getSource().getEmbed()
+                    .title("Max Patrol Range Set");
+                return OK;
             })))
             .then(literal("targetOnlyNakeds").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.spawnPatrol.targetOnlyNakeds = getToggle(c, "toggle");
@@ -174,6 +181,7 @@ public class SpawnPatrolCommand extends Command {
             embed
                 .addField("SpawnPatrol", toggleStr(CONFIG.client.extra.spawnPatrol.enabled), false)
                 .addField("Goal", CONFIG.client.extra.spawnPatrol.goalX + ", " + CONFIG.client.extra.spawnPatrol.goalY + ", " + CONFIG.client.extra.spawnPatrol.goalZ, false)
+                .addField("Max Patrol Range", CONFIG.client.extra.spawnPatrol.maxPatrolRange, false)
                 .addField("Target Only Nakeds", toggleStr(CONFIG.client.extra.spawnPatrol.targetOnlyNakeds), false)
                 .addField("Sticky Targeting", toggleStr(CONFIG.client.extra.spawnPatrol.stickyTargeting), false)
                 .addField("Target Attackers", toggleStr(CONFIG.client.extra.spawnPatrol.targetAttackers), false)

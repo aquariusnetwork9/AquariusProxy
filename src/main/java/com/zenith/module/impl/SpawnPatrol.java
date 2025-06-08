@@ -277,11 +277,15 @@ public class SpawnPatrol extends Module {
     }
 
     private void pathRandom() {
-        double randomXOff = ((Math.random() - 0.5) * 500);
-        randomXOff += Math.signum(randomXOff) * 100;
-        double randomZOff = ((Math.random() - 0.5) * 500);
-        randomZOff += Math.signum(randomZOff) * 100;
-        var goal = new GoalXZ(MathHelper.floorI(randomXOff + CACHE.getPlayerCache().getX()), MathHelper.floorI(randomZOff + CACHE.getPlayerCache().getZ()));
+        double range = CONFIG.client.extra.spawnPatrol.maxPatrolRange;
+        double randomRange = ThreadLocalRandom.current().nextDouble(range / 2, range);
+        double angle = ThreadLocalRandom.current().nextDouble(0, Math.PI * 2);
+        double randomXOff = Math.cos(angle) * randomRange;
+        double randomZOff = Math.sin(angle) * randomRange;
+        var goal = new GoalXZ(
+            MathHelper.floorI(randomXOff + CONFIG.client.extra.spawnPatrol.goalX),
+            MathHelper.floorI(randomZOff + CONFIG.client.extra.spawnPatrol.goalZ)
+        );
         info("Pathing to {}", goal);
         BARITONE.pathTo(goal);
     }

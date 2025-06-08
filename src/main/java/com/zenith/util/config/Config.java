@@ -238,6 +238,7 @@ public final class Config {
                 public int goalX = 0;
                 public int goalY = 120;
                 public int goalZ = 0;
+                public int maxPatrolRange = 500;
                 public final ArrayList<PlayerEntry> ignoreList = new ArrayList<>();
             }
 
