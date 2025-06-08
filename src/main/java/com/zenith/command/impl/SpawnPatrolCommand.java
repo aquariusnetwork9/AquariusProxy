@@ -66,10 +66,10 @@ public class SpawnPatrolCommand extends Command {
                 c.getSource().getEmbed()
                     .title("Goal Set");
             })))
-            .then(literal("maxPatrolRange").then(argument("blocks", integer()).executes(c -> {
+            .then(literal("maxPatrolRange").then(argument("blocks", integer(10)).executes(c -> {
                 CONFIG.client.extra.spawnPatrol.maxPatrolRange = getInteger(c, "blocks");
                 c.getSource().getEmbed()
-                    .title("Max Patrol Range " + CONFIG.client.extra.spawnPatrol.maxPatrolRange);
+                    .title("Max Patrol Range Set");
                 return OK;
             })))
             .then(literal("targetOnlyNakeds").then(argument("toggle", toggle()).executes(c -> {
