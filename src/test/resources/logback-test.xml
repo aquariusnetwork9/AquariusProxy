@@ -19,6 +19,7 @@
         <encoder class="com.zenith.terminal.logback.MCTextFormatANSIEncoder">
             <pattern>[%d{yyyy/MM/dd HH:mm:ss}] [%logger{36}] [%level] %minecraftText%n</pattern>
         </encoder>
+        <filter class="com.zenith.terminal.logback.LogSourceFilter"/>
         <filter class="ThresholdFilter">
             <level>INFO</level>
         </filter>

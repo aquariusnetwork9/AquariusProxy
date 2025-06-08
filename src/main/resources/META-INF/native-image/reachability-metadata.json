@@ -2094,6 +2094,15 @@
       ]
     },
     {
+      "type": "com.zenith.terminal.logback.LogSourceFilter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "com.zenith.terminal.logback.PrintOnlyErrorLogbackStatusListener",
       "methods": [
         {
@@ -2113,6 +2122,15 @@
     },
     {
       "type": "com.zenith.terminal.logback.TerminalConsoleAppender",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.zenith.terminal.logback.TerminalDebugLogFilter",
       "methods": [
         {
           "name": "<init>",
