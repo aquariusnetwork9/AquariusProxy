@@ -3,6 +3,7 @@ package com.zenith.network.client.handler.outgoing;
 import com.zenith.event.module.OutboundChatEvent;
 import com.zenith.network.client.ClientSession;
 import com.zenith.network.codec.PacketHandler;
+import com.zenith.util.ChatUtil;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandSignedPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
@@ -18,9 +19,7 @@ public class OutgoingChatHandler implements PacketHandler<ServerboundChatPacket,
             String message = packet.getMessage();
             String commandFull = message.substring(1, (Math.min(message.length(), 257)));
             String command = commandFull.split(" ")[0];
-            if (CACHE.getChatCache().canUseChatSigning() && CONFIG.client.chatSigning.signWhispers
-                && ("w".equals(command) || "whisper".equals(command) || "msg".equals(command) || "tell".equals(command) || "minecraft:msg".equals(command))
-            ) {
+            if (CACHE.getChatCache().canUseChatSigning() && CONFIG.client.chatSigning.signWhispers && ChatUtil.isWhisperCommand(command)) {
                 session.send(new ServerboundChatCommandSignedPacket(commandFull));
             } else {
                 session.send(new ServerboundChatCommandPacket(commandFull));

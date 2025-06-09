@@ -80,7 +80,7 @@ public class ChatRelayEventListener {
                             break;
                         }
                     }
-                    if (!pm) Proxy.getInstance().getClient().sendAsync(new ServerboundChatPacket("/msg " + sender + " " + event.message()));
+                    if (!pm) Proxy.getInstance().getClient().sendAsync(new ServerboundChatPacket("/" + CONFIG.client.extra.whisperCommand + " " + sender + " " + event.message()));
                 }
             } catch (final Exception e) {
                 DISCORD_LOG.error("Error performing chat relay reply", e);

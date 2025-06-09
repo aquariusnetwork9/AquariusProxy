@@ -14,7 +14,8 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static com.github.rfresh2.EventConsumer.of;
-import static com.zenith.Globals.*;
+import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.DISCORD;
 import static java.util.Objects.isNull;
 
 public class AutoReply extends Module {
@@ -55,12 +56,12 @@ public class AutoReply extends Module {
                 if (isNull(repliedPlayersCache.getIfPresent(event.sender().getName()))) {
                     repliedPlayersCache.put(event.sender().getName(), event.sender().getName());
                     // 236 char max ( 256 - 4(command) - 16(max name length) )
-                    sendClientPacketAsync(new ServerboundChatPacket("/msg " + event.sender().getName() + " " + CONFIG.client.extra.autoReply.message.substring(0, Math.min(CONFIG.client.extra.autoReply.message.length(), 236))));
+                    sendClientPacketAsync(new ServerboundChatPacket("/" + CONFIG.client.extra.whisperCommand + " " + event.sender().getName() + " " + CONFIG.client.extra.autoReply.message.substring(0, Math.min(CONFIG.client.extra.autoReply.message.length(), 236))));
                     this.lastReply = Instant.now();
                 }
             }
         } catch (final Throwable e) {
-            CLIENT_LOG.error("AutoReply Failed", e);
+            error("AutoReply Failed", e);
         }
     }
 }

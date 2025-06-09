@@ -5,7 +5,7 @@ import com.zenith.Proxy;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.event.module.*;
 import com.zenith.module.api.Module;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 
 import java.time.Instant;
 import java.util.List;
@@ -57,7 +57,7 @@ public class VisualRange extends Module {
         if (CONFIG.client.extra.visualRange.enterWhisperWhilePlayerConnected && Proxy.getInstance().hasActivePlayer()) return;
         if (Instant.now().minusSeconds(CONFIG.client.extra.visualRange.enterWhisperCooldownSeconds).isBefore(lastWhisper)) return;
         lastWhisper = Instant.now();
-        sendClientPacketAsync(new ServerboundChatCommandPacket(CONFIG.client.extra.visualRange.enterWhisperCommand +  " " + event.playerEntry().getName() + " " + CONFIG.client.extra.visualRange.enterWhisperMessage));
+        sendClientPacketAsync(new ServerboundChatPacket("/" + CONFIG.client.extra.whisperCommand +  " " + event.playerEntry().getName() + " " + CONFIG.client.extra.visualRange.enterWhisperMessage));
     }
 
     public void handlePlayerLeftVisualRangeEvent(final ServerPlayerLeftVisualRangeEvent event) {
