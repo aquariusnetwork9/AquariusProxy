@@ -11,6 +11,7 @@ import com.zenith.event.server.ServerPlayerConnectedEvent;
 import com.zenith.event.server.ServerPlayerDisconnectedEvent;
 import com.zenith.feature.deathmessages.DeathMessageParseResult;
 import com.zenith.feature.deathmessages.KillerType;
+import com.zenith.util.ChatUtil;
 import com.zenith.util.ComponentSerializer;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
@@ -80,7 +81,9 @@ public class ChatRelayEventListener {
                             break;
                         }
                     }
-                    if (!pm) Proxy.getInstance().getClient().sendAsync(new ServerboundChatPacket("/msg " + sender + " " + event.message()));
+                    if (!pm) {
+                        Proxy.getInstance().getClient().sendAsync(ChatUtil.getWhisperChatPacket(sender, event.message()));
+                    }
                 }
             } catch (final Exception e) {
                 DISCORD_LOG.error("Error performing chat relay reply", e);

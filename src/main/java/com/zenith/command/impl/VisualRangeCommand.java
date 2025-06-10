@@ -8,6 +8,7 @@ import com.zenith.command.api.CommandContext;
 import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import com.zenith.module.impl.VisualRange;
+import com.zenith.util.ChatUtil;
 import com.zenith.util.config.Config;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 
@@ -19,7 +20,6 @@ import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 import static com.zenith.Globals.*;
-import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 import static com.zenith.discord.DiscordBot.escape;
@@ -129,7 +129,7 @@ public class VisualRangeCommand extends Command {
                     }))
                     .then(literal("message").then(argument("message", greedyString()).executes(c -> {
                         var msg = getString(c, "message");
-                        CONFIG.client.extra.visualRange.enterWhisperMessage = msg.substring(0, Math.min(msg.length(), 236));
+                        CONFIG.client.extra.visualRange.enterWhisperMessage = ChatUtil.sanitizeChatMessage(msg.substring(0, Math.min(msg.length(), 236)));
                         c.getSource().getEmbed()
                             .title("VisualRange Enter Whisper Message Set");
                         return OK;
@@ -138,18 +138,6 @@ public class VisualRangeCommand extends Command {
                         CONFIG.client.extra.visualRange.enterWhisperCooldownSeconds = getInteger(c, "seconds");
                         c.getSource().getEmbed()
                             .title("VisualRange Enter Whisper Cooldown Set");
-                        return OK;
-                    })))
-                    .then(literal("command").then(argument("cmd", wordWithChars()).executes(c -> {
-                        var cmd = getString(c, "cmd").toLowerCase().trim();
-                        if (cmd.isBlank()) {
-                            c.getSource().getEmbed()
-                                .title("Command Cannot Be Blank");
-                            return ERROR;
-                        }
-                        CONFIG.client.extra.visualRange.enterWhisperCommand = cmd;
-                        c.getSource().getEmbed()
-                            .title("VisualRange Enter Whisper Command Set");
                         return OK;
                     })))))
             .then(literal("ignoreFriends")
@@ -215,7 +203,6 @@ public class VisualRangeCommand extends Command {
             .addField("Enter Whisper", toggleStr(CONFIG.client.extra.visualRange.enterWhisper))
             .addField("Enter Whisper Message", escape(CONFIG.client.extra.visualRange.enterWhisperMessage))
             .addField("Enter Whisper Cooldown", CONFIG.client.extra.visualRange.enterWhisperCooldownSeconds + "s")
-            .addField("Enter Whisper Command", CONFIG.client.extra.visualRange.enterWhisperCommand)
             .addField("Ignore Friends", toggleStr(CONFIG.client.extra.visualRange.ignoreFriends))
             .addField("Leave Alerts", toggleStr(CONFIG.client.extra.visualRange.leaveAlert))
             .addField("Logout Alerts", toggleStr(CONFIG.client.extra.visualRange.logoutAlert))

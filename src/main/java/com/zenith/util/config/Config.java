@@ -152,6 +152,7 @@ public final class Config {
             public final Pathfinder pathfinder = new Pathfinder();
             public final SpawnPatrol spawnPatrol = new SpawnPatrol();
             public final PearlLoader pearlLoader = new PearlLoader();
+            public String whisperCommand = "msg";
 
             public static final class PearlLoader {
                 public ArrayList<Pearl> pearls = new ArrayList<>();
@@ -260,7 +261,6 @@ public final class Config {
                 public boolean leaveAlert = true;
                 public boolean logoutAlert = true;
                 public boolean enterWhisper = false;
-                public String enterWhisperCommand = "msg";
                 public String enterWhisperMessage = "Hello, I am using ZenithProxy! I have alerted my owner that you are here!";
                 public int enterWhisperCooldownSeconds = 30;
                 public boolean enterWhisperWhilePlayerConnected = false;

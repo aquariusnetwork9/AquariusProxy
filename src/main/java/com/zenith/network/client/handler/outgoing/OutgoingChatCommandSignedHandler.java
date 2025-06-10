@@ -2,6 +2,7 @@ package com.zenith.network.client.handler.outgoing;
 
 import com.zenith.network.client.ClientSession;
 import com.zenith.network.codec.PacketHandler;
+import com.zenith.util.ChatUtil;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandSignedPacket;
 
 import java.util.BitSet;
@@ -17,7 +18,7 @@ public class OutgoingChatCommandSignedHandler implements PacketHandler<Serverbou
         CACHE.getChatCache().setLastChatTimestamp(packet.getTimeStamp());
         if (CACHE.getChatCache().canUseChatSigning() && CONFIG.client.chatSigning.signWhispers) {
             String command = packet.getCommand().split(" ")[0].toLowerCase();
-            if ("w".equals(command) || "whisper".equals(command) || "msg".equals(command) || "tell".equals(command) || "minecraft:msg".equals(command)) {
+            if (ChatUtil.isWhisperCommand(command)) {
                 var signedWhisper = new ServerboundChatCommandSignedPacket(packet.getCommand(), packet.getTimeStamp(), 0, packet.getSignatures(), 0, BitSet.valueOf(new byte[20]));
                 CACHE.getChatCache().getChatSession().sign(signedWhisper);
                 return signedWhisper;

@@ -1867,7 +1867,29 @@
     },
     {
       "type": "com.zenith.feature.chatschema.ChatSchema",
-      "allDeclaredFields": true
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "publicChat",
+          "parameterTypes": []
+        },
+        {
+          "name": "whisperInbound",
+          "parameterTypes": []
+        },
+        {
+          "name": "whisperOutbound",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "com.zenith.feature.queue.QueueStatus",
