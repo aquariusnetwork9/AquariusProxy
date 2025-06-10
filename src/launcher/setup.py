@@ -29,22 +29,24 @@ def setup_execute(config):
         release_channel = "java"
     print("")
 
-    # while True:
-    #     print("Select a Minecraft version: (1/2)")
-    #     print("1. 1.20.4")
-    #     print("2. 1.21.0")
-    #     i1 = input("> ")
-    #     if i1 == "1":
-    #         minecraft_version = "1.20.4"
-    #         break
-    #     elif i1 == "2":
-    #         minecraft_version = "1.21.0"
-    #         break
-    #     else:
-    #         print("Invalid input. Enter 1 or 2")
-    # print("")
-
-    minecraft_version = "1.21.0"
+    while True:
+        print("Select a Minecraft version: (1/2)")
+        print("1. 1.21.0")
+        print("2. 1.21.4")
+        print("3. 1.21.5")
+        i1 = input("> ")
+        if i1 == "1":
+            minecraft_version = "1.21.0"
+            break
+        elif i1 == "2":
+            minecraft_version = "1.21.4"
+            break
+        elif i1 == "3":
+            minecraft_version = "1.21.5"
+            break
+        else:
+            print("Invalid input. Enter 1, 2, or 3")
+    print("")
 
     config.auto_update = True
     config.auto_update_launcher = True
@@ -266,14 +268,32 @@ def setup_unattended(config):
     # check if launch_config.json exists
     if read_launch_config_file() is None:
         print("Creating unattended launch_config.json")
-        if validate_linux_system(config):
-            release_channel = "linux.1.21.0"
+        mc_version = os.getenv("ZENITH_MC_VERSION", "1.21.4")
+        if mc_version not in ["1.21.0", "1.21.4", "1.21.5"]:
+            critical_error("Invalid ZENITH_MC_VERSION. Must be one of: 1.21.0, 1.21.4, 1.21.5")
+        if os.getenv("ZENITH_PLATFORM") is not None:
+            platform = os.getenv("ZENITH_PLATFORM").lower()
+            if platform not in ["java", "linux"]:
+                critical_error("Invalid ZENITH_PLATFORM. Must be one of: java, linux")
+            config.release_channel = platform + "." + mc_version
+            if platform == "linux":
+                if not validate_linux_system(config):
+                    critical_error("Cannot use linux on current system")
+            elif platform == "java":
+                java_exec = get_java_executable(install_type=JavaInstallType.AUTO_INSTALL)
+                if java_exec is None:
+                    critical_error("Java not found and auto install failed")
+            else:
+                critical_error("Invalid ZENITH_PLATFORM. Must be one of: java, linux")
         else:
-            release_channel = "java.1.21.0"
-            java_exec = get_java_executable(install_type=JavaInstallType.AUTO_INSTALL)
-            if java_exec is None:
-                critical_error("Java not found and auto install failed")
-        config.release_channel = release_channel
+            config.release_channel = "java." + mc_version
+            if validate_linux_system(config):
+                config.release_channel = "linux." + mc_version
+            else:
+                config.release_channel = "java." + mc_version
+                java_exec = get_java_executable(install_type=JavaInstallType.AUTO_INSTALL)
+                if java_exec is None:
+                    critical_error("Java not found and auto install failed")
         config.write_launch_config()
     if not os.path.exists("config.json"):
         print("Creating unattended config.json")
