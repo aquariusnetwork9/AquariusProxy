@@ -92,5 +92,5 @@ class LaunchConfig:
         if (self.release_channel.find(".") == -1
                 or not self.release_channel.startswith("java")
                 or not self.release_channel.startswith("linux")):
-            return "1.21.0"
+            return "1.21.4"
         return self.release_channel[self.release_channel.find(".") + 1 :]
