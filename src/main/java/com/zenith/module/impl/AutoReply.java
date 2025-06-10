@@ -6,7 +6,7 @@ import com.google.common.cache.CacheBuilder;
 import com.zenith.Proxy;
 import com.zenith.event.chat.WhisperChatEvent;
 import com.zenith.module.api.Module;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
+import com.zenith.util.ChatUtil;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -48,20 +48,17 @@ public class AutoReply extends Module {
     private void handleWhisperChatEvent(WhisperChatEvent event) {
         if (Proxy.getInstance().hasActivePlayer()) return;
         if (event.outgoing()) return;
-        try {
-            if (!event.sender().getName().equalsIgnoreCase(CONFIG.authentication.username)
-                && Instant.now().minus(Duration.ofSeconds(1)).isAfter(lastReply)
-                && (DISCORD.lastRelayMessage.isEmpty()
-                || Instant.now().minus(Duration.ofSeconds(CONFIG.client.extra.autoReply.cooldownSeconds)).isAfter(DISCORD.lastRelayMessage.get()))) {
-                if (isNull(repliedPlayersCache.getIfPresent(event.sender().getName()))) {
-                    repliedPlayersCache.put(event.sender().getName(), event.sender().getName());
-                    // 236 char max ( 256 - 4(command) - 16(max name length) )
-                    sendClientPacketAsync(new ServerboundChatPacket("/" + CONFIG.client.extra.whisperCommand + " " + event.sender().getName() + " " + CONFIG.client.extra.autoReply.message.substring(0, Math.min(CONFIG.client.extra.autoReply.message.length(), 236))));
-                    this.lastReply = Instant.now();
-                }
+        if (!event.sender().getName().equalsIgnoreCase(CONFIG.authentication.username)
+            && Instant.now().minus(Duration.ofSeconds(1)).isAfter(lastReply)
+            && (DISCORD.lastRelayMessage.isEmpty()
+            || Instant.now().minus(Duration.ofSeconds(CONFIG.client.extra.autoReply.cooldownSeconds)).isAfter(DISCORD.lastRelayMessage.get()))) {
+            if (isNull(repliedPlayersCache.getIfPresent(event.sender().getName()))) {
+                repliedPlayersCache.put(event.sender().getName(), event.sender().getName());
+                sendClientPacketAsync(ChatUtil.getWhisperChatPacket(event.sender().getName(), CONFIG.client.extra.autoReply.message));
+                this.lastReply = Instant.now();
+            } else {
+                debug("Not sending reply to {} due to cooldown", event.sender().getName());
             }
-        } catch (final Throwable e) {
-            error("AutoReply Failed", e);
         }
     }
 }

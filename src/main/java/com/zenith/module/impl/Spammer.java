@@ -4,6 +4,7 @@ import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
 import com.zenith.event.client.ClientTickEvent;
 import com.zenith.module.api.Module;
+import com.zenith.util.ChatUtil;
 import com.zenith.util.timer.Timer;
 import com.zenith.util.timer.Timers;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
@@ -71,9 +72,9 @@ public class Spammer extends Module {
         if (CONFIG.client.extra.spammer.whisper) {
             String player = getNextPlayer();
             if (player != null) {
-                String cmd = "/" + CONFIG.client.extra.whisperCommand + " " + player + " " + CONFIG.client.extra.spammer.messages.get(spamIndex) + (CONFIG.client.extra.spammer.appendRandom ? " " + UUID.randomUUID().toString().substring(0, 6) : "");
-                debug("> {}", cmd);
-                sendClientPacketAsync(new ServerboundChatPacket(cmd));
+                var packet = ChatUtil.getWhisperChatPacket(player, CONFIG.client.extra.spammer.messages.get(spamIndex) + (CONFIG.client.extra.spammer.appendRandom ? " " + UUID.randomUUID().toString().substring(0, 6) : ""));
+                debug("> {}", packet.getMessage());
+                sendClientPacketAsync(packet);
             }
         } else {
             debug("> {}", CONFIG.client.extra.spammer.messages.get(spamIndex));
