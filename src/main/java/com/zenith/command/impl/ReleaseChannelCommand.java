@@ -1,6 +1,5 @@
 package com.zenith.command.impl;
 
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.command.api.Command;
 import com.zenith.command.api.CommandCategory;
@@ -20,6 +19,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.zenith.Globals.*;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static java.util.Arrays.asList;
@@ -71,26 +71,26 @@ public class ReleaseChannelCommand extends Command {
             .then(literal("set")
                 .then(argument("channel", wordWithChars())
                     .then(argument("minecraft_version", wordWithChars()).executes(c -> {
-                            final String channel = StringArgumentType.getString(c, "channel");
-                            final String minecraft_version = StringArgumentType.getString(c, "minecraft_version");
+                            final String channel = getString(c, "channel");
+                            final String minecraft_version = getString(c, "minecraft_version");
                             setChannel(c, channel, minecraft_version, false, false);
                             return OK;
                         })
                         .then(literal("force").executes(c -> {
-                            final String channel = StringArgumentType.getString(c, "channel");
-                            final String minecraft_version = StringArgumentType.getString(c, "minecraft_version");
+                            final String channel = getString(c, "channel");
+                            final String minecraft_version = getString(c, "minecraft_version");
                             setChannel(c, channel, minecraft_version, false, true);
                             return OK;
                         }))
                         .then(literal("pre").executes(c -> {
-                            final String channel = StringArgumentType.getString(c, "channel");
-                            final String minecraft_version = StringArgumentType.getString(c, "minecraft_version");
+                            final String channel = getString(c, "channel");
+                            final String minecraft_version = getString(c, "minecraft_version");
                             setChannel(c, channel, minecraft_version, true, false);
                             return OK;
                         })
                             .then(literal("force").executes(c -> {
-                                final String channel = StringArgumentType.getString(c, "channel");
-                                final String minecraft_version = StringArgumentType.getString(c, "minecraft_version");
+                                final String channel = getString(c, "channel");
+                                final String minecraft_version = getString(c, "minecraft_version");
                                 setChannel(c, channel, minecraft_version, true, true);
                                 return OK;
                             }))))));
@@ -103,21 +103,21 @@ public class ReleaseChannelCommand extends Command {
     }
 
     private void setChannel(com.mojang.brigadier.context.CommandContext<CommandContext> c, String channel, String minecraft_version, boolean pre, boolean force) {
-        if (!PLATFORMS.contains(channel)) {
+        if (!PLATFORMS.contains(channel) && !force) {
             c.getSource().getEmbed()
                 .title("Invalid Platform!")
                 .description("Available platforms: " + PLATFORMS)
                 .errorColor();
             return;
         }
-        if (!force && !MINECRAFT_VERSIONS.contains(minecraft_version)) {
+        if (!MINECRAFT_VERSIONS.contains(minecraft_version) && !force) {
             c.getSource().getEmbed()
                 .title("Invalid Minecraft Version!")
                 .description("Available versions: " + MINECRAFT_VERSIONS)
                 .errorColor();
             return;
         }
-        if (channel.equals("linux")) {
+        if (channel.equals("linux") && !force) {
             if (!validateLinuxPlatform()) {
                 c.getSource().getEmbed()
                     .title("Invalid Platform!")

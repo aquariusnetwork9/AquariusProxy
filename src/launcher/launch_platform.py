@@ -45,7 +45,12 @@ def validate_linux_glibc_version(config):
         version = output.splitlines()[0].split(" ")[-1]
         version = version.split(".")
         if int(version[0]) != 2 or int(version[1]) < glibc_minor_version_min:
-            print("Unsupported OS for linux release channel.\nglibc version too low: ".join(version).join("\nMin glibc version needed: 2.".join(str(glibc_minor_version_min))))
+            print(
+                "Unsupported OS for linux release channel.\nglibc version too low: "
+                + str(version)
+                + "\nMin glibc version needed: 2."
+                + str(glibc_minor_version_min)
+            )
             return False
         return True
     except Exception as e:
