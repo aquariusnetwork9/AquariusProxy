@@ -38,7 +38,7 @@ def validate_linux_glibc_version(config):
         if mc_version in old_versions:
             glibc_minor_version_min = 31
         else:
-            glibc_minor_version_min = 39
+            glibc_minor_version_min = 35
         output = subprocess.check_output(["ldd", "--version"], stderr=subprocess.STDOUT, text=True)
         # ldd (Ubuntu GLIBC 2.35-0ubuntu3.4) 2.35
         # get the version from the last word of the first line

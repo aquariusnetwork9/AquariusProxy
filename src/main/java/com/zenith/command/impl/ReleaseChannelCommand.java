@@ -193,7 +193,7 @@ public class ReleaseChannelCommand extends Command {
             var oldVersions = Set.of("1.12.2", "1.20.1", "1.20.4", "1.20.6", "1.21.0");
             var minorVersionMin = mcVersion == null || oldVersions.contains(mcVersion)
                 ? 31
-                : 39;
+                : 35;
             if (major != 2 || minor < minorVersionMin) {
                 DEFAULT_LOG.warn("Linux release channel selected but glibc version is less than 2.{}", minorVersionMin);
                 return false;
