@@ -9,7 +9,7 @@ jobs:
   build-java-and-linux-amd64:
     runs-on: ubicloud-standard-8
     container:
-      image: catthehacker/ubuntu:act-24.04
+      image: catthehacker/ubuntu:act-22.04
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
