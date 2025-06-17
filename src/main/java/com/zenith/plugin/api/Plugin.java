@@ -13,5 +13,5 @@ public @interface Plugin {
     String description() default "";
     String url() default "";
     String[] authors() default "";
-    String[] mcVersions() default "1.21.0";
+    String[] mcVersions() default "*";
 }

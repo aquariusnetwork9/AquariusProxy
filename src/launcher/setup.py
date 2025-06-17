@@ -29,24 +29,26 @@ def setup_execute(config):
         release_channel = "java"
     print("")
 
-    while True:
-        print("Select a Minecraft version: (1/2)")
-        print("1. 1.21.0")
-        print("2. 1.21.4")
-        print("3. 1.21.5")
-        i1 = input("> ")
-        if i1 == "1":
-            minecraft_version = "1.21.0"
-            break
-        elif i1 == "2":
-            minecraft_version = "1.21.4"
-            break
-        elif i1 == "3":
-            minecraft_version = "1.21.5"
-            break
-        else:
-            print("Invalid input. Enter 1, 2, or 3")
-    print("")
+    # while True:
+    #     print("Select a Minecraft version: (1/2)")
+    #     print("1. 1.21.0")
+    #     print("2. 1.21.4")
+    #     print("3. 1.21.5")
+    #     i1 = input("> ")
+    #     if i1 == "1":
+    #         minecraft_version = "1.21.0"
+    #         break
+    #     elif i1 == "2":
+    #         minecraft_version = "1.21.4"
+    #         break
+    #     elif i1 == "3":
+    #         minecraft_version = "1.21.5"
+    #         break
+    #     else:
+    #         print("Invalid input. Enter 1, 2, or 3")
+    # print("")
+
+    minecraft_version = "1.21.4"
 
     config.auto_update = True
     config.auto_update_launcher = True
@@ -269,8 +271,9 @@ def setup_unattended(config):
     if read_launch_config_file() is None:
         print("Creating unattended launch_config.json")
         mc_version = os.getenv("ZENITH_MC_VERSION", "1.21.4")
-        if mc_version not in ["1.21.0", "1.21.4", "1.21.5"]:
-            critical_error("Invalid ZENITH_MC_VERSION. Must be one of: 1.21.0, 1.21.4, 1.21.5")
+        mc_ver_pattern = re.compile(r"(\d+)\.(\d+)\.(\d+)$")
+        if not mc_ver_pattern.match(mc_version):
+            critical_error("Invalid ZENITH_MC_VERSION.")
         if os.getenv("ZENITH_PLATFORM") is not None:
             platform = os.getenv("ZENITH_PLATFORM").lower()
             if platform not in ["java", "linux"]:
