@@ -1080,7 +1080,7 @@ public final class Bot extends ModuleUtils {
                     var fluidState = World.getFluidState(blockState.id());
                     if (fluidState == null) continue;
                     if (waterFluid) {
-                        if (blockState.block() != BlockRegistry.WATER) continue;
+                        if (!World.isWater(blockState.block())) continue;
                     } else {
                         if (blockState.block() != BlockRegistry.LAVA) continue;
                     }
