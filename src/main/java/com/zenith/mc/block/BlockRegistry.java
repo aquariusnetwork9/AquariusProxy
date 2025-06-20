@@ -267,7 +267,7 @@ public final class BlockRegistry {
 
     public static final Block STICKY_PISTON = REGISTRY.register(new Block(128, "sticky_piston", true, 2035, 2046, 11, BlockOffsetType.NONE, 0.25f, 0.2f, 1.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block COBWEB = REGISTRY.register(new Block(129, "cobweb", false, 2047, 2047, 3, BlockOffsetType.NONE, 0.25f, 0.2f, 4.0f, true));
+    public static final Block COBWEB = REGISTRY.register(new Block(129, "cobweb", true, 2047, 2047, 3, BlockOffsetType.NONE, 0.25f, 0.2f, 4.0f, true));
 
     public static final Block SHORT_GRASS = REGISTRY.register(new Block(130, "short_grass", false, 2048, 2048, 7, BlockOffsetType.XYZ, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
 
@@ -315,7 +315,7 @@ public final class BlockRegistry {
 
     public static final Block BLACK_WOOL = REGISTRY.register(new Block(152, "black_wool", true, 2105, 2105, 29, BlockOffsetType.NONE, 0.25f, 0.2f, 0.8f, false));
 
-    public static final Block MOVING_PISTON = REGISTRY.register(new Block(153, "moving_piston", false, 2106, 2117, 11, BlockOffsetType.NONE, 0.25f, 0.2f, -1.0f, false, BlockEntityType.PISTON));
+    public static final Block MOVING_PISTON = REGISTRY.register(new Block(153, "moving_piston", true, 2106, 2117, 11, BlockOffsetType.NONE, 0.25f, 0.2f, -1.0f, false, BlockEntityType.PISTON));
 
     public static final Block DANDELION = REGISTRY.register(new Block(154, "dandelion", false, 2118, 2118, 7, BlockOffsetType.XZ, 0.25f, 0.2f, 0.0f, false));
 
@@ -397,77 +397,77 @@ public final class BlockRegistry {
 
     public static final Block FURNACE = REGISTRY.register(new Block(193, "furnace", true, 4349, 4356, 11, BlockOffsetType.NONE, 0.25f, 0.2f, 3.5f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE), BlockEntityType.FURNACE));
 
-    public static final Block OAK_SIGN = REGISTRY.register(new Block(194, "oak_sign", false, 4357, 4388, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block OAK_SIGN = REGISTRY.register(new Block(194, "oak_sign", true, 4357, 4388, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block SPRUCE_SIGN = REGISTRY.register(new Block(195, "spruce_sign", false, 4389, 4420, 34, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block SPRUCE_SIGN = REGISTRY.register(new Block(195, "spruce_sign", true, 4389, 4420, 34, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block BIRCH_SIGN = REGISTRY.register(new Block(196, "birch_sign", false, 4421, 4452, 2, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block BIRCH_SIGN = REGISTRY.register(new Block(196, "birch_sign", true, 4421, 4452, 2, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block ACACIA_SIGN = REGISTRY.register(new Block(197, "acacia_sign", false, 4453, 4484, 15, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block ACACIA_SIGN = REGISTRY.register(new Block(197, "acacia_sign", true, 4453, 4484, 15, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block CHERRY_SIGN = REGISTRY.register(new Block(198, "cherry_sign", false, 4485, 4516, 36, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block CHERRY_SIGN = REGISTRY.register(new Block(198, "cherry_sign", true, 4485, 4516, 36, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block JUNGLE_SIGN = REGISTRY.register(new Block(199, "jungle_sign", false, 4517, 4548, 10, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block JUNGLE_SIGN = REGISTRY.register(new Block(199, "jungle_sign", true, 4517, 4548, 10, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block DARK_OAK_SIGN = REGISTRY.register(new Block(200, "dark_oak_sign", false, 4549, 4580, 26, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block DARK_OAK_SIGN = REGISTRY.register(new Block(200, "dark_oak_sign", true, 4549, 4580, 26, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block PALE_OAK_SIGN = REGISTRY.register(new Block(201, "pale_oak_sign", false, 4581, 4612, 14, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block PALE_OAK_SIGN = REGISTRY.register(new Block(201, "pale_oak_sign", true, 4581, 4612, 14, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block MANGROVE_SIGN = REGISTRY.register(new Block(202, "mangrove_sign", false, 4613, 4644, 28, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block MANGROVE_SIGN = REGISTRY.register(new Block(202, "mangrove_sign", true, 4613, 4644, 28, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block BAMBOO_SIGN = REGISTRY.register(new Block(203, "bamboo_sign", false, 4645, 4676, 18, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block BAMBOO_SIGN = REGISTRY.register(new Block(203, "bamboo_sign", true, 4645, 4676, 18, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
     public static final Block OAK_DOOR = REGISTRY.register(new Block(204, "oak_door", true, 4677, 4740, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 3.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
-    public static final Block LADDER = REGISTRY.register(new Block(205, "ladder", true, 4741, 4748, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.4f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.CLIMBABLE)));
+    public static final Block LADDER = REGISTRY.register(new Block(205, "ladder", false, 4741, 4748, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.4f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.CLIMBABLE)));
 
     public static final Block RAIL = REGISTRY.register(new Block(206, "rail", false, 4749, 4768, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.7f, false, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
     public static final Block COBBLESTONE_STAIRS = REGISTRY.register(new Block(207, "cobblestone_stairs", true, 4769, 4848, 11, BlockOffsetType.NONE, 0.25f, 0.2f, 2.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block OAK_WALL_SIGN = REGISTRY.register(new Block(208, "oak_wall_sign", false, 4849, 4856, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block OAK_WALL_SIGN = REGISTRY.register(new Block(208, "oak_wall_sign", true, 4849, 4856, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block SPRUCE_WALL_SIGN = REGISTRY.register(new Block(209, "spruce_wall_sign", false, 4857, 4864, 34, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block SPRUCE_WALL_SIGN = REGISTRY.register(new Block(209, "spruce_wall_sign", true, 4857, 4864, 34, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block BIRCH_WALL_SIGN = REGISTRY.register(new Block(210, "birch_wall_sign", false, 4865, 4872, 2, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block BIRCH_WALL_SIGN = REGISTRY.register(new Block(210, "birch_wall_sign", true, 4865, 4872, 2, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block ACACIA_WALL_SIGN = REGISTRY.register(new Block(211, "acacia_wall_sign", false, 4873, 4880, 15, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block ACACIA_WALL_SIGN = REGISTRY.register(new Block(211, "acacia_wall_sign", true, 4873, 4880, 15, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block CHERRY_WALL_SIGN = REGISTRY.register(new Block(212, "cherry_wall_sign", false, 4881, 4888, 36, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block CHERRY_WALL_SIGN = REGISTRY.register(new Block(212, "cherry_wall_sign", true, 4881, 4888, 36, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block JUNGLE_WALL_SIGN = REGISTRY.register(new Block(213, "jungle_wall_sign", false, 4889, 4896, 10, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block JUNGLE_WALL_SIGN = REGISTRY.register(new Block(213, "jungle_wall_sign", true, 4889, 4896, 10, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block DARK_OAK_WALL_SIGN = REGISTRY.register(new Block(214, "dark_oak_wall_sign", false, 4897, 4904, 26, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block DARK_OAK_WALL_SIGN = REGISTRY.register(new Block(214, "dark_oak_wall_sign", true, 4897, 4904, 26, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block PALE_OAK_WALL_SIGN = REGISTRY.register(new Block(215, "pale_oak_wall_sign", false, 4905, 4912, 14, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block PALE_OAK_WALL_SIGN = REGISTRY.register(new Block(215, "pale_oak_wall_sign", true, 4905, 4912, 14, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block MANGROVE_WALL_SIGN = REGISTRY.register(new Block(216, "mangrove_wall_sign", false, 4913, 4920, 28, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block MANGROVE_WALL_SIGN = REGISTRY.register(new Block(216, "mangrove_wall_sign", true, 4913, 4920, 28, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block BAMBOO_WALL_SIGN = REGISTRY.register(new Block(217, "bamboo_wall_sign", false, 4921, 4928, 18, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block BAMBOO_WALL_SIGN = REGISTRY.register(new Block(217, "bamboo_wall_sign", true, 4921, 4928, 18, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block OAK_HANGING_SIGN = REGISTRY.register(new Block(218, "oak_hanging_sign", false, 4929, 4992, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
+    public static final Block OAK_HANGING_SIGN = REGISTRY.register(new Block(218, "oak_hanging_sign", true, 4929, 4992, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
 
-    public static final Block SPRUCE_HANGING_SIGN = REGISTRY.register(new Block(219, "spruce_hanging_sign", false, 4993, 5056, 34, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
+    public static final Block SPRUCE_HANGING_SIGN = REGISTRY.register(new Block(219, "spruce_hanging_sign", true, 4993, 5056, 34, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
 
-    public static final Block BIRCH_HANGING_SIGN = REGISTRY.register(new Block(220, "birch_hanging_sign", false, 5057, 5120, 2, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
+    public static final Block BIRCH_HANGING_SIGN = REGISTRY.register(new Block(220, "birch_hanging_sign", true, 5057, 5120, 2, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
 
-    public static final Block ACACIA_HANGING_SIGN = REGISTRY.register(new Block(221, "acacia_hanging_sign", false, 5121, 5184, 15, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
+    public static final Block ACACIA_HANGING_SIGN = REGISTRY.register(new Block(221, "acacia_hanging_sign", true, 5121, 5184, 15, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
 
-    public static final Block CHERRY_HANGING_SIGN = REGISTRY.register(new Block(222, "cherry_hanging_sign", false, 5185, 5248, 42, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
+    public static final Block CHERRY_HANGING_SIGN = REGISTRY.register(new Block(222, "cherry_hanging_sign", true, 5185, 5248, 42, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
 
-    public static final Block JUNGLE_HANGING_SIGN = REGISTRY.register(new Block(223, "jungle_hanging_sign", false, 5249, 5312, 10, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
+    public static final Block JUNGLE_HANGING_SIGN = REGISTRY.register(new Block(223, "jungle_hanging_sign", true, 5249, 5312, 10, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
 
-    public static final Block DARK_OAK_HANGING_SIGN = REGISTRY.register(new Block(224, "dark_oak_hanging_sign", false, 5313, 5376, 26, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
+    public static final Block DARK_OAK_HANGING_SIGN = REGISTRY.register(new Block(224, "dark_oak_hanging_sign", true, 5313, 5376, 26, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
 
-    public static final Block PALE_OAK_HANGING_SIGN = REGISTRY.register(new Block(225, "pale_oak_hanging_sign", false, 5377, 5440, 14, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
+    public static final Block PALE_OAK_HANGING_SIGN = REGISTRY.register(new Block(225, "pale_oak_hanging_sign", true, 5377, 5440, 14, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
 
-    public static final Block CRIMSON_HANGING_SIGN = REGISTRY.register(new Block(226, "crimson_hanging_sign", false, 5441, 5504, 53, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
+    public static final Block CRIMSON_HANGING_SIGN = REGISTRY.register(new Block(226, "crimson_hanging_sign", true, 5441, 5504, 53, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
 
-    public static final Block WARPED_HANGING_SIGN = REGISTRY.register(new Block(227, "warped_hanging_sign", false, 5505, 5568, 56, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
+    public static final Block WARPED_HANGING_SIGN = REGISTRY.register(new Block(227, "warped_hanging_sign", true, 5505, 5568, 56, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
 
-    public static final Block MANGROVE_HANGING_SIGN = REGISTRY.register(new Block(228, "mangrove_hanging_sign", false, 5569, 5632, 28, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
+    public static final Block MANGROVE_HANGING_SIGN = REGISTRY.register(new Block(228, "mangrove_hanging_sign", true, 5569, 5632, 28, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
 
-    public static final Block BAMBOO_HANGING_SIGN = REGISTRY.register(new Block(229, "bamboo_hanging_sign", false, 5633, 5696, 18, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
+    public static final Block BAMBOO_HANGING_SIGN = REGISTRY.register(new Block(229, "bamboo_hanging_sign", true, 5633, 5696, 18, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
 
     public static final Block OAK_WALL_HANGING_SIGN = REGISTRY.register(new Block(230, "oak_wall_hanging_sign", true, 5697, 5704, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.HANGING_SIGN));
 
@@ -495,29 +495,29 @@ public final class BlockRegistry {
 
     public static final Block LEVER = REGISTRY.register(new Block(242, "lever", false, 5793, 5816, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false));
 
-    public static final Block STONE_PRESSURE_PLATE = REGISTRY.register(new Block(243, "stone_pressure_plate", false, 5817, 5818, 11, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
+    public static final Block STONE_PRESSURE_PLATE = REGISTRY.register(new Block(243, "stone_pressure_plate", true, 5817, 5818, 11, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
     public static final Block IRON_DOOR = REGISTRY.register(new Block(244, "iron_door", true, 5819, 5882, 6, BlockOffsetType.NONE, 0.25f, 0.2f, 5.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block OAK_PRESSURE_PLATE = REGISTRY.register(new Block(245, "oak_pressure_plate", false, 5883, 5884, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
+    public static final Block OAK_PRESSURE_PLATE = REGISTRY.register(new Block(245, "oak_pressure_plate", true, 5883, 5884, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
-    public static final Block SPRUCE_PRESSURE_PLATE = REGISTRY.register(new Block(246, "spruce_pressure_plate", false, 5885, 5886, 34, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
+    public static final Block SPRUCE_PRESSURE_PLATE = REGISTRY.register(new Block(246, "spruce_pressure_plate", true, 5885, 5886, 34, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
-    public static final Block BIRCH_PRESSURE_PLATE = REGISTRY.register(new Block(247, "birch_pressure_plate", false, 5887, 5888, 2, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
+    public static final Block BIRCH_PRESSURE_PLATE = REGISTRY.register(new Block(247, "birch_pressure_plate", true, 5887, 5888, 2, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
-    public static final Block JUNGLE_PRESSURE_PLATE = REGISTRY.register(new Block(248, "jungle_pressure_plate", false, 5889, 5890, 10, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
+    public static final Block JUNGLE_PRESSURE_PLATE = REGISTRY.register(new Block(248, "jungle_pressure_plate", true, 5889, 5890, 10, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
-    public static final Block ACACIA_PRESSURE_PLATE = REGISTRY.register(new Block(249, "acacia_pressure_plate", false, 5891, 5892, 15, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
+    public static final Block ACACIA_PRESSURE_PLATE = REGISTRY.register(new Block(249, "acacia_pressure_plate", true, 5891, 5892, 15, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
-    public static final Block CHERRY_PRESSURE_PLATE = REGISTRY.register(new Block(250, "cherry_pressure_plate", false, 5893, 5894, 36, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
+    public static final Block CHERRY_PRESSURE_PLATE = REGISTRY.register(new Block(250, "cherry_pressure_plate", true, 5893, 5894, 36, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
-    public static final Block DARK_OAK_PRESSURE_PLATE = REGISTRY.register(new Block(251, "dark_oak_pressure_plate", false, 5895, 5896, 26, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
+    public static final Block DARK_OAK_PRESSURE_PLATE = REGISTRY.register(new Block(251, "dark_oak_pressure_plate", true, 5895, 5896, 26, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
-    public static final Block PALE_OAK_PRESSURE_PLATE = REGISTRY.register(new Block(252, "pale_oak_pressure_plate", false, 5897, 5898, 14, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
+    public static final Block PALE_OAK_PRESSURE_PLATE = REGISTRY.register(new Block(252, "pale_oak_pressure_plate", true, 5897, 5898, 14, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
-    public static final Block MANGROVE_PRESSURE_PLATE = REGISTRY.register(new Block(253, "mangrove_pressure_plate", false, 5899, 5900, 28, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
+    public static final Block MANGROVE_PRESSURE_PLATE = REGISTRY.register(new Block(253, "mangrove_pressure_plate", true, 5899, 5900, 28, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
-    public static final Block BAMBOO_PRESSURE_PLATE = REGISTRY.register(new Block(254, "bamboo_pressure_plate", false, 5901, 5902, 18, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
+    public static final Block BAMBOO_PRESSURE_PLATE = REGISTRY.register(new Block(254, "bamboo_pressure_plate", true, 5901, 5902, 18, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
     public static final Block REDSTONE_ORE = REGISTRY.register(new Block(255, "redstone_ore", true, 5903, 5904, 11, BlockOffsetType.NONE, 0.25f, 0.2f, 3.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE, BlockTags.NEEDS_IRON_TOOL)));
 
@@ -529,7 +529,7 @@ public final class BlockRegistry {
 
     public static final Block STONE_BUTTON = REGISTRY.register(new Block(259, "stone_button", false, 5917, 5940, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block SNOW = REGISTRY.register(new Block(260, "snow", true, 5941, 5948, 8, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, true, EnumSet.of(BlockTags.MINEABLE_WITH_SHOVEL)));
+    public static final Block SNOW = REGISTRY.register(new Block(260, "snow", false, 5941, 5948, 8, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, true, EnumSet.of(BlockTags.MINEABLE_WITH_SHOVEL)));
 
     public static final Block ICE = REGISTRY.register(new Block(261, "ice", true, 5949, 5949, 5, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
@@ -569,7 +569,7 @@ public final class BlockRegistry {
 
     public static final Block CAKE = REGISTRY.register(new Block(279, "cake", true, 6043, 6049, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false));
 
-    public static final Block REPEATER = REGISTRY.register(new Block(280, "repeater", true, 6050, 6113, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block REPEATER = REGISTRY.register(new Block(280, "repeater", false, 6050, 6113, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
     public static final Block WHITE_STAINED_GLASS = REGISTRY.register(new Block(281, "white_stained_glass", true, 6114, 6114, 8, BlockOffsetType.NONE, 0.25f, 0.2f, 0.3f, false));
 
@@ -687,7 +687,7 @@ public final class BlockRegistry {
 
     public static final Block MYCELIUM = REGISTRY.register(new Block(338, "mycelium", true, 7630, 7631, 24, BlockOffsetType.NONE, 0.25f, 0.2f, 0.6f, false, EnumSet.of(BlockTags.MINEABLE_WITH_SHOVEL)));
 
-    public static final Block LILY_PAD = REGISTRY.register(new Block(339, "lily_pad", true, 7632, 7632, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
+    public static final Block LILY_PAD = REGISTRY.register(new Block(339, "lily_pad", false, 7632, 7632, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
 
     public static final Block RESIN_BLOCK = REGISTRY.register(new Block(340, "resin_block", true, 7633, 7633, 37, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
@@ -731,7 +731,7 @@ public final class BlockRegistry {
 
     public static final Block REDSTONE_LAMP = REGISTRY.register(new Block(360, "redstone_lamp", true, 8191, 8192, 37, BlockOffsetType.NONE, 0.25f, 0.2f, 0.3f, false));
 
-    public static final Block COCOA = REGISTRY.register(new Block(361, "cocoa", true, 8193, 8204, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.2f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
+    public static final Block COCOA = REGISTRY.register(new Block(361, "cocoa", false, 8193, 8204, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.2f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
 
     public static final Block SANDSTONE_STAIRS = REGISTRY.register(new Block(362, "sandstone_stairs", true, 8205, 8284, 2, BlockOffsetType.NONE, 0.25f, 0.2f, 0.8f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
@@ -761,63 +761,63 @@ public final class BlockRegistry {
 
     public static final Block MOSSY_COBBLESTONE_WALL = REGISTRY.register(new Block(375, "mossy_cobblestone_wall", true, 9017, 9340, 11, BlockOffsetType.NONE, 0.25f, 0.2f, 2.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block FLOWER_POT = REGISTRY.register(new Block(376, "flower_pot", true, 9341, 9341, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block FLOWER_POT = REGISTRY.register(new Block(376, "flower_pot", false, 9341, 9341, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_TORCHFLOWER = REGISTRY.register(new Block(377, "potted_torchflower", true, 9342, 9342, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_TORCHFLOWER = REGISTRY.register(new Block(377, "potted_torchflower", false, 9342, 9342, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_OAK_SAPLING = REGISTRY.register(new Block(378, "potted_oak_sapling", true, 9343, 9343, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_OAK_SAPLING = REGISTRY.register(new Block(378, "potted_oak_sapling", false, 9343, 9343, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_SPRUCE_SAPLING = REGISTRY.register(new Block(379, "potted_spruce_sapling", true, 9344, 9344, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_SPRUCE_SAPLING = REGISTRY.register(new Block(379, "potted_spruce_sapling", false, 9344, 9344, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_BIRCH_SAPLING = REGISTRY.register(new Block(380, "potted_birch_sapling", true, 9345, 9345, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_BIRCH_SAPLING = REGISTRY.register(new Block(380, "potted_birch_sapling", false, 9345, 9345, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_JUNGLE_SAPLING = REGISTRY.register(new Block(381, "potted_jungle_sapling", true, 9346, 9346, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_JUNGLE_SAPLING = REGISTRY.register(new Block(381, "potted_jungle_sapling", false, 9346, 9346, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_ACACIA_SAPLING = REGISTRY.register(new Block(382, "potted_acacia_sapling", true, 9347, 9347, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_ACACIA_SAPLING = REGISTRY.register(new Block(382, "potted_acacia_sapling", false, 9347, 9347, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_CHERRY_SAPLING = REGISTRY.register(new Block(383, "potted_cherry_sapling", true, 9348, 9348, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_CHERRY_SAPLING = REGISTRY.register(new Block(383, "potted_cherry_sapling", false, 9348, 9348, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_DARK_OAK_SAPLING = REGISTRY.register(new Block(384, "potted_dark_oak_sapling", true, 9349, 9349, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_DARK_OAK_SAPLING = REGISTRY.register(new Block(384, "potted_dark_oak_sapling", false, 9349, 9349, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_PALE_OAK_SAPLING = REGISTRY.register(new Block(385, "potted_pale_oak_sapling", true, 9350, 9350, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_PALE_OAK_SAPLING = REGISTRY.register(new Block(385, "potted_pale_oak_sapling", false, 9350, 9350, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_MANGROVE_PROPAGULE = REGISTRY.register(new Block(386, "potted_mangrove_propagule", true, 9351, 9351, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_MANGROVE_PROPAGULE = REGISTRY.register(new Block(386, "potted_mangrove_propagule", false, 9351, 9351, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_FERN = REGISTRY.register(new Block(387, "potted_fern", true, 9352, 9352, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_FERN = REGISTRY.register(new Block(387, "potted_fern", false, 9352, 9352, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_DANDELION = REGISTRY.register(new Block(388, "potted_dandelion", true, 9353, 9353, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_DANDELION = REGISTRY.register(new Block(388, "potted_dandelion", false, 9353, 9353, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_POPPY = REGISTRY.register(new Block(389, "potted_poppy", true, 9354, 9354, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_POPPY = REGISTRY.register(new Block(389, "potted_poppy", false, 9354, 9354, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_BLUE_ORCHID = REGISTRY.register(new Block(390, "potted_blue_orchid", true, 9355, 9355, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_BLUE_ORCHID = REGISTRY.register(new Block(390, "potted_blue_orchid", false, 9355, 9355, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_ALLIUM = REGISTRY.register(new Block(391, "potted_allium", true, 9356, 9356, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_ALLIUM = REGISTRY.register(new Block(391, "potted_allium", false, 9356, 9356, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_AZURE_BLUET = REGISTRY.register(new Block(392, "potted_azure_bluet", true, 9357, 9357, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_AZURE_BLUET = REGISTRY.register(new Block(392, "potted_azure_bluet", false, 9357, 9357, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_RED_TULIP = REGISTRY.register(new Block(393, "potted_red_tulip", true, 9358, 9358, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_RED_TULIP = REGISTRY.register(new Block(393, "potted_red_tulip", false, 9358, 9358, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_ORANGE_TULIP = REGISTRY.register(new Block(394, "potted_orange_tulip", true, 9359, 9359, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_ORANGE_TULIP = REGISTRY.register(new Block(394, "potted_orange_tulip", false, 9359, 9359, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_WHITE_TULIP = REGISTRY.register(new Block(395, "potted_white_tulip", true, 9360, 9360, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_WHITE_TULIP = REGISTRY.register(new Block(395, "potted_white_tulip", false, 9360, 9360, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_PINK_TULIP = REGISTRY.register(new Block(396, "potted_pink_tulip", true, 9361, 9361, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_PINK_TULIP = REGISTRY.register(new Block(396, "potted_pink_tulip", false, 9361, 9361, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_OXEYE_DAISY = REGISTRY.register(new Block(397, "potted_oxeye_daisy", true, 9362, 9362, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_OXEYE_DAISY = REGISTRY.register(new Block(397, "potted_oxeye_daisy", false, 9362, 9362, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_CORNFLOWER = REGISTRY.register(new Block(398, "potted_cornflower", true, 9363, 9363, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_CORNFLOWER = REGISTRY.register(new Block(398, "potted_cornflower", false, 9363, 9363, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_LILY_OF_THE_VALLEY = REGISTRY.register(new Block(399, "potted_lily_of_the_valley", true, 9364, 9364, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_LILY_OF_THE_VALLEY = REGISTRY.register(new Block(399, "potted_lily_of_the_valley", false, 9364, 9364, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_WITHER_ROSE = REGISTRY.register(new Block(400, "potted_wither_rose", true, 9365, 9365, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_WITHER_ROSE = REGISTRY.register(new Block(400, "potted_wither_rose", false, 9365, 9365, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_RED_MUSHROOM = REGISTRY.register(new Block(401, "potted_red_mushroom", true, 9366, 9366, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_RED_MUSHROOM = REGISTRY.register(new Block(401, "potted_red_mushroom", false, 9366, 9366, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_BROWN_MUSHROOM = REGISTRY.register(new Block(402, "potted_brown_mushroom", true, 9367, 9367, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_BROWN_MUSHROOM = REGISTRY.register(new Block(402, "potted_brown_mushroom", false, 9367, 9367, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_DEAD_BUSH = REGISTRY.register(new Block(403, "potted_dead_bush", true, 9368, 9368, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_DEAD_BUSH = REGISTRY.register(new Block(403, "potted_dead_bush", false, 9368, 9368, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_CACTUS = REGISTRY.register(new Block(404, "potted_cactus", true, 9369, 9369, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_CACTUS = REGISTRY.register(new Block(404, "potted_cactus", false, 9369, 9369, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
     public static final Block CARROTS = REGISTRY.register(new Block(405, "carrots", false, 9370, 9377, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
 
@@ -843,33 +843,33 @@ public final class BlockRegistry {
 
     public static final Block BAMBOO_BUTTON = REGISTRY.register(new Block(416, "bamboo_button", false, 9602, 9625, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
-    public static final Block SKELETON_SKULL = REGISTRY.register(new Block(417, "skeleton_skull", true, 9626, 9657, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
+    public static final Block SKELETON_SKULL = REGISTRY.register(new Block(417, "skeleton_skull", false, 9626, 9657, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
 
-    public static final Block SKELETON_WALL_SKULL = REGISTRY.register(new Block(418, "skeleton_wall_skull", true, 9658, 9665, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
+    public static final Block SKELETON_WALL_SKULL = REGISTRY.register(new Block(418, "skeleton_wall_skull", false, 9658, 9665, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
 
-    public static final Block WITHER_SKELETON_SKULL = REGISTRY.register(new Block(419, "wither_skeleton_skull", true, 9666, 9697, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
+    public static final Block WITHER_SKELETON_SKULL = REGISTRY.register(new Block(419, "wither_skeleton_skull", false, 9666, 9697, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
 
-    public static final Block WITHER_SKELETON_WALL_SKULL = REGISTRY.register(new Block(420, "wither_skeleton_wall_skull", true, 9698, 9705, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
+    public static final Block WITHER_SKELETON_WALL_SKULL = REGISTRY.register(new Block(420, "wither_skeleton_wall_skull", false, 9698, 9705, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
 
-    public static final Block ZOMBIE_HEAD = REGISTRY.register(new Block(421, "zombie_head", true, 9706, 9737, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
+    public static final Block ZOMBIE_HEAD = REGISTRY.register(new Block(421, "zombie_head", false, 9706, 9737, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
 
-    public static final Block ZOMBIE_WALL_HEAD = REGISTRY.register(new Block(422, "zombie_wall_head", true, 9738, 9745, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
+    public static final Block ZOMBIE_WALL_HEAD = REGISTRY.register(new Block(422, "zombie_wall_head", false, 9738, 9745, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
 
-    public static final Block PLAYER_HEAD = REGISTRY.register(new Block(423, "player_head", true, 9746, 9777, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
+    public static final Block PLAYER_HEAD = REGISTRY.register(new Block(423, "player_head", false, 9746, 9777, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
 
-    public static final Block PLAYER_WALL_HEAD = REGISTRY.register(new Block(424, "player_wall_head", true, 9778, 9785, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
+    public static final Block PLAYER_WALL_HEAD = REGISTRY.register(new Block(424, "player_wall_head", false, 9778, 9785, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
 
-    public static final Block CREEPER_HEAD = REGISTRY.register(new Block(425, "creeper_head", true, 9786, 9817, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
+    public static final Block CREEPER_HEAD = REGISTRY.register(new Block(425, "creeper_head", false, 9786, 9817, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
 
-    public static final Block CREEPER_WALL_HEAD = REGISTRY.register(new Block(426, "creeper_wall_head", true, 9818, 9825, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
+    public static final Block CREEPER_WALL_HEAD = REGISTRY.register(new Block(426, "creeper_wall_head", false, 9818, 9825, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
 
-    public static final Block DRAGON_HEAD = REGISTRY.register(new Block(427, "dragon_head", true, 9826, 9857, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
+    public static final Block DRAGON_HEAD = REGISTRY.register(new Block(427, "dragon_head", false, 9826, 9857, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
 
-    public static final Block DRAGON_WALL_HEAD = REGISTRY.register(new Block(428, "dragon_wall_head", true, 9858, 9865, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
+    public static final Block DRAGON_WALL_HEAD = REGISTRY.register(new Block(428, "dragon_wall_head", false, 9858, 9865, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
 
-    public static final Block PIGLIN_HEAD = REGISTRY.register(new Block(429, "piglin_head", true, 9866, 9897, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
+    public static final Block PIGLIN_HEAD = REGISTRY.register(new Block(429, "piglin_head", false, 9866, 9897, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
 
-    public static final Block PIGLIN_WALL_HEAD = REGISTRY.register(new Block(430, "piglin_wall_head", true, 9898, 9905, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
+    public static final Block PIGLIN_WALL_HEAD = REGISTRY.register(new Block(430, "piglin_wall_head", false, 9898, 9905, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, BlockEntityType.SKULL));
 
     public static final Block ANVIL = REGISTRY.register(new Block(431, "anvil", true, 9906, 9909, 6, BlockOffsetType.NONE, 0.25f, 0.2f, 5.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
@@ -879,11 +879,11 @@ public final class BlockRegistry {
 
     public static final Block TRAPPED_CHEST = REGISTRY.register(new Block(434, "trapped_chest", true, 9918, 9941, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 2.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.TRAPPED_CHEST));
 
-    public static final Block LIGHT_WEIGHTED_PRESSURE_PLATE = REGISTRY.register(new Block(435, "light_weighted_pressure_plate", false, 9942, 9957, 30, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
+    public static final Block LIGHT_WEIGHTED_PRESSURE_PLATE = REGISTRY.register(new Block(435, "light_weighted_pressure_plate", true, 9942, 9957, 30, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block HEAVY_WEIGHTED_PRESSURE_PLATE = REGISTRY.register(new Block(436, "heavy_weighted_pressure_plate", false, 9958, 9973, 6, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
+    public static final Block HEAVY_WEIGHTED_PRESSURE_PLATE = REGISTRY.register(new Block(436, "heavy_weighted_pressure_plate", true, 9958, 9973, 6, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block COMPARATOR = REGISTRY.register(new Block(437, "comparator", true, 9974, 9989, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, BlockEntityType.COMPARATOR));
+    public static final Block COMPARATOR = REGISTRY.register(new Block(437, "comparator", false, 9974, 9989, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, BlockEntityType.COMPARATOR));
 
     public static final Block DAYLIGHT_DETECTOR = REGISTRY.register(new Block(438, "daylight_detector", true, 9990, 10021, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 0.2f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.DAYLIGHT_DETECTOR));
 
@@ -1013,37 +1013,37 @@ public final class BlockRegistry {
 
     public static final Block HAY_BLOCK = REGISTRY.register(new Block(501, "hay_block", true, 11604, 11606, 18, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_HOE)));
 
-    public static final Block WHITE_CARPET = REGISTRY.register(new Block(502, "white_carpet", true, 11607, 11607, 8, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block WHITE_CARPET = REGISTRY.register(new Block(502, "white_carpet", false, 11607, 11607, 8, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block ORANGE_CARPET = REGISTRY.register(new Block(503, "orange_carpet", true, 11608, 11608, 15, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block ORANGE_CARPET = REGISTRY.register(new Block(503, "orange_carpet", false, 11608, 11608, 15, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block MAGENTA_CARPET = REGISTRY.register(new Block(504, "magenta_carpet", true, 11609, 11609, 16, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block MAGENTA_CARPET = REGISTRY.register(new Block(504, "magenta_carpet", false, 11609, 11609, 16, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block LIGHT_BLUE_CARPET = REGISTRY.register(new Block(505, "light_blue_carpet", true, 11610, 11610, 17, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block LIGHT_BLUE_CARPET = REGISTRY.register(new Block(505, "light_blue_carpet", false, 11610, 11610, 17, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block YELLOW_CARPET = REGISTRY.register(new Block(506, "yellow_carpet", true, 11611, 11611, 18, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block YELLOW_CARPET = REGISTRY.register(new Block(506, "yellow_carpet", false, 11611, 11611, 18, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block LIME_CARPET = REGISTRY.register(new Block(507, "lime_carpet", true, 11612, 11612, 19, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block LIME_CARPET = REGISTRY.register(new Block(507, "lime_carpet", false, 11612, 11612, 19, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block PINK_CARPET = REGISTRY.register(new Block(508, "pink_carpet", true, 11613, 11613, 20, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block PINK_CARPET = REGISTRY.register(new Block(508, "pink_carpet", false, 11613, 11613, 20, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block GRAY_CARPET = REGISTRY.register(new Block(509, "gray_carpet", true, 11614, 11614, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block GRAY_CARPET = REGISTRY.register(new Block(509, "gray_carpet", false, 11614, 11614, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block LIGHT_GRAY_CARPET = REGISTRY.register(new Block(510, "light_gray_carpet", true, 11615, 11615, 22, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block LIGHT_GRAY_CARPET = REGISTRY.register(new Block(510, "light_gray_carpet", false, 11615, 11615, 22, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block CYAN_CARPET = REGISTRY.register(new Block(511, "cyan_carpet", true, 11616, 11616, 23, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block CYAN_CARPET = REGISTRY.register(new Block(511, "cyan_carpet", false, 11616, 11616, 23, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block PURPLE_CARPET = REGISTRY.register(new Block(512, "purple_carpet", true, 11617, 11617, 24, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block PURPLE_CARPET = REGISTRY.register(new Block(512, "purple_carpet", false, 11617, 11617, 24, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block BLUE_CARPET = REGISTRY.register(new Block(513, "blue_carpet", true, 11618, 11618, 25, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block BLUE_CARPET = REGISTRY.register(new Block(513, "blue_carpet", false, 11618, 11618, 25, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block BROWN_CARPET = REGISTRY.register(new Block(514, "brown_carpet", true, 11619, 11619, 26, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block BROWN_CARPET = REGISTRY.register(new Block(514, "brown_carpet", false, 11619, 11619, 26, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block GREEN_CARPET = REGISTRY.register(new Block(515, "green_carpet", true, 11620, 11620, 27, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block GREEN_CARPET = REGISTRY.register(new Block(515, "green_carpet", false, 11620, 11620, 27, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block RED_CARPET = REGISTRY.register(new Block(516, "red_carpet", true, 11621, 11621, 28, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block RED_CARPET = REGISTRY.register(new Block(516, "red_carpet", false, 11621, 11621, 28, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block BLACK_CARPET = REGISTRY.register(new Block(517, "black_carpet", true, 11622, 11622, 29, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block BLACK_CARPET = REGISTRY.register(new Block(517, "black_carpet", false, 11622, 11622, 29, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
     public static final Block TERRACOTTA = REGISTRY.register(new Block(518, "terracotta", true, 11623, 11623, 15, BlockOffsetType.NONE, 0.25f, 0.2f, 1.25f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
@@ -1063,69 +1063,69 @@ public final class BlockRegistry {
 
     public static final Block LARGE_FERN = REGISTRY.register(new Block(526, "large_fern", false, 11636, 11637, 7, BlockOffsetType.XZ, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
 
-    public static final Block WHITE_BANNER = REGISTRY.register(new Block(527, "white_banner", false, 11638, 11653, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block WHITE_BANNER = REGISTRY.register(new Block(527, "white_banner", true, 11638, 11653, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block ORANGE_BANNER = REGISTRY.register(new Block(528, "orange_banner", false, 11654, 11669, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block ORANGE_BANNER = REGISTRY.register(new Block(528, "orange_banner", true, 11654, 11669, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block MAGENTA_BANNER = REGISTRY.register(new Block(529, "magenta_banner", false, 11670, 11685, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block MAGENTA_BANNER = REGISTRY.register(new Block(529, "magenta_banner", true, 11670, 11685, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block LIGHT_BLUE_BANNER = REGISTRY.register(new Block(530, "light_blue_banner", false, 11686, 11701, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block LIGHT_BLUE_BANNER = REGISTRY.register(new Block(530, "light_blue_banner", true, 11686, 11701, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block YELLOW_BANNER = REGISTRY.register(new Block(531, "yellow_banner", false, 11702, 11717, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block YELLOW_BANNER = REGISTRY.register(new Block(531, "yellow_banner", true, 11702, 11717, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block LIME_BANNER = REGISTRY.register(new Block(532, "lime_banner", false, 11718, 11733, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block LIME_BANNER = REGISTRY.register(new Block(532, "lime_banner", true, 11718, 11733, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block PINK_BANNER = REGISTRY.register(new Block(533, "pink_banner", false, 11734, 11749, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block PINK_BANNER = REGISTRY.register(new Block(533, "pink_banner", true, 11734, 11749, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block GRAY_BANNER = REGISTRY.register(new Block(534, "gray_banner", false, 11750, 11765, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block GRAY_BANNER = REGISTRY.register(new Block(534, "gray_banner", true, 11750, 11765, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block LIGHT_GRAY_BANNER = REGISTRY.register(new Block(535, "light_gray_banner", false, 11766, 11781, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block LIGHT_GRAY_BANNER = REGISTRY.register(new Block(535, "light_gray_banner", true, 11766, 11781, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block CYAN_BANNER = REGISTRY.register(new Block(536, "cyan_banner", false, 11782, 11797, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block CYAN_BANNER = REGISTRY.register(new Block(536, "cyan_banner", true, 11782, 11797, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block PURPLE_BANNER = REGISTRY.register(new Block(537, "purple_banner", false, 11798, 11813, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block PURPLE_BANNER = REGISTRY.register(new Block(537, "purple_banner", true, 11798, 11813, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block BLUE_BANNER = REGISTRY.register(new Block(538, "blue_banner", false, 11814, 11829, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block BLUE_BANNER = REGISTRY.register(new Block(538, "blue_banner", true, 11814, 11829, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block BROWN_BANNER = REGISTRY.register(new Block(539, "brown_banner", false, 11830, 11845, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block BROWN_BANNER = REGISTRY.register(new Block(539, "brown_banner", true, 11830, 11845, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block GREEN_BANNER = REGISTRY.register(new Block(540, "green_banner", false, 11846, 11861, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block GREEN_BANNER = REGISTRY.register(new Block(540, "green_banner", true, 11846, 11861, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block RED_BANNER = REGISTRY.register(new Block(541, "red_banner", false, 11862, 11877, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block RED_BANNER = REGISTRY.register(new Block(541, "red_banner", true, 11862, 11877, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block BLACK_BANNER = REGISTRY.register(new Block(542, "black_banner", false, 11878, 11893, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block BLACK_BANNER = REGISTRY.register(new Block(542, "black_banner", true, 11878, 11893, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block WHITE_WALL_BANNER = REGISTRY.register(new Block(543, "white_wall_banner", false, 11894, 11897, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block WHITE_WALL_BANNER = REGISTRY.register(new Block(543, "white_wall_banner", true, 11894, 11897, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block ORANGE_WALL_BANNER = REGISTRY.register(new Block(544, "orange_wall_banner", false, 11898, 11901, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block ORANGE_WALL_BANNER = REGISTRY.register(new Block(544, "orange_wall_banner", true, 11898, 11901, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block MAGENTA_WALL_BANNER = REGISTRY.register(new Block(545, "magenta_wall_banner", false, 11902, 11905, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block MAGENTA_WALL_BANNER = REGISTRY.register(new Block(545, "magenta_wall_banner", true, 11902, 11905, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block LIGHT_BLUE_WALL_BANNER = REGISTRY.register(new Block(546, "light_blue_wall_banner", false, 11906, 11909, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block LIGHT_BLUE_WALL_BANNER = REGISTRY.register(new Block(546, "light_blue_wall_banner", true, 11906, 11909, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block YELLOW_WALL_BANNER = REGISTRY.register(new Block(547, "yellow_wall_banner", false, 11910, 11913, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block YELLOW_WALL_BANNER = REGISTRY.register(new Block(547, "yellow_wall_banner", true, 11910, 11913, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block LIME_WALL_BANNER = REGISTRY.register(new Block(548, "lime_wall_banner", false, 11914, 11917, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block LIME_WALL_BANNER = REGISTRY.register(new Block(548, "lime_wall_banner", true, 11914, 11917, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block PINK_WALL_BANNER = REGISTRY.register(new Block(549, "pink_wall_banner", false, 11918, 11921, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block PINK_WALL_BANNER = REGISTRY.register(new Block(549, "pink_wall_banner", true, 11918, 11921, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block GRAY_WALL_BANNER = REGISTRY.register(new Block(550, "gray_wall_banner", false, 11922, 11925, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block GRAY_WALL_BANNER = REGISTRY.register(new Block(550, "gray_wall_banner", true, 11922, 11925, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block LIGHT_GRAY_WALL_BANNER = REGISTRY.register(new Block(551, "light_gray_wall_banner", false, 11926, 11929, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block LIGHT_GRAY_WALL_BANNER = REGISTRY.register(new Block(551, "light_gray_wall_banner", true, 11926, 11929, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block CYAN_WALL_BANNER = REGISTRY.register(new Block(552, "cyan_wall_banner", false, 11930, 11933, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block CYAN_WALL_BANNER = REGISTRY.register(new Block(552, "cyan_wall_banner", true, 11930, 11933, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block PURPLE_WALL_BANNER = REGISTRY.register(new Block(553, "purple_wall_banner", false, 11934, 11937, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block PURPLE_WALL_BANNER = REGISTRY.register(new Block(553, "purple_wall_banner", true, 11934, 11937, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block BLUE_WALL_BANNER = REGISTRY.register(new Block(554, "blue_wall_banner", false, 11938, 11941, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block BLUE_WALL_BANNER = REGISTRY.register(new Block(554, "blue_wall_banner", true, 11938, 11941, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block BROWN_WALL_BANNER = REGISTRY.register(new Block(555, "brown_wall_banner", false, 11942, 11945, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block BROWN_WALL_BANNER = REGISTRY.register(new Block(555, "brown_wall_banner", true, 11942, 11945, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block GREEN_WALL_BANNER = REGISTRY.register(new Block(556, "green_wall_banner", false, 11946, 11949, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block GREEN_WALL_BANNER = REGISTRY.register(new Block(556, "green_wall_banner", true, 11946, 11949, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block RED_WALL_BANNER = REGISTRY.register(new Block(557, "red_wall_banner", false, 11950, 11953, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block RED_WALL_BANNER = REGISTRY.register(new Block(557, "red_wall_banner", true, 11950, 11953, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
-    public static final Block BLACK_WALL_BANNER = REGISTRY.register(new Block(558, "black_wall_banner", false, 11954, 11957, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
+    public static final Block BLACK_WALL_BANNER = REGISTRY.register(new Block(558, "black_wall_banner", true, 11954, 11957, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.BANNER));
 
     public static final Block RED_SANDSTONE = REGISTRY.register(new Block(559, "red_sandstone", true, 11958, 11958, 15, BlockOffsetType.NONE, 0.25f, 0.2f, 0.8f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
@@ -1247,11 +1247,11 @@ public final class BlockRegistry {
 
     public static final Block BAMBOO_DOOR = REGISTRY.register(new Block(618, "bamboo_door", true, 13283, 13346, 18, BlockOffsetType.NONE, 0.25f, 0.2f, 3.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
-    public static final Block END_ROD = REGISTRY.register(new Block(619, "end_rod", true, 13347, 13352, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block END_ROD = REGISTRY.register(new Block(619, "end_rod", false, 13347, 13352, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block CHORUS_PLANT = REGISTRY.register(new Block(620, "chorus_plant", true, 13353, 13416, 24, BlockOffsetType.NONE, 0.25f, 0.2f, 0.4f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
+    public static final Block CHORUS_PLANT = REGISTRY.register(new Block(620, "chorus_plant", false, 13353, 13416, 24, BlockOffsetType.NONE, 0.25f, 0.2f, 0.4f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
 
-    public static final Block CHORUS_FLOWER = REGISTRY.register(new Block(621, "chorus_flower", true, 13417, 13422, 24, BlockOffsetType.NONE, 0.25f, 0.2f, 0.4f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
+    public static final Block CHORUS_FLOWER = REGISTRY.register(new Block(621, "chorus_flower", false, 13417, 13422, 24, BlockOffsetType.NONE, 0.25f, 0.2f, 0.4f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
 
     public static final Block PURPUR_BLOCK = REGISTRY.register(new Block(622, "purpur_block", true, 13423, 13423, 16, BlockOffsetType.NONE, 0.25f, 0.2f, 1.5f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
@@ -1263,7 +1263,7 @@ public final class BlockRegistry {
 
     public static final Block TORCHFLOWER_CROP = REGISTRY.register(new Block(626, "torchflower_crop", false, 13508, 13509, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.SWORD_EFFICIENT)));
 
-    public static final Block PITCHER_CROP = REGISTRY.register(new Block(627, "pitcher_crop", true, 13510, 13519, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.SWORD_EFFICIENT)));
+    public static final Block PITCHER_CROP = REGISTRY.register(new Block(627, "pitcher_crop", false, 13510, 13519, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.SWORD_EFFICIENT)));
 
     public static final Block PITCHER_PLANT = REGISTRY.register(new Block(628, "pitcher_plant", false, 13520, 13521, 7, BlockOffsetType.XZ, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.SWORD_EFFICIENT)));
 
@@ -1451,15 +1451,15 @@ public final class BlockRegistry {
 
     public static final Block HORN_CORAL_BLOCK = REGISTRY.register(new Block(720, "horn_coral_block", true, 13825, 13825, 18, BlockOffsetType.NONE, 0.25f, 0.2f, 1.5f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block DEAD_TUBE_CORAL = REGISTRY.register(new Block(721, "dead_tube_coral", false, 13826, 13827, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
+    public static final Block DEAD_TUBE_CORAL = REGISTRY.register(new Block(721, "dead_tube_coral", true, 13826, 13827, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block DEAD_BRAIN_CORAL = REGISTRY.register(new Block(722, "dead_brain_coral", false, 13828, 13829, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
+    public static final Block DEAD_BRAIN_CORAL = REGISTRY.register(new Block(722, "dead_brain_coral", true, 13828, 13829, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block DEAD_BUBBLE_CORAL = REGISTRY.register(new Block(723, "dead_bubble_coral", false, 13830, 13831, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
+    public static final Block DEAD_BUBBLE_CORAL = REGISTRY.register(new Block(723, "dead_bubble_coral", true, 13830, 13831, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block DEAD_FIRE_CORAL = REGISTRY.register(new Block(724, "dead_fire_coral", false, 13832, 13833, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
+    public static final Block DEAD_FIRE_CORAL = REGISTRY.register(new Block(724, "dead_fire_coral", true, 13832, 13833, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block DEAD_HORN_CORAL = REGISTRY.register(new Block(725, "dead_horn_coral", false, 13834, 13835, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
+    public static final Block DEAD_HORN_CORAL = REGISTRY.register(new Block(725, "dead_horn_coral", true, 13834, 13835, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
     public static final Block TUBE_CORAL = REGISTRY.register(new Block(726, "tube_coral", false, 13836, 13837, 25, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
@@ -1471,15 +1471,15 @@ public final class BlockRegistry {
 
     public static final Block HORN_CORAL = REGISTRY.register(new Block(730, "horn_coral", false, 13844, 13845, 18, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block DEAD_TUBE_CORAL_FAN = REGISTRY.register(new Block(731, "dead_tube_coral_fan", false, 13846, 13847, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
+    public static final Block DEAD_TUBE_CORAL_FAN = REGISTRY.register(new Block(731, "dead_tube_coral_fan", true, 13846, 13847, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block DEAD_BRAIN_CORAL_FAN = REGISTRY.register(new Block(732, "dead_brain_coral_fan", false, 13848, 13849, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
+    public static final Block DEAD_BRAIN_CORAL_FAN = REGISTRY.register(new Block(732, "dead_brain_coral_fan", true, 13848, 13849, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block DEAD_BUBBLE_CORAL_FAN = REGISTRY.register(new Block(733, "dead_bubble_coral_fan", false, 13850, 13851, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
+    public static final Block DEAD_BUBBLE_CORAL_FAN = REGISTRY.register(new Block(733, "dead_bubble_coral_fan", true, 13850, 13851, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block DEAD_FIRE_CORAL_FAN = REGISTRY.register(new Block(734, "dead_fire_coral_fan", false, 13852, 13853, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
+    public static final Block DEAD_FIRE_CORAL_FAN = REGISTRY.register(new Block(734, "dead_fire_coral_fan", true, 13852, 13853, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block DEAD_HORN_CORAL_FAN = REGISTRY.register(new Block(735, "dead_horn_coral_fan", false, 13854, 13855, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
+    public static final Block DEAD_HORN_CORAL_FAN = REGISTRY.register(new Block(735, "dead_horn_coral_fan", true, 13854, 13855, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
     public static final Block TUBE_CORAL_FAN = REGISTRY.register(new Block(736, "tube_coral_fan", false, 13856, 13857, 25, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
@@ -1491,15 +1491,15 @@ public final class BlockRegistry {
 
     public static final Block HORN_CORAL_FAN = REGISTRY.register(new Block(740, "horn_coral_fan", false, 13864, 13865, 18, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block DEAD_TUBE_CORAL_WALL_FAN = REGISTRY.register(new Block(741, "dead_tube_coral_wall_fan", false, 13866, 13873, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
+    public static final Block DEAD_TUBE_CORAL_WALL_FAN = REGISTRY.register(new Block(741, "dead_tube_coral_wall_fan", true, 13866, 13873, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block DEAD_BRAIN_CORAL_WALL_FAN = REGISTRY.register(new Block(742, "dead_brain_coral_wall_fan", false, 13874, 13881, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
+    public static final Block DEAD_BRAIN_CORAL_WALL_FAN = REGISTRY.register(new Block(742, "dead_brain_coral_wall_fan", true, 13874, 13881, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block DEAD_BUBBLE_CORAL_WALL_FAN = REGISTRY.register(new Block(743, "dead_bubble_coral_wall_fan", false, 13882, 13889, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
+    public static final Block DEAD_BUBBLE_CORAL_WALL_FAN = REGISTRY.register(new Block(743, "dead_bubble_coral_wall_fan", true, 13882, 13889, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block DEAD_FIRE_CORAL_WALL_FAN = REGISTRY.register(new Block(744, "dead_fire_coral_wall_fan", false, 13890, 13897, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
+    public static final Block DEAD_FIRE_CORAL_WALL_FAN = REGISTRY.register(new Block(744, "dead_fire_coral_wall_fan", true, 13890, 13897, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block DEAD_HORN_CORAL_WALL_FAN = REGISTRY.register(new Block(745, "dead_horn_coral_wall_fan", false, 13898, 13905, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
+    public static final Block DEAD_HORN_CORAL_WALL_FAN = REGISTRY.register(new Block(745, "dead_horn_coral_wall_fan", true, 13898, 13905, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
     public static final Block TUBE_CORAL_WALL_FAN = REGISTRY.register(new Block(746, "tube_coral_wall_fan", false, 13906, 13913, 25, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
@@ -1511,17 +1511,17 @@ public final class BlockRegistry {
 
     public static final Block HORN_CORAL_WALL_FAN = REGISTRY.register(new Block(750, "horn_coral_wall_fan", false, 13938, 13945, 18, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block SEA_PICKLE = REGISTRY.register(new Block(751, "sea_pickle", true, 13946, 13953, 27, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block SEA_PICKLE = REGISTRY.register(new Block(751, "sea_pickle", false, 13946, 13953, 27, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
     public static final Block BLUE_ICE = REGISTRY.register(new Block(752, "blue_ice", true, 13954, 13954, 5, BlockOffsetType.NONE, 0.25f, 0.2f, 2.8f, false, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
     public static final Block CONDUIT = REGISTRY.register(new Block(753, "conduit", true, 13955, 13956, 31, BlockOffsetType.NONE, 0.25f, 0.2f, 3.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE), BlockEntityType.CONDUIT));
 
-    public static final Block BAMBOO_SAPLING = REGISTRY.register(new Block(754, "bamboo_sapling", false, 13957, 13957, 13, BlockOffsetType.XZ, 0.25f, 0.2f, 1.0f, false));
+    public static final Block BAMBOO_SAPLING = REGISTRY.register(new Block(754, "bamboo_sapling", true, 13957, 13957, 13, BlockOffsetType.XZ, 0.25f, 0.2f, 1.0f, false));
 
     public static final Block BAMBOO = REGISTRY.register(new Block(755, "bamboo", true, 13958, 13969, 7, BlockOffsetType.XZ, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
-    public static final Block POTTED_BAMBOO = REGISTRY.register(new Block(756, "potted_bamboo", true, 13970, 13970, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_BAMBOO = REGISTRY.register(new Block(756, "potted_bamboo", false, 13970, 13970, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
     public static final Block VOID_AIR = REGISTRY.register(new Block(757, "void_air", false, 13971, 13971, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
@@ -1609,7 +1609,7 @@ public final class BlockRegistry {
 
     public static final Block DIORITE_WALL = REGISTRY.register(new Block(799, "diorite_wall", true, 19061, 19384, 14, BlockOffsetType.NONE, 0.25f, 0.2f, 1.5f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block SCAFFOLDING = REGISTRY.register(new Block(800, "scaffolding", true, 19385, 19416, 2, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.CLIMBABLE)));
+    public static final Block SCAFFOLDING = REGISTRY.register(new Block(800, "scaffolding", false, 19385, 19416, 2, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.CLIMBABLE)));
 
     public static final Block LOOM = REGISTRY.register(new Block(801, "loom", true, 19417, 19420, 13, BlockOffsetType.NONE, 0.25f, 0.2f, 2.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
@@ -1693,9 +1693,9 @@ public final class BlockRegistry {
 
     public static final Block WARPED_SLAB = REGISTRY.register(new Block(841, "warped_slab", true, 19687, 19692, 56, BlockOffsetType.NONE, 0.25f, 0.2f, 2.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
-    public static final Block CRIMSON_PRESSURE_PLATE = REGISTRY.register(new Block(842, "crimson_pressure_plate", false, 19693, 19694, 53, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
+    public static final Block CRIMSON_PRESSURE_PLATE = REGISTRY.register(new Block(842, "crimson_pressure_plate", true, 19693, 19694, 53, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
-    public static final Block WARPED_PRESSURE_PLATE = REGISTRY.register(new Block(843, "warped_pressure_plate", false, 19695, 19696, 56, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
+    public static final Block WARPED_PRESSURE_PLATE = REGISTRY.register(new Block(843, "warped_pressure_plate", true, 19695, 19696, 56, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
     public static final Block CRIMSON_FENCE = REGISTRY.register(new Block(844, "crimson_fence", true, 19697, 19728, 53, BlockOffsetType.NONE, 0.25f, 0.2f, 2.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
@@ -1721,13 +1721,13 @@ public final class BlockRegistry {
 
     public static final Block WARPED_DOOR = REGISTRY.register(new Block(855, "warped_door", true, 20225, 20288, 56, BlockOffsetType.NONE, 0.25f, 0.2f, 3.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE)));
 
-    public static final Block CRIMSON_SIGN = REGISTRY.register(new Block(856, "crimson_sign", false, 20289, 20320, 53, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block CRIMSON_SIGN = REGISTRY.register(new Block(856, "crimson_sign", true, 20289, 20320, 53, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block WARPED_SIGN = REGISTRY.register(new Block(857, "warped_sign", false, 20321, 20352, 56, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block WARPED_SIGN = REGISTRY.register(new Block(857, "warped_sign", true, 20321, 20352, 56, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block CRIMSON_WALL_SIGN = REGISTRY.register(new Block(858, "crimson_wall_sign", false, 20353, 20360, 53, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block CRIMSON_WALL_SIGN = REGISTRY.register(new Block(858, "crimson_wall_sign", true, 20353, 20360, 53, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
-    public static final Block WARPED_WALL_SIGN = REGISTRY.register(new Block(859, "warped_wall_sign", false, 20361, 20368, 56, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
+    public static final Block WARPED_WALL_SIGN = REGISTRY.register(new Block(859, "warped_wall_sign", true, 20361, 20368, 56, BlockOffsetType.NONE, 0.25f, 0.2f, 1.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE), BlockEntityType.SIGN));
 
     public static final Block STRUCTURE_BLOCK = REGISTRY.register(new Block(860, "structure_block", true, 20369, 20372, 22, BlockOffsetType.NONE, 0.25f, 0.2f, -1.0f, true, BlockEntityType.STRUCTURE_BLOCK));
 
@@ -1753,13 +1753,13 @@ public final class BlockRegistry {
 
     public static final Block RESPAWN_ANCHOR = REGISTRY.register(new Block(871, "respawn_anchor", true, 20463, 20467, 29, BlockOffsetType.NONE, 0.25f, 0.2f, 50.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE, BlockTags.NEEDS_DIAMOND_TOOL)));
 
-    public static final Block POTTED_CRIMSON_FUNGUS = REGISTRY.register(new Block(872, "potted_crimson_fungus", true, 20468, 20468, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_CRIMSON_FUNGUS = REGISTRY.register(new Block(872, "potted_crimson_fungus", false, 20468, 20468, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_WARPED_FUNGUS = REGISTRY.register(new Block(873, "potted_warped_fungus", true, 20469, 20469, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_WARPED_FUNGUS = REGISTRY.register(new Block(873, "potted_warped_fungus", false, 20469, 20469, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_CRIMSON_ROOTS = REGISTRY.register(new Block(874, "potted_crimson_roots", true, 20470, 20470, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_CRIMSON_ROOTS = REGISTRY.register(new Block(874, "potted_crimson_roots", false, 20470, 20470, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_WARPED_ROOTS = REGISTRY.register(new Block(875, "potted_warped_roots", true, 20471, 20471, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_WARPED_ROOTS = REGISTRY.register(new Block(875, "potted_warped_roots", false, 20471, 20471, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
     public static final Block LODESTONE = REGISTRY.register(new Block(876, "lodestone", true, 20472, 20472, 6, BlockOffsetType.NONE, 0.25f, 0.2f, 3.5f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
@@ -1791,7 +1791,7 @@ public final class BlockRegistry {
 
     public static final Block POLISHED_BLACKSTONE_SLAB = REGISTRY.register(new Block(890, "polished_blackstone_slab", true, 21379, 21384, 29, BlockOffsetType.NONE, 0.25f, 0.2f, 2.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block POLISHED_BLACKSTONE_PRESSURE_PLATE = REGISTRY.register(new Block(891, "polished_blackstone_pressure_plate", false, 21385, 21386, 29, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
+    public static final Block POLISHED_BLACKSTONE_PRESSURE_PLATE = REGISTRY.register(new Block(891, "polished_blackstone_pressure_plate", true, 21385, 21386, 29, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
     public static final Block POLISHED_BLACKSTONE_BUTTON = REGISTRY.register(new Block(892, "polished_blackstone_button", false, 21387, 21410, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
@@ -1803,39 +1803,39 @@ public final class BlockRegistry {
 
     public static final Block QUARTZ_BRICKS = REGISTRY.register(new Block(896, "quartz_bricks", true, 21737, 21737, 14, BlockOffsetType.NONE, 0.25f, 0.2f, 0.8f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
-    public static final Block CANDLE = REGISTRY.register(new Block(897, "candle", true, 21738, 21753, 2, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block CANDLE = REGISTRY.register(new Block(897, "candle", false, 21738, 21753, 2, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block WHITE_CANDLE = REGISTRY.register(new Block(898, "white_candle", true, 21754, 21769, 3, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block WHITE_CANDLE = REGISTRY.register(new Block(898, "white_candle", false, 21754, 21769, 3, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block ORANGE_CANDLE = REGISTRY.register(new Block(899, "orange_candle", true, 21770, 21785, 15, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block ORANGE_CANDLE = REGISTRY.register(new Block(899, "orange_candle", false, 21770, 21785, 15, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block MAGENTA_CANDLE = REGISTRY.register(new Block(900, "magenta_candle", true, 21786, 21801, 16, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block MAGENTA_CANDLE = REGISTRY.register(new Block(900, "magenta_candle", false, 21786, 21801, 16, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block LIGHT_BLUE_CANDLE = REGISTRY.register(new Block(901, "light_blue_candle", true, 21802, 21817, 17, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block LIGHT_BLUE_CANDLE = REGISTRY.register(new Block(901, "light_blue_candle", false, 21802, 21817, 17, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block YELLOW_CANDLE = REGISTRY.register(new Block(902, "yellow_candle", true, 21818, 21833, 18, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block YELLOW_CANDLE = REGISTRY.register(new Block(902, "yellow_candle", false, 21818, 21833, 18, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block LIME_CANDLE = REGISTRY.register(new Block(903, "lime_candle", true, 21834, 21849, 19, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block LIME_CANDLE = REGISTRY.register(new Block(903, "lime_candle", false, 21834, 21849, 19, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block PINK_CANDLE = REGISTRY.register(new Block(904, "pink_candle", true, 21850, 21865, 20, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block PINK_CANDLE = REGISTRY.register(new Block(904, "pink_candle", false, 21850, 21865, 20, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block GRAY_CANDLE = REGISTRY.register(new Block(905, "gray_candle", true, 21866, 21881, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block GRAY_CANDLE = REGISTRY.register(new Block(905, "gray_candle", false, 21866, 21881, 21, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block LIGHT_GRAY_CANDLE = REGISTRY.register(new Block(906, "light_gray_candle", true, 21882, 21897, 22, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block LIGHT_GRAY_CANDLE = REGISTRY.register(new Block(906, "light_gray_candle", false, 21882, 21897, 22, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block CYAN_CANDLE = REGISTRY.register(new Block(907, "cyan_candle", true, 21898, 21913, 23, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block CYAN_CANDLE = REGISTRY.register(new Block(907, "cyan_candle", false, 21898, 21913, 23, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block PURPLE_CANDLE = REGISTRY.register(new Block(908, "purple_candle", true, 21914, 21929, 24, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block PURPLE_CANDLE = REGISTRY.register(new Block(908, "purple_candle", false, 21914, 21929, 24, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block BLUE_CANDLE = REGISTRY.register(new Block(909, "blue_candle", true, 21930, 21945, 25, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block BLUE_CANDLE = REGISTRY.register(new Block(909, "blue_candle", false, 21930, 21945, 25, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block BROWN_CANDLE = REGISTRY.register(new Block(910, "brown_candle", true, 21946, 21961, 26, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block BROWN_CANDLE = REGISTRY.register(new Block(910, "brown_candle", false, 21946, 21961, 26, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block GREEN_CANDLE = REGISTRY.register(new Block(911, "green_candle", true, 21962, 21977, 27, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block GREEN_CANDLE = REGISTRY.register(new Block(911, "green_candle", false, 21962, 21977, 27, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block RED_CANDLE = REGISTRY.register(new Block(912, "red_candle", true, 21978, 21993, 28, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block RED_CANDLE = REGISTRY.register(new Block(912, "red_candle", false, 21978, 21993, 28, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
-    public static final Block BLACK_CANDLE = REGISTRY.register(new Block(913, "black_candle", true, 21994, 22009, 29, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
+    public static final Block BLACK_CANDLE = REGISTRY.register(new Block(913, "black_candle", false, 21994, 22009, 29, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false));
 
     public static final Block CANDLE_CAKE = REGISTRY.register(new Block(914, "candle_cake", true, 22010, 22011, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.5f, false));
 
@@ -1923,7 +1923,7 @@ public final class BlockRegistry {
 
     public static final Block SCULK = REGISTRY.register(new Block(956, "sculk", true, 23812, 23812, 29, BlockOffsetType.NONE, 0.25f, 0.2f, 0.2f, false, EnumSet.of(BlockTags.MINEABLE_WITH_HOE)));
 
-    public static final Block SCULK_VEIN = REGISTRY.register(new Block(957, "sculk_vein", false, 23813, 23940, 29, BlockOffsetType.NONE, 0.25f, 0.2f, 0.2f, false, EnumSet.of(BlockTags.MINEABLE_WITH_HOE)));
+    public static final Block SCULK_VEIN = REGISTRY.register(new Block(957, "sculk_vein", true, 23813, 23940, 29, BlockOffsetType.NONE, 0.25f, 0.2f, 0.2f, false, EnumSet.of(BlockTags.MINEABLE_WITH_HOE)));
 
     public static final Block SCULK_CATALYST = REGISTRY.register(new Block(958, "sculk_catalyst", true, 23941, 23942, 29, BlockOffsetType.NONE, 0.25f, 0.2f, 3.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_HOE), BlockEntityType.SCULK_CATALYST));
 
@@ -2089,17 +2089,17 @@ public final class BlockRegistry {
 
     public static final Block SPORE_BLOSSOM = REGISTRY.register(new Block(1039, "spore_blossom", false, 25836, 25836, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
 
-    public static final Block AZALEA = REGISTRY.register(new Block(1040, "azalea", true, 25837, 25837, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
+    public static final Block AZALEA = REGISTRY.register(new Block(1040, "azalea", false, 25837, 25837, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
 
-    public static final Block FLOWERING_AZALEA = REGISTRY.register(new Block(1041, "flowering_azalea", true, 25838, 25838, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
+    public static final Block FLOWERING_AZALEA = REGISTRY.register(new Block(1041, "flowering_azalea", false, 25838, 25838, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
 
-    public static final Block MOSS_CARPET = REGISTRY.register(new Block(1042, "moss_carpet", true, 25839, 25839, 27, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false, EnumSet.of(BlockTags.MINEABLE_WITH_HOE)));
+    public static final Block MOSS_CARPET = REGISTRY.register(new Block(1042, "moss_carpet", false, 25839, 25839, 27, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false, EnumSet.of(BlockTags.MINEABLE_WITH_HOE)));
 
     public static final Block PINK_PETALS = REGISTRY.register(new Block(1043, "pink_petals", false, 25840, 25855, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_HOE, BlockTags.SWORD_EFFICIENT)));
 
     public static final Block MOSS_BLOCK = REGISTRY.register(new Block(1044, "moss_block", true, 25856, 25856, 27, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false, EnumSet.of(BlockTags.MINEABLE_WITH_HOE)));
 
-    public static final Block BIG_DRIPLEAF = REGISTRY.register(new Block(1045, "big_dripleaf", true, 25857, 25888, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
+    public static final Block BIG_DRIPLEAF = REGISTRY.register(new Block(1045, "big_dripleaf", false, 25857, 25888, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
 
     public static final Block BIG_DRIPLEAF_STEM = REGISTRY.register(new Block(1046, "big_dripleaf_stem", false, 25889, 25896, 7, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false, EnumSet.of(BlockTags.MINEABLE_WITH_AXE, BlockTags.SWORD_EFFICIENT)));
 
@@ -2161,9 +2161,9 @@ public final class BlockRegistry {
 
     public static final Block RAW_GOLD_BLOCK = REGISTRY.register(new Block(1075, "raw_gold_block", true, 27573, 27573, 30, BlockOffsetType.NONE, 0.25f, 0.2f, 5.0f, true, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE, BlockTags.NEEDS_IRON_TOOL)));
 
-    public static final Block POTTED_AZALEA_BUSH = REGISTRY.register(new Block(1076, "potted_azalea_bush", true, 27574, 27574, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_AZALEA_BUSH = REGISTRY.register(new Block(1076, "potted_azalea_bush", false, 27574, 27574, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_FLOWERING_AZALEA_BUSH = REGISTRY.register(new Block(1077, "potted_flowering_azalea_bush", true, 27575, 27575, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_FLOWERING_AZALEA_BUSH = REGISTRY.register(new Block(1077, "potted_flowering_azalea_bush", false, 27575, 27575, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
     public static final Block OCHRE_FROGLIGHT = REGISTRY.register(new Block(1078, "ochre_froglight", true, 27576, 27578, 2, BlockOffsetType.NONE, 0.25f, 0.2f, 0.3f, false));
 
@@ -2183,11 +2183,11 @@ public final class BlockRegistry {
 
     public static final Block VAULT = REGISTRY.register(new Block(1086, "vault", true, 27663, 27694, 11, BlockOffsetType.NONE, 0.25f, 0.2f, 50.0f, false, BlockEntityType.VAULT));
 
-    public static final Block HEAVY_CORE = REGISTRY.register(new Block(1087, "heavy_core", true, 27695, 27696, 6, BlockOffsetType.NONE, 0.25f, 0.2f, 10.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
+    public static final Block HEAVY_CORE = REGISTRY.register(new Block(1087, "heavy_core", false, 27695, 27696, 6, BlockOffsetType.NONE, 0.25f, 0.2f, 10.0f, false, EnumSet.of(BlockTags.MINEABLE_WITH_PICKAXE)));
 
     public static final Block PALE_MOSS_BLOCK = REGISTRY.register(new Block(1088, "pale_moss_block", true, 27697, 27697, 22, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false, EnumSet.of(BlockTags.MINEABLE_WITH_HOE)));
 
-    public static final Block PALE_MOSS_CARPET = REGISTRY.register(new Block(1089, "pale_moss_carpet", true, 27698, 27859, 22, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false, EnumSet.of(BlockTags.MINEABLE_WITH_HOE)));
+    public static final Block PALE_MOSS_CARPET = REGISTRY.register(new Block(1089, "pale_moss_carpet", false, 27698, 27859, 22, BlockOffsetType.NONE, 0.25f, 0.2f, 0.1f, false, EnumSet.of(BlockTags.MINEABLE_WITH_HOE)));
 
     public static final Block PALE_HANGING_MOSS = REGISTRY.register(new Block(1090, "pale_hanging_moss", false, 27860, 27861, 22, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
@@ -2195,7 +2195,7 @@ public final class BlockRegistry {
 
     public static final Block CLOSED_EYEBLOSSOM = REGISTRY.register(new Block(1092, "closed_eyeblossom", false, 27863, 27863, 49, BlockOffsetType.XZ, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_OPEN_EYEBLOSSOM = REGISTRY.register(new Block(1093, "potted_open_eyeblossom", true, 27864, 27864, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_OPEN_EYEBLOSSOM = REGISTRY.register(new Block(1093, "potted_open_eyeblossom", false, 27864, 27864, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 
-    public static final Block POTTED_CLOSED_EYEBLOSSOM = REGISTRY.register(new Block(1094, "potted_closed_eyeblossom", true, 27865, 27865, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
+    public static final Block POTTED_CLOSED_EYEBLOSSOM = REGISTRY.register(new Block(1094, "potted_closed_eyeblossom", false, 27865, 27865, 0, BlockOffsetType.NONE, 0.25f, 0.2f, 0.0f, false));
 }
