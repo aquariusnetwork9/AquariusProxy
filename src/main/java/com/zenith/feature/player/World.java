@@ -322,11 +322,13 @@ public class World {
                 float fluidHDiffMult = 0.0F;
                 float offsetFluidHeight = getFluidHeight(adjacentFluidState);
                 if (offsetFluidHeight == 0) {
-                    FluidState adjacentBelowFluidState = getFluidState(getBlockStateId(x, y - 1, z));
-                    if (affectsFlow(fluidState, adjacentBelowFluidState)) {
-                        offsetFluidHeight = getFluidHeight(adjacentBelowFluidState);
-                        if (offsetFluidHeight > 0) {
-                            fluidHDiffMult = fluidHeight - (offsetFluidHeight - 0.8888889F);
+                    if (!blocksMotion(getBlock(adjacentBlockstateId))) {
+                        FluidState adjacentBelowFluidState = getFluidState(getBlockStateId(x, y - 1, z));
+                        if (affectsFlow(fluidState, adjacentBelowFluidState)) {
+                            offsetFluidHeight = getFluidHeight(adjacentBelowFluidState);
+                            if (offsetFluidHeight > 0) {
+                                fluidHDiffMult = fluidHeight - (offsetFluidHeight - 0.8888889F);
+                            }
                         }
                     }
                 } else if (offsetFluidHeight > 0) {
@@ -354,6 +356,10 @@ public class World {
         }
         flowVec.normalize();
         return flowVec;
+    }
+
+    public boolean blocksMotion(Block block) {
+        return block != BlockRegistry.COBWEB && block != BlockRegistry.BAMBOO_SAPLING && block.isBlock();
     }
 
     public float getFluidHeight(final @Nullable FluidState fluidState) {
