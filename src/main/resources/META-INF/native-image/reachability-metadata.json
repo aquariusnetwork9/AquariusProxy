@@ -52,6 +52,9 @@
       "type": "[Lcom.viaversion.viaversion.api.minecraft.BlockChangeRecord;"
     },
     {
+      "type": "[Lcom.viaversion.viaversion.api.minecraft.GameProfile$Property;"
+    },
+    {
       "type": "[Lcom.viaversion.viaversion.api.minecraft.Particle;"
     },
     {
@@ -98,6 +101,9 @@
     },
     {
       "type": "[Lcom.viaversion.viaversion.libs.opennbt.tag.builtin.Tag;"
+    },
+    {
+      "type": "[Lcom.viaversion.viaversion.util.Key;"
     },
     {
       "type": "[Lcom.zaxxer.hikari.util.ConcurrentBag$IConcurrentBagEntry;"
@@ -770,10 +776,19 @@
           "name": "listeners"
         },
         {
+          "name": "listenersField"
+        },
+        {
           "name": "value"
         },
         {
+          "name": "valueField"
+        },
+        {
           "name": "waiters"
+        },
+        {
+          "name": "waitersField"
         }
       ]
     },
