@@ -157,6 +157,7 @@ public final class Config {
 
             public static final class PearlLoader {
                 public ArrayList<Pearl> pearls = new ArrayList<>();
+                public boolean returnToStartPos = true;
 
                 /**
                  * @param id player name or some other unique identifier
