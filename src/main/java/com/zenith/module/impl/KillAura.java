@@ -27,8 +27,8 @@ import static com.zenith.Globals.*;
 public class KillAura extends AbstractInventoryModule {
 
     private static final Set<EntityType> hostileEntities = ReferenceOpenHashSet.of(
-        EntityType.BLAZE, EntityType.BOGGED, EntityType.BREEZE, EntityType.CAVE_SPIDER, EntityType.CREEPER,
-        EntityType.DROWNED, EntityType.ELDER_GUARDIAN,
+        EntityType.BLAZE, EntityType.BOGGED, EntityType.BREEZE, EntityType.CAVE_SPIDER, EntityType.CREAKING,
+        EntityType.CREEPER, EntityType.DROWNED, EntityType.ELDER_GUARDIAN,
         EntityType.ENDER_DRAGON, EntityType.ENDERMITE, EntityType.EVOKER, EntityType.GHAST, EntityType.GUARDIAN,
         EntityType.HOGLIN, EntityType.HUSK, EntityType.ILLUSIONER, EntityType.FIREBALL, EntityType.MAGMA_CUBE,
         EntityType.PHANTOM, EntityType.PIGLIN, EntityType.PIGLIN_BRUTE, EntityType.PILLAGER, EntityType.RAVAGER,
