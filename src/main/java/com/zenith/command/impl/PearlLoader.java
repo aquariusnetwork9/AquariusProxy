@@ -1,19 +1,22 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.zenith.Proxy;
 import com.zenith.command.api.Command;
 import com.zenith.command.api.CommandCategory;
 import com.zenith.command.api.CommandContext;
 import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
+import com.zenith.mc.block.BlockPos;
 import com.zenith.util.config.Config.Client.Extra.PearlLoader.Pearl;
 
-import static com.zenith.Globals.BARITONE;
-import static com.zenith.Globals.CONFIG;
+import static com.zenith.Globals.*;
 import static com.zenith.command.brigadier.BlockPosArgument.blockPos;
 import static com.zenith.command.brigadier.BlockPosArgument.getBlockPos;
 import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
 import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
+import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
+import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 
 public class PearlLoader extends Command {
     @Override
@@ -32,7 +35,8 @@ public class PearlLoader extends Command {
                 "add <id> <x> <y> <z>",
                 "del <id>",
                 "load <id>",
-                "list"
+                "list",
+                "returnToStartPos on/off"
             )
             .aliases("pl")
             .build();
@@ -85,16 +89,40 @@ public class PearlLoader extends Command {
                 return OK;
             }))
             .then(literal("load").then(argument("id", wordWithChars()).executes(c -> {
+                if (!Proxy.getInstance().isConnected() || Proxy.getInstance().isInQueue()) {
+                    c.getSource().getEmbed()
+                        .title("Can't Load Pearl")
+                        .description("Bot is not online")
+                        .errorColor();
+                    return ERROR;
+                }
+                if (Proxy.getInstance().hasActivePlayer()) {
+                    c.getSource().getEmbed()
+                        .title("Can't Load Pearl")
+                        .description("Player is controlling")
+                        .errorColor();
+                    return ERROR;
+                }
                 String id = getString(c, "id");
                 var pearls = CONFIG.client.extra.pearlLoader.pearls;
                 for (var pearl : pearls) {
                     if (pearl.id().equals(id)) {
+                        BlockPos current = CACHE.getPlayerCache().getThePlayer().blockPos();
                         BARITONE.rightClickBlock(pearl.x(), pearl.y(), pearl.z())
                             .addExecutedListener(f -> {
                                 c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
                                     .title("Pearl Loaded!")
                                     .addField("Pearl ID", pearl.id(), false)
                                     .successColor());
+                                if (CONFIG.client.extra.pearlLoader.returnToStartPos) {
+                                    BARITONE.pathTo(current.x(), current.z())
+                                        .addExecutedListener(f2 -> {
+                                            c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
+                                                .description("Returned to start pos")
+                                                .successColor());
+                                        });
+                                }
+
                             });
                         c.getSource().getEmbed()
                             .title("Loading Pearl")
@@ -107,13 +135,22 @@ public class PearlLoader extends Command {
                     .addField("Error", "Pearl with id: " + id + " not found.", false)
                     .errorColor();
                 return OK;
+            })))
+            .then(literal("returnToStartPos").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.pearlLoader.returnToStartPos = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("Return to Start Pos Set")
+                    .primaryColor();
             })));
     }
 
     @Override
     public void defaultEmbed(Embed embed) {
+        if (embed.description() == null) {
+            embed.description(pearlsList());
+        }
         embed
-            .description(pearlsList());
+            .addField("Return To Start Pos", toggleStr(CONFIG.client.extra.pearlLoader.returnToStartPos));
     }
 
     private String pearlsList() {
@@ -132,6 +169,6 @@ public class PearlLoader extends Command {
                 sb.append("coords disabled\n");
             }
         }
-        return sb.toString();
+        return sb.substring(0, 4000);
     }
 }
