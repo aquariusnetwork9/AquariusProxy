@@ -169,6 +169,8 @@ public class PearlLoader extends Command {
                 sb.append("coords disabled\n");
             }
         }
-        return sb.substring(0, 4000);
+        String s = sb.toString();
+        if (s.isEmpty()) return "None";
+        return s.substring(0, s.length() - 1);
     }
 }
