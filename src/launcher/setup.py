@@ -6,6 +6,7 @@ import requests
 
 from jdk_install import get_java_executable, JavaInstallType
 from launch_config import read_launch_config_file
+from launch_platform import get_public_ip
 from launch_platform import validate_linux_system
 from utils import critical_error
 
@@ -100,18 +101,35 @@ def setup_execute(config):
             break
         elif i1 == "2":
             print("Attempting to determine IP for players to connect to...")
-            response = requests.get("https://api.ipify.org", timeout=10)
-            if response.status_code == 200:
-                ip = response.content.decode()
+            ip = get_public_ip()
+            if ip is not None:
                 print("Found IP:", ip)
-                break
             else:
-                print("Failed to get IP:", response.status_code, response.reason)
                 ip = "localhost"
-                break
+            break
         else:
             print("Invalid input. Enter 1 or 2.")
     print("")
+
+    upnp = False
+    if ip == "localhost":
+        while True:
+            print("Enable UPnP to attempt automatic port forwarding? (y/n)")
+            i1 = input("> ")
+            if i1 == "y":
+                upnp = True
+                print("Attempting to determine IP for players to connect to...")
+                public_ip = get_public_ip()
+                if public_ip is not None:
+                    ip = public_ip
+                    print("Found IP:", ip)
+                break
+            elif i1 == "n":
+                upnp = False
+                break
+            else:
+                print("Invalid input. Enter y or n")
+        print("")
 
     while True:
         print("Enable Discord bot? (y/n)")
@@ -207,6 +225,7 @@ def setup_execute(config):
             "port": port,
         },
         "proxyIP": proxy_address,
+        "upnp": upnp
     }
 
     if discord_bot:

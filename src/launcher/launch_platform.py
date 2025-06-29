@@ -4,6 +4,8 @@ import subprocess
 import sys
 from enum import Enum
 
+import requests
+
 from jdk_install import get_java_executable
 
 
@@ -148,3 +150,11 @@ def get_platform_arch():
         return CpuArch.AMD64
     else:
         raise PlatformError("Unsupported CPU architecture: " + uname)
+
+def get_public_ip():
+    response = requests.get("https://api.ipify.org", timeout=10)
+    if response.status_code == 200:
+        return response.content.decode()
+    else:
+        print("Failed to get public IP:", response.status_code, response.reason)
+        return None
