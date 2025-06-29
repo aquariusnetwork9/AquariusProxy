@@ -601,6 +601,7 @@ public final class Config {
         public final LoginRateLimiter loginRateLimiter = new LoginRateLimiter();
         public boolean connectionTestOnStart = true;
         public final PacketRateLimiter packetRateLimiter = new PacketRateLimiter();
+        public boolean upnp = false;
 
         public static final class PacketRateLimiter {
             public boolean enabled = true;

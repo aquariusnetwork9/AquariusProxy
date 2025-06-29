@@ -30,6 +30,8 @@ public class ServerConnectionCommand extends Command {
             
             The `port` argument changes the port the ZenithProxy MC server listens on
             
+            `upnp` will try to open the port to the public internet, useful for self-hosting on a home network
+            
             The `ping` arguments configure the server list ping response ZenithProxy sends to players.
             `onlinePlayers` = MC profiles of players
             `onlinePlayerCount` = number of players connected
@@ -42,6 +44,7 @@ public class ServerConnectionCommand extends Command {
             .usageLines(
                 "proxyIP <ip>",
                 "port <port>",
+                "upnp on/off",
                 "ping on/off",
                 "ping onlinePlayers on/off",
                 "ping onlinePlayerCount on/off",
@@ -63,7 +66,6 @@ public class ServerConnectionCommand extends Command {
                 CONFIG.server.proxyIP = getString(c, "ip");
                 c.getSource().getEmbed()
                     .title("Proxy IP Set");
-                return OK;
             })))
             .then(literal("port").then(argument("port", integer(1, 65535)).executes(context -> {
                 CONFIG.server.bind.port = getInteger(context, "port");
@@ -74,78 +76,77 @@ public class ServerConnectionCommand extends Command {
                     Proxy.getInstance().stopServer();
                     Proxy.getInstance().startServer();
                 });
-                return OK;
+            })))
+            .then(literal("upnp").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.server.upnp = getToggle(c, "toggle");
+                if (CONFIG.server.upnp) {
+                    Proxy.getInstance().openUpnp();
+                } else {
+                    Proxy.getInstance().closeUpnp();
+                }
+                c.getSource().getEmbed()
+                    .title("UPnP " + toggleStrCaps(CONFIG.server.upnp));
             })))
             .then(literal("ping")
-                      .then(argument("pingToggle", toggle()).executes(context -> {
-                          CONFIG.server.ping.enabled = getToggle(context, "pingToggle");
-                          context.getSource().getEmbed()
-                              .title("Ping Set!");
-                          return OK;
-                      }))
-                      .then(literal("onlinePlayers")
-                                .then(argument("onlinePlayersToggle", toggle()).executes(context -> {
-                                    CONFIG.server.ping.onlinePlayers = getToggle(context, "onlinePlayersToggle");
-                                    context.getSource().getEmbed()
-                                        .title("Ping Reports Online Players Set!");
-                                    return OK;
-                                })))
-                      .then(literal("onlinePlayerCount")
-                                .then(argument("onlinePlayerCountToggle", toggle()).executes(context -> {
-                                    CONFIG.server.ping.onlinePlayerCount = getToggle(context, "onlinePlayerCountToggle");
-                                    context.getSource().getEmbed()
-                                        .title("Ping Online Player Count Set!");
-                                    return OK;
-                                })))
-                      .then(literal("maxPlayers").then(argument("maxPlayers", integer(0)).executes(context -> {
-                          CONFIG.server.ping.maxPlayers = getInteger(context, "maxPlayers");
-                          context.getSource().getEmbed()
-                              .title("Ping Max Players Set!");
-                          return OK;
-                      })))
-                      .then(literal("lanBroadcast")
-                                .then(argument("lanBroadcastToggle", toggle()).executes(context -> {
-                                    CONFIG.server.ping.lanBroadcast = getToggle(context, "lanBroadcastToggle");
-                                    context.getSource().getEmbed()
-                                        .title("Ping LAN Broadcast Set!");
-                                    return OK;
-                                })))
-                      .then(literal("log")
-                                .then(argument("toggle", toggle()).executes(c -> {
-                                    CONFIG.server.ping.logPings = getToggle(c, "toggle");
-                                    c.getSource().getEmbed()
-                                        .title("Ping Log " + toggleStrCaps(CONFIG.server.ping.logPings));
-                                    return OK;
-                                }))))
+                .then(argument("pingToggle", toggle()).executes(context -> {
+                    CONFIG.server.ping.enabled = getToggle(context, "pingToggle");
+                    context.getSource().getEmbed()
+                        .title("Ping Set!");
+                }))
+                .then(literal("onlinePlayers")
+                    .then(argument("onlinePlayersToggle", toggle()).executes(context -> {
+                        CONFIG.server.ping.onlinePlayers = getToggle(context, "onlinePlayersToggle");
+                        context.getSource().getEmbed()
+                            .title("Ping Reports Online Players Set!");
+                    })))
+                .then(literal("onlinePlayerCount")
+                    .then(argument("onlinePlayerCountToggle", toggle()).executes(context -> {
+                        CONFIG.server.ping.onlinePlayerCount = getToggle(context, "onlinePlayerCountToggle");
+                        context.getSource().getEmbed()
+                            .title("Ping Online Player Count Set!");
+                    })))
+                .then(literal("maxPlayers").then(argument("maxPlayers", integer(0)).executes(context -> {
+                    CONFIG.server.ping.maxPlayers = getInteger(context, "maxPlayers");
+                    context.getSource().getEmbed()
+                        .title("Ping Max Players Set!");
+                })))
+                .then(literal("lanBroadcast")
+                    .then(argument("lanBroadcastToggle", toggle()).executes(context -> {
+                        CONFIG.server.ping.lanBroadcast = getToggle(context, "lanBroadcastToggle");
+                        context.getSource().getEmbed()
+                            .title("Ping LAN Broadcast Set!");
+                    })))
+                .then(literal("log")
+                    .then(argument("toggle", toggle()).executes(c -> {
+                        CONFIG.server.ping.logPings = getToggle(c, "toggle");
+                        c.getSource().getEmbed()
+                            .title("Ping Log " + toggleStrCaps(CONFIG.server.ping.logPings));
+                    }))))
             .then(literal("enforceMatchingConnectingAddress")
-                      .then(argument("toggle", toggle()).executes(c -> {
-                          CONFIG.server.enforceMatchingConnectingAddress = getToggle(c, "toggle");
-                          c.getSource().getEmbed()
-                              .title("Enforce Connecting Address " + toggleStrCaps(CONFIG.server.enforceMatchingConnectingAddress));
-                          return OK;
-                      })))
+                .then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.server.enforceMatchingConnectingAddress = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                        .title("Enforce Connecting Address " + toggleStrCaps(CONFIG.server.enforceMatchingConnectingAddress));
+                })))
             .then(literal("timeout")
-                      .then(argument("toggle", toggle()).executes(c -> {
-                          CONFIG.server.extra.timeout.enable = getToggle(c, "toggle");
-                          syncTimeout();
-                          c.getSource().getEmbed()
-                              .title("Server Timeout " + toggleStrCaps(CONFIG.server.extra.timeout.enable));
-                          return OK;
-                      }))
-                      .then(argument("timeout", integer(10, 120)).executes(c -> {
-                          CONFIG.server.extra.timeout.seconds = getInteger(c, "timeout");
-                          syncTimeout();
-                          c.getSource().getEmbed()
-                              .title("Server Timeout Set");
-                          return OK;
-                      })))
+                .then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.server.extra.timeout.enable = getToggle(c, "toggle");
+                    syncTimeout();
+                    c.getSource().getEmbed()
+                        .title("Server Timeout " + toggleStrCaps(CONFIG.server.extra.timeout.enable));
+                }))
+                .then(argument("timeout", integer(10, 120)).executes(c -> {
+                    CONFIG.server.extra.timeout.seconds = getInteger(c, "timeout");
+                    syncTimeout();
+                    c.getSource().getEmbed()
+                        .title("Server Timeout Set");
+                })))
             .then(literal("autoConnectOnLogin")
-                      .then(argument("toggle", toggle()).executes(c -> {
-                          CONFIG.client.extra.autoConnectOnLogin = getToggle(c, "toggle");
-                          c.getSource().getEmbed()
-                              .title("Auto Connect On Login " + toggleStrCaps(CONFIG.client.extra.autoConnectOnLogin));
-                          return OK;
-                      })));
+                .then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.autoConnectOnLogin = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                        .title("Auto Connect On Login " + toggleStrCaps(CONFIG.client.extra.autoConnectOnLogin));
+                })));
     }
 
     private void syncTimeout() {
@@ -161,16 +162,17 @@ public class ServerConnectionCommand extends Command {
     public void defaultEmbed(final Embed builder) {
         builder
             .primaryColor()
-            .addField("Proxy IP", CONFIG.server.proxyIP, false)
-            .addField("Port", CONFIG.server.bind.port, false)
-            .addField("Ping", toggleStr(CONFIG.server.ping.enabled), false)
-            .addField("Ping Reports Online Players", toggleStr(CONFIG.server.ping.onlinePlayers), false)
-            .addField("Ping Reports Online Player Count", toggleStr(CONFIG.server.ping.onlinePlayerCount), false)
-            .addField("Ping Max Players", CONFIG.server.ping.maxPlayers, false)
-            .addField("Ping LAN Broadcast", toggleStr(CONFIG.server.ping.lanBroadcast), false)
-            .addField("Ping Log", toggleStr(CONFIG.server.ping.logPings), false)
-            .addField("Enforce Matching Connecting Address", toggleStr(CONFIG.server.enforceMatchingConnectingAddress), false)
-            .addField("Timeout", CONFIG.server.extra.timeout.enable ? CONFIG.server.extra.timeout.seconds : toggleStr(false), false)
-            .addField("Auto Connect On Login", toggleStr(CONFIG.client.extra.autoConnectOnLogin), false);
+            .addField("Proxy IP", CONFIG.server.proxyIP)
+            .addField("Port", CONFIG.server.bind.port)
+            .addField("UPnP", CONFIG.server.upnp)
+            .addField("Ping", toggleStr(CONFIG.server.ping.enabled))
+            .addField("Ping Reports Online Players", toggleStr(CONFIG.server.ping.onlinePlayers))
+            .addField("Ping Reports Online Player Count", toggleStr(CONFIG.server.ping.onlinePlayerCount))
+            .addField("Ping Max Players", CONFIG.server.ping.maxPlayers)
+            .addField("Ping LAN Broadcast", toggleStr(CONFIG.server.ping.lanBroadcast))
+            .addField("Ping Log", toggleStr(CONFIG.server.ping.logPings))
+            .addField("Enforce Matching Connecting Address", toggleStr(CONFIG.server.enforceMatchingConnectingAddress))
+            .addField("Timeout", CONFIG.server.extra.timeout.enable ? CONFIG.server.extra.timeout.seconds : toggleStr(false))
+            .addField("Auto Connect On Login", toggleStr(CONFIG.client.extra.autoConnectOnLogin));
     }
 }

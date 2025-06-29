@@ -31,6 +31,8 @@ import com.zenith.util.Wait;
 import com.zenith.util.struct.FastArrayList;
 import com.zenith.via.ZenithClientChannelInitializer;
 import com.zenith.via.ZenithServerChannelInitializer;
+import dev.omega24.upnp4j.UPnP4J;
+import dev.omega24.upnp4j.util.Protocol;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -465,6 +467,41 @@ public class Proxy {
         }
         this.server.addListener(new ProxyServerListener());
         this.server.bind(false);
+        if (CONFIG.server.upnp) {
+            EXECUTOR.execute(this::openUpnp);
+        }
+    }
+
+    public void openUpnp() {
+        try {
+            if (UPnP4J.isUPnPAvailable()) {
+                if (UPnP4J.open(server.getPort(), Protocol.TCP)) {
+                    SERVER_LOG.info("Opened UPnP address: {}:{}", UPnP4J.getExternalIP(), server.getPort());
+                } else {
+                    SERVER_LOG.info("Failed to open UPnP address: {}:{}", UPnP4J.getExternalIP(), server.getPort());
+                }
+            } else {
+                SERVER_LOG.debug("UPnP not available!");
+            }
+        } catch (final Exception e) {
+            SERVER_LOG.error(e.getMessage(), e);
+        }
+    }
+
+    public void closeUpnp() {
+        try {
+            if (UPnP4J.isUPnPAvailable()) {
+                if (UPnP4J.close(server.getPort(), Protocol.TCP)) {
+                    SERVER_LOG.info("Closed UPnP address: {}:{}", UPnP4J.getExternalIP(), server.getPort());
+                } else {
+                    SERVER_LOG.info("Failed to close UPnP address: {}:{}", UPnP4J.getExternalIP(), server.getPort());
+                }
+            } else {
+                SERVER_LOG.debug("UPnP not available!");
+            }
+        } catch (final Exception e) {
+            SERVER_LOG.error(e.getMessage(), e);
+        }
     }
 
     public synchronized void stopServer() {
@@ -473,6 +510,9 @@ public class Proxy {
         if (this.lanBroadcaster != null) {
             this.lanBroadcaster.stop();
             this.lanBroadcaster = null;
+        }
+        if (this.server != null && CONFIG.server.upnp) {
+            closeUpnp();
         }
     }
 
