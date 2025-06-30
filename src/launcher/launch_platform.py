@@ -1,5 +1,7 @@
+import errno
 import os
 import platform
+import socket
 import subprocess
 import sys
 from enum import Enum
@@ -151,6 +153,7 @@ def get_platform_arch():
     else:
         raise PlatformError("Unsupported CPU architecture: " + uname)
 
+
 def get_public_ip():
     response = requests.get("https://api.ipify.org", timeout=10)
     if response.status_code == 200:
@@ -158,3 +161,15 @@ def get_public_ip():
     else:
         print("Failed to get public IP:", response.status_code, response.reason)
         return None
+
+
+def check_port_in_use(port):
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("localhost", port))
+            return False
+    except socket.error as e:
+        if e.errno == errno.EADDRINUSE:
+            return True
+        else:
+            return False

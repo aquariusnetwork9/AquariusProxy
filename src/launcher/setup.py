@@ -1,12 +1,13 @@
 import json
 import os
+import random
 import re
 
 import requests
 
 from jdk_install import get_java_executable, JavaInstallType
 from launch_config import read_launch_config_file
-from launch_platform import get_public_ip
+from launch_platform import get_public_ip, check_port_in_use
 from launch_platform import validate_linux_system
 from utils import critical_error
 
@@ -76,22 +77,6 @@ def setup_execute(config):
         print("")
 
     while True:
-        print("Select the port ZenithProxy will be hosted on.")
-        print("If you are unsure, just press enter to use 25565 by default.")
-        port = input("> ")
-        if port == "":
-            port = 25565
-            break
-        try:
-            port = int(port)
-            if port < 1 or port > 65535:
-                raise ValueError
-            break
-        except ValueError:
-            print("Invalid port number. Must be between 1 and 65535")
-    print("")
-
-    while True:
         print("Select the type of environment you are running ZenithProxy on.")
         print("1. PC or other computer in your home")
         print("2. VPS or server outside your home")
@@ -111,10 +96,31 @@ def setup_execute(config):
             print("Invalid input. Enter 1 or 2.")
     print("")
 
+    while True:
+        print("Select the port ZenithProxy will be hosted on.")
+        print("If you are unsure, press enter to select a random port.")
+        port = input("> ")
+        if port == "":
+            port = int(random.uniform(35000, 65000))
+            attempts = 0
+            while check_port_in_use(port) and attempts < 10:
+                port = int(random.uniform(35000, 65000))
+                attempts += 1
+            break
+        try:
+            port = int(port)
+            if port < 1 or port > 65535:
+                raise ValueError
+            break
+        except ValueError:
+            print("Invalid port number. Must be between 1 and 65535")
+    print("Using port:", port)
+    print("")
+
     upnp = False
     if ip == "localhost":
         while True:
-            print("Enable UPnP to attempt automatic port forwarding? (y/n)")
+            print("Enable automatic port forwarding with UPnP (https://w.wiki/Ebjt)? (y/n)")
             i1 = input("> ")
             if i1 == "y":
                 upnp = True
