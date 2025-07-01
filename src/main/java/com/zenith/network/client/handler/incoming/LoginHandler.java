@@ -24,8 +24,8 @@ public class LoginHandler implements PacketHandler<ClientboundLoginPacket, Clien
         }
         CACHE.getPlayerCache()
             .setHardcore(packet.isHardcore())
+            .setUuid(CACHE.getProfileCache().getProfile().getId()) // must be before entity id setter
             .setEntityId(packet.getEntityId())
-            .setUuid(CACHE.getProfileCache().getProfile().getId())
             .setLastDeathPos(packet.getCommonPlayerSpawnInfo().getLastDeathPos())
             .setPortalCooldown(packet.getCommonPlayerSpawnInfo().getPortalCooldown())
             .setMaxPlayers(packet.getMaxPlayers())
