@@ -396,6 +396,13 @@ public final class MovementHelper {
         if (block == BlockRegistry.GLASS || block.name().endsWith("stained_glass")) {
             return YES;
         }
+        if (block.name().endsWith("_trapdoor")) {
+            var openProperty = World.getBlockStateProperty(blockStateId, BlockStateProperties.OPEN);
+            if (openProperty == null || openProperty) {
+                return NO;
+            }
+            return YES;
+        }
         if (block.name().endsWith("_stairs")) {
             return YES;
         }
