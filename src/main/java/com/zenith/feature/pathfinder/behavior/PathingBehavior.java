@@ -18,7 +18,6 @@ import com.zenith.feature.pathfinder.util.PathCalculationResult;
 import com.zenith.feature.pathfinder.util.PathEvent;
 import com.zenith.mc.block.BlockPos;
 import lombok.Getter;
-import lombok.Locked;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -47,7 +46,10 @@ public class PathingBehavior extends Behavior {
     private boolean cancelRequested;
     private boolean calcFailedLastTick;
     private volatile AbstractNodeCostSearch inProgress;
+    private final Object pathCalcLock = new Object();
+    private final Object pathPlanLock = new Object();
     @Nullable private volatile ListenableFuture<?> pathSearchFuture;
+    private boolean lastAutoJump;
     private BlockPos expectedSegmentStart;
     private final LinkedBlockingQueue<PathEvent> toDispatch = new LinkedBlockingQueue<>();
 
@@ -63,6 +65,14 @@ public class PathingBehavior extends Behavior {
         ArrayList<PathEvent> curr = new ArrayList<>();
         toDispatch.drainTo(curr);
         calcFailedLastTick = curr.contains(PathEvent.CALC_FAILED);
+//        for (PathEvent event : curr) {
+//            baritone.getGameEventHandler().onPathEvent(event);
+//        }
+    }
+
+    public void onClientBotTickStateChange() {
+        secretInternalSegmentCancel();
+        baritone.getPathingControlManager().cancelEverything();
     }
 
     public void onTick() {
@@ -91,103 +101,109 @@ public class PathingBehavior extends Behavior {
             cancelRequested = false;
             baritone.getInputOverrideHandler().clearAllKeys();
         }
-        tickPath0();
-    }
-
-    @Locked
-    private void tickPath0() {
-        if (inProgress != null) {
-            // we are calculating
-            // are we calculating the right thing though? 🤔
-            BlockPos calcFrom = inProgress.getStart();
-            Optional<IPath> currentBest = inProgress.bestPathSoFar();
-            if ((current == null || !current.getPath().getDest().equals(calcFrom)) // if current ends in inProgress's start, then we're ok
-                && !calcFrom.equals(ctx.playerFeet()) && !calcFrom.equals(expectedSegmentStart) // if current starts in our playerFeet or pathStart, then we're ok
-                && (!currentBest.isPresent() || (!currentBest.get().positions().contains(ctx.playerFeet()) && !currentBest.get().positions().contains(expectedSegmentStart))) // if
-            ) {
-                // when it was *just* started, currentBest will be empty so we need to also check calcFrom since that's always present
-                inProgress.cancel(); // cancellation doesn't dispatch any events
+        synchronized (pathPlanLock) {
+            synchronized (pathCalcLock) {
+                if (inProgress != null) {
+                    // we are calculating
+                    // are we calculating the right thing though? 🤔
+                    BlockPos calcFrom = inProgress.getStart();
+                    Optional<IPath> currentBest = inProgress.bestPathSoFar();
+                    if ((current == null || !current.getPath().getDest().equals(calcFrom)) // if current ends in inProgress's start, then we're ok
+                        && !calcFrom.equals(ctx.playerFeet()) && !calcFrom.equals(expectedSegmentStart) // if current starts in our playerFeet or pathStart, then we're ok
+                        && (!currentBest.isPresent() || (!currentBest.get().positions().contains(ctx.playerFeet()) && !currentBest.get().positions().contains(expectedSegmentStart))) // if
+                    ) {
+                        // when it was *just* started, currentBest will be empty so we need to also check calcFrom since that's always present
+                        inProgress.cancel(); // cancellation doesn't dispatch any events
+                    }
+                }
             }
-        }
-        if (current == null) {
-            return;
-        }
-        safeToCancel = current.onTick();
-        if (System.currentTimeMillis() - lastFailedPathTime < 3000) {
-            return;
-        }
-        if (current.failed() || current.finished()) {
-            current = null;
-            if (goal == null || goal.isInGoal(ctx.playerFeet())) {
-                PATH_LOG.info("All done. At {}", requireNonNullElse(goal, "goal"));
-                queuePathEvent(PathEvent.AT_GOAL);
-                next = null;
+            if (current == null) {
                 return;
             }
-            if (next != null && !next.getPath().positions().contains(ctx.playerFeet()) && !next.getPath().positions().contains(expectedSegmentStart)) { // can contain either one
-                // if the current path failed, we may not actually be on the next one, so make sure
-                PATH_LOG.debug("Discarding next path as it does not contain current position");
-                // for example if we had a nicely planned ahead path that starts where current ends
-                // that's all fine and good
-                // but if we fail in the middle of current
-                // we're nowhere close to our planned ahead path
-                // so need to discard it sadly.
-                queuePathEvent(PathEvent.DISCARD_NEXT);
-                next = null;
+            safeToCancel = current.onTick();
+            if (System.currentTimeMillis() - lastFailedPathTime < 3000) {
+                return;
             }
-            if (next != null) {
-                PATH_LOG.debug("Continuing on to planned next path");
-                queuePathEvent(PathEvent.CONTINUING_ONTO_PLANNED_NEXT);
+            if (current.failed() || current.finished()) {
+                current = null;
+                if (goal == null || goal.isInGoal(ctx.playerFeet())) {
+                    PATH_LOG.info("All done. At {}", requireNonNullElse(goal, "goal"));
+                    queuePathEvent(PathEvent.AT_GOAL);
+                    next = null;
+//                    if (Baritone.settings().disconnectOnArrival.value) {
+//                        ctx.world().disconnect();
+//                    }
+                    return;
+                }
+                if (next != null && !next.getPath().positions().contains(ctx.playerFeet()) && !next.getPath().positions().contains(expectedSegmentStart)) { // can contain either one
+                    // if the current path failed, we may not actually be on the next one, so make sure
+                    PATH_LOG.debug("Discarding next path as it does not contain current position");
+                    // for example if we had a nicely planned ahead path that starts where current ends
+                    // that's all fine and good
+                    // but if we fail in the middle of current
+                    // we're nowhere close to our planned ahead path
+                    // so need to discard it sadly.
+                    queuePathEvent(PathEvent.DISCARD_NEXT);
+                    next = null;
+                }
+                if (next != null) {
+                    PATH_LOG.debug("Continuing on to planned next path");
+                    queuePathEvent(PathEvent.CONTINUING_ONTO_PLANNED_NEXT);
+                    current = next;
+                    next = null;
+                    current.onTick(); // don't waste a tick doing nothing, get started right away
+                    return;
+                }
+                // at this point, current just ended, but we aren't in the goal and have no plan for the future
+                synchronized (pathCalcLock) {
+                    ListenableFuture<?> searchFuture = pathSearchFuture;
+                    if (inProgress != null || (searchFuture != null && !searchFuture.isDone())) {
+                        queuePathEvent(PathEvent.PATH_FINISHED_NEXT_STILL_CALCULATING);
+                        return;
+                    }
+                    // we aren't calculating
+                    queuePathEvent(PathEvent.CALC_STARTED);
+                    findPathInNewThread(expectedSegmentStart, context);
+                }
+                return;
+            }
+            // at this point, we know current is in progress
+            if (safeToCancel && next != null && next.snipsnapifpossible()) {
+                // a movement just ended; jump directly onto the next path
+                PATH_LOG.debug("Splicing into planned next path early...");
+                queuePathEvent(PathEvent.SPLICING_ONTO_NEXT_EARLY);
                 current = next;
                 next = null;
-                current.onTick(); // don't waste a tick doing nothing, get started right away
+                current.onTick();
                 return;
             }
-            // at this point, current just ended, but we aren't in the goal and have no plan for the future
-            ListenableFuture<?> searchFuture = pathSearchFuture;
-            if (inProgress != null || (searchFuture != null && !searchFuture.isDone())) {
-                queuePathEvent(PathEvent.PATH_FINISHED_NEXT_STILL_CALCULATING);
-                return;
+            current = current.trySplice(next);
+            if (next != null && current.getPath().getDest().equals(next.getPath().getDest())) {
+                next = null;
             }
-            // we aren't calculating
-            queuePathEvent(PathEvent.CALC_STARTED);
-            findPathInNewThread(expectedSegmentStart, context);
-            return;
-        }
-        // at this point, we know current is in progress
-        if (safeToCancel && next != null && next.snipsnapifpossible()) {
-            // a movement just ended; jump directly onto the next path
-            PATH_LOG.debug("Splicing into planned next path early...");
-            queuePathEvent(PathEvent.SPLICING_ONTO_NEXT_EARLY);
-            current = next;
-            next = null;
-            current.onTick();
-            return;
-        }
-        current = current.trySplice(next);
-        if (next != null && current.getPath().getDest().equals(next.getPath().getDest())) {
-            next = null;
-        }
-        ListenableFuture<?> searchFuture = pathSearchFuture;
-        if (inProgress != null || (searchFuture != null && !searchFuture.isDone())) {
-            // if we aren't calculating right now
-            return;
-        }
-        if (next != null) {
-            // and we have no plan for what to do next
-            return;
-        }
-        if (goal == null || goal.isInGoal(current.getPath().getDest())) {
-            // and this path doesn't get us all the way there
-            return;
-        }
-        if (ticksRemainingInSegment(false).get() < 150) {
-            // and this path has 7.5 seconds or less left
-            // don't include the current movement so a very long last movement (e.g. descend) doesn't trip it up
-            // if we actually included current, it wouldn't start planning ahead until the last movement was done, if the last movement took more than 7.5 seconds on its own
-            PATH_LOG.debug("Path almost over. Planning ahead...");
-            queuePathEvent(PathEvent.NEXT_SEGMENT_CALC_STARTED);
-            findPathInNewThread(current.getPath().getDest(), context);
+            synchronized (pathCalcLock) {
+                ListenableFuture<?> searchFuture = pathSearchFuture;
+                if (inProgress != null || (searchFuture != null && !searchFuture.isDone())) {
+                    // if we aren't calculating right now
+                    return;
+                }
+                if (next != null) {
+                    // and we have no plan for what to do next
+                    return;
+                }
+                if (goal == null || goal.isInGoal(current.getPath().getDest())) {
+                    // and this path doesn't get us all the way there
+                    return;
+                }
+                if (ticksRemainingInSegment(false).get() < 150) {
+                    // and this path has 7.5 seconds or less left
+                    // don't include the current movement so a very long last movement (e.g. descend) doesn't trip it up
+                    // if we actually included current, it wouldn't start planning ahead until the last movement was done, if the last movement took more than 7.5 seconds on its own
+                    PATH_LOG.debug("Path almost over. Planning ahead...");
+                    queuePathEvent(PathEvent.NEXT_SEGMENT_CALC_STARTED);
+                    findPathInNewThread(current.getPath().getDest(), context);
+                }
+            }
         }
     }
 
@@ -204,21 +220,20 @@ public class PathingBehavior extends Behavior {
         if (goal.isInGoal(ctx.playerFeet())) {
             return false;
         }
-        return secretInternalSetGoalAndPath0(command);
-    }
-
-    @Locked
-    private boolean secretInternalSetGoalAndPath0(PathingCommand command) {
-        if (current != null) {
-            return false;
+        synchronized (pathPlanLock) {
+            if (current != null) {
+                return false;
+            }
+            synchronized (pathCalcLock) {
+                ListenableFuture<?> searchFuture = pathSearchFuture;
+                if (inProgress != null || (searchFuture != null && !searchFuture.isDone())) {
+                    return false;
+                }
+                queuePathEvent(PathEvent.CALC_STARTED);
+                findPathInNewThread(expectedSegmentStart, context);
+                return true;
+            }
         }
-        ListenableFuture<?> searchFuture = pathSearchFuture;
-        if (inProgress != null || (searchFuture != null && !searchFuture.isDone())) {
-            return false;
-        }
-        queuePathEvent(PathEvent.CALC_STARTED);
-        findPathInNewThread(expectedSegmentStart, context);
-        return true;
     }
 
     public boolean isPathing() {
@@ -261,35 +276,38 @@ public class PathingBehavior extends Behavior {
         return calcFailedLastTick;
     }
 
-    @Locked
     public void softCancelIfSafe() {
-        getInProgress().ifPresent(AbstractNodeCostSearch::cancel); // only cancel ours
-        if (!isSafeToCancel()) {
-            return;
+        synchronized (pathPlanLock) {
+            getInProgress().ifPresent(AbstractNodeCostSearch::cancel); // only cancel ours
+            if (!isSafeToCancel()) {
+                return;
+            }
+            current = null;
+            next = null;
         }
-        current = null;
-        next = null;
         cancelRequested = true;
         // do everything BUT clear keys
     }
 
     // just cancel the current path
-    @Locked
     public void secretInternalSegmentCancel() {
         queuePathEvent(PathEvent.CANCELED);
-        getInProgress().ifPresent(AbstractNodeCostSearch::cancel);
-        if (current != null) {
-            current = null;
-            next = null;
-            baritone.getInputOverrideHandler().clearAllKeys();
+        synchronized (pathPlanLock) {
+            getInProgress().ifPresent(AbstractNodeCostSearch::cancel);
+            if (current != null) {
+                current = null;
+                next = null;
+                baritone.getInputOverrideHandler().clearAllKeys();
+            }
         }
     }
 
-    @Locked
     public void forceCancel() { // exposed on public api because :sob:
         cancelEverything();
         secretInternalSegmentCancel();
-        inProgress = null;
+        synchronized (pathCalcLock) {
+            inProgress = null;
+        }
     }
 
     public CalculationContext secretInternalGetCalculationContext() {
@@ -377,8 +395,13 @@ public class PathingBehavior extends Behavior {
     /**
      * In a new thread, pathfind to target blockpos
      */
-    @Locked
     private void findPathInNewThread(final BlockPos start, CalculationContext context) {
+        // this must be called with synchronization on pathCalcLock!
+        // actually, we can check this, muahaha
+        if (!Thread.holdsLock(pathCalcLock)) {
+            throw new IllegalStateException("Must be called with synchronization on pathCalcLock");
+            // why do it this way? it's already indented so much that putting the whole thing in a synchronized(pathCalcLock) was just too much lol
+        }
         if (inProgress != null) {
             throw new IllegalStateException("Already doing it"); // should have been checked by caller
         }
@@ -401,76 +424,70 @@ public class PathingBehavior extends Behavior {
             PATH_LOG.debug("Simplifying {} to GoalXZ due to distance", goal.getClass());
         }
         inProgress = pathfinder;
-        pathSearchFuture = Baritone.getExecutor().submit(() -> findPathInNewThread0(start, pathfinder, primaryTimeout, failureTimeout));
-    }
-
-    // main calculations run inside executor
-    // not locked because no path state is mutated
-    private void findPathInNewThread0(final BlockPos start, AbstractNodeCostSearch pathfinder, long primaryTimeout, long failureTimeout) {
-        if (System.currentTimeMillis() - lastFailedPathTime < CONFIG.client.extra.pathfinder.failedPathSearchCooldownMs) {
-            try {
-                Thread.sleep(CONFIG.client.extra.pathfinder.failedPathSearchCooldownMs - (System.currentTimeMillis() - lastFailedPathTime));
-            } catch (InterruptedException ignored) {
-            }
-        }
-
-        PATH_LOG.debug("Searching for path from {} to {}", start, goal);
-
-        PathCalculationResult calcResult = pathfinder.calculate(primaryTimeout, failureTimeout);
-        findPathInNewThread1(start, calcResult);
-    }
-
-    // handle calculation results inside executor
-    @Locked
-    private void findPathInNewThread1(final BlockPos start, PathCalculationResult calcResult) {
-        if (calcResult.getType() == PathCalculationResult.Type.FAILURE || calcResult.getType() == PathCalculationResult.Type.EXCEPTION) {
-            lastFailedPathTime = System.currentTimeMillis();
-            failedPathSearches.getAndIncrement();
-        } else {
-            failedPathSearches.set(0);
-        }
-        Optional<PathExecutor> executor = calcResult.getPath().map(p -> new PathExecutor(PathingBehavior.this, p));
-        if (current == null) {
-            if (executor.isPresent()) {
-                if (executor.get().getPath().positions().contains(expectedSegmentStart)) {
-                    queuePathEvent(PathEvent.CALC_FINISHED_NOW_EXECUTING);
-                    current = executor.get();
-                    resetEstimatedTicksToGoal(start);
-                } else {
-                    PATH_LOG.debug("Warning: discarding orphan path segment with incorrect start");
+        pathSearchFuture = Baritone.getExecutor().submit(() -> {
+            if (System.currentTimeMillis() - lastFailedPathTime < CONFIG.client.extra.pathfinder.failedPathSearchCooldownMs) {
+                try {
+                    Thread.sleep(CONFIG.client.extra.pathfinder.failedPathSearchCooldownMs - (System.currentTimeMillis() - lastFailedPathTime));
+                } catch (InterruptedException ignored) {
                 }
+            }
+
+            PATH_LOG.debug("Searching for path from {} to {}", start, goal);
+
+            PathCalculationResult calcResult = pathfinder.calculate(primaryTimeout, failureTimeout);
+            if (calcResult.getType() == PathCalculationResult.Type.FAILURE || calcResult.getType() == PathCalculationResult.Type.EXCEPTION) {
+                lastFailedPathTime = System.currentTimeMillis();
+                failedPathSearches.getAndIncrement();
             } else {
-                if (calcResult.getType() != PathCalculationResult.Type.CANCELLATION && calcResult.getType() != PathCalculationResult.Type.EXCEPTION) {
-                    // don't dispatch CALC_FAILED on cancellation
-                    queuePathEvent(PathEvent.CALC_FAILED);
-                }
+                failedPathSearches.set(0);
             }
-        } else {
-            if (next == null) {
-                if (executor.isPresent()) {
-                    if (executor.get().getPath().getSrc().equals(current.getPath().getDest())) {
-                        queuePathEvent(PathEvent.NEXT_SEGMENT_CALC_FINISHED);
-                        next = executor.get();
+            synchronized (pathPlanLock) {
+                Optional<PathExecutor> executor = calcResult.getPath().map(p -> new PathExecutor(PathingBehavior.this, p));
+                if (current == null) {
+                    if (executor.isPresent()) {
+                        if (executor.get().getPath().positions().contains(expectedSegmentStart)) {
+                            queuePathEvent(PathEvent.CALC_FINISHED_NOW_EXECUTING);
+                            current = executor.get();
+                            resetEstimatedTicksToGoal(start);
+                        } else {
+                            PATH_LOG.debug("Warning: discarding orphan path segment with incorrect start");
+                        }
                     } else {
-                        PATH_LOG.debug("Warning: discarding orphan next segment with incorrect start");
+                        if (calcResult.getType() != PathCalculationResult.Type.CANCELLATION && calcResult.getType() != PathCalculationResult.Type.EXCEPTION) {
+                            // don't dispatch CALC_FAILED on cancellation
+                            queuePathEvent(PathEvent.CALC_FAILED);
+                        }
                     }
                 } else {
-                    queuePathEvent(PathEvent.NEXT_CALC_FAILED);
+                    if (next == null) {
+                        if (executor.isPresent()) {
+                            if (executor.get().getPath().getSrc().equals(current.getPath().getDest())) {
+                                queuePathEvent(PathEvent.NEXT_SEGMENT_CALC_FINISHED);
+                                next = executor.get();
+                            } else {
+                                PATH_LOG.debug("Warning: discarding orphan next segment with incorrect start");
+                            }
+                        } else {
+                            queuePathEvent(PathEvent.NEXT_CALC_FAILED);
+                        }
+                    } else {
+                        //throw new IllegalStateException("I have no idea what to do with this path");
+                        // no point in throwing an exception here, and it gets it stuck with inProgress being not null
+                        PATH_LOG.debug("Warning: PathingBehaivor illegal state! Discarding invalid path!");
+                    }
                 }
-            } else {
-                //throw new IllegalStateException("I have no idea what to do with this path");
-                // no point in throwing an exception here, and it gets it stuck with inProgress being not null
-                PATH_LOG.debug("Warning: PathingBehaivor illegal state! Discarding invalid path!");
+                if (current != null && current.getPath() != null) {
+                    if (goal.isInGoal(current.getPath().getDest())) {
+                        PATH_LOG.debug("Finished finding a path from {} to {}. {} nodes considered", start, goal, current.getPath().getNumNodesConsidered());
+                    } else {
+                        PATH_LOG.debug("Found path segment from {} towards {}. {} nodes considered", start, goal, current.getPath().getNumNodesConsidered());
+                    }
+                }
+                synchronized (pathCalcLock) {
+                    inProgress = null;
+                }
             }
-        }
-        if (current != null && current.getPath() != null) {
-            if (goal.isInGoal(current.getPath().getDest())) {
-                PATH_LOG.debug("Finished finding a path from {} to {}. {} nodes considered", start, goal, current.getPath().getNumNodesConsidered());
-            } else {
-                PATH_LOG.debug("Found path segment from {} towards {}. {} nodes considered", start, goal, current.getPath().getNumNodesConsidered());
-            }
-        }
-        inProgress = null;
+        });
     }
 
     private AbstractNodeCostSearch createPathfinder(BlockPos start, Goal goal, IPath previous, CalculationContext context) {
