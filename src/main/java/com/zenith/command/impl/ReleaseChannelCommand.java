@@ -34,7 +34,8 @@ public class ReleaseChannelCommand extends Command {
         "1.21.0",
         "1.21.3",
         "1.21.4",
-        "1.21.5"
+        "1.21.5",
+        "1.21.7"
     );
 
     @Override
