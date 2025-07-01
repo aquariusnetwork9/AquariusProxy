@@ -76,7 +76,7 @@ public class Authenticator {
         MinecraftAuth.LOGGER = new Slf4jConsoleLogger(AUTH_LOG);
     }
 
-    private static final File AUTH_CACHE_FILE = new File("mc_auth_cache.json");
+    public static final File AUTH_CACHE_FILE = new File("mc_auth_cache.json");
 
     public void clearAuthCache() {
         try {
@@ -179,7 +179,7 @@ public class Authenticator {
         return getPrismDeviceCodeAuthStep().getFromInput(createHttpClient(), new StepMsaDeviceCode.MsaDeviceCodeCallback(this::onDeviceCode));
     }
 
-    private Optional<FullJavaSession> tryRefresh(final FullJavaSession session) {
+    public Optional<FullJavaSession> tryRefresh(final FullJavaSession session) {
         AUTH_LOG.debug("Performing token refresh..");
         try {
             return Optional.of(getAuthStep().refresh(createHttpClient(), session));
@@ -189,7 +189,7 @@ public class Authenticator {
         }
     }
 
-    private StepFullJavaSession getAuthStep() {
+    public StepFullJavaSession getAuthStep() {
         return switch (CONFIG.authentication.accountType) {
             case MSA -> getMsaAuthStep();
             case DEVICE_CODE -> getDeviceCodeAuthStep();
@@ -199,7 +199,7 @@ public class Authenticator {
         };
     }
 
-    private FullJavaSession fullLogin() {
+    public FullJavaSession fullLogin() {
         return switch (CONFIG.authentication.accountType) {
             case MSA -> msaLogin();
             case DEVICE_CODE -> deviceCodeLogin();
@@ -268,7 +268,7 @@ public class Authenticator {
         }
     }
 
-    private void saveAuthCache(final FullJavaSession session) {
+    public void saveAuthCache(final FullJavaSession session) {
         saveAuthCacheJson(getAuthStep().toJson(session));
     }
 
@@ -286,7 +286,7 @@ public class Authenticator {
         AUTH_LOG.debug("Auth cache saved!");
     }
 
-    private void updateConfig(FullJavaSession javaSession) {
+    public void updateConfig(FullJavaSession javaSession) {
         var javaProfile = javaSession.getMcProfile();
         if (!CONFIG.authentication.username.equals(javaProfile.getName())) {
             CONFIG.authentication.username = javaProfile.getName();
@@ -294,11 +294,11 @@ public class Authenticator {
         }
     }
 
-    private void saveAuthCacheAsync(final FullJavaSession session) {
+    public void saveAuthCacheAsync(final FullJavaSession session) {
         Thread.ofVirtual().name("Auth Cache Writer").start(() -> saveAuthCache(session));
     }
 
-    private Optional<FullJavaSession> loadAuthCache() {
+    public Optional<FullJavaSession> loadAuthCache() {
         if (!AUTH_CACHE_FILE.exists()) return Optional.empty();
         fixupAuthCacheIfPlayerCertsMissing();
         return readAuthCacheJson()
@@ -362,7 +362,7 @@ public class Authenticator {
         return Optional.of(authCacheSession);
     }
 
-    private static HttpClient createHttpClient() {
+    public HttpClient createHttpClient() {
         var client = MinecraftAuth.createHttpClient();
         if (CONFIG.authentication.useClientConnectionProxy) {
             var type = switch (CONFIG.client.connectionProxy.type) {
