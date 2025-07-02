@@ -22,6 +22,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerState;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
+import org.geysermc.mcprotocollib.protocol.data.game.scoreboard.CollisionRule;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundExplodePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundClientTickEndPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClosePacket;
@@ -891,11 +892,37 @@ public final class Bot extends ModuleUtils {
     }
 
     private void tickEntityPushing() {
+        if (CACHE.getPlayerCache().getGameMode() == GameMode.SPECTATOR) return;
+        var selfTeam = CACHE.getTeamCache().getTeamsByPlayer().get(CACHE.getProfileCache().getProfile().getName());
+        var selfCollisionRule = selfTeam == null ? CollisionRule.ALWAYS : selfTeam.getCollisionRule();
+        if (selfCollisionRule == CollisionRule.NEVER) return;
         List<EntityLiving> pushableEntities = new ArrayList<>(0);
         for (var it = CACHE.getEntityCache().getEntities().values().iterator(); it.hasNext(); ) {
             var entity = it.next();
             if (entity == CACHE.getPlayerCache().getThePlayer()) continue;
             if (!(entity instanceof EntityLiving entityLiving)) continue;
+            var otherScoreboardName = entity.getUuid().toString();
+            if (entity instanceof EntityPlayer entityPlayer) {
+                var playerListEntry = CACHE.getTabListCache().get(entityPlayer.getUuid());
+                if (playerListEntry.isPresent()) {
+                    if (playerListEntry.get().getGameMode() == GameMode.SPECTATOR) continue;
+                    otherScoreboardName = playerListEntry.get().getName();
+                }
+            }
+            var otherTeam = CACHE.getTeamCache().getTeamsByPlayer().get(otherScoreboardName);
+            var otherCollisionRule = otherTeam == null ? CollisionRule.ALWAYS : otherTeam.getCollisionRule();
+            if (otherCollisionRule == CollisionRule.NEVER) {
+                continue;
+            } else {
+                var teamsAllied = selfTeam != null && selfTeam.equals(otherTeam);
+                if ((selfCollisionRule == CollisionRule.PUSH_OWN_TEAM || otherCollisionRule == CollisionRule.PUSH_OWN_TEAM) && teamsAllied) {
+                    continue;
+                } else {
+                    if ((selfCollisionRule == CollisionRule.PUSH_OTHER_TEAMS || otherCollisionRule == CollisionRule.PUSH_OTHER_TEAMS) && !teamsAllied) {
+                        continue;
+                    }
+                }
+            }
             if (CACHE.getPlayerCache().distanceSqToSelf(entity) > 16.0) continue;
             EntityType entityType = entityLiving.getEntityType();
             if (entityType == EntityType.HORSE

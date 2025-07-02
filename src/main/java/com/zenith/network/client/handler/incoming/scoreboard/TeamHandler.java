@@ -14,9 +14,9 @@ public class TeamHandler implements ClientEventLoopPacketHandler<ClientboundSetP
     public boolean applyAsync(@NonNull ClientboundSetPlayerTeamPacket packet, @NonNull ClientSession session) {
         switch (packet.getAction()) {
             case CREATE -> CACHE.getTeamCache().add(packet);
-            case REMOVE -> CACHE.getTeamCache().remove(packet);
+            case REMOVE -> CACHE.getTeamCache().getTeamsByName().get(packet.getTeamName());
             case UPDATE -> {
-                var team = CACHE.getTeamCache().get(packet);
+                var team = CACHE.getTeamCache().getTeamsByName().get(packet.getTeamName());
                 if (team != null) {
                     team.setDisplayName(packet.getDisplayName())
                         .setPrefix(packet.getPrefix())
@@ -29,16 +29,22 @@ public class TeamHandler implements ClientEventLoopPacketHandler<ClientboundSetP
                 }
             }
             case ADD_PLAYER -> {
-                var team = CACHE.getTeamCache().get(packet);
+                var team = CACHE.getTeamCache().getTeamsByName().get(packet.getTeamName());
                 if (team != null) {
                     Collections.addAll(team.getPlayers(), packet.getPlayers());
+                    for (var player : packet.getPlayers()) {
+                        CACHE.getTeamCache().getTeamsByPlayer().put(player, team);
+                    }
                 }
             }
             case REMOVE_PLAYER -> {
-                var team = CACHE.getTeamCache().get(packet);
+                var team = CACHE.getTeamCache().getTeamsByName().get(packet.getTeamName());
                 if (team != null) {
                     var players = team.getPlayers();
-                    for (String p : packet.getPlayers()) players.remove(p);
+                    for (String p : packet.getPlayers()) {
+                        players.remove(p);
+                        CACHE.getTeamCache().getTeamsByPlayer().remove(p);
+                    }
                 }
             }
         }
