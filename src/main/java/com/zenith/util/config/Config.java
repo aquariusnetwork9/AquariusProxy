@@ -484,6 +484,7 @@ public final class Config {
                 public boolean obfuscateChunkHeightmap = true;
                 public boolean obfuscateChunkLighting = true;
                 public boolean obfuscateBiomes = false;
+                public String obfuscateBiomesKey = "plains";
                 public int teleportOffsetRegenerateDistanceMin = 64; // minimum distance to regenerate coords at
                 public int randomBound = 10000000; // maximum bound to randomize coords by
                 public int randomMinOffset = 100000; // minimum bound to randomize coords by

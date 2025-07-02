@@ -7,6 +7,8 @@ import com.viaversion.nbt.tag.IntTag;
 import com.viaversion.nbt.tag.ListTag;
 import com.viaversion.nbt.tag.Tag;
 import com.zenith.feature.player.World;
+import com.zenith.mc.biome.Biome;
+import com.zenith.mc.biome.BiomeRegistry;
 import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.mc.item.ItemRegistry;
@@ -214,6 +216,10 @@ public record CoordOffset(
         var shouldAddBedrockLayer = CONFIG.client.extra.coordObfuscation.obfuscateBedrock
             && (currentDimension == DimensionRegistry.OVERWORLD.get() || currentDimension == DimensionRegistry.THE_NETHER.get());
         var shouldReplaceBiomes = CONFIG.client.extra.coordObfuscation.obfuscateBiomes;
+        DataPalette obfuscatedBiomes = null;
+        if (shouldReplaceBiomes) {
+            obfuscatedBiomes = obfuscatedBiomePalette();
+        }
 
         if (!shouldAddBedrockLayer && !shouldReplaceBiomes) return originalSections;
 
@@ -244,7 +250,7 @@ public record CoordOffset(
                     }
                 }
                 if (shouldReplaceBiomes) {
-                    newSection.setBiomeData(defaultBiomePalette);
+                    newSection.setBiomeData(obfuscatedBiomes);
                 }
                 sections[i] = newSection;
             }
@@ -255,11 +261,19 @@ public record CoordOffset(
     public DataPalette[] obfuscateBiomePalettes(final DataPalette[] originalPalettes) {
         if (!CONFIG.client.extra.coordObfuscation.obfuscateBiomes) return originalPalettes;
         var palettes = new DataPalette[originalPalettes.length];
-        Arrays.fill(palettes, defaultBiomePalette);
+        Arrays.fill(palettes, obfuscatedBiomePalette());
         return palettes;
     }
 
-    static DataPalette defaultBiomePalette = new DataPalette(new SingletonPalette(39), null, PaletteType.BIOME);
+    public DataPalette obfuscatedBiomePalette() {
+        String biomeKey = CONFIG.client.extra.coordObfuscation.obfuscateBiomesKey;
+        Biome biome = BiomeRegistry.REGISTRY.get(biomeKey);
+        int id = 40;
+        if (biome != null) {
+            id = biome.id();
+        }
+        return new DataPalette(new SingletonPalette(id), null, PaletteType.BIOME);
+    }
 
     public Particle offsetParticle(Particle particle) {
         if (particle == null) return particle;

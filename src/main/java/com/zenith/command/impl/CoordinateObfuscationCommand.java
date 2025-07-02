@@ -1,11 +1,14 @@
 package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.zenith.Proxy;
 import com.zenith.command.api.Command;
 import com.zenith.command.api.CommandCategory;
 import com.zenith.command.api.CommandContext;
 import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
+import com.zenith.mc.biome.Biome;
+import com.zenith.mc.biome.BiomeRegistry;
 import com.zenith.module.impl.CoordObfuscation;
 import com.zenith.util.config.Config.Client.Extra.CoordObfuscation.ObfuscationMode;
 
@@ -13,6 +16,8 @@ import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.zenith.Globals.CONFIG;
 import static com.zenith.Globals.MODULE;
+import static com.zenith.command.brigadier.CustomStringArgumentType.getString;
+import static com.zenith.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
 import static com.zenith.command.brigadier.ToggleArgumentType.toggle;
 
@@ -56,6 +61,7 @@ public class CoordinateObfuscationCommand extends Command {
                 "atLocation <x> <z>",
                 "obfuscateBedrock on/off",
                 "obfuscateBiomes on/off",
+                "obfuscateBiomesKey <biomeId>",
                 "obfuscateLighting on/off",
                 "eyeOfEnderDisconnect on/off",
                 "validateSetup on/off"
@@ -132,6 +138,20 @@ public class CoordinateObfuscationCommand extends Command {
             .then(literal("obfuscateBiomes").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.obfuscateBiomes = getToggle(c, "toggle");
             })))
+            .then(literal("obfuscateBiomesKey").then(argument("biomeId", wordWithChars()).executes(c -> {
+                String biomeId = getString(c, "biomeId");
+                Biome biome = BiomeRegistry.REGISTRY.get(biomeId);
+                if (biome == null) {
+                    if (Proxy.getInstance().isConnected()) {
+                        c.getSource().getEmbed()
+                            .title("Error")
+                            .description("No biome with this id found");
+                        return ERROR;
+                    }
+                }
+                CONFIG.client.extra.coordObfuscation.obfuscateBiomesKey = biomeId;
+                return OK;
+            })))
             .then(literal("validateSetup").then(argument("toggleArg", toggle()).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.validateSetup = getToggle(c, "toggleArg");
             })))
@@ -163,6 +183,7 @@ public class CoordinateObfuscationCommand extends Command {
             .addField("At Location", CONFIG.client.extra.coordObfuscation.atLocationX + ", " + CONFIG.client.extra.coordObfuscation.atLocationZ)
             .addField("Obfuscate Bedrock", toggleStr(CONFIG.client.extra.coordObfuscation.obfuscateBedrock))
             .addField("Obfuscate Biomes", toggleStr(CONFIG.client.extra.coordObfuscation.obfuscateBiomes))
+            .addField("Obfuscated Biome Key", CONFIG.client.extra.coordObfuscation.obfuscateBiomesKey)
             .addField("Eye of Ender Disconnect", toggleStr(CONFIG.client.extra.coordObfuscation.disconnectWhileEyeOfEnderPresent))
             .primaryColor();
         MODULE.get(CoordObfuscation.class).onConfigChange();
