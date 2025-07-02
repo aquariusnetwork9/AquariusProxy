@@ -6,12 +6,15 @@ import com.viaversion.nbt.tag.StringTag;
 import com.zenith.cache.CacheResetType;
 import com.zenith.cache.CachedData;
 import com.zenith.mc.Registry;
+import com.zenith.mc.biome.Biome;
+import com.zenith.mc.biome.BiomeRegistry;
 import com.zenith.mc.chat_type.ChatType;
 import com.zenith.mc.chat_type.ChatTypeRegistry;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.mc.enchantment.EnchantmentData;
 import com.zenith.mc.enchantment.EnchantmentRegistry;
+import lombok.Getter;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.network.tcp.TcpSession;
 import org.geysermc.mcprotocollib.protocol.data.game.RegistryEntry;
@@ -30,7 +33,7 @@ import static com.zenith.Globals.CACHE_LOG;
 public class RegistriesCache implements CachedData {
     // data directly as sent by the server
     // zenith's internal registry classes store a slimmed down version of select registry types
-    private final Map<String, List<RegistryEntry>> registryEntries = new ConcurrentHashMap<>();
+    @Getter private final Map<String, List<RegistryEntry>> registryEntries = new ConcurrentHashMap<>();
 
     public void initialize(String registryName, List<RegistryEntry> entries) {
         this.registryEntries.put(registryName, entries);
@@ -39,6 +42,7 @@ public class RegistriesCache implements CachedData {
                 case "minecraft:dimension_type" -> initializeDimensionTypeRegistry(entries);
                 case "minecraft:chat_type" -> initializeChatTypeRegistry(entries);
                 case "minecraft:enchantment" -> initializeEnchantmentRegistry(entries);
+                case "minecraft:worldgen/biome" -> initializeBiomeRegistry(entries);
                 case null, default -> {}
             }
         } catch (Exception e) {
@@ -107,6 +111,24 @@ public class RegistriesCache implements CachedData {
         ChatTypeRegistry.REGISTRY.set(registry);
     }
 
+    private void initializeBiomeRegistry(final List<RegistryEntry> entries) {
+        Registry<Biome> registry = new Registry<>(entries.size());
+        for (int i = 0; i < entries.size(); i++) {
+            final var entry = entries.get(i);
+            String key = entry.getId();
+            if (key.contains(":")) {
+                key = key.split(":")[1];
+            }
+            if (entry.getData() == null) {
+                CACHE_LOG.error("Null data for biome registry key: {}", key);
+                continue;
+            }
+            var biome = new Biome(i, key);
+            registry.register(biome);
+        }
+        BiomeRegistry.REGISTRY.set(registry);
+    }
+
     @Override
     public void getPackets(@NonNull final Consumer<Packet> consumer, final @NonNull TcpSession session) {}
 
@@ -121,6 +143,7 @@ public class RegistriesCache implements CachedData {
             DimensionRegistry.REGISTRY.reset();
             EnchantmentRegistry.REGISTRY.reset();
             ChatTypeRegistry.REGISTRY.reset();
+            BiomeRegistry.REGISTRY.reset();
         }
     }
 }
