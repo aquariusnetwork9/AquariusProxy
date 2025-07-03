@@ -296,25 +296,20 @@ public class CoordObfuscation extends Module {
     }
 
     private CoordOffset generateRandomOffset(final double playerX, final double playerZ) {
-        int x, z;
         int tries = 0;
         while (true) {
             if (tries++ > 100) {
                 throw new RuntimeException("Failed to generate coord offset after 100 tries lol");
             }
-            x = generateRandomOffsetVal();
-            z = generateRandomOffsetVal();
-            int xOffsetRes = (int) (playerX + x);
-            if (Math.abs(xOffsetRes) > 29000000)
-                continue;
-            int zOffsetRes = (int) (playerZ + z);
-            if (Math.abs(zOffsetRes) > 29000000)
-                continue;
-            if (MathHelper.distance2d(0, 0, xOffsetRes, zOffsetRes) < CONFIG.client.extra.coordObfuscation.randomMinSpawnDistance)
-                continue;
-            break;
+            int x = generateRandomPos();
+            int z = generateRandomPos();
+            if (MathHelper.distance2d(playerX, playerZ, x, z) < CONFIG.client.extra.coordObfuscation.randomMinDistanceFromSelf)
+                continue; // retry
+            int xOffset = (x / 16) - MathHelper.floorI(playerX / 16);
+            int zOffset = (z / 16) - MathHelper.floorI(playerZ / 16);
+            debug("Generated random pos: {} {}", x, z);
+            return new CoordOffset(xOffset, zOffset);
         }
-        return new CoordOffset(x / 16, z / 16);
     }
 
     private CoordOffset generateConstantOffset(final ServerSession session, final double playerX, final double playerZ) {
@@ -333,18 +328,17 @@ public class CoordObfuscation extends Module {
     }
 
     private CoordOffset generateLocationOffset(final double playerX, final double playerZ) {
-        int playerChunkX = (int) Math.floor(playerX / 16);
-        int playerChunkZ = (int) Math.floor(playerZ / 16);
+        int playerChunkX = MathHelper.floorI(playerX / 16);
+        int playerChunkZ = MathHelper.floorI(playerZ / 16);
         int xOffset = (CONFIG.client.extra.coordObfuscation.atLocationX / 16) - playerChunkX;
         int zOffset = (CONFIG.client.extra.coordObfuscation.atLocationZ / 16) - playerChunkZ;
         return new CoordOffset(xOffset, zOffset);
     }
 
-    private int generateRandomOffsetVal() {
-        return random.nextInt(
-            CONFIG.client.extra.coordObfuscation.randomMinOffset,
-            CONFIG.client.extra.coordObfuscation.randomMinOffset + CONFIG.client.extra.coordObfuscation.randomBound)
-            * (random.nextBoolean() ? 1 : -1);
+    private int generateRandomPos() {
+        int min = CONFIG.client.extra.coordObfuscation.randomMinDistanceFromSpawn;
+        int max = CONFIG.client.extra.coordObfuscation.randomMaxDistanceFromSpawn;
+        return random.nextInt(min, max) * (random.nextBoolean() ? 1 : -1);
     }
 
     public void playerMovePos(final ServerSession session, final double x, final double z) {

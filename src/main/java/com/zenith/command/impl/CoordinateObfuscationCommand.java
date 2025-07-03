@@ -52,9 +52,9 @@ public class CoordinateObfuscationCommand extends Command {
                 "on/off",
                 "mode <random/constant/atLocation>",
                 "regenOnTpMinDistance <blocks>",
-                "randomBound <chunks>",
-                "randomMinOffset <blocks>",
-                "randomMinSpawnDistance <blocks>",
+                "randomMinDistanceFromSelf <blocks>",
+                "randomMinDistanceFromSpawn <blocks>",
+                "randomMaxDistanceFromSpawn <blocks>",
                 "constantOffset <x> <z>",
                 "constantOffsetNetherTranslate on/off",
                 "constantOffsetMinSpawnDistance <blocks>",
@@ -109,14 +109,14 @@ public class CoordinateObfuscationCommand extends Command {
             .then(literal("regenOnTpMinDistance").then(argument("blocks", integer(64)).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin = c.getArgument("blocks", Integer.class);
             })))
-            .then(literal("randomBound").then(argument("randomBound", integer(0, 1000000)).executes(c -> {
-                CONFIG.client.extra.coordObfuscation.randomBound = c.getArgument("randomBound", Integer.class);
+            .then(literal("randomMinDistanceFromSelf").then(argument("blocks", integer(0, 30_000_000)).executes(c -> {
+                CONFIG.client.extra.coordObfuscation.randomMinDistanceFromSelf = getInteger(c, "blocks");
             })))
-            .then(literal("randomMinOffset").then(argument("minOffset", integer(0, 30000000)).executes(c -> {
-                CONFIG.client.extra.coordObfuscation.randomMinOffset = c.getArgument("minOffset", Integer.class);
+            .then(literal("randomMinDistanceFromSpawn").then(argument("blocks", integer(0, 30_000_000)).executes(c -> {
+                CONFIG.client.extra.coordObfuscation.randomMinDistanceFromSpawn = getInteger(c, "blocks");
             })))
-            .then(literal("randomMinSpawnDistance").then(argument("minSpawnDistance", integer(0, 30000000)).executes(c -> {
-                CONFIG.client.extra.coordObfuscation.randomMinSpawnDistance = c.getArgument("minSpawnDistance", Integer.class);
+            .then(literal("randomMaxDistanceFromSpawn").then(argument("blocks", integer(0, 30_000_000)).executes(c -> {
+                CONFIG.client.extra.coordObfuscation.randomMaxDistanceFromSpawn = getInteger(c, "blocks");
             })))
             .then(literal("constantOffset").then(argument("xOffset", integer(-30000000, 30000000)).then(argument("zOffset", integer(-30000000, 30000000)).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.constantOffsetX = c.getArgument("xOffset", Integer.class);
@@ -174,9 +174,9 @@ public class CoordinateObfuscationCommand extends Command {
             .addField("Mode", modeToString(CONFIG.client.extra.coordObfuscation.mode))
             .addField("Available Modes", "`constant`, `random`, `atLocation`")
             .addField("Regenerate on Teleport Min Distance", CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin)
-            .addField("Random Bound", CONFIG.client.extra.coordObfuscation.randomBound)
-            .addField("Random Minimum Offset", CONFIG.client.extra.coordObfuscation.randomMinOffset)
-            .addField("Random Minimum Spawn Distance", CONFIG.client.extra.coordObfuscation.randomMinSpawnDistance)
+            .addField("Random Min Distance From Self", CONFIG.client.extra.coordObfuscation.randomMinDistanceFromSelf)
+            .addField("Random Min Distance From Spawn", CONFIG.client.extra.coordObfuscation.randomMinDistanceFromSpawn)
+            .addField("Random Max Distance From Spawn", CONFIG.client.extra.coordObfuscation.randomMaxDistanceFromSpawn)
             .addField("Constant Offset", CONFIG.client.extra.coordObfuscation.constantOffsetX + ", " + CONFIG.client.extra.coordObfuscation.constantOffsetZ)
             .addField("Constant Offset Nether Translate", toggleStr(CONFIG.client.extra.coordObfuscation.constantOffsetNetherTranslate))
             .addField("Constant Offset Minimum Spawn Distance", CONFIG.client.extra.coordObfuscation.constantOffsetMinSpawnDistance)
