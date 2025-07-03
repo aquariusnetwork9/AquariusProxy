@@ -228,4 +228,8 @@ public class MathHelper {
         }
         return Math.max(x, y);
     }
+
+    public static boolean equal(double x, double y) {
+        return Math.abs(y - x) < 1.0E-5F;
+    }
 }

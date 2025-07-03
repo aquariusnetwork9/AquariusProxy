@@ -5,11 +5,15 @@ import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.event.client.ClientBotTick;
 import com.zenith.mc.block.*;
+import com.zenith.mc.block.properties.api.BlockStateProperties;
 import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.mc.entity.EntityData;
 import com.zenith.module.api.ModuleUtils;
 import com.zenith.util.math.MathHelper;
 import com.zenith.util.math.MutableVec3d;
+import it.unimi.dsi.fastutil.doubles.DoubleArraySet;
+import it.unimi.dsi.fastutil.doubles.DoubleArrays;
+import it.unimi.dsi.fastutil.doubles.DoubleSet;
 import lombok.Getter;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
@@ -63,6 +67,8 @@ public final class Bot extends ModuleUtils {
     private double fallDistance;
     @Getter private boolean isTouchingWater;
     private boolean isTouchingLava;
+    private double waterHeight;
+    private double lavaHeight;
     private int ticksSinceLastPositionPacketSent;
     private final MutableVec3d stuckSpeedMultiplier = new MutableVec3d(0, 0, 0);
     @Getter private final MutableVec3d velocity = new MutableVec3d(0, 0, 0);
@@ -455,7 +461,7 @@ public final class Bot extends ModuleUtils {
     private void jump() {
         float jumpPower = getJumpPower();
         if (!(jumpPower <= 1.0E-5f)) {
-            this.velocity.setY(jumpPower);
+            this.velocity.setY(Math.max(jumpPower, velocity.getY()));
             if (this.isSprinting) {
                 float sprintAngle = yaw * (float) (Math.PI / 180.0);
                 this.velocity.setX(this.velocity.getX() - (Math.sin(sprintAngle) * 0.2F));
@@ -484,7 +490,7 @@ public final class Bot extends ModuleUtils {
 
     public synchronized void handlePlayerPosRotate(final int teleportId) {
         syncFromCache(true);
-        CLIENT_LOG.debug("Server teleport {} to: {}, {}, {}", teleportId, this.x, this.y, this.z);
+        CLIENT_LOG.info("Server teleport {} to: {}, {}, {}d", teleportId, this.x, this.y, this.z);
         sendClientPacketAwait(new ServerboundMovePlayerPosRotPacket(false, false, this.x, this.y, this.z, this.yaw, this.pitch));
         sendClientPacketAwait(new ServerboundAcceptTeleportationPacket(teleportId));
         CLIENT_LOG.debug("Accepted teleport: {}", teleportId);
@@ -499,6 +505,16 @@ public final class Bot extends ModuleUtils {
     }
 
     private void travel(MutableVec3d movementInputVec) {
+        if (isTouchingWater || isTouchingLava) {
+            travelInFluid(movementInputVec);
+        } else if (isFallFlying) {
+            travelFallFlying(movementInputVec);
+        } else {
+            travelInAir(movementInputVec);
+        }
+    }
+
+    private void travelInFluid(MutableVec3d movementInputVec) {
         if (isTouchingWater) {
             boolean falling = velocity.getY() <= 0.0;
             float waterSlowdown = isSprinting ? 0.9f : 0.8f;
@@ -518,126 +534,161 @@ public final class Bot extends ModuleUtils {
                 velocity.setY(0.2);
             }
             velocity.multiply(waterSlowdown, 0.8f, waterSlowdown);
-            double d;
+            double fluidFallingAdjustedY;
             if (falling && Math.abs(velocity.getY() - 0.005) >= 0.003 && Math.abs(velocity.getY() - gravity / 16.0) < 0.003) {
-                d = -0.003;
+                fluidFallingAdjustedY = -0.003;
             } else {
-                d = velocity.getY() - gravity / 16.0;
+                fluidFallingAdjustedY = velocity.getY() - gravity / 16.0;
             }
-            velocity.setY(d);
-            // todo: autojump when near shore block. need more checks for water level collisions
-//            if (horizontalCollision && World.isFree(playerCollisionBox.move(0, 0.6 - getY() + beforeMoveY, 0))) {
-//                velocity.setY(0.3);
-//            }
-        } else if (isTouchingLava) {
+            velocity.setY(fluidFallingAdjustedY);
+        } else { // lava
             updateVelocity(0.02f, movementInputVec);
             move();
-            // todo: fluid height conditional here, different y velocity calc when below 0.4
-            velocity.multiply(0.5);
+            if (lavaHeight <= 0.4) {
+                velocity.multiply(0.5, 0.8, 0.5);
+                double fluidFallingAdjustedY;
+                boolean falling = velocity.getY() <= 0.0;
+                if (falling && Math.abs(velocity.getY() - 0.005) >= 0.003 && Math.abs(velocity.getY() - gravity / 16.0) < 0.003) {
+                    fluidFallingAdjustedY = -0.003;
+                } else {
+                    fluidFallingAdjustedY = velocity.getY() - gravity / 16.0;
+                }
+                velocity.setY(fluidFallingAdjustedY);
+            } else {
+                velocity.multiply(0.5);
+            }
             if (gravity != 0.0) {
                 velocity.add(0, -gravity / 4.0, 0);
             }
-            // todo: autojump when near shore block. need more checks for water level collisions
+        }
+        // todo: autojump when near shore block. need more checks for water level collisions
 //            if (horizontalCollision && World.isFree(playerCollisionBox.move(velocity.getX(), velocity.getY() + 0.6 - getY() + beforeMoveY, velocity.getZ()))) {
 //                velocity.setY(0.3);
 //            }
-        } else if (isFallFlying) {
-            if (velocity.getY() > -0.5 && fallDistance < 1) {
-                fallDistance = 1;
-            }
-            var lookVec = MathHelper.calculateViewVector(yaw, pitch);
-            float pitchRad = pitch * (float) (Math.PI / 180.0);
-            double hLookVec = Math.sqrt(lookVec.getX() * lookVec.getX() + lookVec.getZ() * lookVec.getZ());
-            double hVel = velocity.horizontalDistance();
-            double lookVecLen = lookVec.length();
-            double cosPitch = Math.cos(pitchRad);
-            cosPitch = cosPitch * cosPitch * Math.min(1.0, lookVecLen / 0.4);
-            velocity.add(0, gravity * (-1.0 + cosPitch * 0.75), 0);
-            if (velocity.getY() < 0 && hLookVec > 0) {
-                double m = velocity.getY() * -0.1 * cosPitch;
-                velocity.add(lookVec.getX() * m / hLookVec, m, lookVec.getZ() * m / hLookVec);
-            }
-            if (pitchRad < 0 && hLookVec > 0) {
-                double m = hVel * -Math.sin(pitchRad) * 0.04;
-                velocity.add(-lookVec.getX() * m / hLookVec, m * 3.2, -lookVec.getZ() * m / hLookVec);
-            }
-            if (hLookVec > 0) {
-                velocity.add((lookVec.getX() / hLookVec * hVel - velocity.getX()) * 0.1, 0, (lookVec.getZ() / hLookVec * hVel - velocity.getZ()) * 0.1);
-            }
-            velocity.multiply(0.99, 0.98, 0.99);
-            move();
-        } else {
-            final Block floorBlock = World.getBlock(getVelocityAffectingPos());
-            float floorSlipperiness = BLOCK_DATA.getBlockSlipperiness(floorBlock);
-            float friction = this.onGround ? floorSlipperiness * 0.91f : 0.91F;
-            applyMovementInput(movementInputVec, floorSlipperiness);
-            if (!isFlying) velocity.setY(velocity.getY() - gravity);
-            velocity.multiply(friction, 0.9800000190734863, friction);
+    }
+
+    private void travelFallFlying(MutableVec3d movementInputVec) {
+        if (velocity.getY() > -0.5 && fallDistance < 1) {
+            fallDistance = 1;
         }
+        var lookVec = MathHelper.calculateViewVector(yaw, pitch);
+        float pitchRad = pitch * (float) (Math.PI / 180.0);
+        double hLookVec = Math.sqrt(lookVec.getX() * lookVec.getX() + lookVec.getZ() * lookVec.getZ());
+        double hVel = velocity.horizontalDistance();
+        double lookVecLen = lookVec.length();
+        double cosPitch = Math.cos(pitchRad);
+        cosPitch = cosPitch * cosPitch * Math.min(1.0, lookVecLen / 0.4);
+        velocity.add(0, gravity * (-1.0 + cosPitch * 0.75), 0);
+        if (velocity.getY() < 0 && hLookVec > 0) {
+            double m = velocity.getY() * -0.1 * cosPitch;
+            velocity.add(lookVec.getX() * m / hLookVec, m, lookVec.getZ() * m / hLookVec);
+        }
+        if (pitchRad < 0 && hLookVec > 0) {
+            double m = hVel * -Math.sin(pitchRad) * 0.04;
+            velocity.add(-lookVec.getX() * m / hLookVec, m * 3.2, -lookVec.getZ() * m / hLookVec);
+        }
+        if (hLookVec > 0) {
+            velocity.add((lookVec.getX() / hLookVec * hVel - velocity.getX()) * 0.1, 0, (lookVec.getZ() / hLookVec * hVel - velocity.getZ()) * 0.1);
+        }
+        velocity.multiply(0.99, 0.98, 0.99);
+        move();
+    }
+
+    private void travelInAir(MutableVec3d movementInputVec) {
+        final Block floorBlock = World.getBlock(getVelocityAffectingPos());
+        float floorSlipperiness = BLOCK_DATA.getBlockSlipperiness(floorBlock);
+        float friction = this.onGround ? floorSlipperiness * 0.91f : 0.91F;
+        applyMovementInput(movementInputVec, floorSlipperiness);
+        if (!isFlying) velocity.setY(velocity.getY() - gravity);
+        velocity.multiply(friction, 0.9800000190734863, friction);
+    }
+
+    private double[] collectCandidateStepUpHeights(LocalizedCollisionBox playerCB, List<LocalizedCollisionBox> colliders, double deltaY, double maxUpStep) {
+        DoubleSet doubleSet = new DoubleArraySet(4);
+        for (var cb : colliders) {
+            double minYDelta = cb.minY() - playerCB.minY();
+            if (!(minYDelta < 0) && minYDelta != deltaY) {
+                if (minYDelta > maxUpStep) {
+                    continue;
+                }
+                doubleSet.add(minYDelta);
+            }
+            double maxYDelta = cb.maxY() - playerCB.minY();
+            if (!(maxYDelta < 0) && maxYDelta != deltaY) {
+                if (maxYDelta > maxUpStep) {
+                    continue;
+                }
+                doubleSet.add(maxYDelta);
+            }
+        }
+        double[] doubleArray = doubleSet.toDoubleArray();
+        DoubleArrays.unstableSort(doubleArray);
+        return doubleArray;
+    }
+
+    private MutableVec3d collide(MutableVec3d movement) {
+        List<LocalizedCollisionBox> blockCollisionBoxes = World.getIntersectingCollisionBoxes(
+            playerCollisionBox.stretch(movement.getX(), movement.getY(), movement.getZ()));
+        MutableVec3d adjustedMovement = collidePlayerBoundingBox(movement, playerCollisionBox, blockCollisionBoxes);
+        boolean isYAdjusted = movement.getY() != adjustedMovement.getY();
+        boolean isXAdjusted = movement.getX() != adjustedMovement.getX();
+        boolean isZAdjusted = movement.getZ() != adjustedMovement.getZ();
+        boolean isYAdjustedAndPrevFalling = isYAdjusted && movement.getY() < 0;
+        if (stepHeight > 0 && ((isYAdjustedAndPrevFalling) || onGround) && (isXAdjusted || isZAdjusted)) {
+            LocalizedCollisionBox playerCB = isYAdjustedAndPrevFalling ? playerCollisionBox.move(0, adjustedMovement.getY(), 0) : playerCollisionBox;
+            LocalizedCollisionBox stepUpXZCb = playerCB.stretch(movement.getX(), stepHeight, movement.getZ());
+            if (!isYAdjustedAndPrevFalling) {
+                stepUpXZCb = stepUpXZCb.stretch(0, -1.0E-5, 0);
+            }
+
+            blockCollisionBoxes.addAll(World.getIntersectingCollisionBoxes(stepUpXZCb));
+            double[] stepUpHeights = collectCandidateStepUpHeights(playerCB, blockCollisionBoxes, adjustedMovement.getY(), stepHeight);
+
+            for (double stepUpHeight : stepUpHeights) {
+                var stepCollision = collidePlayerBoundingBox(new MutableVec3d(movement.getX(), stepUpHeight, movement.getZ()), playerCB, blockCollisionBoxes);
+                if (stepCollision.horizontalLengthSquared() > adjustedMovement.horizontalLengthSquared()) {
+                    double deltaY = playerCollisionBox.minY() - playerCB.minY();
+                    stepCollision.setY(stepCollision.getY() - deltaY);
+                    return stepCollision;
+                }
+            }
+        }
+        return adjustedMovement;
     }
 
     private void move() {
-        MutableVec3d localVelocity = new MutableVec3d(velocity);
+        MutableVec3d movement = new MutableVec3d(velocity);
         if (stuckSpeedMultiplier.lengthSquared() > 1.0E-7) {
-            localVelocity.multiply(stuckSpeedMultiplier.getX(), stuckSpeedMultiplier.getY(), stuckSpeedMultiplier.getZ());
+            movement.multiply(stuckSpeedMultiplier.getX(), stuckSpeedMultiplier.getY(), stuckSpeedMultiplier.getZ());
             stuckSpeedMultiplier.set(0, 0, 0);
             velocity.set(0, 0, 0);
         }
 
         // in-place velocity update
-        adjustMovementForSneaking(localVelocity);
+        maybeBackOffFromEdge(movement);
 
-        List<LocalizedCollisionBox> blockCollisionBoxes = World.getIntersectingCollisionBoxes(
-            playerCollisionBox.stretch(localVelocity.getX(), localVelocity.getY(), localVelocity.getZ()));
-        MutableVec3d adjustedMovement = adjustMovementForCollisions(localVelocity, playerCollisionBox, blockCollisionBoxes);
-        boolean isYAdjusted = localVelocity.getY() != adjustedMovement.getY();
-        boolean isXAdjusted = localVelocity.getX() != adjustedMovement.getX();
-        boolean isZAdjusted = localVelocity.getZ() != adjustedMovement.getZ();
-        if (onGround && (isXAdjusted || isZAdjusted)) {
-            // attempt to step up in xz direction block
-            MutableVec3d stepUpAdjustedVec = adjustMovementForCollisions(
-                new MutableVec3d(localVelocity.getX(), stepHeight, localVelocity.getZ()),
-                playerCollisionBox,
-                blockCollisionBoxes);
-            MutableVec3d stepUpWithMoveXZAdjustedVec = adjustMovementForCollisions(
-                new MutableVec3d(0.0, stepHeight, 0.0),
-                playerCollisionBox.stretch(localVelocity.getX(), 0.0, localVelocity.getZ()),
-                blockCollisionBoxes);
-            if (stepUpWithMoveXZAdjustedVec.getY() < this.stepHeight) {
-                MutableVec3d stepUpAndMoveVec = adjustMovementForCollisions(
-                    new MutableVec3d(localVelocity.getX(), 0.0, localVelocity.getZ()),
-                    playerCollisionBox.move(stepUpWithMoveXZAdjustedVec.getX(),
-                                            stepUpWithMoveXZAdjustedVec.getY(),
-                                            stepUpWithMoveXZAdjustedVec.getZ()),
-                    blockCollisionBoxes);
-                stepUpAndMoveVec.add(stepUpWithMoveXZAdjustedVec);
-                if (stepUpAndMoveVec.horizontalLengthSquared() > stepUpAdjustedVec.horizontalLengthSquared()) {
-                    stepUpAdjustedVec = stepUpAndMoveVec;
-                }
-            }
+        var collidedVec = collide(movement);
 
-            if (stepUpAdjustedVec.horizontalLengthSquared() > adjustedMovement.horizontalLengthSquared()) {
-                stepUpAdjustedVec.add(adjustMovementForCollisions(
-                    new MutableVec3d(0.0, -stepUpAdjustedVec.getY() + localVelocity.getY(), 0.0),
-                    playerCollisionBox.move(stepUpAdjustedVec.getX(),
-                                            stepUpAdjustedVec.getY(),
-                                            stepUpAdjustedVec.getZ()),
-                    blockCollisionBoxes));
-                adjustedMovement = stepUpAdjustedVec;
-            }
-        }
+        boolean isXAdjusted = !MathHelper.equal(collidedVec.getX(), movement.getX());
+        boolean isYAdjusted = !MathHelper.equal(collidedVec.getY(), movement.getY());
+        boolean isZAdjusted = !MathHelper.equal(collidedVec.getZ(), movement.getZ());
+
         horizontalCollision = isXAdjusted || isZAdjusted;
-        horizontalCollisionMinor = horizontalCollision && isHorizontalCollisionMinor();
         verticalCollision = isYAdjusted;
-        this.setOnGround(isYAdjusted && localVelocity.getY() < 0.0, adjustedMovement);
+        boolean verticalCollisionBelow = verticalCollision && movement.getY() < 0;
+        setOnGround(verticalCollisionBelow, collidedVec);
+        horizontalCollisionMinor = horizontalCollision && isHorizontalCollisionMinor();
+
+        if (horizontalCollision) {
+            if (isXAdjusted) velocity.setX(0.0);
+            if (isZAdjusted) velocity.setZ(0.0);
+        }
+        if (isYAdjusted) velocity.setY(0.0);
 
         final LocalizedCollisionBox movedPlayerCollisionBox = playerCollisionBox.move(
-            adjustedMovement.getX(),
-            adjustedMovement.getY(),
-            adjustedMovement.getZ());
-        if (isXAdjusted) velocity.setX(0.0);
-        if (isYAdjusted) velocity.setY(0.0);
-        if (isZAdjusted) velocity.setZ(0.0);
+            collidedVec.getX(),
+            collidedVec.getY(),
+            collidedVec.getZ());
 
         // todo: apply block falling effects like bouncing off slime blocks
 
@@ -779,7 +830,7 @@ public final class Bot extends ModuleUtils {
         }
     }
 
-    private MutableVec3d adjustMovementForCollisions(MutableVec3d movement, LocalizedCollisionBox pCollisionBox, List<LocalizedCollisionBox> blockCollisionBoxes) {
+    private MutableVec3d collidePlayerBoundingBox(MutableVec3d movement, LocalizedCollisionBox pCollisionBox, List<LocalizedCollisionBox> blockCollisionBoxes) {
         double xVel = movement.getX();
         double yVel = movement.getY();
         double zVel = movement.getZ();
@@ -816,7 +867,7 @@ public final class Bot extends ModuleUtils {
             && !World.isSpaceEmpty(playerCollisionBox.move(0.0, -this.stepHeight, 0.0));
     }
 
-    private void adjustMovementForSneaking(MutableVec3d movement) {
+    private void maybeBackOffFromEdge(MutableVec3d movement) {
         if (!this.isFlying
             && movement.getY() <= 0.0
             && isSneaking
@@ -885,7 +936,8 @@ public final class Bot extends ModuleUtils {
         }
         move();
         if (horizontalCollision || movementInput.jumping) {
-            if (onClimbable()) { // todo: or inside powder snow
+            Block inBlock = World.getBlock(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z));
+            if (onClimbable() || inBlock == BlockRegistry.POWDER_SNOW) { // todo: or inside powder snow
                 velocity.setY(0.2);
             }
         }
@@ -1031,12 +1083,21 @@ public final class Bot extends ModuleUtils {
 
     private float getBlockSpeedFactor() {
         if (this.isGliding || this.isFlying) return 1.0f;
-        Block inBlock = World.getBlock(MathHelper.floorI(World.getCurrentPlayerX()), MathHelper.floorI(
-            World.getCurrentPlayerY()), MathHelper.floorI(World.getCurrentPlayerZ()));
+        Block inBlock = World.getBlock(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z));
         float inBlockSpeedFactor = getBlockSpeedFactor(inBlock);
         if (inBlockSpeedFactor != 1.0f || World.isWater(inBlock)) return inBlockSpeedFactor;
-        Block underPlayer = World.getBlock(MathHelper.floorI(World.getCurrentPlayerX()), MathHelper.floorI(
-            World.getCurrentPlayerY()) - 1, MathHelper.floorI(World.getCurrentPlayerZ()));
+        int blockX, blockY, blockZ;
+        if (supportingBlockPos.isPresent()) {
+            BlockPos pos = supportingBlockPos.get();
+            blockX = pos.x();
+            blockY = MathHelper.floorI(y - 0.500001);
+            blockZ = pos.z();
+        } else {
+            blockX = MathHelper.floorI(x);
+            blockY = MathHelper.floorI(y - 0.500001);
+            blockZ = MathHelper.floorI(z);
+        }
+        Block underPlayer = World.getBlock(blockX, blockY, blockZ);
         return getBlockSpeedFactor(underPlayer);
     }
 
@@ -1161,18 +1222,31 @@ public final class Bot extends ModuleUtils {
             pushVec.multiply(motionScale);
             velocity.add(pushVec);
         }
+        if (waterFluid) {
+            waterHeight = topFluidHDelta;
+        } else {
+            lavaHeight = topFluidHDelta;
+        }
         return touched;
     }
 
     private boolean onClimbable() {
         var inBlock = World.getBlock(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z));
-        if (inBlock.blockTags().contains(BlockTags.CLIMBABLE)) return true;
-//        // todo: check trapdoor is open
-//        if (inBlock.name().endsWith("trapdoor")) {
-//            Block belowTrapdoor = World.getBlockAtBlockPos(MathHelper.floorI(x), MathHelper.floorI(y) - 1, MathHelper.floorI(z));
-//            // todo: ladder and trapdoor facing checks
-//            if (belowTrapdoor == BlockRegistry.LADDER) return true;
-//        }
+        if (inBlock.blockTags().contains(BlockTags.CLIMBABLE)) {
+            return true;
+        } else if (inBlock.name().endsWith("_trapdoor")) {
+            int blockStateId = World.getBlockStateId(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z));
+            var openProperty = World.getBlockStateProperty(blockStateId, BlockStateProperties.OPEN);
+            if (openProperty != null && openProperty) {
+                int blockStateIdBelow = World.getBlockStateId(MathHelper.floorI(x), MathHelper.floorI(y) - 1, MathHelper.floorI(z));
+                Block blockBelow = World.getBlock(blockStateIdBelow);
+                if (blockBelow == BlockRegistry.LADDER) {
+                    var ladderFacing = World.getBlockStateProperty(blockStateIdBelow, BlockStateProperties.FACING);
+                    var trapdoorFacing = World.getBlockStateProperty(blockStateId, BlockStateProperties.FACING);
+                    return ladderFacing == trapdoorFacing;
+                }
+            }
+        }
         return false;
     }
 
