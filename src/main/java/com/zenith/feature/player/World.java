@@ -153,10 +153,8 @@ public class World {
         for (int i = 0; i < blockPosList.size(); i++) {
             var blockPos = blockPosList.getLong(i);
             final BlockState blockState = getBlockState(blockPos);
-            if (blockState.isSolidBlock()) {
-                var collisionBoxes = blockState.getLocalizedCollisionBoxes();
-                results.addAll(collisionBoxes);
-            }
+            var collisionBoxes = blockState.getLocalizedCollisionBoxes();
+            results.addAll(collisionBoxes);
         }
     }
 
