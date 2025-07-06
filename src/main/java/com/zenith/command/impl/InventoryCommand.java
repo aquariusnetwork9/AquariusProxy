@@ -481,7 +481,28 @@ public class InventoryCommand extends Command {
         if (items.isEmpty()) {
             multiLineOutput.add("Empty!");
         } else {
-            multiLineOutput.add(items);
+            if (items.length() > 1950) {
+                List<String> lines = items.lines().toList();
+                sb.setLength(0);
+                sb.append("```\n");
+                for (String line : lines) {
+                    if (line.isBlank() || line.startsWith("```") || line.endsWith("```")) continue;
+                    sb.append(line).append("\n");
+                    if (sb.length() > 1500) {
+                        sb.append("\n```");
+                        multiLineOutput.add(sb.toString());
+                        sb.setLength(0);
+                        sb.append("```\n");
+                    }
+                }
+                String s = sb.toString();
+                if (!s.endsWith("```\n")) {
+                    s += "\n```";
+                    multiLineOutput.add(s);
+                }
+            } else {
+                multiLineOutput.add(items);
+            }
         }
     }
 
