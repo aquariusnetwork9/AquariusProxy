@@ -69,7 +69,7 @@ public class AuthCommand extends Command {
                     .description("Cached tokens and authentication state cleared. Full re-auth will occur on next login.")
                     .primaryColor();
             }))
-            .then(literal("attempts").then(argument("attempts", integer(1, 10)).executes(c -> {
+            .then(literal("attempts").then(argument("attempts", integer(1)).executes(c -> {
                 CONFIG.authentication.msaLoginAttemptsBeforeCacheWipe = c.getArgument("attempts", Integer.class);
                 c.getSource().getEmbed()
                     .title("Authentication Max Attempts Set")

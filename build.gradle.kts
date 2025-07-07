@@ -1,7 +1,7 @@
 plugins {
     `java-library`
     id("org.graalvm.buildtools.native") version "0.10.6"
-    id("com.gradleup.shadow") version "8.3.7"
+    id("com.gradleup.shadow") version "9.0.0-rc1"
     `maven-publish`
 }
 

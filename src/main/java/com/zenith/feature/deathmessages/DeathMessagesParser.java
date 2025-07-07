@@ -72,8 +72,11 @@ public class DeathMessagesParser {
         return component.children().stream()
             .map(Component::clickEvent)
             .filter(Objects::nonNull)
-            .filter(clickEvent -> clickEvent.action() == ClickEvent.Action.SUGGEST_COMMAND && clickEvent.value().startsWith("/w"))
-            .map(clickEvent -> clickEvent.value().substring(3).trim())
+            .filter(clickEvent -> clickEvent.action() == ClickEvent.Action.SUGGEST_COMMAND)
+            .filter(clickEvent ->  clickEvent.payload() instanceof ClickEvent.Payload.Text)
+            .map(clickEvent -> (ClickEvent.Payload.Text) clickEvent.payload())
+            .filter(textPayload -> textPayload.value().startsWith("/w"))
+            .map(textPayload -> textPayload.value().substring(3).trim())
             .toList();
     }
 }

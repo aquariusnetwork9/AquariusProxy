@@ -150,8 +150,8 @@ public final class ComponentSerializer {
         if (content.isEmpty()) return "";
         if (content.startsWith("http")) return content;
         var clickEvent = component.clickEvent();
-        if (clickEvent != null && clickEvent.action() == ClickEvent.Action.OPEN_URL) {
-            var link = clickEvent.value();
+        if (clickEvent != null && clickEvent.action() == ClickEvent.Action.OPEN_URL && clickEvent.payload() instanceof ClickEvent.Payload.Text text) {
+            var link = text.value();
             return content + " (" + link + ")";
         }
         return content;
