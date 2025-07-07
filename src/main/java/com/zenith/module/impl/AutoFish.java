@@ -4,6 +4,7 @@ import com.github.rfresh2.EventConsumer;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityStandard;
 import com.zenith.cache.data.inventory.Container;
+import com.zenith.discord.Embed;
 import com.zenith.event.client.ClientBotTick;
 import com.zenith.event.module.EntityFishHookSpawnEvent;
 import com.zenith.event.module.SplashSoundEffectEvent;
@@ -28,6 +29,7 @@ public class AutoFish extends AbstractInventoryModule {
     private int delay = 0;
     public static final int MOVEMENT_PRIORITY = 10;
     private Instant castTime = Instant.EPOCH;
+    private int fishTimeoutCounter = 0;
 
     public AutoFish() {
         super(HandRestriction.EITHER, 2, MOVEMENT_PRIORITY);
@@ -61,6 +63,7 @@ public class AutoFish extends AbstractInventoryModule {
         fishHookEntityId = -1;
         delay = 0;
         castTime = Instant.EPOCH;
+        fishTimeoutCounter = 0;
     }
 
     public void handleEntityFishHookSpawnEvent(final EntityFishHookSpawnEvent event) {
@@ -86,6 +89,7 @@ public class AutoFish extends AbstractInventoryModule {
                 if (rightClickResult.getType() == ClickResult.RightClickResult.RightClickType.USE_ITEM) {
                     fishHookEntityId = -1;
                     delay = 20;
+                    fishTimeoutCounter = 0;
                 }
             }
         });
@@ -111,6 +115,13 @@ public class AutoFish extends AbstractInventoryModule {
         if (isFishing() && Instant.now().getEpochSecond() - castTime.getEpochSecond() > 60) {
             // something's wrong, probably don't have hook in water
             warn("Probably don't have hook in water. reeling in");
+            fishTimeoutCounter++;
+            if (fishTimeoutCounter > 0 && fishTimeoutCounter % 5 == 0) {
+                discordNotification(Embed.builder()
+                    .title("Warning")
+                    .description("Fishing timed out, probably don't have hook in water")
+                    .errorColor());
+            }
             fishHookEntityId = -1;
             requestUseRod(false);
         }
