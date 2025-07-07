@@ -58,6 +58,7 @@ public class PathfinderCommand extends Command {
                 "mine <block>",
                 "click <left/right> <x> <y> <z>",
                 "click <left/right> entity <type>",
+                "break <x> <y> <z>",
                 "pickup",
                 "pickup <item>",
                 "status",
@@ -367,6 +368,27 @@ public class PathfinderCommand extends Command {
                                 .primaryColor();
                             return OK;
                         })))))
+            .then(literal("break").then(argument("pos", blockPos()).executes(c -> {
+                BlockPos pos = getBlockPos(c, "pos");
+                int x = pos.x();
+                int y = pos.y();
+                int z = pos.z();
+                BARITONE.breakBlock(x, y, z, true)
+                    .addExecutedListener(f -> {
+                        c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
+                            .title("Block Broken!")
+                            .addField("Target", CONFIG.discord.reportCoords
+                                ? "||[" + x + ", " + y + ", " + z + "]||"
+                                : "Coords disabled")
+                            .primaryColor());
+                    });
+                c.getSource().getEmbed()
+                    .title("Pathing")
+                    .addField("Breaking Block", CONFIG.discord.reportCoords
+                        ? "||[" + x + ", " + y + ", " + z + "]||"
+                        : "Coords disabled")
+                    .primaryColor();
+            })))
             .then(literal("status").executes(c -> {
                 boolean isActive = BARITONE.isActive();
                 c.getSource().getEmbed()

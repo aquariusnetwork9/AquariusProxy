@@ -1,6 +1,10 @@
 package com.zenith.feature.pathfinder.process;
 
 import com.zenith.cache.data.entity.EntityLiving;
+import com.zenith.feature.inventory.InventoryActionRequest;
+import com.zenith.feature.inventory.actions.MoveToHotbarSlot;
+import com.zenith.feature.inventory.actions.SetHeldItem;
+import com.zenith.feature.inventory.util.InventoryUtil;
 import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.feature.pathfinder.PathingCommand;
 import com.zenith.feature.pathfinder.PathingCommandType;
@@ -10,11 +14,13 @@ import com.zenith.feature.pathfinder.goals.GoalNear;
 import com.zenith.feature.player.*;
 import com.zenith.feature.player.raycast.RaycastHelper;
 import com.zenith.mc.block.Block;
+import com.zenith.mc.block.BlockRegistry;
 import com.zenith.mc.block.LocalizedCollisionBox;
 import com.zenith.util.math.MathHelper;
 import lombok.Data;
 import org.cloudburstmc.math.vector.Vector2f;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
+import org.geysermc.mcprotocollib.protocol.data.game.inventory.MoveToHotbarAction;
 import org.jspecify.annotations.Nullable;
 
 import java.lang.ref.WeakReference;
@@ -44,6 +50,10 @@ public class InteractWithProcess extends BaritoneProcessHelper {
 
     public PathingRequestFuture leftClickEntity(EntityLiving entity) {
         return interact(new InteractWithEntity(new WeakReference<>(entity), true));
+    }
+
+    public PathingRequestFuture breakBlock(int x, int y, int z, boolean autoTool) {
+        return interact(new BreakBlock(x, y, z, autoTool));
     }
 
     public PathingRequestFuture interact(InteractTarget target) {
@@ -94,6 +104,90 @@ public class InteractWithProcess extends BaritoneProcessHelper {
     public interface InteractTarget {
         PathingCommand pathingCommand();
         boolean succeeded();
+    }
+
+    @Data
+    public static class BreakBlock implements InteractTarget {
+        private final int x;
+        private final int y;
+        private final int z;
+        private final boolean autoTool;
+        private boolean succeeded = false;
+
+        @Override
+        public PathingCommand pathingCommand() {
+            if (!targetValid() || succeeded) return null;
+            if (canInteract()) {
+                Hand hand = Hand.MAIN_HAND;
+                if (autoTool) {
+                    int toolSlot = InventoryUtil.bestToolAgainst(BlockRegistry.STONE);
+                    if (toolSlot >= 9) {
+                        if (toolSlot < 36) { // in main inv
+                            INVENTORY.submit(InventoryActionRequest.builder()
+                                .owner(this)
+                                .actions(new MoveToHotbarSlot(toolSlot, MoveToHotbarAction.from(0)))
+                                .priority(Baritone.MOVEMENT_PRIORITY)
+                                .build());
+                        } else if (toolSlot <= 44) { // in hotbar
+                            INVENTORY.submit(InventoryActionRequest.builder()
+                                .owner(this)
+                                .actions(new SetHeldItem(toolSlot - 36))
+                                .priority(Baritone.MOVEMENT_PRIORITY)
+                                .build());
+                        } else if (toolSlot == 45) { // in offhand
+                            hand = Hand.OFF_HAND;
+                        }
+                    }
+                }
+                interact(hand);
+                return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
+            }
+            // todo: some antistuck func here
+            int rangeSq = MathHelper.clamp(((int) Math.pow(BOT.getBlockReachDistance(), 2)) - 1, 1, 4);
+            return new PathingCommand(new GoalNear(x, y, z, rangeSq), PathingCommandType.REVALIDATE_GOAL_AND_PATH);
+        }
+
+        @Override
+        public boolean succeeded() {
+            return this.succeeded;
+        }
+
+        public boolean targetValid() {
+            if (World.isChunkLoadedBlockPos(x, z)) {
+                Block block = World.getBlock(x, y, z);
+                if (BLOCK_DATA.isAir(block)) return false;
+                var cbs = BLOCK_DATA.getInteractionBoxesFromBlockStateId(World.getBlockStateId(x, y, z));
+                if (cbs.isEmpty()) return false;
+            }
+            return true;
+        }
+
+        public boolean canInteract() {
+            Position center = World.blockInteractionCenter(x, y, z);
+            Vector2f rotation = RotationHelper.rotationTo(center.x(), center.y(), center.z());
+            var blockRaycastResult = RaycastHelper.playerEyeRaycastThroughToBlockTarget(x, y, z, rotation.getX(), rotation.getY());
+            if (!blockRaycastResult.hit()) return false;
+            if (blockRaycastResult.x() != x || blockRaycastResult.y() != y || blockRaycastResult.z() != z) return false;
+            return true;
+        }
+
+        public void interact(Hand hand) {
+            var in = Input.builder()
+                .hand(hand)
+                .clickTarget(new ClickTarget.BlockPosition(x, y, z))
+                .leftClick(true);
+            Position center = World.blockInteractionCenter(x, y, z);
+            Vector2f rot = RotationHelper.rotationTo(center.x(), center.y(), center.z());
+            INPUTS.submit(
+                InputRequest.builder()
+                    .owner(this)
+                    .input(in.build())
+                    .yaw(rot.getX())
+                    .pitch(rot.getY())
+                    .priority(Baritone.MOVEMENT_PRIORITY + 1)
+                    .build()
+            );
+        }
     }
 
     @Data

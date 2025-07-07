@@ -14,7 +14,6 @@ public class SetHeldItem implements InventoryAction {
     @Override
     public MinecraftPacket packet() {
         if (CACHE.getPlayerCache().getHeldItemSlot() == hotbarSlotId) {
-            CLIENT_LOG.debug("Slot already held: {}", this);
             return null;
         }
         if (hotbarSlotId < 0 || hotbarSlotId > 8) {

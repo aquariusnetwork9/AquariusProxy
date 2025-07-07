@@ -155,6 +155,11 @@ public class Baritone implements Pathfinder {
     }
 
     @Override
+    public PathingRequestFuture breakBlock(int x, int y, int z, boolean autoTool) {
+        return getInteractWithProcess().breakBlock(x, y, z, autoTool);
+    }
+
+    @Override
     public PathingRequestFuture leftClickEntity(EntityLiving entity) {
         return getInteractWithProcess().leftClickEntity(entity);
     }
