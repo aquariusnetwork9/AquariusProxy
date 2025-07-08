@@ -31,7 +31,8 @@ public class MinotarApi extends Api {
             }
             return Optional.of(response.body());
         } catch (Throwable e) {
-            DEFAULT_LOG.error("Failed to get avatar from Minotar for username: {}", username, e);
+            DEFAULT_LOG.error("Failed to get avatar from Minotar for username: {} : {}", username, e.getMessage());
+            DEFAULT_LOG.debug("Failed to get avatar from Minotar for username: {}", username, e);
             return Optional.empty();
         }
     }
@@ -50,7 +51,8 @@ public class MinotarApi extends Api {
             }
             return Optional.of(response.body());
         } catch (Throwable e) {
-            DEFAULT_LOG.error("Failed to get avatar from Minotar for username: {}", uuid, e);
+            DEFAULT_LOG.error("Failed to get avatar from Minotar for uuid: {} : {}", uuid, e.getMessage());
+            DEFAULT_LOG.debug("Failed to get avatar from Minotar for uuid: {}", uuid, e);
             return Optional.empty();
         }
     }

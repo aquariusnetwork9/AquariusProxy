@@ -40,7 +40,8 @@ public class CraftheadApi extends Api {
             }
             return Optional.of(response.body());
         } catch (Throwable e) {
-            DEFAULT_LOG.error("Failed to get avatar from Crafthead for username: {}", username, e);
+            DEFAULT_LOG.error("Failed to get avatar from Crafthead for username: {} : {}", username, e.getMessage());
+            DEFAULT_LOG.debug("Failed to get avatar from Crafthead for username: {}", username, e);
             return Optional.empty();
         }
     }
@@ -59,7 +60,8 @@ public class CraftheadApi extends Api {
             }
             return Optional.of(response.body());
         } catch (Throwable e) {
-            DEFAULT_LOG.error("Failed to get avatar from Crafthead for username: {}", uuid, e);
+            DEFAULT_LOG.error("Failed to get avatar from Crafthead for uuid: {} : {}", uuid, e.getMessage());
+            DEFAULT_LOG.debug("Failed to get avatar from Crafthead for uuid: {}", uuid, e);
             return Optional.empty();
         }
     }
