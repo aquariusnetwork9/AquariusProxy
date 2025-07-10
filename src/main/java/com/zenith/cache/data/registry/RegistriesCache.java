@@ -10,6 +10,8 @@ import com.zenith.mc.biome.Biome;
 import com.zenith.mc.biome.BiomeRegistry;
 import com.zenith.mc.chat_type.ChatType;
 import com.zenith.mc.chat_type.ChatTypeRegistry;
+import com.zenith.mc.damage_type.DamageType;
+import com.zenith.mc.damage_type.DamageTypeRegistry;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.mc.enchantment.EnchantmentData;
@@ -43,11 +45,27 @@ public class RegistriesCache implements CachedData {
                 case "minecraft:chat_type" -> initializeChatTypeRegistry(entries);
                 case "minecraft:enchantment" -> initializeEnchantmentRegistry(entries);
                 case "minecraft:worldgen/biome" -> initializeBiomeRegistry(entries);
+                case "minecraft:damage_type" -> initializeDamageTypeRegistry(entries);
                 case null, default -> {}
             }
         } catch (Exception e) {
             CACHE_LOG.error("Error initializing registry: {}", registryName, e);
         }
+    }
+
+    private void initializeDamageTypeRegistry(final List<RegistryEntry> entries) {
+        Registry<DamageType> registry = new Registry<>(entries.size());
+        for (int i = 0; i < entries.size(); i++) {
+            var entry = entries.get(i);
+            String key = entry.getId();
+            if (key.contains(":")) {
+                key = key.split(":")[1];
+            }
+            var damageType = new DamageType(i, key);
+            registry.register(damageType);
+        }
+        CACHE_LOG.debug("Loaded {} damage types", registry.size());
+        DamageTypeRegistry.REGISTRY.set(registry);
     }
 
     private void initializeEnchantmentRegistry(final List<RegistryEntry> entries) {
@@ -144,6 +162,7 @@ public class RegistriesCache implements CachedData {
             EnchantmentRegistry.REGISTRY.reset();
             ChatTypeRegistry.REGISTRY.reset();
             BiomeRegistry.REGISTRY.reset();
+            DamageTypeRegistry.REGISTRY.reset();
         }
     }
 }
