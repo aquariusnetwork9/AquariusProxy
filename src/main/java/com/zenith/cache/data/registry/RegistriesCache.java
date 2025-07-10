@@ -46,7 +46,7 @@ public class RegistriesCache implements CachedData {
                 case "minecraft:enchantment" -> initializeEnchantmentRegistry(entries);
                 case "minecraft:worldgen/biome" -> initializeBiomeRegistry(entries);
                 case "minecraft:damage_type" -> initializeDamageTypeRegistry(entries);
-                case null, default -> {}
+                default -> {}
             }
         } catch (Exception e) {
             CACHE_LOG.error("Error initializing registry: {}", registryName, e);

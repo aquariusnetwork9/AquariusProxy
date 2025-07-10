@@ -27,6 +27,7 @@ public class ServerTablistDataOutgoingHandler implements PacketHandler<Clientbou
     }
 
     public Component insertProxyDataIntoFooter(final Component footer, final ServerSession session) {
+        if (!CONFIG.server.injectTablistFooter) return footer;
         try {
             var sessionProfile = session.getProfileCache().getProfile();
             var clientProfile = CACHE.getProfileCache().getProfile();

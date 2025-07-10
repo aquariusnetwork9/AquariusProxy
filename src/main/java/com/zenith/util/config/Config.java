@@ -603,6 +603,8 @@ public final class Config {
         public boolean connectionTestOnStart = true;
         public final PacketRateLimiter packetRateLimiter = new PacketRateLimiter();
         public boolean upnp = false;
+        public boolean injectTablistFooter = true;
+        public boolean welcomeMessages = true;
 
         public static final class PacketRateLimiter {
             public boolean enabled = true;

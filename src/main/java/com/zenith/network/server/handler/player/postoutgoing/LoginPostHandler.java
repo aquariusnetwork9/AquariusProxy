@@ -41,22 +41,24 @@ public class LoginPostHandler implements PostOutgoingPacketHandler<ClientboundLo
             session.send(connection.getEntitySpawnPacket());
             session.send(connection.getEntityMetadataPacket());
         }
-        if (CONFIG.client.extra.chat.hideChat) {
-            session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<gray>Chat is currently disabled. To enable chat, type <red>/togglechat"), false));
-        }
-        if (CONFIG.client.extra.chat.hideWhispers) {
-            session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<gray>Whispers are currently disabled. To enable whispers, type <red>/toggleprivatemsgs"), false));
-        }
-        if (CONFIG.client.extra.chat.showConnectionMessages) {
-            session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<gray>Connection messages enabled. To disable, type <red>/toggleconnectionmsgs"), false));
-        }
-        if (CONFIG.client.extra.chat.hideDeathMessages) {
-            session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<gray>Death messages are currently disabled. To enable death messages, type <red>/toggledeathmsgs"), false));
-        }
-        session.sendAsyncAlert("<green>Connected to <red>" + CACHE.getProfileCache().getProfile().getName());
-        if (CONFIG.inGameCommands.enable && !CONFIG.inGameCommands.slashCommands) {
-            session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<green>Command Prefix : \"" + CONFIG.inGameCommands.prefix + "\""), false));
-            session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>help <gray>- <dark_gray>List Commands"), false));
+        if (CONFIG.server.welcomeMessages) {
+            if (CONFIG.client.extra.chat.hideChat) {
+                session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<gray>Chat is currently disabled. To enable chat, type <red>/togglechat"), false));
+            }
+            if (CONFIG.client.extra.chat.hideWhispers) {
+                session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<gray>Whispers are currently disabled. To enable whispers, type <red>/toggleprivatemsgs"), false));
+            }
+            if (CONFIG.client.extra.chat.showConnectionMessages) {
+                session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<gray>Connection messages enabled. To disable, type <red>/toggleconnectionmsgs"), false));
+            }
+            if (CONFIG.client.extra.chat.hideDeathMessages) {
+                session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<gray>Death messages are currently disabled. To enable death messages, type <red>/toggledeathmsgs"), false));
+            }
+            session.sendAsyncAlert("<green>Connected to <red>" + CACHE.getProfileCache().getProfile().getName());
+            if (CONFIG.inGameCommands.enable && !CONFIG.inGameCommands.slashCommands) {
+                session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<green>Command Prefix : \"" + CONFIG.inGameCommands.prefix + "\""), false));
+                session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>help <gray>- <dark_gray>List Commands"), false));
+            }
         }
     }
 

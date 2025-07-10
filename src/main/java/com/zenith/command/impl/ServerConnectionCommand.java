@@ -122,12 +122,11 @@ public class ServerConnectionCommand extends Command {
                         c.getSource().getEmbed()
                             .title("Ping Log " + toggleStrCaps(CONFIG.server.ping.logPings));
                     }))))
-            .then(literal("enforceMatchingConnectingAddress")
-                .then(argument("toggle", toggle()).executes(c -> {
-                    CONFIG.server.enforceMatchingConnectingAddress = getToggle(c, "toggle");
-                    c.getSource().getEmbed()
-                        .title("Enforce Connecting Address " + toggleStrCaps(CONFIG.server.enforceMatchingConnectingAddress));
-                })))
+            .then(literal("enforceMatchingConnectingAddress").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.server.enforceMatchingConnectingAddress = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("Enforce Connecting Address " + toggleStrCaps(CONFIG.server.enforceMatchingConnectingAddress));
+            })))
             .then(literal("timeout")
                 .then(argument("toggle", toggle()).executes(c -> {
                     CONFIG.server.extra.timeout.enable = getToggle(c, "toggle");
@@ -141,12 +140,21 @@ public class ServerConnectionCommand extends Command {
                     c.getSource().getEmbed()
                         .title("Server Timeout Set");
                 })))
-            .then(literal("autoConnectOnLogin")
-                .then(argument("toggle", toggle()).executes(c -> {
-                    CONFIG.client.extra.autoConnectOnLogin = getToggle(c, "toggle");
-                    c.getSource().getEmbed()
-                        .title("Auto Connect On Login " + toggleStrCaps(CONFIG.client.extra.autoConnectOnLogin));
-                })));
+            .then(literal("autoConnectOnLogin").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.autoConnectOnLogin = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("Auto Connect On Login " + toggleStrCaps(CONFIG.client.extra.autoConnectOnLogin));
+            })))
+            .then(literal("injectTablistFooter").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.server.injectTablistFooter = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("Inject Tablist Footer "  + toggleStrCaps(CONFIG.server.injectTablistFooter));
+            })))
+            .then(literal("welcomeMessages").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.server.welcomeMessages = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("Welcome Messages " + toggleStrCaps(CONFIG.server.welcomeMessages));
+            })));
     }
 
     private void syncTimeout() {
