@@ -3,6 +3,7 @@ package com.zenith.cache.data.cookie;
 import com.zenith.cache.CacheResetType;
 import com.zenith.cache.CachedData;
 import lombok.Data;
+import lombok.experimental.Accessors;
 import net.kyori.adventure.key.Key;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.network.tcp.TcpSession;
@@ -23,6 +24,7 @@ import static java.util.Arrays.asList;
 
 // todo: generify this to support both ClientSession and ServerConnection caches?
 @Data
+@Accessors(chain = true)
 public class CookieCache implements CachedData {
     private static final Key zenithTransferSrcKey = Key.key("zenith", "zenith-transfer-src");
     private static final Key zenithSpectatorKey = Key.key("zenith", "zenith-spectator");

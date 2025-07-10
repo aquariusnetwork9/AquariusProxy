@@ -2,8 +2,7 @@ package com.zenith.cache.data.tab;
 
 import com.zenith.cache.CacheResetType;
 import com.zenith.cache.CachedData;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 import lombok.experimental.Accessors;
 import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.network.packet.Packet;
@@ -19,8 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 
-@Getter
-@Setter
+@Data
 @Accessors(chain = true)
 public class TabListCache implements CachedData {
     protected final Map<UUID, PlayerListEntry> tablist = new ConcurrentHashMap<>();

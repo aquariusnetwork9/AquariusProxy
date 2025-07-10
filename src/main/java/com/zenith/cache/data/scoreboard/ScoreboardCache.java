@@ -3,6 +3,7 @@ package com.zenith.cache.data.scoreboard;
 import com.zenith.cache.CacheResetType;
 import com.zenith.cache.CachedData;
 import lombok.Data;
+import lombok.experimental.Accessors;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.network.tcp.TcpSession;
 import org.geysermc.mcprotocollib.protocol.data.game.scoreboard.ScoreboardPosition;
@@ -16,6 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 @Data
+@Accessors(chain = true)
 public class ScoreboardCache implements CachedData {
     protected final Map<String, Objective> cachedObjectives = new ConcurrentHashMap<>();
     protected final Map<ScoreboardPosition, String> cachedPositionObjectives = new EnumMap<>(ScoreboardPosition.class);

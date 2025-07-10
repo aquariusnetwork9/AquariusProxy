@@ -3,6 +3,7 @@ package com.zenith.cache.data.config;
 import com.zenith.cache.CacheResetType;
 import com.zenith.cache.CachedData;
 import lombok.Data;
+import lombok.experimental.Accessors;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.network.tcp.TcpSession;
 import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundUpdateTagsPacket;
@@ -18,6 +19,7 @@ import java.util.function.Consumer;
  * Configuration phase registry and features cache
  */
 @Data
+@Accessors(chain = true)
 public class ConfigurationCache implements CachedData {
     protected String[] enabledFeatures = new String[]{"minecraft:vanilla"};
     private Map<UUID, ResourcePack> resourcePacks = new ConcurrentHashMap<>();

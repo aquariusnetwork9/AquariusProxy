@@ -12,8 +12,7 @@ import com.zenith.network.server.ServerSession;
 import com.zenith.util.math.MutableVec3i;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.ints.IntArrayFIFOQueue;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 import lombok.experimental.Accessors;
 import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.network.packet.Packet;
@@ -54,8 +53,7 @@ import static java.util.Objects.nonNull;
 import static org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot.*;
 
 
-@Getter
-@Setter
+@Data
 @Accessors(chain = true)
 public class PlayerCache implements CachedData {
     protected boolean hardcore;

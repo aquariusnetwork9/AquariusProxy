@@ -3,6 +3,7 @@ package com.zenith.cache.data.map;
 import com.zenith.cache.CacheResetType;
 import com.zenith.cache.CachedData;
 import lombok.Data;
+import lombok.experimental.Accessors;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.network.tcp.TcpSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundMapItemDataPacket;
@@ -13,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 @Data
+@Accessors(chain = true)
 public class MapDataCache implements CachedData {
     Map<Integer, StoredMapData> mapDataMap = new ConcurrentHashMap<>();
 

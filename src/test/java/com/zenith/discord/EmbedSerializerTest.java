@@ -1,6 +1,7 @@
 package com.zenith.discord;
 
 import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.junit.jupiter.api.Test;
@@ -88,6 +89,6 @@ public class EmbedSerializerTest {
         var child = c.children().get(0);
         assertSame(child.style().color(), NamedTextColor.BLUE);
         assertEquals("Test", ((TextComponent) child).content());
-        assertEquals("https://example.com", child.clickEvent().value());
+        assertEquals("https://example.com", ((ClickEvent.Payload.Text) child.clickEvent().payload()).value());
     }
 }

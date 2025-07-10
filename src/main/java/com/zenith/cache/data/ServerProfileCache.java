@@ -2,7 +2,8 @@ package com.zenith.cache.data;
 
 import com.zenith.cache.CacheResetType;
 import com.zenith.cache.CachedData;
-import lombok.Setter;
+import lombok.Data;
+import lombok.experimental.Accessors;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.network.tcp.TcpSession;
@@ -11,7 +12,8 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.function.Consumer;
 
-@Setter
+@Data
+@Accessors(chain = true)
 public class ServerProfileCache implements CachedData {
 
     protected GameProfile profile;

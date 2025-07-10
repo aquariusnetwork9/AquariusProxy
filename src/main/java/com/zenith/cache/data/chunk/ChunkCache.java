@@ -11,8 +11,8 @@ import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.BrandSerializer;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
+import lombok.experimental.Accessors;
 import net.kyori.adventure.key.Key;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.network.tcp.TcpSession;
@@ -46,8 +46,8 @@ import static com.zenith.cache.data.chunk.Chunk.chunkPosToLong;
 import static java.util.Arrays.asList;
 import static java.util.Collections.synchronizedList;
 
-@Getter
-@Setter
+@Data
+@Accessors(chain = true)
 public class ChunkCache implements CachedData {
     // todo: consider moving weather to a separate cache object
     private boolean isRaining = false;

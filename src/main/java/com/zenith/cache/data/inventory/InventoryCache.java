@@ -4,6 +4,7 @@ import com.zenith.Proxy;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import lombok.Data;
+import lombok.experimental.Accessors;
 import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerActionType;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerType;
@@ -16,6 +17,7 @@ import org.jspecify.annotations.Nullable;
 import static com.zenith.Globals.CACHE_LOG;
 
 @Data
+@Accessors(chain = true)
 public class InventoryCache {
     private final Int2ObjectMap<Container> containers = new Int2ObjectOpenHashMap<>();
     private int openContainerId = 0;

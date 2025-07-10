@@ -2,7 +2,8 @@ package com.zenith.cache.data.bossbar;
 
 import com.zenith.cache.CacheResetType;
 import com.zenith.cache.CachedData;
-import lombok.Getter;
+import lombok.Data;
+import lombok.experimental.Accessors;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.network.tcp.TcpSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundBossEventPacket;
@@ -14,7 +15,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
-@Getter
+@Data
+@Accessors(chain = true)
 public class BossBarCache implements CachedData {
     protected final Map<UUID, BossBar> bossBars = new ConcurrentHashMap<>();
 

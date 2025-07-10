@@ -5,6 +5,7 @@ import com.google.common.cache.CacheBuilder;
 import com.zenith.cache.CacheResetType;
 import com.zenith.cache.CachedData;
 import lombok.Data;
+import lombok.experimental.Accessors;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.network.tcp.TcpSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.spawn.ClientboundAddEntityPacket;
@@ -19,6 +20,7 @@ import java.util.function.Consumer;
 import static com.zenith.Globals.CACHE;
 
 @Data
+@Accessors(chain = true)
 public class EntityCache implements CachedData {
     protected final Map<Integer, Entity> entities = new ConcurrentHashMap<>();
     protected final Map<UUID, EntityPlayer> players = new ConcurrentHashMap<>();

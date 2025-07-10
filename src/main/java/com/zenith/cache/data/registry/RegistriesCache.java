@@ -16,7 +16,7 @@ import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.mc.enchantment.EnchantmentData;
 import com.zenith.mc.enchantment.EnchantmentRegistry;
-import lombok.Getter;
+import lombok.Data;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.network.tcp.TcpSession;
 import org.geysermc.mcprotocollib.protocol.data.game.RegistryEntry;
@@ -32,10 +32,11 @@ import java.util.function.Consumer;
 import static com.zenith.Globals.CACHE_LOG;
 
 @NullMarked
+@Data
 public class RegistriesCache implements CachedData {
     // data directly as sent by the server
     // zenith's internal registry classes store a slimmed down version of select registry types
-    @Getter private final Map<String, List<RegistryEntry>> registryEntries = new ConcurrentHashMap<>();
+    private final Map<String, List<RegistryEntry>> registryEntries = new ConcurrentHashMap<>();
 
     public void initialize(String registryName, List<RegistryEntry> entries) {
         this.registryEntries.put(registryName, entries);
@@ -57,10 +58,7 @@ public class RegistriesCache implements CachedData {
         Registry<DamageType> registry = new Registry<>(entries.size());
         for (int i = 0; i < entries.size(); i++) {
             var entry = entries.get(i);
-            String key = entry.getId();
-            if (key.contains(":")) {
-                key = key.split(":")[1];
-            }
+            String key = getKey(entry);
             var damageType = new DamageType(i, key);
             registry.register(damageType);
         }
@@ -72,10 +70,7 @@ public class RegistriesCache implements CachedData {
         Registry<EnchantmentData> registry = new Registry<>(entries.size());
         for (int i = 0; i < entries.size(); i++) {
             final var entry = entries.get(i);
-            String key = entry.getId();
-            if (key.contains(":")) {
-                key = key.split(":")[1];
-            }
+            String key = getKey(entry);
             var enchantData = new EnchantmentData(i, key);
             registry.register(enchantData);
         }
@@ -87,10 +82,7 @@ public class RegistriesCache implements CachedData {
         Registry<DimensionData> registry = new Registry<>(entries.size());
         for (int i = 0; i < entries.size(); i++) {
             final var entry = entries.get(i);
-            String key = entry.getId();
-            if (key.contains(":")) {
-                key = key.split(":")[1];
-            }
+            String key = getKey(entry);
             if (entry.getData() == null) {
                 CACHE_LOG.error("Null data for dimension registry key: {}", key);
                 continue;
@@ -110,10 +102,7 @@ public class RegistriesCache implements CachedData {
         Registry<ChatType> registry = new Registry<>(entries.size());
         for (int i = 0; i < entries.size(); i++) {
             final var entry = entries.get(i);
-            String key = entry.getId();
-            if (key.contains(":")) {
-                key = key.split(":")[1];
-            }
+            String key = getKey(entry);
             if (entry.getData() == null) {
                 CACHE_LOG.error("Null data for chat type registry key: {}", key);
                 continue;
@@ -133,10 +122,7 @@ public class RegistriesCache implements CachedData {
         Registry<Biome> registry = new Registry<>(entries.size());
         for (int i = 0; i < entries.size(); i++) {
             final var entry = entries.get(i);
-            String key = entry.getId();
-            if (key.contains(":")) {
-                key = key.split(":")[1];
-            }
+            String key = getKey(entry);
             if (entry.getData() == null) {
                 CACHE_LOG.error("Null data for biome registry key: {}", key);
                 continue;
@@ -152,6 +138,14 @@ public class RegistriesCache implements CachedData {
 
     public void getRegistryPackets(@NonNull final Consumer<Packet> consumer, final @NonNull TcpSession session) {
         registryEntries.forEach((registry, entries) -> consumer.accept(new ClientboundRegistryDataPacket(registry, entries)));
+    }
+
+    private String getKey(RegistryEntry entry) {
+        String key = entry.getId();
+        if (key.contains(":")) {
+            key = key.split(":")[1];
+        }
+        return key;
     }
 
     @Override

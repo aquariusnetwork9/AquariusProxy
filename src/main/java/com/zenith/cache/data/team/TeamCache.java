@@ -3,7 +3,8 @@ package com.zenith.cache.data.team;
 import com.zenith.cache.CacheResetType;
 import com.zenith.cache.CachedData;
 import it.unimi.dsi.fastutil.objects.ObjectArraySet;
-import lombok.Getter;
+import lombok.Data;
+import lombok.experimental.Accessors;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.network.tcp.TcpSession;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.scoreboard.ClientboundSetPlayerTeamPacket;
@@ -13,7 +14,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
-@Getter
+@Data
+@Accessors(chain = true)
 public class TeamCache implements CachedData {
      protected final Map<String, Team> teamsByName = new ConcurrentHashMap<>();
      protected final Map<String, Team> teamsByPlayer = new ConcurrentHashMap<>();
