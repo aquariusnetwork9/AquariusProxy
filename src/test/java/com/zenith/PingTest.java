@@ -9,18 +9,18 @@ public class PingTest {
 //    @Test
     public void constPing() {
         // testing ping srv dns resolver
-        assertEquals(ProtocolVersionDetector.getProtocolVersion("constantiam.net", 25565), 762);
+        assertEquals(762, ProtocolVersionDetector.getProtocolVersion("constantiam.net", 25565));
     }
 
 //    @Test
     public void nineb9tPing() {
         // testing ping srv dns resolver
-        assertEquals(ProtocolVersionDetector.getProtocolVersion("9b9t.com", 25565), 757);
+        assertEquals(757, ProtocolVersionDetector.getProtocolVersion("9b9t.com", 25565));
     }
 
 //    @Test
     public void twob2tPing() {
         // testing ping srv dns resolver
-        assertEquals(ProtocolVersionDetector.getProtocolVersion("2b2t.org", 25565), 765);
+        assertEquals(765, ProtocolVersionDetector.getProtocolVersion("2b2t.org", 25565));
     }
 }

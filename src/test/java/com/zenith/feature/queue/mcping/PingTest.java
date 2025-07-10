@@ -28,8 +28,8 @@ public class PingTest {
         if (!prioQueueStr.contains("Priority")) {
             throw new IOException("Priority queue string doesn't contain Priority: " + prioQueueStr);
         }
-        final Integer regular = Integer.parseInt(regularQMatcher.group());
-        final Integer prio = Integer.parseInt(prioQMatcher.group());
+        final int regular = Integer.parseInt(regularQMatcher.group());
+        final int prio = Integer.parseInt(prioQMatcher.group());
         System.out.println("Regular: " + regular + ", Priority: " + prio);
     }
 

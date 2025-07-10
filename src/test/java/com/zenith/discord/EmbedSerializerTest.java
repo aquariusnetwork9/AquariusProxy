@@ -6,7 +6,8 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class EmbedSerializerTest {
     @Test
@@ -16,8 +17,8 @@ public class EmbedSerializerTest {
         var c = EmbedSerializer.serializeText(str);
 
         var child = c.children().get(0);
-        assertTrue(child.style().decorations().get(TextDecoration.BOLD) == TextDecoration.State.TRUE);
-        assertTrue(((TextComponent) child).content().equals("Test"));
+        assertSame(TextDecoration.State.TRUE, child.style().decorations().get(TextDecoration.BOLD));
+        assertEquals("Test", ((TextComponent) child).content());
     }
 
     @Test
@@ -27,15 +28,15 @@ public class EmbedSerializerTest {
         var c = EmbedSerializer.serializeText(str);
 
         var child1 = c.children().get(0);
-        assertSame(child1.style().decorations().get(TextDecoration.BOLD), TextDecoration.State.TRUE);
+        assertSame(TextDecoration.State.TRUE, child1.style().decorations().get(TextDecoration.BOLD));
         assertEquals("Test two words", ((TextComponent) child1).content());
 
         var child2 = c.children().get(1);
-        assertSame(child2.style().decorations().get(TextDecoration.BOLD), TextDecoration.State.NOT_SET);
+        assertSame(TextDecoration.State.NOT_SET, child2.style().decorations().get(TextDecoration.BOLD));
         assertEquals(" and another ", ((TextComponent) child2).content());
 
         var child3 = c.children().get(2);
-        assertSame(child3.style().decorations().get(TextDecoration.BOLD), TextDecoration.State.TRUE);
+        assertSame(TextDecoration.State.TRUE, child3.style().decorations().get(TextDecoration.BOLD));
         assertEquals("bold", ((TextComponent) child3).content());
     }
 
@@ -46,7 +47,7 @@ public class EmbedSerializerTest {
         var c = EmbedSerializer.serializeText(str);
 
         var child = c.children().get(0);
-        assertSame(child.style().color(), NamedTextColor.GRAY);
+        assertSame(NamedTextColor.GRAY, child.style().color());
         assertEquals("Test", ((TextComponent) child).content());
     }
 
@@ -57,7 +58,7 @@ public class EmbedSerializerTest {
         var c = EmbedSerializer.serializeText(str);
 
         var child = c.children().get(0);
-        assertSame(child.style().color(), NamedTextColor.GRAY);
+        assertSame(NamedTextColor.GRAY, child.style().color());
         assertEquals("Test", ((TextComponent) child).content());
     }
 
@@ -68,15 +69,15 @@ public class EmbedSerializerTest {
         var c = EmbedSerializer.serializeText(str);
 
         var child1 = c.children().get(0);
-        assertSame(child1.style().decorations().get(TextDecoration.BOLD), TextDecoration.State.TRUE);
+        assertSame(TextDecoration.State.TRUE, child1.style().decorations().get(TextDecoration.BOLD));
         assertEquals("Test", ((TextComponent) child1).content());
 
         var child2 = c.children().get(2);
-        assertSame(child2.style().color(), NamedTextColor.GRAY);
+        assertSame(NamedTextColor.GRAY, child2.style().color());
         assertEquals("code", ((TextComponent) child2).content());
 
         var child3 = c.children().get(4);
-        assertSame(child3.style().color(), NamedTextColor.GRAY);
+        assertSame(NamedTextColor.GRAY, child3.style().color());
         assertEquals("code block", ((TextComponent) child3).content());
     }
 
@@ -87,7 +88,7 @@ public class EmbedSerializerTest {
         var c = EmbedSerializer.serializeText(str);
 
         var child = c.children().get(0);
-        assertSame(child.style().color(), NamedTextColor.BLUE);
+        assertSame(NamedTextColor.BLUE, child.style().color());
         assertEquals("Test", ((TextComponent) child).content());
         assertEquals("https://example.com", ((ClickEvent.Payload.Text) child.clickEvent().payload()).value());
     }

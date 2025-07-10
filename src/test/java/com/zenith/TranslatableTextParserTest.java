@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 public class TranslatableTextParserTest {
 
@@ -16,7 +16,7 @@ public class TranslatableTextParserTest {
         Logger blah = Globals.CLIENT_LOG; // init in shared static block
         final String chatText = "{\"translate\":\"chat.type.text\",\"with\":[{\"text\":\"bonk2b2t\"},{\"text\":\"you should never talk about that with them\"}]}";
         Component deserialize = ComponentSerializer.deserialize(chatText);
-        assertTrue(deserialize instanceof TranslatableComponent);
+        assertInstanceOf(TranslatableComponent.class, deserialize);
         String serialize = ComponentSerializer.serializePlain(deserialize);
         assertEquals("<bonk2b2t> you should never talk about that with them", serialize);
     }
