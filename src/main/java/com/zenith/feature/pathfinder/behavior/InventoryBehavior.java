@@ -46,10 +46,10 @@ public class InventoryBehavior extends Behavior {
         }
         int pickIndex = InventoryUtil.bestToolAgainst(BlockRegistry.STONE);
         if (pickIndex > -1 && pickIndex < 36) {
-            requestSwapWithHotBar(pickIndex, 0);
+            requestSwapWithHotBar(pickIndex, 6);
         }
         if (lastTickRequestedMove != null) {
-            PATH_LOG.debug("Remembering to move " + lastTickRequestedMove[0] + " " + lastTickRequestedMove[1] + " from a previous tick");
+            PATH_LOG.debug("Remembering to move {} {} from a previous tick", lastTickRequestedMove[0], lastTickRequestedMove[1]);
             requestSwapWithHotBar(lastTickRequestedMove[0], lastTickRequestedMove[1]);
         }
     }

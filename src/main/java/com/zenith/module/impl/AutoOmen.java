@@ -30,7 +30,7 @@ public class AutoOmen extends AbstractInventoryModule {
     );
 
     public AutoOmen() {
-        super(HandRestriction.EITHER, 0, MOVEMENT_PRIORITY);
+        super(HandRestriction.EITHER, 3, MOVEMENT_PRIORITY);
     }
 
     @Override

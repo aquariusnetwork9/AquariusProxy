@@ -93,9 +93,7 @@ public abstract class AbstractInventoryModule extends Module {
                 }
                 var actionSlot = getActionSlot();
                 actions.add(new MoveToHotbarSlot(i, actionSlot));
-                if (actionSlot != MoveToHotbarAction.OFF_HAND
-                    && CACHE.getPlayerCache().getHeldItemSlot() != targetMainHandHotbarSlot
-                ) {
+                if (actionSlot != MoveToHotbarAction.OFF_HAND) {
                     actions.add(new SetHeldItem(targetMainHandHotbarSlot));
                 }
                 INVENTORY.submit(InventoryActionRequest.builder()
