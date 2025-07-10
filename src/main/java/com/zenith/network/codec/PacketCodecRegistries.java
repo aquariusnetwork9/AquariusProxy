@@ -143,7 +143,6 @@ public final class PacketCodecRegistries {
                 .inbound(ClientboundPongResponsePacket.class, PongResponseHandler.INSTANCE)
                 .inbound(ClientboundResourcePackPushPacket.class, ResourcePackPushHandler.INSTANCE)
                 .inbound(ClientboundResourcePackPopPacket.class, ResourcePackPopHandler.INSTANCE)
-                .inbound(ClientboundSoundPacket.class, new SoundHandler())
                 .inbound(ClientboundSetExperiencePacket.class, new SetExperienceHandler())
                 .inbound(ClientboundRespawnPacket.class, new RespawnHandler())
                 .inbound(ClientboundContainerClosePacket.class, new ContainerCloseHandler())

@@ -3,7 +3,6 @@ package com.zenith.network.client.handler.incoming.spawn;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityPlayer;
 import com.zenith.cache.data.entity.EntityStandard;
-import com.zenith.event.module.EntityFishHookSpawnEvent;
 import com.zenith.event.module.ServerPlayerInVisualRangeEvent;
 import com.zenith.feature.whitelist.PlayerListsManager;
 import com.zenith.network.client.ClientSession;
@@ -42,8 +41,6 @@ public class AddEntityHandler implements ClientEventLoopPacketHandler<Clientboun
                 .setVelY(packet.getMotionY())
                 .setVelZ(packet.getMotionZ());
             CACHE.getEntityCache().add(entity);
-            if (entity.getEntityType() == EntityType.FISHING_BOBBER)
-                EVENT_BUS.postAsync(new EntityFishHookSpawnEvent(entity));
         }
         return true;
     }
