@@ -73,7 +73,7 @@ public class VisualRange extends Module {
                     }
                 }
                 case ENEMY -> {
-                    if (!isFriend && noEnemyInVisualRange()) {
+                    if (noEnemyInVisualRange()) {
                         MODULE.get(ReplayMod.class).startDelayedRecordingStop(
                             CONFIG.client.extra.visualRange.replayRecordingCooldownMins,
                             this::noEnemyInVisualRange
