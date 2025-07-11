@@ -25,7 +25,7 @@ repositories {
     mavenLocal()
 }
 
-val mcplVersion = "1.21.4.25"
+val mcplVersion = "1.21.4.26"
 dependencies {
     api("com.github.rfresh2:JDA:5.6.14") {
         exclude(group = "club.minnced")
@@ -35,29 +35,29 @@ dependencies {
     api("com.github.rfresh2:MCProtocolLib:$mcplVersion") {
         exclude(group = "io.netty")
     }
-    val nettyVersion = "4.2.2.Final"
-    api("io.netty:netty-buffer:$nettyVersion")
-    api("io.netty:netty-codec-haproxy:$nettyVersion")
-    api("io.netty:netty-codec-dns:$nettyVersion")
-    api("io.netty:netty-codec-http2:$nettyVersion")
-    api("io.netty:netty-codec-http:$nettyVersion")
-    api("io.netty:netty-codec-socks:$nettyVersion")
-    api("io.netty:netty-handler-proxy:$nettyVersion")
-    api("io.netty:netty-handler:$nettyVersion")
-    api("io.netty:netty-resolver-dns:$nettyVersion")
-    api("io.netty:netty-transport-classes-epoll:$nettyVersion")
-    api("io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64")
-    api("io.netty:netty-transport-native-epoll:$nettyVersion:linux-aarch_64")
-    api("io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64")
-    api("io.netty:netty-transport-native-unix-common:$nettyVersion:linux-aarch_64")
-    api("io.netty:netty-resolver-dns-native-macos:$nettyVersion:osx-aarch_64")
+    api(enforcedPlatform("io.netty:netty-bom:4.2.2.Final"))
+    api("io.netty:netty-buffer")
+    api("io.netty:netty-codec-haproxy")
+    api("io.netty:netty-codec-dns")
+    api("io.netty:netty-codec-http2")
+    api("io.netty:netty-codec-http")
+    api("io.netty:netty-codec-socks")
+    api("io.netty:netty-handler-proxy")
+    api("io.netty:netty-handler")
+    api("io.netty:netty-resolver-dns")
+    api("io.netty:netty-transport-classes-epoll")
+    api("io.netty:netty-transport-native-epoll") { artifact { classifier = "linux-x86_64" } }
+    api("io.netty:netty-transport-native-epoll") { artifact { classifier = "linux-aarch_64" } }
+    api("io.netty:netty-transport-native-unix-common") { artifact { classifier = "linux-x86_64"} }
+    api("io.netty:netty-transport-native-unix-common") { artifact { classifier = "linux-aarch_64"} }
+    api("io.netty:netty-resolver-dns-native-macos") { artifact { classifier = "osx-aarch_64" } }
     api("org.cloudburstmc.math:api:2.0")
     api("org.cloudburstmc.math:immutable:2.0")
     api("org.redisson:redisson:3.50.0") {
         exclude(group = "io.netty")
     }
     api("com.github.rfresh2:SimpleEventBus:1.6")
-    val fastutilVersion = "8.5.15"
+    val fastutilVersion = "8.5.16"
     api("com.github.rfresh2.fastutil.maps:object-object-maps:$fastutilVersion")
     api("com.github.rfresh2.fastutil.maps:int-object-maps:$fastutilVersion")
     api("com.github.rfresh2.fastutil.maps:object-int-maps:$fastutilVersion")
@@ -75,7 +75,7 @@ dependencies {
     api("ar.com.hjg:pngj:2.1.0")
     api("com.zaxxer:HikariCP:6.3.0")
     api("org.postgresql:postgresql:42.7.7")
-    api("org.jdbi:jdbi3-postgres:3.49.4")
+    api("org.jdbi:jdbi3-postgres:3.49.5")
     api("com.google.guava:guava:33.4.6-jre")
     api("ch.qos.logback:logback-classic:1.5.18")
     api("org.slf4j:slf4j-api:2.0.17")
