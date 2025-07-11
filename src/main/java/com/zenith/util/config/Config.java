@@ -3,6 +3,7 @@ package com.zenith.util.config;
 import com.google.common.collect.Lists;
 import com.google.gson.annotations.SerializedName;
 import com.zenith.feature.chatschema.ChatSchema;
+import com.zenith.feature.waypoints.Waypoint;
 import com.zenith.feature.whitelist.PlayerEntry;
 import com.zenith.module.impl.ActiveHours.ActiveTime;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
@@ -152,7 +153,12 @@ public final class Config {
             public final Pathfinder pathfinder = new Pathfinder();
             public final SpawnPatrol spawnPatrol = new SpawnPatrol();
             public final PearlLoader pearlLoader = new PearlLoader();
+            public final Waypoints waypoints = new Waypoints();
             public String whisperCommand = "msg";
+
+            public static final class Waypoints {
+                public ArrayList<Waypoint> waypoints = new ArrayList<>();
+            }
 
             public static final class PearlLoader {
                 public ArrayList<Pearl> pearls = new ArrayList<>();
