@@ -5,11 +5,10 @@ import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.zenith.Proxy;
 import com.zenith.command.api.*;
 import com.zenith.network.server.ServerSession;
-import com.zenith.util.ComponentSerializer;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 
 import static com.zenith.Globals.EXECUTOR;
 import static com.zenith.Globals.PLAYER_LISTS;
+import static com.zenith.util.ComponentSerializer.minimessage;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -66,23 +65,23 @@ public class SpectatorSwapCommand extends Command {
             c.getSource().setNoOutput(true);
             if (spectatorProfile == null) return;
             if (!PLAYER_LISTS.getWhitelist().contains(spectatorProfile.getId())) {
-                session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>You are not whitelisted!"), false));
+                session.sendAsyncMessage(minimessage("<red>You are not whitelisted!"));
                 return;
             }
             if (session.getProtocolVersion().olderThan(ProtocolVersion.v1_20_5)) {
-                session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>Unsupported Client MC Version"), false));
+                session.sendAsyncMessage(minimessage("<red>Unsupported Client MC Version"));
                 return;
             }
             if (activePlayer != null) {
                 if (force) {
                     if (activePlayer.getProtocolVersion().olderThan(ProtocolVersion.v1_20_5)) {
-                        session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>Controlling player is using an unsupported Client MC Version"), false));
+                        session.sendAsyncMessage(minimessage("<red>Controlling player is using an unsupported Client MC Version"));
                         return;
                     }
                     activePlayer.transferToSpectator();
                     EXECUTOR.schedule(() -> session.transferToControllingPlayer(), 1, SECONDS);
                 } else {
-                    session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>Someone is already controlling the player!"), false));
+                    session.sendAsyncMessage(minimessage("<red>Someone is already controlling the player!"));
                 }
                 return;
             }

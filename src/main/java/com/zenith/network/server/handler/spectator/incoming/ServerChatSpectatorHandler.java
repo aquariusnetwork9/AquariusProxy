@@ -8,14 +8,13 @@ import com.zenith.feature.spectator.SpectatorEntityRegistry;
 import com.zenith.feature.spectator.SpectatorSync;
 import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
-import com.zenith.util.ComponentSerializer;
 import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSetCameraPacket;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundRemoveEntitiesPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 
 import static com.zenith.Globals.*;
+import static com.zenith.util.ComponentSerializer.minimessage;
 
 public class ServerChatSpectatorHandler implements PacketHandler<ServerboundChatPacket, ServerSession> {
     @Override
@@ -47,23 +46,23 @@ public class ServerChatSpectatorHandler implements PacketHandler<ServerboundChat
         final String command = fullCommandAndArgs.split(" ")[0]; // first word is the command
         switch (command) {
             case "help" -> {
-                session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<blue><bold>Spectator commands:"), false));
-                session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<green>Prefix : \"" + CONFIG.inGameCommands.prefix + "\""), false));
-                session.send(new ClientboundSystemChatPacket(Component.text(""), false));
-                session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>help <gray>- <dark_gray>Display help menu"), false));
+                session.sendAsyncMessage(minimessage("<blue><bold>Spectator commands:"));
+                session.sendAsyncMessage(minimessage("<green>Prefix : \"" + CONFIG.inGameCommands.prefix + "\""));
+                session.sendAsyncMessage(Component.text(""));
+                session.sendAsyncMessage(minimessage("<red>help <gray>- <dark_gray>Display help menu"));
                 if (CONFIG.server.spectator.spectatorPublicChatEnabled)
-                    session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>m <gray>- <dark_gray>Send public chats"), false));
-                session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>playercam <gray>- <dark_gray>Set camera to the player"), false));
-                session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>etoggle <gray>- <dark_gray>Hide your entity from yourself"), false));
-                session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>e <gray>- <dark_gray>List spectator entities. Change with \"!e <entity>\""), false));
-                session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>swap <gray>- <dark_gray>Swap from spectator to controlling the player"), false));
+                    session.sendAsyncMessage(minimessage("<red>m <gray>- <dark_gray>Send public chats"));
+                session.sendAsyncMessage(minimessage("<red>playercam <gray>- <dark_gray>Set camera to the player"));
+                session.sendAsyncMessage(minimessage("<red>etoggle <gray>- <dark_gray>Hide your entity from yourself"));
+                session.sendAsyncMessage(minimessage("<red>e <gray>- <dark_gray>List spectator entities. Change with \"!e <entity>\""));
+                session.sendAsyncMessage(minimessage("<red>swap <gray>- <dark_gray>Swap from spectator to controlling the player"));
             }
             case "m" -> {
                 if (CONFIG.server.spectator.spectatorPublicChatEnabled) {
                     String chatMessageContent = fullCommandAndArgs.substring(1).trim();
                     Proxy.getInstance().getClient().send(new ServerboundChatPacket(chatMessageContent));
                 } else {
-                    session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>Spectator chat disabled"), false));
+                    session.sendAsyncMessage(minimessage("<red>Spectator chat disabled"));
                 }
             }
             case "etoggle" -> {
@@ -74,7 +73,7 @@ public class ServerChatSpectatorHandler implements PacketHandler<ServerboundChat
                 } else {
                     session.send(new ClientboundRemoveEntitiesPacket(new int[]{session.getSpectatorEntityId()}));
                 }
-                session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<blue>Show self entity toggled " + (session.isShowSelfEntity() ? "on!" : "off!")), false));
+                session.sendAsyncMessage(minimessage("<blue>Show self entity toggled " + (session.isShowSelfEntity() ? "on!" : "off!")));
             }
             case "e" -> {
                 String entityId = fullCommandAndArgs.substring(1).trim();
@@ -91,10 +90,10 @@ public class ServerChatSpectatorHandler implements PacketHandler<ServerboundChat
                             SpectatorSync.updateSpectatorPosition(session);
                         }
                     }
-                    session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<blue>Updated entity to: " + entityId), false));
+                    session.sendAsyncMessage(minimessage("<blue>Updated entity to: " + entityId));
                 } else {
-                    session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>No entity found with id: " + entityId), false));
-                    session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>Valid id's: " + String.join(", ", SpectatorEntityRegistry.getEntityIdentifiers())), false));
+                    session.sendAsyncMessage(minimessage("<red>No entity found with id: " + entityId));
+                    session.sendAsyncMessage(minimessage("<red>Valid id's: " + String.join(", ", SpectatorEntityRegistry.getEntityIdentifiers())));
                 }
             }
             case "playercam" -> {
@@ -103,7 +102,7 @@ public class ServerChatSpectatorHandler implements PacketHandler<ServerboundChat
                     session.setCameraTarget(null);
                     session.send(new ClientboundSetCameraPacket(session.getSpectatorSelfEntityId()));
                     SpectatorSync.syncSpectatorPositionToEntity(session, existingTarget);
-                    session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<blue>Exited playercam!"), false));
+                    session.sendAsyncMessage(minimessage("<blue>Exited playercam!"));
                 } else {
                     session.setCameraTarget(CACHE.getPlayerCache().getThePlayer());
                     session.send(new ClientboundSetCameraPacket(CACHE.getPlayerCache().getEntityId()));
@@ -112,23 +111,23 @@ public class ServerChatSpectatorHandler implements PacketHandler<ServerboundChat
                         var connection = connections[i];
                         connection.send(new ClientboundRemoveEntitiesPacket(new int[]{session.getSpectatorEntityId()}));
                     }
-                    session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<blue>Entered playercam!"), false));
+                    session.sendAsyncMessage(minimessage("<blue>Entered playercam!"));
                 }
             }
             case "swap" -> {
                 var spectatorProfile = session.getProfileCache().getProfile();
                 if (spectatorProfile == null) return;
                 if (!PLAYER_LISTS.getWhitelist().contains(spectatorProfile.getId())) {
-                    session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>You are not whitelisted!"), false));
+                    session.sendAsyncMessage(minimessage("<red>You are not whitelisted!"));
                     return;
                 }
                 if (Proxy.getInstance().getActivePlayer() != null) {
-                    session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>Someone is already controlling the player!"), false));
+                    session.sendAsyncMessage(minimessage("<red>Someone is already controlling the player!"));
                     return;
                 }
                 if (CONFIG.server.viaversion.enabled) {
                     if (session.getProtocolVersion().olderThan(ProtocolVersion.v1_20_5)) {
-                        session.send(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>Unsupported Client MC Version"), false));
+                        session.sendAsyncMessage(minimessage("<red>Unsupported Client MC Version"));
                         return;
                     }
                 }

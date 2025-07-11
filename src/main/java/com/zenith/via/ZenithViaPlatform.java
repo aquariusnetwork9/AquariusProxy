@@ -8,7 +8,6 @@ import com.zenith.network.server.ServerSession;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundCustomPayloadPacket;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +48,7 @@ public class ZenithViaPlatform extends ViaVersionPlatformImpl {
         var serverConnection = getServerConnection(connection);
         if (serverConnection.isPresent()) {
             LOGGER.info("Sending message: {} to player: {}", msg, serverConnection.get().getLoginProfileUUID());
-            serverConnection.get().send(new ClientboundSystemChatPacket(Component.text(msg), false));
+            serverConnection.get().sendAsyncMessage(Component.text(msg));
         } else {
             LOGGER.warn("Failed to send message: {}", msg);
         }

@@ -5,12 +5,11 @@ import com.zenith.Proxy;
 import com.zenith.cache.data.entity.Entity;
 import com.zenith.command.api.*;
 import com.zenith.feature.spectator.SpectatorSync;
-import com.zenith.util.ComponentSerializer;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSetCameraPacket;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundRemoveEntitiesPacket;
 
 import static com.zenith.Globals.CACHE;
+import static com.zenith.util.ComponentSerializer.minimessage;
 
 public class SpectatorPlayerCamCommand extends Command {
     @Override
@@ -31,7 +30,7 @@ public class SpectatorPlayerCamCommand extends Command {
                 session.setCameraTarget(null);
                 session.sendAsync(new ClientboundSetCameraPacket(session.getSpectatorSelfEntityId()));
                 SpectatorSync.syncSpectatorPositionToEntity(session, existingTarget);
-                session.sendAsync(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<blue>Exited playercam!"), false));
+                session.sendAsyncMessage(minimessage("<blue>Exited playercam!"));
             } else {
                 session.setCameraTarget(CACHE.getPlayerCache().getThePlayer());
                 session.sendAsync(new ClientboundSetCameraPacket(CACHE.getPlayerCache().getEntityId()));
@@ -40,7 +39,7 @@ public class SpectatorPlayerCamCommand extends Command {
                     var connection = connections[i];
                     connection.sendAsync(new ClientboundRemoveEntitiesPacket(new int[]{session.getSpectatorEntityId()}));
                 }
-                session.sendAsync(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<blue>Entered playercam!"), false));
+                session.sendAsyncMessage(minimessage("<blue>Entered playercam!"));
             }
             c.getSource().setNoOutput(true);
         });

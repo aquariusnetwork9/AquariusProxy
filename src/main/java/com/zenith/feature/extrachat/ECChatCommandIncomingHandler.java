@@ -2,11 +2,10 @@ package com.zenith.feature.extrachat;
 
 import com.zenith.network.codec.PacketHandler;
 import com.zenith.network.server.ServerSession;
-import com.zenith.util.ComponentSerializer;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandPacket;
 
 import static com.zenith.Globals.*;
+import static com.zenith.util.ComponentSerializer.minimessage;
 
 public class ECChatCommandIncomingHandler implements PacketHandler<ServerboundChatCommandPacket, ServerSession> {
     @Override
@@ -22,8 +21,8 @@ public class ECChatCommandIncomingHandler implements PacketHandler<ServerboundCh
         // todo: replace these by executing `extraChat <cmd>`?
         return switch (commandLowercased) {
             case "ignorelist" -> {
-                CONFIG.client.extra.chat.ignoreList.forEach(s -> session.send(
-                    new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>" + s.getUsername()), true)));
+                CONFIG.client.extra.chat.ignoreList.forEach(s ->
+                    session.sendAsyncMessage(minimessage("<red>" + s.getUsername())));
                 yield false;
             }
             case "ignoredeathmsgs" -> { // todo

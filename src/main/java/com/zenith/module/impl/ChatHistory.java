@@ -10,7 +10,6 @@ import com.zenith.event.player.SpectatorLoggedInEvent;
 import com.zenith.module.api.Module;
 import com.zenith.util.struct.CircularFifoQueue;
 import net.kyori.adventure.text.Component;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -61,14 +60,14 @@ public class ChatHistory extends Module {
     private void handleClientLoggedIn(PlayerLoginEvent.Post event) {
         removeOldChats();
         var session = event.session();
-        chatHistory.forEach(chat -> session.sendAsync(new ClientboundSystemChatPacket(chat.message(), false)));
+        chatHistory.forEach(chat -> session.sendAsyncMessage(chat.message()));
     }
 
     private void handleSpectatorLoggedIn(SpectatorLoggedInEvent event) {
         if (!CONFIG.server.extra.chatHistory.spectators) return;
         removeOldChats();
         var session = event.session();
-        chatHistory.forEach(chat -> session.sendAsync(new ClientboundSystemChatPacket(chat.message(), false)));
+        chatHistory.forEach(chat -> session.sendAsyncMessage(chat.message()));
     }
 
     private void handleDisconnect(ClientDisconnectEvent event) {

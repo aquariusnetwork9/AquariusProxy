@@ -4,13 +4,12 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.Proxy;
 import com.zenith.command.api.*;
 import com.zenith.event.message.PrivateMessageSendEvent;
-import com.zenith.util.ComponentSerializer;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 import static com.zenith.Globals.CONFIG;
 import static com.zenith.Globals.EVENT_BUS;
+import static com.zenith.util.ComponentSerializer.minimessage;
 
 public class SendMessageCommand extends Command {
     @Override
@@ -51,7 +50,7 @@ public class SendMessageCommand extends Command {
                                       .title("Sent Message!")
                                       .description(message);
                               } else {
-                                  session.sendAsync(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>Spectator chat disabled"), false));
+                                  session.sendAsyncMessage(minimessage("<red>Spectator chat disabled"));
                                   c.getSource().setNoOutput(true);
                               }
                           } else {

@@ -4,11 +4,10 @@ import com.zenith.command.api.CommandContext;
 import com.zenith.command.api.CommandOutputHelper;
 import com.zenith.command.api.CommandSources;
 import com.zenith.network.server.ServerSession;
-import com.zenith.util.ComponentSerializer;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.jspecify.annotations.NonNull;
 
 import static com.zenith.Globals.*;
+import static com.zenith.util.ComponentSerializer.minimessage;
 
 public class InGameCommandManager {
 
@@ -19,12 +18,8 @@ public class InGameCommandManager {
         TERMINAL_LOG.info("{} executed in-game command: {}", session.getName(), message);
         final String command = message.split(" ")[0]; // first word is the command
         if (command.equals("help") && CONFIG.inGameCommands.enable && !CONFIG.inGameCommands.slashCommands) {
-            session.sendAsync(new ClientboundSystemChatPacket(
-                ComponentSerializer.minimessage("<blue><bold>In Game commands"),
-                false));
-            session.sendAsync(new ClientboundSystemChatPacket(
-                ComponentSerializer.minimessage("<green>Prefix : \"" + CONFIG.inGameCommands.prefix + "\""),
-                false));
+            session.sendAsyncMessage(minimessage("<blue><bold>In Game commands"));
+            session.sendAsyncMessage(minimessage("<green>Prefix : \"" + CONFIG.inGameCommands.prefix + "\""));
         }
         return executeInGameCommand(message, session, printUnhandled);
     }

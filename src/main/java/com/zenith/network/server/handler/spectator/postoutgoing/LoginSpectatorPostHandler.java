@@ -5,19 +5,18 @@ import com.zenith.event.player.SpectatorLoggedInEvent;
 import com.zenith.feature.spectator.SpectatorSync;
 import com.zenith.network.codec.PostOutgoingPacketHandler;
 import com.zenith.network.server.ServerSession;
-import com.zenith.util.ComponentSerializer;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntryAction;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundPlayerInfoUpdatePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSetCameraPacket;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundRemoveEntitiesPacket;
 import org.jspecify.annotations.NonNull;
 
 import java.util.EnumSet;
 
 import static com.zenith.Globals.*;
+import static com.zenith.util.ComponentSerializer.minimessage;
 import static org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode.SPECTATOR;
 
 public class LoginSpectatorPostHandler implements PostOutgoingPacketHandler<ClientboundLoginPacket, ServerSession> {
@@ -47,18 +46,15 @@ public class LoginSpectatorPostHandler implements PostOutgoingPacketHandler<Clie
         ));
         EVENT_BUS.postAsync(new SpectatorLoggedInEvent(session));
         SpectatorSync.initSpectator(session, () -> CACHE.getAllDataSpectator(session.getSpectatorPlayerCache()));
-        //send cached data
-        var connections = Proxy.getInstance().getActiveConnections().getArray();
-        for (int i = 0; i < connections.length; i++) {
-            var connection = connections[i];
-            if (connection.equals(session)) continue;
-            connection.sendAsync(new ClientboundSystemChatPacket(
-                ComponentSerializer.minimessage("<green>" + session.getName() + " connected!"), false
-            ));
-            if (connection.equals(Proxy.getInstance().getCurrentPlayer().get())) {
-                connection.sendAsync(new ClientboundSystemChatPacket(
-                    ComponentSerializer.minimessage("<blue>Send private messages: \"!m \\<message>\""), false
-                ));
+        if (CONFIG.server.welcomeMessages) {
+            var connections = Proxy.getInstance().getActiveConnections().getArray();
+            for (int i = 0; i < connections.length; i++) {
+                var connection = connections[i];
+                if (connection.equals(session)) continue;
+                connection.sendAsyncMessage(minimessage("<green>" + session.getName() + " connected!"));
+                if (connection.equals(Proxy.getInstance().getCurrentPlayer().get())) {
+                    connection.sendAsyncMessage(minimessage("<blue>Send private messages: \"!m \\<message>\""));
+                }
             }
         }
         session.setLoggedIn();
@@ -75,10 +71,12 @@ public class LoginSpectatorPostHandler implements PostOutgoingPacketHandler<Clie
             }
         }
         // send command help
-        session.sendAsyncAlert("<green>Spectating <red>" + CACHE.getProfileCache().getProfile().getName());
-        if (CONFIG.inGameCommands.enable) {
-            session.sendAsync(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<green>Command Prefix : \"" + CONFIG.inGameCommands.prefix + "\""), false));
-            session.sendAsync(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<red>help <gray>- <dark_gray>List Commands"), false));
+        if (CONFIG.server.welcomeMessages) {
+            session.sendAsyncAlert("<green>Spectating <red>" + CACHE.getProfileCache().getProfile().getName());
+            if (CONFIG.inGameCommands.enable) {
+                session.sendAsyncMessage(minimessage("<green>Command Prefix : \"" + CONFIG.inGameCommands.prefix + "\""));
+                session.sendAsyncMessage(minimessage("<red>help <gray>- <dark_gray>List Commands"));
+            }
         }
     }
 }

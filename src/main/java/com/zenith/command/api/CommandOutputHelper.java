@@ -7,7 +7,6 @@ import com.zenith.network.server.ServerSession;
 import com.zenith.util.ComponentSerializer;
 import lombok.experimental.UtilityClass;
 import net.kyori.adventure.text.Component;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 
 import java.util.List;
 
@@ -42,7 +41,7 @@ public class CommandOutputHelper {
     public void logEmbedOutputToInGame(final Embed embed, final ServerSession session) {
         if (!embed.isTitlePresent()) return;
         var component = ComponentSerializer.deserializeEmbed(embed);
-        session.sendAsync(new ClientboundSystemChatPacket(component, false));
+        session.sendAsyncMessage(component);
     }
 
     public void logEmbedOutputToInGameAllConnectedPlayers(final Embed embed) {
@@ -54,7 +53,7 @@ public class CommandOutputHelper {
     }
 
     public void logMultiLineOutputToInGame(final List<String> multiLine, final ServerSession session) {
-        multiLine.forEach(line -> session.sendAsync(new ClientboundSystemChatPacket(Component.text(line), false)));
+        multiLine.forEach(line -> session.sendAsyncMessage(Component.text(line)));
     }
 
     public void logMultiLineOutputToInGameAllConnectedPlayers(final List<String> multLine) {

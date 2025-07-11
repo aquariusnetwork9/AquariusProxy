@@ -12,7 +12,6 @@ import com.zenith.feature.extrachat.ECSystemChatOutgoingHandler;
 import com.zenith.module.api.Module;
 import com.zenith.network.codec.PacketHandlerCodec;
 import com.zenith.network.codec.PacketHandlerStateCodec;
-import com.zenith.util.ComponentSerializer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
@@ -26,6 +25,7 @@ import java.util.List;
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Globals.CHAT_LOG;
 import static com.zenith.Globals.CONFIG;
+import static com.zenith.util.ComponentSerializer.minimessage;
 import static java.util.Objects.nonNull;
 
 public class ExtraChat extends Module {
@@ -62,14 +62,14 @@ public class ExtraChat extends Module {
         if (!CONFIG.client.extra.chat.showConnectionMessages) return;
         var serverConnection = Proxy.getInstance().getCurrentPlayer().get();
         if (nonNull(serverConnection) && serverConnection.isLoggedIn())
-            serverConnection.sendAsync(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<aqua>" + event.playerEntry().getName() + "<yellow> disconnected"), false));
+            serverConnection.sendAsyncMessage(minimessage("<aqua>" + event.playerEntry().getName() + "<yellow> disconnected"));
     }
 
     private void handleServerPlayerConnected(ServerPlayerConnectedEvent event) {
         if (!CONFIG.client.extra.chat.showConnectionMessages) return;
         var serverConnection = Proxy.getInstance().getCurrentPlayer().get();
         if (nonNull(serverConnection) && serverConnection.isLoggedIn())
-            serverConnection.sendAsync(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<aqua>" + event.playerEntry().getName() + "<yellow> connected"), false));
+            serverConnection.sendAsyncMessage(minimessage("<aqua>" + event.playerEntry().getName() + "<yellow> connected"));
     }
 
     private void handleQueuePositionUpdate(QueuePositionUpdateEvent event) {

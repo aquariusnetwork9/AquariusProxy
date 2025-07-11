@@ -2,9 +2,9 @@ package com.zenith.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.zenith.command.api.*;
-import com.zenith.util.ComponentSerializer;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundRemoveEntitiesPacket;
+
+import static com.zenith.util.ComponentSerializer.minimessage;
 
 public class SpectatorEntityToggleCommand extends Command {
     @Override
@@ -28,7 +28,7 @@ public class SpectatorEntityToggleCommand extends Command {
             } else {
                 session.sendAsync(new ClientboundRemoveEntitiesPacket(new int[]{session.getSpectatorEntityId()}));
             }
-            session.sendAsync(new ClientboundSystemChatPacket(ComponentSerializer.minimessage("<blue>Show self entity toggled " + (session.isShowSelfEntity() ? "on!" : "off!")), false));
+            session.sendAsyncMessage(minimessage("<blue>Show self entity toggled " + (session.isShowSelfEntity() ? "on!" : "off!")));
             c.getSource().setNoOutput(true);
         });
     }
