@@ -2505,7 +2505,15 @@
       ]
     },
     {
+      "type": "com.zenith.util.config.Config$Client$Extra$Click$HoldClickTarget",
+      "allDeclaredFields": true
+    },
+    {
       "type": "com.zenith.util.config.Config$Client$Extra$Click$HoldRightClickMode",
+      "allDeclaredFields": true
+    },
+    {
+      "type": "com.zenith.util.config.Config$Client$Extra$Click$HoldRightClickTarget",
       "allDeclaredFields": true
     },
     {
