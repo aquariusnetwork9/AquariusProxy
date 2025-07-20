@@ -2,11 +2,15 @@ package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
+import com.zenith.cache.data.inventory.Container;
 import com.zenith.event.module.*;
 import com.zenith.event.player.PlayerDisconnectedEvent;
+import com.zenith.mc.item.ItemRegistry;
 import com.zenith.module.api.Module;
+import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Globals.*;
@@ -79,7 +83,13 @@ public class AutoDisconnect extends Module {
         if (event.entityId() != CACHE.getPlayerCache().getEntityId()) return;
         if (playerConnectedCheck()) {
             info("Totem popped");
-            doDisconnect("Totem Pop");
+            // delay execution to allow inventory to update
+            EXECUTOR.schedule(() -> {
+                var totemCount = countTotems();
+                if (totemCount < CONFIG.client.extra.utility.actions.autoDisconnect.minTotemsRemaining && playerConnectedCheck()) {
+                    doDisconnect("Totem Pop - " + totemCount + " remaining");
+                }
+            }, 1, TimeUnit.SECONDS);
         }
     }
 
@@ -99,5 +109,14 @@ public class AutoDisconnect extends Module {
 
     public static boolean isAutoDisconnectReason(String reason) {
         return reason.startsWith(AUTODISCONNECT_REASON_PREFIX);
+    }
+
+    private int countTotems() {
+        var count = 0;
+        for (ItemStack item : CACHE.getPlayerCache().getPlayerInventory()) {
+            if (item != Container.EMPTY_STACK && item.getId() == ItemRegistry.TOTEM_OF_UNDYING.id())
+                count++;
+        }
+        return count;
     }
 }

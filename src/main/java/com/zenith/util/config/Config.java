@@ -445,6 +445,7 @@ public final class Config {
                     public boolean onUnknownPlayerInVisualRange = false;
                     public boolean mentionOnDisconnect = false;
                     public boolean onTotemPop = false;
+                    public int minTotemsRemaining = 50;
                 }
 
                 public static final class ActiveHours {
