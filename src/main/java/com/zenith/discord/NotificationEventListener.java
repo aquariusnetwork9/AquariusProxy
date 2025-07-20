@@ -23,9 +23,9 @@ import com.zenith.module.impl.SessionTimeLimit;
 import com.zenith.util.DisconnectReasonInfo;
 import com.zenith.util.math.MathHelper;
 import net.dv8tion.jda.api.OnlineStatus;
+import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
-import net.dv8tion.jda.api.interactions.components.buttons.Button;
 
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;

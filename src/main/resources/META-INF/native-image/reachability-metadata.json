@@ -4879,6 +4879,14 @@
       ]
     },
     {
+      "type": "okhttp3.internal.connection.RealConnectionPool",
+      "fields": [
+        {
+          "name": "addressStates"
+        }
+      ]
+    },
+    {
       "type": "org.apache.commons.logging.LogFactory"
     },
     {

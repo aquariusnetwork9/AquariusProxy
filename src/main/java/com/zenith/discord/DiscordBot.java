@@ -16,6 +16,9 @@ import lombok.experimental.Accessors;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.OnlineStatus;
+import net.dv8tion.jda.api.components.ActionComponent;
+import net.dv8tion.jda.api.components.actionrow.ActionRow;
+import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.ISnowflake;
 import net.dv8tion.jda.api.entities.Icon;
@@ -27,8 +30,6 @@ import net.dv8tion.jda.api.events.session.*;
 import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 import net.dv8tion.jda.api.exceptions.PermissionException;
 import net.dv8tion.jda.api.hooks.SimpleEventBusListener;
-import net.dv8tion.jda.api.interactions.components.ActionComponent;
-import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.requests.ErrorResponse;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.FileUpload;
@@ -408,10 +409,10 @@ public class DiscordBot {
                     new MessageCreateBuilder()
                         .setEmbeds(embed.toJDAEmbed())
                         .setContent(message)
-                        .setActionRow(buttons)
+                        .addComponents(ActionRow.of(buttons))
                         .build())
                 .queue();
-            var buttonIds = buttons.stream().map(ActionComponent::getId).collect(Collectors.toSet());
+            var buttonIds = buttons.stream().map(ActionComponent::getCustomId).collect(Collectors.toSet());
             jda.listenOnce(ButtonInteractionEvent.class)
                 .filter(e -> buttonIds.contains(e.getComponentId()))
                 .timeout(timeout)
