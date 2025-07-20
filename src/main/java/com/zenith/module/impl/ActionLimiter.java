@@ -1,10 +1,13 @@
 package com.zenith.module.impl;
 
 import com.github.rfresh2.EventConsumer;
+import com.zenith.cache.data.inventory.Container;
 import com.zenith.event.player.PlayerConnectionRemovedEvent;
 import com.zenith.event.player.PlayerLoginEvent;
 import com.zenith.feature.actionlimiter.handlers.inbound.*;
 import com.zenith.feature.actionlimiter.handlers.outbound.*;
+import com.zenith.mc.item.ItemData;
+import com.zenith.mc.item.ItemRegistry;
 import com.zenith.module.api.Module;
 import com.zenith.network.codec.PacketHandlerCodec;
 import com.zenith.network.codec.PacketHandlerStateCodec;
@@ -13,12 +16,17 @@ import com.zenith.util.math.MathHelper;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ReferenceSet;
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
+import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundCommandSuggestionsPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundMoveMinecartPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundMoveVehiclePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundTeleportEntityPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerSetContentPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerSetSlotPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundSetCursorItemPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundSetPlayerInventoryPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundForgetLevelChunkPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundLevelChunkWithLightPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.*;
@@ -65,6 +73,10 @@ public class ActionLimiter extends Module {
                 .outbound(ClientboundPlayerPositionPacket.class, new ALPlayerPositionHandler())
                 .outbound(ClientboundTeleportEntityPacket.class, new ALTeleportEntityHandler())
                 .outbound(ClientboundMoveMinecartPacket.class, new ALMoveMinecartHandler())
+                .outbound(ClientboundContainerSetContentPacket.class, new ALContainerSetContentHandler())
+                .outbound(ClientboundContainerSetSlotPacket.class, new ALContainerSetSlotHandler())
+                .outbound(ClientboundSetPlayerInventoryPacket.class, new ALSetPlayerInventoryHandler())
+                .outbound(ClientboundSetCursorItemPacket.class, new ALSetCursorItemHandler())
                 .build())
             .build();
     }
@@ -118,5 +130,13 @@ public class ActionLimiter extends Module {
 
     public boolean shouldLimit(final ServerSession serverConnection) {
         return limitedConnections.contains(serverConnection);
+    }
+
+    public boolean isBlacklistedItem(final ItemStack item) {
+        if (item == Container.EMPTY_STACK) return false;
+        ItemData itemData = ItemRegistry.REGISTRY.get(item.getId());
+        if (itemData == null) return false;
+        String id = itemData.name();
+        return CONFIG.client.extra.actionLimiter.itemsBlacklist.contains(id);
     }
 }

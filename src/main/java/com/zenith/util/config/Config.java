@@ -13,6 +13,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 
 
@@ -540,6 +541,8 @@ public final class Config {
                 public boolean allowChat = true; // outbound chats
                 public boolean allowServerCommands = true; // includes whispers
                 public boolean exemptProxyAccount = false;
+                public boolean itemsBlacklistEnabled = false;
+                public final HashSet<String> itemsBlacklist = new HashSet<>();
             }
         }
 
