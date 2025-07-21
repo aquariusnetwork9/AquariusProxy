@@ -213,8 +213,8 @@ public class PathfinderCommand extends Command {
                     c.getSource().getEmbed()
                         .title("Picking up all items")
                         .primaryColor();
-                }))
-            .then(argument("item", item()).executes(c -> {
+                })
+                .then(argument("item", item()).executes(c -> {
                 var item = getItem(c, "item");
                 if (item == null) {
                     c.getSource().getEmbed()
@@ -232,7 +232,7 @@ public class PathfinderCommand extends Command {
                     .addField("Item", escape(item.name()))
                     .primaryColor();
                 return OK;
-            }))
+            })))
             .then(literal("thisway").then(argument("dist", integer()).executes(c -> {
                 int dist = getInteger(c, "dist");
                 BARITONE.thisWay(dist)
