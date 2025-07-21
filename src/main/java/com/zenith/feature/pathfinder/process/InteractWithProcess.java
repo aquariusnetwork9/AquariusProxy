@@ -156,6 +156,7 @@ public class InteractWithProcess extends BaritoneProcessHelper {
             if (World.isChunkLoadedBlockPos(x, z)) {
                 Block block = World.getBlock(x, y, z);
                 if (BLOCK_DATA.isAir(block)) return false;
+                if (World.isFluid(block)) return false;
                 var cbs = BLOCK_DATA.getInteractionBoxesFromBlockStateId(World.getBlockStateId(x, y, z));
                 if (cbs.isEmpty()) return false;
             }
