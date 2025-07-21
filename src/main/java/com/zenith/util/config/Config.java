@@ -513,6 +513,7 @@ public final class Config {
                 public int delayPlayerLoginsAfterTpMs = 1000;
                 public boolean disconnectWhileEyeOfEnderPresent = true;
                 public boolean debugPacketLog = false;
+                public boolean disconnectWhileNearOffsetBlocks = true;
                 public enum ObfuscationMode {
                     RANDOM_OFFSET,
                     CONSTANT_OFFSET,

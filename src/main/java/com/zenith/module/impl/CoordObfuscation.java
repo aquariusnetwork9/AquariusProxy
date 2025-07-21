@@ -3,6 +3,7 @@ package com.zenith.module.impl;
 import com.zenith.Proxy;
 import com.zenith.cache.data.PlayerCache;
 import com.zenith.discord.Embed;
+import com.zenith.event.client.ClientTickEvent;
 import com.zenith.event.player.PlayerConnectionRemovedEvent;
 import com.zenith.event.player.PlayerLoginEvent;
 import com.zenith.event.player.SpectatorConnectedEvent;
@@ -11,7 +12,11 @@ import com.zenith.feature.coordobf.CoordOffset;
 import com.zenith.feature.coordobf.ObfPlayerState;
 import com.zenith.feature.coordobf.handlers.inbound.*;
 import com.zenith.feature.coordobf.handlers.outbound.*;
+import com.zenith.feature.player.Bot;
 import com.zenith.feature.player.World;
+import com.zenith.mc.block.BlockOffsetType;
+import com.zenith.mc.block.BlockPos;
+import com.zenith.mc.block.LocalizedCollisionBox;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
 import com.zenith.mc.item.ItemRegistry;
@@ -96,7 +101,8 @@ public class CoordObfuscation extends Module {
             of(PlayerConnectionRemovedEvent.class, this::onServerConnectionRemoved),
             of(PlayerLoginEvent.Pre.class, this::onPlayerLoginEvent),
             of(SpectatorConnectedEvent.class, this::onSpectatorConnected),
-            of(SpectatorDisconnectedEvent.class, this::onSpectatorDisconnected)
+            of(SpectatorDisconnectedEvent.class, this::onSpectatorDisconnected),
+            of(ClientTickEvent.class, this::checkNearBlockOffsets)
         );
     }
 
@@ -106,6 +112,15 @@ public class CoordObfuscation extends Module {
 
     private void onSpectatorConnected(SpectatorConnectedEvent event) {
         spectatorEntityIds.add(event.session().getSpectatorEntityId());
+    }
+
+    private void checkNearBlockOffsets(ClientTickEvent event) {
+        if (!CONFIG.client.extra.coordObfuscation.disconnectWhileNearOffsetBlocks) return;
+        if (playerStateMap.isEmpty()) return;
+        if (!isNearOffsetBlockStates()) return;
+        for (var session : playerStateMap.keySet()) {
+            disconnect(session, "Near illegal blocks", "Nearby collidable blocks with position offsets");
+        }
     }
 
     @Override
@@ -240,6 +255,12 @@ public class CoordObfuscation extends Module {
                 return;
             }
             client.getClientEventLoop().submit(() -> {
+                var profile = session.getProfileCache().getProfile();
+                var proxyProfile = CACHE.getProfileCache().getProfile();
+                if (CONFIG.client.extra.coordObfuscation.exemptProxyAccount && profile != null && proxyProfile != null && profile.getId().equals(proxyProfile.getId())) {
+                    info("Exempted proxy account session with no offset: {}", profile.getName());
+                    return;
+                }
                 if (client.isInQueue() || !client.isOnline()) {
                     disconnect(session, "Queueing");
                     return;
@@ -260,10 +281,8 @@ public class CoordObfuscation extends Module {
                     disconnect(session, genericDisconnectReason, "An eye of ender is in the world");
                     return;
                 }
-                var profile = session.getProfileCache().getProfile();
-                var proxyProfile = CACHE.getProfileCache().getProfile();
-                if (CONFIG.client.extra.coordObfuscation.exemptProxyAccount && profile != null && proxyProfile != null && profile.getId().equals(proxyProfile.getId())) {
-                    info("Exempted proxy account session with no offset: {}", profile.getName());
+                if (CONFIG.client.extra.coordObfuscation.disconnectWhileNearOffsetBlocks && isNearOffsetBlockStates()) {
+                    disconnect(session, genericDisconnectReason, "Nearby collidable blocks with position offsets");
                     return;
                 }
                 var state = new ObfPlayerState(session);
@@ -477,6 +496,19 @@ public class CoordObfuscation extends Module {
                 if (itemStack == null) continue;
                 if (itemStack.getId() == ItemRegistry.ENDER_EYE.id()) return true;
             }
+        }
+        return false;
+    }
+
+    public boolean isNearOffsetBlockStates() {
+        var playerCb = new LocalizedCollisionBox(Bot.STANDING_COLLISION_BOX, CACHE.getPlayerCache().getX(), CACHE.getPlayerCache().getY(), CACHE.getPlayerCache().getZ());
+        for (var posLong : World.getBlockPosLongListInCollisionBox(playerCb)) {
+            int blockStateId = World.getBlockStateId(BlockPos.getX(posLong), BlockPos.getY(posLong), BlockPos.getZ(posLong));
+            var block = World.getBlock(blockStateId);
+            if (block.offsetType() == BlockOffsetType.NONE) continue;
+            var blockCb = BLOCK_DATA.getCollisionBoxesFromBlockStateId(blockStateId);
+            if (blockCb.isEmpty()) continue;
+            return true;
         }
         return false;
     }

@@ -163,6 +163,9 @@ public class CoordinateObfuscationCommand extends Command {
             })))
             .then(literal("eyeOfEnderDisconnect").then(argument("toggleArg", toggle()).executes(c -> {
                 CONFIG.client.extra.coordObfuscation.disconnectWhileEyeOfEnderPresent = getToggle(c, "toggleArg");
+            })))
+            .then(literal("blockOffsetsDisconnect").then(argument("toggleArg", toggle()).executes(c -> {;
+                CONFIG.client.extra.coordObfuscation.disconnectWhileNearOffsetBlocks = getToggle(c, "toggleArg");
             })));
     }
 
@@ -185,6 +188,7 @@ public class CoordinateObfuscationCommand extends Command {
             .addField("Obfuscate Biomes", toggleStr(CONFIG.client.extra.coordObfuscation.obfuscateBiomes))
             .addField("Obfuscated Biome Key", CONFIG.client.extra.coordObfuscation.obfuscateBiomesKey)
             .addField("Eye of Ender Disconnect", toggleStr(CONFIG.client.extra.coordObfuscation.disconnectWhileEyeOfEnderPresent))
+            .addField("Block Offsets Disconnect", toggleStr(CONFIG.client.extra.coordObfuscation.disconnectWhileNearOffsetBlocks))
             .primaryColor();
         MODULE.get(CoordObfuscation.class).onConfigChange();
     }
