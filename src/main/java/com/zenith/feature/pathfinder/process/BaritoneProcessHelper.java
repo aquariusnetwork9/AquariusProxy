@@ -17,4 +17,9 @@ public abstract class BaritoneProcessHelper implements IBaritoneProcess {
     public boolean isTemporary() {
         return false;
     }
+
+    @Override
+    public void stop() {
+        onLostControl();
+    }
 }

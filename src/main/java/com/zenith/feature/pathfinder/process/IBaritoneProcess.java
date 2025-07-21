@@ -74,6 +74,8 @@ public interface IBaritoneProcess {
      */
     void onLostControl();
 
+    void stop();
+
     /**
      * Used to determine which Process gains control if multiple are reporting {@link #isActive()}. The one
      * that returns the highest value will be given control.

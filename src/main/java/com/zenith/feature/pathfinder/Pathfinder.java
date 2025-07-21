@@ -3,6 +3,7 @@ package com.zenith.feature.pathfinder;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.feature.pathfinder.goals.Goal;
 import com.zenith.mc.block.Block;
+import com.zenith.mc.block.BlockPos;
 import com.zenith.mc.item.ItemData;
 import org.jspecify.annotations.Nullable;
 
@@ -25,6 +26,7 @@ public interface Pathfinder {
     PathingRequestFuture breakBlock(int x, int y, int z, boolean autoTool);
     PathingRequestFuture leftClickEntity(EntityLiving entity);
     PathingRequestFuture rightClickEntity(EntityLiving entity);
+    PathingRequestFuture clearArea(BlockPos pos1, BlockPos pos2);
     void stop();
     @Nullable Goal currentGoal();
 }

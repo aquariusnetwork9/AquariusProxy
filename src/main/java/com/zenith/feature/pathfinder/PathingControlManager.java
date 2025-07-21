@@ -28,7 +28,7 @@ public class PathingControlManager {
 
 //    @Override
     public void registerProcess(IBaritoneProcess process) {
-        process.onLostControl(); // make sure it's reset
+        process.stop(); // make sure it's reset
         processes.add(process);
     }
 
@@ -38,7 +38,7 @@ public class PathingControlManager {
         command = null;
         active.clear();
         for (IBaritoneProcess proc : processes) {
-            proc.onLostControl();
+            proc.stop();
             if (proc.isActive() && !proc.isTemporary()) { // it's okay only for a temporary thing (like combat pause) to maintain control even if you say to cancel
                 throw new IllegalStateException(proc.displayName());
             }

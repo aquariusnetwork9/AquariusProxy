@@ -64,6 +64,7 @@ public class PathfinderCommand extends Command {
                 "break <x> <y> <z>",
                 "pickup",
                 "pickup <item>",
+                "clearArea <pos1> <pos2>",
                 "status",
                 "settings"
             )
@@ -233,6 +234,25 @@ public class PathfinderCommand extends Command {
                     .primaryColor();
                 return OK;
             })))
+            .then(literal("clearArea").then(argument("pos1", blockPos()).then(argument("pos2", blockPos()).executes(c -> {
+                var pos1 = getBlockPos(c, "pos1");
+                var pos2 = getBlockPos(c, "pos2");
+                BARITONE.clearArea(pos1, pos2)
+                    .addExecutedListener(f -> {
+                        c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
+                            .title("Area Cleared!")
+                            .addField("Area", CONFIG.discord.reportCoords
+                                ? "||[" + pos1.x() + ", " + pos1.y() + ", " + pos1.z() + "] <> [" + pos2.x() + ", " + pos2.y() + ", " + pos2.z() + "]||"
+                                : "Coords disabled")
+                            .primaryColor());
+                    });
+                c.getSource().getEmbed()
+                    .title("Clearing Area")
+                    .addField("Area", CONFIG.discord.reportCoords
+                        ? "||[" + pos1.x() + ", " + pos1.y() + ", " + pos1.z() + "] <> [" + pos2.x() + ", " + pos2.y() + ", " + pos2.z() + "]||"
+                        : "Coords disabled")
+                    .primaryColor();
+            }))))
             .then(literal("thisway").then(argument("dist", integer()).executes(c -> {
                 int dist = getInteger(c, "dist");
                 BARITONE.thisWay(dist)

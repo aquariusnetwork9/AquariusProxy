@@ -14,6 +14,7 @@ import com.zenith.feature.pathfinder.goals.GoalXZ;
 import com.zenith.feature.pathfinder.process.*;
 import com.zenith.feature.player.InputRequest;
 import com.zenith.mc.block.Block;
+import com.zenith.mc.block.BlockPos;
 import com.zenith.mc.item.ItemData;
 import com.zenith.util.math.MathHelper;
 import com.zenith.util.timer.Timer;
@@ -59,6 +60,7 @@ public class Baritone implements Pathfinder {
     private final GetToBlockProcess getToBlockProcess = new GetToBlockProcess(this);
     private final MineProcess mineProcess = new MineProcess(this);
     private final InteractWithProcess interactWithProcess = new InteractWithProcess(this);
+    private final ClearAreaProcess clearAreaProcess = new ClearAreaProcess(this);
     private final Timer teleportDelayTimer = Timers.timer();
     private final IngamePathRenderer ingamePathRenderer = new IngamePathRenderer();
 
@@ -68,6 +70,7 @@ public class Baritone implements Pathfinder {
         pathingControlManager.registerProcess(getToBlockProcess);
         pathingControlManager.registerProcess(mineProcess);
         pathingControlManager.registerProcess(interactWithProcess);
+        pathingControlManager.registerProcess(clearAreaProcess);
         EVENT_BUS.subscribe(
             this,
             of(ClientBotTick.class, this::onClientBotTick),
@@ -167,6 +170,11 @@ public class Baritone implements Pathfinder {
     @Override
     public PathingRequestFuture rightClickEntity(EntityLiving entity) {
         return getInteractWithProcess().rightClickEntity(entity);
+    }
+
+    @Override
+    public PathingRequestFuture clearArea(BlockPos pos1, BlockPos pos2) {
+        return getClearAreaProcess().clearArea(pos1, pos2);
     }
 
     @Override
