@@ -102,9 +102,10 @@ public class Proxy {
         Locale.setDefault(Locale.ENGLISH);
         SLF4JBridgeHandler.removeHandlersForRootLogger();
         SLF4JBridgeHandler.install();
-        setPropertySafe("io.netty.allocator.type", "adaptive");
+        setPropertySafe("io.netty.allocator.type", "pooled");
         setPropertySafe("reactor.schedulers.defaultPoolSize", "1");
-        setPropertySafe("io.netty.trackPinnedMemory", "false");
+        setPropertySafe("io.netty.allocator.numHeapArenas", "2");
+        setPropertySafe("io.netty.allocator.numDirectArenas", "2");
         setPropertySafe("io.netty.leakDetection.level", "disabled");
         setPropertySafe("io.netty.noUnsafe", "false");
         instance.start();
