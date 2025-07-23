@@ -280,9 +280,10 @@ def verify_discord_bot_token(token, verbose=False):
             return False
         response_json = response.json()
         flags = response_json["flags"]
-        message_content_intent = flags >> 19
-        if message_content_intent != 1:
-            print("ERROR: Message content intent is not enabled.")
+        gateway_message_content = (flags & (1 << 18) == (1 << 18))
+        gateway_message_content_limited = (flags & (1 << 19) == (1 << 19))
+        if not (gateway_message_content or gateway_message_content_limited):
+            print("ERROR: Message content intent is not enabled, flags: " + str(flags))
             print("Enable 'Message Content Intent' in the discord bot settings")
             return False
         return True
