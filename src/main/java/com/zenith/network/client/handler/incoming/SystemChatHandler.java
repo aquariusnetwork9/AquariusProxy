@@ -32,6 +32,9 @@ public class SystemChatHandler implements ClientEventLoopPacketHandler<Clientbou
     @Override
     public boolean applyAsync(@NonNull ClientboundSystemChatPacket packet, @NonNull ClientSession session) {
         try {
+            if (packet.isOverlay()) {
+                return true; // skip action bar text
+            }
             logSystemChat(packet);
             final Component component = packet.getContent();
             String messageString = ComponentSerializer.serializePlain(component);
