@@ -21,6 +21,7 @@ public class ECSystemChatOutgoingHandler implements PacketHandler<ClientboundSys
 
     @Override
     public ClientboundSystemChatPacket apply(ClientboundSystemChatPacket packet, ServerSession session) {
+        if (packet.isOverlay()) return packet;
         try {
             final Component component = packet.getContent();
             final String message = ComponentSerializer.serializePlain(component);
