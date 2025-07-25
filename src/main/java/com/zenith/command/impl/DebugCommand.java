@@ -53,74 +53,74 @@ public class DebugCommand extends Command {
     public LiteralArgumentBuilder<CommandContext> register() {
         return command("debug").requires(Command::validateAccountOwner)
             .then(literal("packetLog")
-                      .then(argument("toggle", toggle()).executes(c -> {
-                          CONFIG.debug.packetLog.enabled = getToggle(c, "toggle");
-                          c.getSource().getEmbed()
-                              .title("Packet Log " + toggleStrCaps(CONFIG.debug.packetLog.enabled));
-                          return OK;
-                      }))
-                      .then(literal("client")
-                                .then(argument("toggle", toggle()).executes(c -> {
-                                    var toggle = getToggle(c, "toggle");
-                                    if (toggle) {
-                                        CONFIG.debug.packetLog.clientPacketLog.received = true;
-                                        CONFIG.debug.packetLog.clientPacketLog.receivedBody = true;
-                                        CONFIG.debug.packetLog.clientPacketLog.postSent = true;
-                                        CONFIG.debug.packetLog.clientPacketLog.postSentBody = true;
-                                    } else {
-                                        CONFIG.debug.packetLog.clientPacketLog.received = false;
-                                        CONFIG.debug.packetLog.clientPacketLog.postSent = false;
-                                        CONFIG.debug.packetLog.clientPacketLog.preSent = false;
-                                    }
-                                    c.getSource().getEmbed()
-                                        .title("Client Packet Log " + toggleStrCaps(toggle));
-                                    return OK;
-                                })))
-                      .then(literal("server")
-                                .then(argument("toggle", toggle()).executes(c -> {
-                                    var toggle = getToggle(c, "toggle");
-                                    if (toggle) {
-                                        CONFIG.debug.packetLog.serverPacketLog.received = true;
-                                        CONFIG.debug.packetLog.serverPacketLog.receivedBody = true;
-                                        CONFIG.debug.packetLog.serverPacketLog.postSent = true;
-                                        CONFIG.debug.packetLog.serverPacketLog.postSentBody = true;
-                                    } else {
-                                        CONFIG.debug.packetLog.serverPacketLog.received = false;
-                                        CONFIG.debug.packetLog.serverPacketLog.postSent = false;
-                                        CONFIG.debug.packetLog.serverPacketLog.preSent = false;
-                                    }
-                                    c.getSource().getEmbed()
-                                        .title("Server Packet Log " + toggleStrCaps(toggle));
-                                    return OK;
-                                })))
-                      .then(literal("filter")
-                                .then(argument("filter", wordWithChars()).executes(c -> {
-                                    CONFIG.debug.packetLog.packetFilter = c.getArgument("filter", String.class);
-                                    if ("off".equalsIgnoreCase(CONFIG.debug.packetLog.packetFilter))
-                                        CONFIG.debug.packetLog.packetFilter = "";
-                                    c.getSource().getEmbed()
-                                        .title("Packet Log Filter Set: " + CONFIG.debug.packetLog.packetFilter);
-                                    return OK;
-                                })))
-                      .then(literal("logLevelDebug").then(argument("toggle", toggle()).executes(c -> {
-                            CONFIG.debug.packetLog.logLevelDebug = getToggle(c, "toggle");
-                            c.getSource().getEmbed()
-                                .title("Log Level Debug " + toggleStrCaps(CONFIG.debug.packetLog.logLevelDebug));
-                          return OK;
-                      }))))
+                .then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.debug.packetLog.enabled = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                        .title("Packet Log " + toggleStrCaps(CONFIG.debug.packetLog.enabled));
+                    return OK;
+                }))
+                .then(literal("client")
+                    .then(argument("toggle", toggle()).executes(c -> {
+                        var toggle = getToggle(c, "toggle");
+                        if (toggle) {
+                            CONFIG.debug.packetLog.clientPacketLog.received = true;
+                            CONFIG.debug.packetLog.clientPacketLog.receivedBody = true;
+                            CONFIG.debug.packetLog.clientPacketLog.postSent = true;
+                            CONFIG.debug.packetLog.clientPacketLog.postSentBody = true;
+                        } else {
+                            CONFIG.debug.packetLog.clientPacketLog.received = false;
+                            CONFIG.debug.packetLog.clientPacketLog.postSent = false;
+                            CONFIG.debug.packetLog.clientPacketLog.preSent = false;
+                        }
+                        c.getSource().getEmbed()
+                            .title("Client Packet Log " + toggleStrCaps(toggle));
+                        return OK;
+                    })))
+                .then(literal("server")
+                    .then(argument("toggle", toggle()).executes(c -> {
+                        var toggle = getToggle(c, "toggle");
+                        if (toggle) {
+                            CONFIG.debug.packetLog.serverPacketLog.received = true;
+                            CONFIG.debug.packetLog.serverPacketLog.receivedBody = true;
+                            CONFIG.debug.packetLog.serverPacketLog.postSent = true;
+                            CONFIG.debug.packetLog.serverPacketLog.postSentBody = true;
+                        } else {
+                            CONFIG.debug.packetLog.serverPacketLog.received = false;
+                            CONFIG.debug.packetLog.serverPacketLog.postSent = false;
+                            CONFIG.debug.packetLog.serverPacketLog.preSent = false;
+                        }
+                        c.getSource().getEmbed()
+                            .title("Server Packet Log " + toggleStrCaps(toggle));
+                        return OK;
+                    })))
+                .then(literal("filter")
+                    .then(argument("filter", wordWithChars()).executes(c -> {
+                        CONFIG.debug.packetLog.packetFilter = c.getArgument("filter", String.class);
+                        if ("off".equalsIgnoreCase(CONFIG.debug.packetLog.packetFilter))
+                            CONFIG.debug.packetLog.packetFilter = "";
+                        c.getSource().getEmbed()
+                            .title("Packet Log Filter Set: " + CONFIG.debug.packetLog.packetFilter);
+                        return OK;
+                    })))
+                .then(literal("logLevelDebug").then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.debug.packetLog.logLevelDebug = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                        .title("Log Level Debug " + toggleStrCaps(CONFIG.debug.packetLog.logLevelDebug));
+                    return OK;
+                }))))
             .then(literal("sync")
-                        .then(literal("inventory").executes(c -> {
-                            PlayerCache.sync();
-                            c.getSource().getEmbed()
-                                .title("Inventory Synced");
-                            return OK;
-                        }))
-                        .then(literal("chunks").executes(c -> {
-                            ChunkCache.sync();
-                            c.getSource().getEmbed()
-                                .title("Synced Chunks");
-                            return OK;
-                        })))
+                .then(literal("inventory").executes(c -> {
+                    PlayerCache.inventorySync();
+                    c.getSource().getEmbed()
+                        .title("Inventory Synced");
+                    return OK;
+                }))
+                .then(literal("chunks").executes(c -> {
+                    ChunkCache.sync();
+                    c.getSource().getEmbed()
+                        .title("Synced Chunks");
+                    return OK;
+                })))
             .then(literal("clearEffects").executes(c -> {
                 CACHE.getPlayerCache().getThePlayer().getPotionEffectMap().clear();
                 var session = Proxy.getInstance().getCurrentPlayer().get();
@@ -172,6 +172,11 @@ public class DebugCommand extends Command {
                 CONFIG.client.defaultClientRenderDistance = getInteger(c, "dist");
                 c.getSource().getEmbed()
                     .title("Default Client Render Distance Set");
+            })))
+            .then(literal("inventorySyncOnLogin").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.debug.inventorySyncOnLogin = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("Inventory Sync On Login " + toggleStrCaps(CONFIG.debug.inventorySyncOnLogin));
             })));
     }
 

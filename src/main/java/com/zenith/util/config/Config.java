@@ -570,6 +570,7 @@ public final class Config {
         public boolean kickDisconnect = false;
         public boolean debugLogs = false;
         public boolean terminalDebugLogs = false;
+        public boolean inventorySyncOnLogin = false;
 
         public static final class PacketLog {
             public boolean enabled = false;

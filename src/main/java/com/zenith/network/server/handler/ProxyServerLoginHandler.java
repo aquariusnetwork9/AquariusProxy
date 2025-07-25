@@ -115,7 +115,7 @@ public class ProxyServerLoginHandler {
                 ),
                 false
             ));
-            if (!Proxy.getInstance().isInQueue()) { PlayerCache.sync(); }
+            if (CONFIG.debug.inventorySyncOnLogin && !Proxy.getInstance().isInQueue()) { PlayerCache.inventorySync(); }
         }
         connection.send(new ClientboundServerDataPacket(
             ZenithServerInfoBuilder.INSTANCE.getMotd(),

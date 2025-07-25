@@ -48,8 +48,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-import static com.zenith.Globals.CLIENT_LOG;
-import static java.util.Objects.nonNull;
 import static org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot.*;
 
 
@@ -162,22 +160,17 @@ public class PlayerCache implements CachedData {
         );
     }
 
-    public static void sync() {
-        if (nonNull(Proxy.getInstance().getClient())) {
-            try {
-                // intentionally sends an invalid inventory packet to make the server send us our full inventory
-                Proxy.getInstance().getClient().sendAsync(new ServerboundContainerClickPacket(
-                    0,
-                    -1337,
-                    0,
-                    ContainerActionType.CREATIVE_GRAB_MAX_STACK,
-                    CreativeGrabAction.GRAB,
-                    new ItemStack(1, 1),
-                    Int2ObjectMaps.emptyMap()));
-            } catch (final Exception e) {
-                CLIENT_LOG.warn("Failed Player Sync", e);
-            }
-        }
+    public static void inventorySync() {
+        // intentionally sends an invalid inventory packet to make the server send us our full inventory
+        Proxy.getInstance().getClient().sendAsync(new ServerboundContainerClickPacket(
+            0,
+            -1337,
+            0,
+            ContainerActionType.CREATIVE_GRAB_MAX_STACK,
+            CreativeGrabAction.GRAB,
+            new ItemStack(1, 1),
+            Int2ObjectMaps.emptyMap())
+        );
     }
 
     public boolean isAlive() {
