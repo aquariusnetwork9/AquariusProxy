@@ -1,6 +1,8 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.zenith.Proxy;
+import com.zenith.event.client.ClientDisconnectEvent;
 import com.zenith.event.module.ActiveHoursConnectEvent;
 import com.zenith.feature.queue.Queue;
 import com.zenith.module.api.Module;
@@ -8,16 +10,19 @@ import org.jspecify.annotations.Nullable;
 
 import java.time.*;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Globals.*;
 
 public class ActiveHours extends Module {
     public static final String ACTIVE_HOURS_DISCONNECT_PREFIX = "[Active Hours] ";
     private @Nullable ScheduledFuture<?> activeHoursTickFuture;
     private Instant lastActiveHoursConnect = Instant.EPOCH;
+    private volatile boolean activeSession = false;
 
     @Override
     public boolean enabledSetting() {
@@ -25,8 +30,20 @@ public class ActiveHours extends Module {
     }
 
     @Override
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
+            of(ClientDisconnectEvent.class, this::onDisconnect)
+        );
+    }
+
+    private void onDisconnect(ClientDisconnectEvent event) {
+        activeSession = false;
+    }
+
+    @Override
     public void onEnable() {
         activeHoursTickFuture = EXECUTOR.scheduleAtFixedRate(this::handleActiveHoursTick, 0L, 1L, TimeUnit.MINUTES);
+        activeSession = false;
     }
 
     @Override
@@ -34,12 +51,14 @@ public class ActiveHours extends Module {
         if (activeHoursTickFuture != null) {
             activeHoursTickFuture.cancel(false);
         }
+        activeSession = false;
     }
 
     private void handleActiveHoursTick() {
         try {
             var activeHoursConfig = CONFIG.client.extra.utility.actions.activeHours;
             var proxy = Proxy.getInstance();
+            if (activeHoursConfig.fullSessionUntilNextDisconnect && activeSession) return;
             if (proxy.isOn2b2t() && (proxy.isPrio() && proxy.isConnected())) return;
             if (proxy.hasActivePlayer() && !activeHoursConfig.forceReconnect) return;
             if (lastActiveHoursConnect.isAfter(Instant.now().minus(Duration.ofHours(1)))) return;
@@ -84,6 +103,7 @@ public class ActiveHours extends Module {
                         }
                     }
                     proxy.connectAndCatchExceptions();
+                    activeSession = Proxy.getInstance().isConnected();
                     return;
                 }
             }

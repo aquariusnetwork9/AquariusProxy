@@ -48,7 +48,8 @@ public class ActiveHoursCommand extends Command {
                 "add/del <time>",
                 "status",
                 "whilePlayerConnected on/off",
-                "queueEtaCalc on/off"
+                "queueEtaCalc on/off",
+                "fullSessionUntilNextDisconnect on/off"
             )
             .aliases(
                 "schedule"
@@ -92,7 +93,7 @@ public class ActiveHoursCommand extends Command {
                         CONFIG.client.extra.utility.actions.activeHours.activeTimes.add(activeTime);
                     }
                     c.getSource().getEmbed()
-                                 .title("Added time: " + time);
+                        .title("Added time: " + time);
                     return OK;
                 }
             })))
@@ -116,19 +117,24 @@ public class ActiveHoursCommand extends Command {
                     .title("Active Hours Status");
             }))
             .then(literal("whilePlayerConnected")
-                      .then(argument("toggle", toggle()).executes(c -> {
-                          CONFIG.client.extra.utility.actions.activeHours.forceReconnect = getToggle(c, "toggle");
-                          c.getSource().getEmbed()
-                              .title("Force Reconnect Set!");
-                          return OK;
-                      })))
+                .then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.utility.actions.activeHours.forceReconnect = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                        .title("Force Reconnect Set!");
+                    return OK;
+                })))
             .then(literal("queueEtaCalc")
-                      .then(argument("toggle", toggle()).executes(c -> {
-                          CONFIG.client.extra.utility.actions.activeHours.queueEtaCalc = getToggle(c, "toggle");
-                          c.getSource().getEmbed()
-                              .title("Queue ETA Calc Set!");
-                          return OK;
-                      })));
+                .then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.utility.actions.activeHours.queueEtaCalc = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                        .title("Queue ETA Calc Set!");
+                    return OK;
+                })))
+            .then(literal("fullSessionUntilNextDisconnect").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.utility.actions.activeHours.fullSessionUntilNextDisconnect = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("Full Session Until Next Disconnect " + toggleStrCaps(CONFIG.client.extra.utility.actions.activeHours.fullSessionUntilNextDisconnect));
+            })));
     }
 
     private boolean timeMatchesRegex(final String arg) {
@@ -141,27 +147,28 @@ public class ActiveHoursCommand extends Command {
 
     private String activeTimeListToString(final List<ActiveTime> activeTimes) {
         return activeTimes.stream()
-                .sorted((a, b) -> {
-                    if (a.hour() == b.hour()) {
-                        return a.minute() - b.minute();
-                    } else {
-                        return a.hour() - b.hour();
-                    }
-                })
-                .map(ActiveTime::toString)
-                .collect(Collectors.joining(", "));
+            .sorted((a, b) -> {
+                if (a.hour() == b.hour()) {
+                    return a.minute() - b.minute();
+                } else {
+                    return a.hour() - b.hour();
+                }
+            })
+            .map(ActiveTime::toString)
+            .collect(Collectors.joining(", "));
     }
 
     @Override
     public void defaultEmbed(Embed builder) {
         builder
-            .addField("ActiveHours", toggleStr(CONFIG.client.extra.utility.actions.activeHours.enabled), false)
-            .addField("Time Zone", CONFIG.client.extra.utility.actions.activeHours.timeZoneId, false)
+            .addField("ActiveHours", toggleStr(CONFIG.client.extra.utility.actions.activeHours.enabled))
+            .addField("Time Zone", CONFIG.client.extra.utility.actions.activeHours.timeZoneId)
             .addField("Active Hours", (CONFIG.client.extra.utility.actions.activeHours.activeTimes.isEmpty()
                 ? "None set!"
-                : activeTimeListToString(CONFIG.client.extra.utility.actions.activeHours.activeTimes)), false)
-            .addField("While Player Connected", toggleStr(CONFIG.client.extra.utility.actions.activeHours.forceReconnect), false)
-            .addField("Queue ETA Calc", toggleStr(CONFIG.client.extra.utility.actions.activeHours.queueEtaCalc), false)
+                : activeTimeListToString(CONFIG.client.extra.utility.actions.activeHours.activeTimes)))
+            .addField("While Player Connected", toggleStr(CONFIG.client.extra.utility.actions.activeHours.forceReconnect))
+            .addField("Queue ETA Calc", toggleStr(CONFIG.client.extra.utility.actions.activeHours.queueEtaCalc))
+            .addField("Full Session Until Next Disconnect", toggleStr(CONFIG.client.extra.utility.actions.activeHours.fullSessionUntilNextDisconnect))
             .primaryColor();
     }
 }

@@ -453,6 +453,7 @@ public final class Config {
                     public boolean enabled = false;
                     public boolean forceReconnect = false;
                     public boolean queueEtaCalc = true;
+                    public boolean fullSessionUntilNextDisconnect = true;
                     public String timeZoneId = "Universal";
                     public final ArrayList<ActiveTime> activeTimes = new ArrayList<>();
                 }
