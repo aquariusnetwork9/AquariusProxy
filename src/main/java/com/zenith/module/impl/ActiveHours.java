@@ -58,7 +58,7 @@ public class ActiveHours extends Module {
         try {
             var activeHoursConfig = CONFIG.client.extra.utility.actions.activeHours;
             var proxy = Proxy.getInstance();
-            if (activeHoursConfig.fullSessionUntilNextDisconnect && activeSession) return;
+            if (activeHoursConfig.fullSessionUntilNextDisconnect && activeSession && Proxy.getInstance().isConnected()) return;
             if (proxy.isOn2b2t() && (proxy.isPrio() && proxy.isConnected())) return;
             if (proxy.hasActivePlayer() && !activeHoursConfig.forceReconnect) return;
             if (lastActiveHoursConnect.isAfter(Instant.now().minus(Duration.ofHours(1)))) return;
