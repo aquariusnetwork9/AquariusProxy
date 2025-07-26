@@ -272,6 +272,7 @@ public final class PacketCodecRegistries {
                 .outbound(ClientboundPlayerAbilitiesPacket.class, new PlayerAbilitiesSpectatorOutgoingHandler())
                 .outbound(ClientboundRespawnPacket.class, new RespawnSpectatorOutgoingPacket())
                 .outbound(ClientboundStartConfigurationPacket.class, new StartConfigurationSpectatorOutgoingHandler())
+                .outbound(ClientboundLoginPacket.class, new LoginSpectatorOutgoingHandler())
                 .postOutbound(ClientboundLoginPacket.class, new LoginSpectatorPostHandler())
                 .build())
             .build();
