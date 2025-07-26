@@ -34,10 +34,11 @@ public class EntityDataManager {
     public LocalizedCollisionBox getCollisionBox(final EntityLiving entity) {
         var data = getEntityData(entity.getEntityType());
         if (data == null) return null;
-        double w = data.width() / 2;
+        var dimensions = entity.dimensions();
+        double w = dimensions.getX() / 2;
         return new LocalizedCollisionBox(
             entity.getX() - w, entity.getX() + w,
-            entity.getY(), entity.getY() + data.height(),
+            entity.getY(), entity.getY() + dimensions.getY(),
             entity.getZ() - w, entity.getZ() + w,
             entity.getX(), entity.getY(), entity.getZ()
         );

@@ -8,6 +8,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import lombok.Data;
 import lombok.experimental.Accessors;
+import org.cloudburstmc.math.vector.Vector2d;
 import org.cloudburstmc.math.vector.Vector3d;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.Attribute;
@@ -115,4 +116,13 @@ public abstract class Entity {
         }
         return null;
     }
+
+    public Vector2d dimensions() {
+        EntityData entityData = ENTITY_DATA.getEntityData(entityType);
+        if (entityData != null) {
+            return Vector2d.from(entityData.width(), entityData.height());
+        }
+        return Vector2d.ZERO;
+    }
+
 }

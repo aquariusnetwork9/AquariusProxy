@@ -1,12 +1,10 @@
 package com.zenith.feature.player;
 
 import com.zenith.cache.data.entity.Entity;
-import com.zenith.mc.entity.EntityData;
 import lombok.experimental.UtilityClass;
 import org.cloudburstmc.math.vector.Vector2f;
 
 import static com.zenith.Globals.CACHE;
-import static com.zenith.Globals.ENTITY_DATA;
 
 @UtilityClass
 public final class RotationHelper {
@@ -32,9 +30,9 @@ public final class RotationHelper {
         final double playerX = CACHE.getPlayerCache().getX();
         final double playerY = CACHE.getPlayerCache().getEyeY();
         final double playerZ = CACHE.getPlayerCache().getZ();
-        final EntityData entityData = ENTITY_DATA.getEntityData(entity.getEntityType());
-        final double entityHeight = entityData.height();
-        final double entityWidth = entityData.width();
+        var dimensions = entity.dimensions();
+        final double entityHeight = dimensions.getY();
+        final double entityWidth = dimensions.getX();
         final double halfW = entityWidth / 2.0;
         final double nearestX = Math.clamp(playerX, entity.getX() - halfW, entity.getX() + halfW);
         final double nearestY = Math.clamp(playerY, entity.getY(), entity.getY() + entityHeight);

@@ -1,16 +1,20 @@
 package com.zenith.cache.data.entity;
 
+import com.zenith.mc.entity.EntityData;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
+import org.cloudburstmc.math.vector.Vector2d;
 import org.cloudburstmc.math.vector.Vector3i;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.AttributeType;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.EntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.Equipment;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.MetadataTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.Pose;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundSetEquipmentPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundUpdateMobEffectPacket;
@@ -21,6 +25,8 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
+
+import static com.zenith.Globals.ENTITY_DATA;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -78,4 +84,47 @@ public class EntityLiving extends Entity {
         }
         return false;
     }
+
+    public boolean isBaby() {
+        if (removed) return false;
+        var entityData = ENTITY_DATA.getEntityData(entityType);
+        if (entityType == null) return false;
+        int metadataIndex = -1;
+
+        if (entityData.ageableMob()) {
+            // https://minecraft.wiki/w/Java_Edition_protocol/Entity_metadata#Ageable_Mob
+            metadataIndex = 16;
+        } else if (entityType == EntityType.HOGLIN) {
+            // https://minecraft.wiki/w/Java_Edition_protocol/Entity_metadata#Hoglin
+            metadataIndex = 16;
+        } else if (entityType == EntityType.ZOMBIE) {
+            // https://minecraft.wiki/w/Java_Edition_protocol/Entity_metadata#Zombie
+            metadataIndex = 16;
+        } else if (entityType == EntityType.PIGLIN) {
+            // https://minecraft.wiki/w/Java_Edition_protocol/Entity_metadata#Piglin
+            metadataIndex = 17;
+        }
+        if (metadataIndex == -1) return false;
+        var metadataValue = getMetadataValue(metadataIndex, MetadataTypes.BOOLEAN, Boolean.class);
+        if (metadataValue == null) return false;
+        return metadataValue;
+    }
+
+    @Override
+    public Vector2d dimensions() {
+        EntityData entityData = ENTITY_DATA.getEntityData(entityType);
+        if (entityData != null) {
+            var dimensions = super.dimensions();
+            if (isBaby()) {
+                dimensions = dimensions.mul(0.5);
+            }
+            var scaleAttribute = attributes.get(AttributeType.Builtin.SCALE);
+            if (scaleAttribute != null) {
+                dimensions = dimensions.mul(scaleAttribute.getValue());
+            }
+            return dimensions;
+        }
+        return Vector2d.ZERO;
+    }
+
 }

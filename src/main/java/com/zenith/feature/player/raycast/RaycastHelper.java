@@ -213,8 +213,9 @@ public class RaycastHelper {
     }
 
     private static LocalizedCollisionBox entityCollisionBox(final Entity entity, final EntityData data) {
-        double width = data.width();
-        double height = data.height();
+        var dimensions = entity.dimensions();
+        double width = dimensions.getX();
+        double height = dimensions.getY();
         double x = entity.getX();
         double y = entity.getY();
         double z = entity.getZ();

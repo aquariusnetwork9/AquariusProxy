@@ -165,17 +165,16 @@ public class World {
                 continue;
             if (entity.getPassengerIds().contains(CACHE.getPlayerCache().getThePlayer().getEntityId()))
                 continue;
-            var entityData = ENTITY_DATA.getEntityData(entityType);
-            if (entityData == null) continue;
             var x = entity.getX();
             var y = entity.getY();
             var z = entity.getZ();
-            double halfW = entityData.width() / 2.0;
+            var dimensions = entity.dimensions();
+            double halfW = dimensions.getX() / 2.0;
             double minX = x - halfW;
             double minY = y;
             double minZ = z - halfW;
             double maxX = x + halfW;
-            double maxY = y + entityData.height();
+            double maxY = y + dimensions.getY();
             double maxZ = z + halfW;
             if (cb.intersects(minX, maxX, minY, maxY, minZ, maxZ)) {
                 results.add(new LocalizedCollisionBox(minX, maxX, minY, maxY, minZ, maxZ, x, y, z));
