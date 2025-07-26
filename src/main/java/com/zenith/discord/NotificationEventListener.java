@@ -108,12 +108,11 @@ public class NotificationEventListener {
     }
 
     private void handleSessionTimeLimitEvent(SessionTimeLimitWarningEvent event) {
-        if (!CONFIG.client.extra.sessionTimeLimit.discordNotification) return;
         var embed = Embed.builder()
             .title("Session Time Limit Warning")
             .description(event.sessionTimeLimit().toHoursPart() + "h kick in: " + event.durationUntilKick().toMinutes() + "m")
             .primaryColor();
-        if (CONFIG.client.extra.sessionTimeLimit.discordNotificationMention) {
+        if (CONFIG.client.extra.sessionTimeLimit.discordMentionPositions.contains((int) event.durationUntilKick().toMinutes())) {
             sendEmbedMessage(notificationMention(), embed);
         } else {
             sendEmbedMessage(embed);

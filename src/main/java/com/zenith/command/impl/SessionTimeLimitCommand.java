@@ -8,6 +8,10 @@ import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 import com.zenith.module.impl.SessionTimeLimit;
 
+import java.util.stream.Collectors;
+
+import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
+import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.zenith.Globals.CONFIG;
 import static com.zenith.Globals.MODULE;
 import static com.zenith.command.brigadier.ToggleArgumentType.getToggle;
@@ -26,9 +30,15 @@ public class SessionTimeLimitCommand extends Command {
             .usageLines(
                 "on/off",
                 "refresh",
-                "ingame on/off",
-                "discord on/off",
-                "discord mention on/off"
+                "ingame list",
+                "ingame add <minutes>",
+                "ingame del <minutes>",
+                "ingame clear",
+                "discord list",
+                "discord add <minutes>",
+                "discord add <minutes> mention",
+                "discord del <minutes>",
+                "discord clear"
             )
             .build();
     }
@@ -49,22 +59,62 @@ public class SessionTimeLimitCommand extends Command {
                     .title("Session Time Limit Refreshed");
                 return OK;
             }))
-            .then(literal("ingame").then(argument("toggle", toggle()).executes(c -> {
-                CONFIG.client.extra.sessionTimeLimit.ingameNotification = getToggle(c, "toggle");
-                c.getSource().getEmbed()
-                    .title("Ingame Notification " + toggleStrCaps(CONFIG.client.extra.sessionTimeLimit.ingameNotification));
-            })))
-            .then(literal("discord")
-                .then(argument("toggle", toggle()).executes(c -> {
-                    CONFIG.client.extra.sessionTimeLimit.discordNotification = getToggle(c, "toggle");
+            .then(literal("ingame")
+                .then(literal("list").executes(c -> {
                     c.getSource().getEmbed()
-                        .title("Discord Notification " + toggleStrCaps(CONFIG.client.extra.sessionTimeLimit.discordNotification));
+                        .title("Session Time Limit List");
                 }))
-                .then(literal("mention").then(argument("toggle", toggle()).executes(c -> {
-                    CONFIG.client.extra.sessionTimeLimit.discordNotificationMention = getToggle(c, "toggle");
+                .then(literal("add").then(argument("minutes", integer(1)).executes(c -> {
+                    var minutes = getInteger(c, "minutes");
+                    CONFIG.client.extra.sessionTimeLimit.ingameNotificationPositions.add(minutes);
                     c.getSource().getEmbed()
-                        .title("Discord Mention " + toggleStrCaps(CONFIG.client.extra.sessionTimeLimit.discordNotificationMention));
-                }))));
+                        .title("In Game Time Added");
+                })))
+                .then(literal("del").then(argument("minutes", integer(1)).executes(c -> {
+                    var minutes = getInteger(c, "minutes");
+                    CONFIG.client.extra.sessionTimeLimit.ingameNotificationPositions.remove(minutes);
+                    c.getSource().getEmbed()
+                        .title("In Game Time Removed");
+                })))
+                .then(literal("clear").executes(c -> {
+                    CONFIG.client.extra.sessionTimeLimit.ingameNotificationPositions.clear();
+                    c.getSource().getEmbed()
+                        .title("In Game Times Cleared");
+                    return OK;
+                })))
+            .then(literal("discord")
+                .then(literal("list").executes(c -> {
+                    c.getSource().getEmbed()
+                        .title("Session Time Limit List");
+                }))
+                .then(literal("add").then(argument("minutes", integer(1)).executes(c -> {
+                    var minutes = getInteger(c, "minutes");
+                    CONFIG.client.extra.sessionTimeLimit.discordNotificationPositions.add(minutes);
+                    CONFIG.client.extra.sessionTimeLimit.discordMentionPositions.remove(minutes);
+                    c.getSource().getEmbed()
+                        .title("Discord Time Added");
+                })
+                    .then(literal("mention").executes(c -> {
+                        var minutes = getInteger(c, "minutes");
+                        CONFIG.client.extra.sessionTimeLimit.discordNotificationPositions.add(minutes);
+                        CONFIG.client.extra.sessionTimeLimit.discordMentionPositions.add(minutes);
+                        c.getSource().getEmbed()
+                            .title("Discord Time Added");
+                    }))))
+                .then(literal("del").then(argument("minutes", integer(1)).executes(c -> {
+                    var minutes = getInteger(c, "minutes");
+                    CONFIG.client.extra.sessionTimeLimit.discordNotificationPositions.remove(minutes);
+                    CONFIG.client.extra.sessionTimeLimit.discordMentionPositions.remove(minutes);
+                    c.getSource().getEmbed()
+                        .title("Discord Time Removed");
+                })))
+                .then(literal("clear").executes(c -> {
+                    CONFIG.client.extra.sessionTimeLimit.discordNotificationPositions.clear();
+                    CONFIG.client.extra.sessionTimeLimit.discordMentionPositions.clear();
+                    c.getSource().getEmbed()
+                        .title("Discord Times Cleared");
+                    return OK;
+                })));
     }
 
     @Override
@@ -72,9 +122,20 @@ public class SessionTimeLimitCommand extends Command {
         embed
             .addField("Session Time Limit", toggleStr(CONFIG.client.extra.sessionTimeLimit.enabled))
             .addField("Limit", formatDuration(MODULE.get(SessionTimeLimit.class).getSessionTimeLimit()))
-            .addField("Ingame Notification", toggleStr(CONFIG.client.extra.sessionTimeLimit.ingameNotification))
-            .addField("Discord Notification", toggleStr(CONFIG.client.extra.sessionTimeLimit.discordNotification))
-            .addField("Discord Mention", toggleStr(CONFIG.client.extra.sessionTimeLimit.discordNotificationMention))
+            .addField("In Game Notifications",
+                CONFIG.client.extra.sessionTimeLimit.ingameNotificationPositions.isEmpty()
+                    ? "Empty"
+                    : CONFIG.client.extra.sessionTimeLimit.ingameNotificationPositions.intStream()
+                        .sorted()
+                        .mapToObj(String::valueOf)
+                        .collect(Collectors.joining("\n")))
+            .addField("Discord Notifications",
+                CONFIG.client.extra.sessionTimeLimit.discordNotificationPositions.isEmpty()
+                    ? "Empty"
+                    : CONFIG.client.extra.sessionTimeLimit.discordNotificationPositions.intStream()
+                        .sorted()
+                        .mapToObj(pos -> pos + (CONFIG.client.extra.sessionTimeLimit.discordMentionPositions.contains(pos) ? " (m)" : ""))
+                        .collect(Collectors.joining("\n")))
             .primaryColor();
     }
 }

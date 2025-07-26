@@ -32,6 +32,7 @@ public class QueueWarningCommand extends Command {
                 "on/off",
                 "list",
                 "clear",
+                "add <position>",
                 "add <position> mention",
                 "del <position>"
             )

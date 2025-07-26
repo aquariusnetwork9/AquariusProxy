@@ -29,12 +29,15 @@ import static com.zenith.Globals.*;
 public class SessionTimeLimit extends Module {
     @Getter private Duration sessionTimeLimit = Duration.ofHours(8);
     private Instant lastUpdatedSessionTimeLimit = Instant.EPOCH;
-    private Instant lastWarningSent = Instant.EPOCH;
+    private Instant lastWarningCheck = Instant.EPOCH;
 
     public SessionTimeLimit() {
-        EXECUTOR.schedule(() -> {
-            EXECUTOR.scheduleAtFixedRate(this::updateSessionTimeLimit, 0, 6, TimeUnit.HOURS);
-        }, ThreadLocalRandom.current().nextInt(1, 60), TimeUnit.MINUTES);
+        EXECUTOR.scheduleAtFixedRate(
+            this::updateSessionTimeLimit,
+            ThreadLocalRandom.current().nextInt(1, 60),
+            TimeUnit.HOURS.toMinutes(6),
+            TimeUnit.MINUTES
+        );
     }
 
     @Override
@@ -51,13 +54,14 @@ public class SessionTimeLimit extends Module {
 
     private void handleClientTick(ClientTickEvent event) {
         if (Proxy.getInstance().isPrio()) return;
-        if (!Proxy.getInstance().isOnlineOn2b2tForAtLeastDurationWithQueueSkip(sessionTimeLimit.minusMinutes(10))) return;
-        if (lastWarningSent.isAfter(Instant.now().minus(Duration.ofMinutes(1)))) return;
+        if (!Proxy.getInstance().isOnlineOn2b2tForAtLeastDurationWithQueueSkip(Duration.ofHours(1))) return;
+        if (lastWarningCheck.isAfter(Instant.now().minus(Duration.ofMinutes(1)))) return;
         final Duration durationUntilKick = sessionTimeLimit.minus(Duration.ofSeconds(Proxy.getInstance().getOnlineTimeSecondsWithQueueSkip()));
         if (durationUntilKick.isNegative()) return; // sanity check just in case 2b's plugin changes
-        debug("Sending 2b2t session time limit warning: {}m", durationUntilKick.toMinutes());
-        lastWarningSent = Instant.now();
-        if (CONFIG.client.extra.sessionTimeLimit.ingameNotification && Proxy.getInstance().hasActivePlayer()) {
+        int minsUntilKick = (int) durationUntilKick.toMinutes();
+        lastWarningCheck = Instant.now();
+        if (CONFIG.client.extra.sessionTimeLimit.ingameNotificationPositions.contains(minsUntilKick) && Proxy.getInstance().hasActivePlayer()) {
+            debug("Sending ingame 2b2t session time limit warning: {}m", durationUntilKick.toMinutes());
             final ServerSession playerConnection = Proxy.getInstance().getCurrentPlayer().get();
             var actionBarPacket = new ClientboundSetActionBarTextPacket(
                 ComponentSerializer.minimessage((durationUntilKick.toMinutes() <= 3 ? "<red>" : "<blue>") + sessionTimeLimit.toHours() + "hr kick in: " + durationUntilKick.toMinutes() + "m"));
@@ -77,7 +81,10 @@ public class SessionTimeLimit extends Module {
                 0L
             ));
         }
-        EVENT_BUS.postAsync(new SessionTimeLimitWarningEvent(sessionTimeLimit, durationUntilKick));
+        if (CONFIG.client.extra.sessionTimeLimit.discordNotificationPositions.contains(minsUntilKick)) {
+            debug("Sending discord 2b2t session time limit warning: {}m", durationUntilKick.toMinutes());
+            EVENT_BUS.postAsync(new SessionTimeLimitWarningEvent(sessionTimeLimit, durationUntilKick));
+        }
     }
 
     private void updateSessionTimeLimit() {

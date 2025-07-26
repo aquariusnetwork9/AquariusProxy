@@ -207,9 +207,9 @@ public final class Config {
 
             public static class SessionTimeLimit {
                 public boolean enabled = true;
-                public boolean ingameNotification = true;
-                public boolean discordNotification = false;
-                public boolean discordNotificationMention = true;
+                public IntArraySet ingameNotificationPositions = IntArraySet.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+                public IntArraySet discordNotificationPositions = new IntArraySet();
+                public IntArraySet discordMentionPositions = new IntArraySet();
                 public boolean dynamic2b2tSessionTimeLimit = true;
             }
 
