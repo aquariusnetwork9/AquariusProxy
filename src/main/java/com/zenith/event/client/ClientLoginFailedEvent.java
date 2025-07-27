@@ -1,3 +1,3 @@
 package com.zenith.event.client;
 
-public record ClientLoginFailedEvent() { }
+public record ClientLoginFailedEvent(Exception exception) { }

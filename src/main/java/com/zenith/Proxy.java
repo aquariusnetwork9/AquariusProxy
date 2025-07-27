@@ -403,7 +403,7 @@ public class Proxy {
             EVENT_BUS.postAsync(new ClientStartConnectEvent());
             minecraftProtocol = this.logIn();
         } catch (final Exception e) {
-            EVENT_BUS.post(new ClientLoginFailedEvent());
+            EVENT_BUS.post(new ClientLoginFailedEvent(e));
             var connections = getActiveConnections().getArray();
             for (int i = 0; i < connections.length; i++) {
                 var connection = connections[i];
@@ -547,6 +547,7 @@ public class Proxy {
                     return null;
                 }
                 CLIENT_LOG.error("Login failed", e);
+                EVENT_BUS.postAsync(new ClientLoginFailedEvent(e));
                 if (e instanceof MinecraftRequestException mre) {
                     if (mre.getResponse().getStatusCode() == 404) {
                         AUTH_LOG.error("""

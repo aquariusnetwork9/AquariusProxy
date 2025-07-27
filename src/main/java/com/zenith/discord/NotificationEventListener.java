@@ -638,18 +638,21 @@ public class NotificationEventListener {
     }
 
     public void handleProxyLoginFailedEvent(ClientLoginFailedEvent event) {
+        var description = """ 
+        [Help]
+        Try waiting and connecting again.
+        
+        If that fails, log into the account with the vanilla MC launcher and join a server. Then try again with ZenithProxy.
+        
+        Another possible cause is your microsoft account needing to have a password (re)set. Usually only possible if you are using email codes to log in instead of passwords.
+        """;
+        if (event.exception() != null) {
+            description = "Error: " + event.exception().getMessage() + "\n\n" + description;
+        }
         var embed = Embed.builder()
             .title("Login Failed")
-            .description("""
-              [Help]
-              Try waiting and connecting again.
-              
-              If that fails, log into the account with the vanilla MC launcher and join a server. Then try again with ZenithProxy.
-              
-              Another possible cause is your microsoft account needing to have a password (re)set. Usually only possible if you are using email codes to log in instead of passwords.
-              """)
-            .errorColor()
-            .addField("Help", "Try waiting and connecting again.", false);
+            .description(description)
+            .errorColor();
         if (CONFIG.discord.mentionRoleOnLoginFailed) {
             sendEmbedMessage(notificationMention(), embed);
         } else {
