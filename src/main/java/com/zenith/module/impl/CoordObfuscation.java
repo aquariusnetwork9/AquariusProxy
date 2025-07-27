@@ -226,8 +226,10 @@ public class CoordObfuscation extends Module {
     public ObfPlayerState getPlayerState(ServerSession session) {
         var state = playerStateMap.get(session);
         if (state == null) {
-            if (!session.isDisconnected()) error("Tried to get player state for {} but it was null", session.getName(), new Exception(""));
-            disconnect(session, "Invalid state", "Tried to get player state but it was null");
+            if (!session.isDisconnected()) {
+                error("Tried to get player state for {} but it was null", session.getName(), new Exception(""));
+                disconnect(session, "Invalid state", "Tried to get player state but it was null");
+            }
             return new ObfPlayerState(session);
         }
         return state;
@@ -462,6 +464,7 @@ public class CoordObfuscation extends Module {
     }
 
     public void disconnect(ServerSession session, String publicReason, String privateReason) {
+        if (session.isDisconnected()) return; // already disconnected
         disconnectNotif(session, privateReason);
         delayIncomingLogins();
         super.disconnect(session, publicReason);
@@ -469,6 +472,7 @@ public class CoordObfuscation extends Module {
 
     @Override
     public void disconnect(ServerSession session, String reason) {
+        if (session.isDisconnected()) return; // already disconnected
         disconnectNotif(session, reason);
         delayIncomingLogins();
         super.disconnect(session, reason);
