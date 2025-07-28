@@ -1255,7 +1255,8 @@ public final class Bot extends ModuleUtils {
         // can occur when a connected player disconnects in an unusual way like crashing
         if (!CACHE.getPlayerCache().getTeleportQueue().isEmpty()) {
             warn("Detected teleport desync, resyncing. queueSize: {}", CACHE.getPlayerCache().getTeleportQueue().size());
-            while (!CACHE.getPlayerCache().getTeleportQueue().isEmpty()) {
+            int count = 0;
+            while (!CACHE.getPlayerCache().getTeleportQueue().isEmpty() && count++ < 25) {
                 var packet = CACHE.getPlayerCache().getTeleportQueue().poll();
                 var cache = CACHE.getPlayerCache();
                 cache
