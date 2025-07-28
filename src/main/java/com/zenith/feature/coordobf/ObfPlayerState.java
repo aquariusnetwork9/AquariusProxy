@@ -21,5 +21,4 @@ public class ObfPlayerState {
     private boolean respawning = false;
     private boolean isInGame = false; // player has accepted the join game packet and spawned at correct position
     private final Queue<ServerTeleport> serverTeleports = new LinkedBlockingQueue<>();
-    public record ServerTeleport(double x, double y, double z, int id) {}
 }

@@ -1,8 +1,11 @@
 package com.zenith.module.impl;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.zenith.Proxy;
 import com.zenith.cache.data.PlayerCache;
 import com.zenith.discord.Embed;
+import com.zenith.event.client.ClientDisconnectEvent;
 import com.zenith.event.client.ClientTickEvent;
 import com.zenith.event.player.PlayerConnectionRemovedEvent;
 import com.zenith.event.player.PlayerLoginEvent;
@@ -10,6 +13,7 @@ import com.zenith.event.player.SpectatorConnectedEvent;
 import com.zenith.event.player.SpectatorDisconnectedEvent;
 import com.zenith.feature.coordobf.CoordOffset;
 import com.zenith.feature.coordobf.ObfPlayerState;
+import com.zenith.feature.coordobf.ServerTeleport;
 import com.zenith.feature.coordobf.handlers.inbound.*;
 import com.zenith.feature.coordobf.handlers.outbound.*;
 import com.zenith.feature.player.Bot;
@@ -67,6 +71,7 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Globals.*;
@@ -74,8 +79,10 @@ import static com.zenith.Globals.*;
 public class CoordObfuscation extends Module {
     private final Random random = new SecureRandom();
     private final Map<ServerSession, ObfPlayerState> playerStateMap = new ConcurrentHashMap<>();
-    private int preTeleportId = Integer.MIN_VALUE;
-    private final MutableVec3d preTeleportClientPos = new MutableVec3d(0.0, 0.0, 0.0);
+    private final Cache<Integer, ServerTeleport> preTeleportPositionCache = CacheBuilder.newBuilder()
+        .maximumSize(20)
+        .expireAfterWrite(5L, TimeUnit.SECONDS)
+        .build();
     // todo: maybe add spectator entities to the main entity cache
     @Getter private final IntSet spectatorEntityIds = new IntOpenHashSet();
 
@@ -102,8 +109,13 @@ public class CoordObfuscation extends Module {
             of(PlayerLoginEvent.Pre.class, this::onPlayerLoginEvent),
             of(SpectatorConnectedEvent.class, this::onSpectatorConnected),
             of(SpectatorDisconnectedEvent.class, this::onSpectatorDisconnected),
-            of(ClientTickEvent.class, this::checkNearBlockOffsets)
+            of(ClientTickEvent.class, this::checkNearBlockOffsets),
+            of(ClientDisconnectEvent.class, this::onDisconnect)
         );
+    }
+
+    private void onDisconnect(ClientDisconnectEvent event) {
+        preTeleportPositionCache.invalidateAll();
     }
 
     private void onSpectatorDisconnected(SpectatorDisconnectedEvent event) {
@@ -201,8 +213,7 @@ public class CoordObfuscation extends Module {
                     // by the time our server handler for teleports is called, we may have already updated the player cache pos
                     // subject to race conditions, as cache update is done on the client event loop
                     PlayerCache cache = CACHE.getPlayerCache();
-                    preTeleportClientPos.set(cache.getX(), cache.getY(), cache.getZ());
-                    preTeleportId = packet.getId();
+                    preTeleportPositionCache.put(packet.getId(), new ServerTeleport(cache.getX(), cache.getY(), cache.getZ(), packet.getId()));
                     return packet;
                 })
                 .build())
@@ -220,6 +231,7 @@ public class CoordObfuscation extends Module {
     public void onDisable() {
         reconnectAllActiveConnections("Module disabled");
         playerStateMap.clear();
+        preTeleportPositionCache.invalidateAll();
         PacketCodecRegistries.SERVER_REGISTRY.unregister(beforeOffsetPacketLogger);
     }
 
@@ -369,15 +381,35 @@ public class CoordObfuscation extends Module {
             double playerMoveDist = MathHelper.distance2d(x, z, pos.getX(), pos.getZ());
             if (playerMoveDist > CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin) {
                 info("Reconnecting {} due to long distance movement", session.getName());
-                reconnect(session, String.format("Long distance movement attempted: %.1f blocks, from: [%.1f, %.1f] (player pos) to [%.1f, %.1f]",
-                                                 playerMoveDist, pos.getX(), pos.getZ(), x, z));
+                var reason = "Long distance movement attempted";
+                var coordsPart = String.format(": %.1f blocks, from: [%.1f, %.1f] (player pos) to [%.1f, %.1f]",
+                    playerMoveDist, pos.getX(), pos.getZ(), x, z);
+                if (CONFIG.discord.reportCoords) {
+                    // as is notified in discord
+                    reason += coordsPart;
+                } else {
+                    // just to log
+                    var reasonWithCoords = reason + coordsPart;
+                    warn(reasonWithCoords);
+                }
+                reconnect(session, reason);
                 return;
             }
             var playerMoveDist2 = MathHelper.distance2d(x, z, CACHE.getPlayerCache().getX(), CACHE.getPlayerCache().getZ());
             if (playerMoveDist2 > CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin) {
                 info("Reconnecting {} due to long distance movement", session.getName());
-                reconnect(session, String.format("Long distance movement attempted: %.1f blocks, from: [%.1f, %.1f] (cached pos) to [%.1f, %.1f]",
-                                                 playerMoveDist2, CACHE.getPlayerCache().getX(), CACHE.getPlayerCache().getZ(), x, z));
+                var reason = "Long distance movement attempted";
+                var coordsPart = String.format(": %.1f blocks, from: [%.1f, %.1f] (cached pos) to [%.1f, %.1f]",
+                    playerMoveDist2, CACHE.getPlayerCache().getX(), CACHE.getPlayerCache().getZ(), x, z);
+                if (CONFIG.discord.reportCoords) {
+                    // as is notified in discord
+                    reason += coordsPart;
+                } else {
+                    // just to log
+                    var reasonWithCoords = reason + coordsPart;
+                    warn(reasonWithCoords);
+                }
+                reconnect(session, reason);
                 return;
             }
         }
@@ -387,7 +419,7 @@ public class CoordObfuscation extends Module {
 
     public void setServerTeleportPos(final ServerSession session, final double x, final double y, final double z, final int teleportId) {
         if (session.isSpectator()) return; // ignore for spectators
-        getPlayerState(session).getServerTeleports().add(new ObfPlayerState.ServerTeleport(x, y, z, teleportId));
+        getPlayerState(session).getServerTeleports().add(new ServerTeleport(x, y, z, teleportId));
     }
 
     public void onServerTeleport(final ServerSession session, double x, double y, double z, final int teleportId, final List<PositionElement> relative) {
@@ -395,19 +427,24 @@ public class CoordObfuscation extends Module {
         if (teleportId == session.getSpawnTeleportId() && !session.isSpawned()) return;
         // spectator position resync see SpectatorSync$syncSpectatorPositionToEntity
         if (teleportId == session.getSpawnTeleportId() && session.isSpectator() && session.isAllowSpectatorServerPlayerPosRotate()) return;
-        if (preTeleportId != teleportId) {
-            warn("Unexpected teleport id {} != {} for {}", teleportId, preTeleportId, session.getName());
+        var tp = preTeleportPositionCache.getIfPresent(teleportId);
+        if (tp == null) {
+            warn("Unexpected teleport id {} for {}, known teleports: {}",
+                teleportId,
+                session.getName(),
+                preTeleportPositionCache.asMap().keySet().stream().map(Object::toString).collect(Collectors.joining(", ", "[", "]"))
+            );
             reconnect(session, "Unexpected teleport id");
             return;
         }
         if (relative.contains(PositionElement.X)) {
-            x += preTeleportClientPos.getX();
+            x += tp.x();
         }
         if (relative.contains(PositionElement.Y)) {
-            y += preTeleportClientPos.getY();
+            y += tp.y();
         }
         if (relative.contains(PositionElement.Z)) {
-            z += preTeleportClientPos.getZ();
+            z += tp.z();
         }
         setServerTeleportPos(session, x, y, z, teleportId);
         if (getPlayerState(session).isRespawning()) {
@@ -419,15 +456,37 @@ public class CoordObfuscation extends Module {
             return;
         }
 
-        if (MathHelper.distance2d(x, z, preTeleportClientPos.getX(), preTeleportClientPos.getZ()) >= CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin) {
+        if (MathHelper.distance2d(x, z, tp.x(), tp.z()) >= CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin) {
             info("Reconnecting {} due to long distance teleport using preTeleportPos calc", session.getName());
-            reconnect(session, String.format("Long distance server teleport, from: [%.1f, %.1f] to: [%.1f, %.1f] (0)", preTeleportClientPos.getX(), preTeleportClientPos.getZ(), x, z));
+            var reason = "Long distance server teleport";
+            var coordsPart = String.format(", from: [%.1f, %.1f] to: [%.1f, %.1f] (2)", tp.x(), tp.z(), x, z);
+            if (CONFIG.discord.reportCoords) {
+                // as is notified in discord
+                reason += coordsPart;
+            } else {
+                // just to log
+                var reasonWithCoords = reason + coordsPart;
+                warn(reasonWithCoords);
+                reason += " (2)";
+            }
+            reconnect(session, reason);
             return;
         }
         // it is possible for controlling players to manipulate the player cache position temporarily
         // but chunk cache should be not be able to be manipulated
         if (MathHelper.distance2d(x / 16, z / 16, CACHE.getChunkCache().getCenterX(), CACHE.getChunkCache().getCenterZ()) >= CONFIG.client.extra.coordObfuscation.teleportOffsetRegenerateDistanceMin / 16.0) {
-            reconnect(session, String.format("Long distance server teleport, from: [%.1f, %.1f] to: [%.1f, %.1f] (1)", preTeleportClientPos.getX(), preTeleportClientPos.getZ(), x, z));
+            var reason = "Long distance server teleport";
+            var coordsPart = String.format(", from: [%.1f, %.1f] to: [%.1f, %.1f] (1)\", tp.x(), tp.z(), x, z)", tp.x(), tp.z(), x, z);
+            if (CONFIG.discord.reportCoords) {
+                // as is notified in discord
+                reason += coordsPart;
+            } else {
+                // just to log
+                var reasonWithCoords = reason + coordsPart;
+                warn(reasonWithCoords);
+                reason += " (1)";
+            }
+            reconnect(session, reason);
             return;
         }
     }
