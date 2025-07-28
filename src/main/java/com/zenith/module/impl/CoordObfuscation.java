@@ -1,5 +1,6 @@
 package com.zenith.module.impl;
 
+import com.github.rfresh2.EventConsumer;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.zenith.Proxy;
@@ -102,9 +103,8 @@ public class CoordObfuscation extends Module {
     }
 
     @Override
-    public void subscribeEvents() {
-        EVENT_BUS.subscribe(
-            this,
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
             of(PlayerConnectionRemovedEvent.class, this::onServerConnectionRemoved),
             of(PlayerLoginEvent.Pre.class, this::onPlayerLoginEvent),
             of(SpectatorConnectedEvent.class, this::onSpectatorConnected),
