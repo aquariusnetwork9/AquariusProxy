@@ -15,11 +15,18 @@ public class PostOutgoingAcceptTeleportHandler implements ClientEventLoopPacketH
     public boolean applyAsync(final ServerboundAcceptTeleportationPacket packet, final ClientSession session) {
         try {
             var queue = CACHE.getPlayerCache().getTeleportQueue();
-            int expectedTeleportId = queue.firstInt();
-            if (packet.getId() == expectedTeleportId) {
-                CACHE.getPlayerCache().getTeleportQueue().dequeueInt();
+            var expectedTeleport = queue.peek();
+            if (expectedTeleport != null) {
+                int expectedTeleportId = expectedTeleport.getId();
+                if (packet.getId() == expectedTeleportId) {
+                    CACHE.getPlayerCache().getTeleportQueue().poll();
+                } else {
+                    CLIENT_LOG.debug("Accepting out-of-order teleport ID: expected: {}, actual: {}", expectedTeleportId, packet.getId());
+                    // possible we still have this teleport id in our queue and things may go very wrong here
+                    // could also occur as a race condition at player login in the sequence documented below
+                }
             } else {
-                CLIENT_LOG.debug("Accepting out-of-order teleport ID: expected: {}, actual: {}", expectedTeleportId, packet.getId());
+                CLIENT_LOG.debug("Accepting out-of-order teleport ID: actual: {}", packet.getId());
                 // possible we still have this teleport id in our queue and things may go very wrong here
                 // could also occur as a race condition at player login in the sequence documented below
             }

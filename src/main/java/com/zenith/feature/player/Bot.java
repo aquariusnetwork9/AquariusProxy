@@ -25,6 +25,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.ByteEn
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerState;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PositionElement;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.data.game.scoreboard.CollisionRule;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundExplodePacket;
@@ -110,11 +111,11 @@ public final class Bot extends ModuleUtils {
         );
     }
 
-    private synchronized void handleClientTickStarting(final ClientBotTick.Starting event) {
+    private void handleClientTickStarting(final ClientBotTick.Starting event) {
         syncFromCache(false);
     }
 
-    private synchronized void handleClientTickStopped(final ClientBotTick.Stopped event) {
+    private void handleClientTickStopped(final ClientBotTick.Stopped event) {
         if (isSneaking) {
             sendClientPacketAsync(new ServerboundPlayerCommandPacket(CACHE.getPlayerCache().getEntityId(), PlayerState.STOP_SNEAKING));
         }
@@ -123,7 +124,7 @@ public final class Bot extends ModuleUtils {
         }
     }
 
-    synchronized void requestMovement(final InputRequest request, final InputRequestFuture inputRequestFuture) {
+    void requestMovement(final InputRequest request, final InputRequestFuture inputRequestFuture) {
         var reqInput = request.input();
         if (reqInput != null) {
             movementInput.apply(reqInput);
@@ -224,7 +225,7 @@ public final class Bot extends ModuleUtils {
         }
     }
 
-    private synchronized void tick(final ClientBotTick event) {
+    private void tick(final ClientBotTick event) {
         if (this.jumpingCooldown > 0) --this.jumpingCooldown;
         if (!CACHE.getChunkCache().isChunkLoaded((int) x >> 4, (int) z >> 4)) return;
 
@@ -488,19 +489,19 @@ public final class Bot extends ModuleUtils {
         return jumpStrength * blockJumpFactor + jumpBoostPower;
     }
 
-    public synchronized void handlePlayerPosRotate(final int teleportId) {
+    public void handlePlayerPosRotate(final int teleportId) {
         syncFromCache(true);
         CLIENT_LOG.info("Server teleport {} to: {}, {}, {}d", teleportId, this.x, this.y, this.z);
-        sendClientPacketAwait(new ServerboundMovePlayerPosRotPacket(false, false, this.x, this.y, this.z, this.yaw, this.pitch));
         sendClientPacketAwait(new ServerboundAcceptTeleportationPacket(teleportId));
+        sendClientPacketAwait(new ServerboundMovePlayerPosRotPacket(false, false, this.x, this.y, this.z, this.yaw, this.pitch));
         CLIENT_LOG.debug("Accepted teleport: {}", teleportId);
     }
 
-    public synchronized void handlePlayerRotate() {
+    public void handlePlayerRotate() {
         syncFromCache(false);
     }
 
-    public synchronized void handleRespawn() {
+    public void handleRespawn() {
         syncFromCache(true);
     }
 
@@ -1252,11 +1253,28 @@ public final class Bot extends ModuleUtils {
 
     private boolean resyncTeleport() {
         // can occur when a connected player disconnects in an unusual way like crashing
-        if (CACHE.getPlayerCache().getTeleportQueue().isEmpty()) return false;
-        int queuedTeleport = CACHE.getPlayerCache().getTeleportQueue().dequeueInt();
-        warn("Detected teleport desync, resyncing. queuedTeleport: {}, queueSize: {}", queuedTeleport, CACHE.getPlayerCache().getTeleportQueue().size());
-        sendClientPacketAwait(new ServerboundMovePlayerPosRotPacket(false, false, x, y, z, yaw, pitch));
-        sendClientPacketAwait(new ServerboundAcceptTeleportationPacket(queuedTeleport));
+        if (!CACHE.getPlayerCache().getTeleportQueue().isEmpty()) {
+            warn("Detected teleport desync, resyncing. queueSize: {}", CACHE.getPlayerCache().getTeleportQueue().size());
+            while (!CACHE.getPlayerCache().getTeleportQueue().isEmpty()) {
+                var packet = CACHE.getPlayerCache().getTeleportQueue().poll();
+                var cache = CACHE.getPlayerCache();
+                cache
+                    .setRespawning(false)
+                    .setX((packet.getRelatives().contains(PositionElement.X) ? cache.getX() : 0.0d) + packet.getX())
+                    .setY((packet.getRelatives().contains(PositionElement.Y) ? cache.getY() : 0.0d) + packet.getY())
+                    .setZ((packet.getRelatives().contains(PositionElement.Z) ? cache.getZ() : 0.0d) + packet.getZ())
+                    .setVelX((packet.getRelatives().contains(PositionElement.DELTA_X) ? cache.getVelX() : 0.0d) + packet.getDeltaX())
+                    .setVelY((packet.getRelatives().contains(PositionElement.DELTA_Y) ? cache.getVelY() : 0.0d) + packet.getDeltaY())
+                    .setVelZ((packet.getRelatives().contains(PositionElement.DELTA_Z) ? cache.getVelZ() : 0.0d) + packet.getDeltaZ())
+                    .setYaw((packet.getRelatives().contains(PositionElement.Y_ROT) ? cache.getYaw() : 0.0f) + packet.getYaw())
+                    .setPitch((packet.getRelatives().contains(PositionElement.X_ROT) ? cache.getPitch() : 0.0f) + packet.getPitch());
+                debug("Sending queued teleport: {}", packet.getId());
+                syncFromCache(true);
+                sendClientPacketAwait(new ServerboundAcceptTeleportationPacket(packet.getId()));
+                sendClientPacketAwait(new ServerboundMovePlayerPosRotPacket(false, false, x, y, z, yaw, pitch));
+            }
+            return false;
+        }
         return true;
     }
 

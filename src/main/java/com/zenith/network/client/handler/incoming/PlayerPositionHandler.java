@@ -19,10 +19,10 @@ public class PlayerPositionHandler implements ClientEventLoopPacketHandler<Clien
     public boolean applyAsync(@NonNull ClientboundPlayerPositionPacket packet, @NonNull ClientSession session) {
         PlayerCache cache = CACHE.getPlayerCache();
         var teleportQueue = cache.getTeleportQueue();
-        cache.getTeleportQueue().enqueue(packet.getId());
+        cache.getTeleportQueue().add(packet);
         while (teleportQueue.size() > 100) {
-            var id = teleportQueue.dequeueInt();
-            CLIENT_LOG.debug("Teleport queue larger than 100, dropping oldest entry. Dropped teleport: {} Last teleport: {}", id, packet.getId());
+            var tp = teleportQueue.poll();
+            CLIENT_LOG.debug("Teleport queue larger than 100, dropping oldest entry. Dropped teleport: {} Last teleport: {}", tp.getId(), packet.getId());
         }
         cache
             .setRespawning(false)

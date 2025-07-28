@@ -11,7 +11,6 @@ import com.zenith.cache.data.inventory.InventoryCache;
 import com.zenith.network.server.ServerSession;
 import com.zenith.util.math.MutableVec3i;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
-import it.unimi.dsi.fastutil.ints.IntArrayFIFOQueue;
 import lombok.Data;
 import lombok.experimental.Accessors;
 import net.kyori.adventure.text.Component;
@@ -40,10 +39,8 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.Clien
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClickPacket;
 import org.jspecify.annotations.NonNull;
 
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -84,7 +81,7 @@ public class PlayerCache implements CachedData {
     protected AtomicInteger seqId = new AtomicInteger(0);
     private static final MutableVec3i DEFAULT_SPAWN_POSITION = new MutableVec3i(0, 0, 0);
     protected MutableVec3i spawnPosition = DEFAULT_SPAWN_POSITION;
-    protected IntArrayFIFOQueue teleportQueue = new IntArrayFIFOQueue();
+    protected Queue<ClientboundPlayerPositionPacket> teleportQueue = new LinkedBlockingQueue<>();
     protected boolean respawning = false;
 
     public PlayerCache(final EntityCache entityCache) {
@@ -129,13 +126,11 @@ public class PlayerCache implements CachedData {
             this.inventoryCache.reset();
             this.doLimitedCrafting = false;
             this.teleportQueue.clear();
-            this.teleportQueue.trim();
             this.actionId.set(0);
             this.seqId.set(0);
         }
         if (type == CacheResetType.LOGIN) {
             this.teleportQueue.clear();
-            this.teleportQueue.trim();
         }
         this.spawnPosition = DEFAULT_SPAWN_POSITION;
         this.gameMode = null;
