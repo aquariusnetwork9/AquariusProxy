@@ -37,7 +37,7 @@ jobs:
           dependency-graph: generate-and-submit
 
       - name: Build ZenithProxy Java
-        run: ./gradlew jarBuild
+        run: ./gradlew build
 #
 #      - name: Set ACT Runner Env Variables
 #        run: |

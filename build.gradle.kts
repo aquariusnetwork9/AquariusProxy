@@ -140,7 +140,7 @@ tasks {
         javaLauncher = javaLauncherProvider
     }
     processResources {
-        dependsOn(releaseTagTask, mcVersionTask, commitHashTask)
+        dependsOn(releaseTagTask, mcVersionTask, commitHashTask, javaPathTask)
     }
     val devOutputDir = layout.buildDirectory.get().dir("dev").asFile
     jar {
@@ -188,13 +188,9 @@ tasks {
             ))
         }
     }
-    val jarBuildTask = register("jarBuild") {
-        group = "build"
-        dependsOn(shadowJar, build, javaPathTask)
-    }
     nativeCompile {
         classpathJar = shadowJar.flatMap { it.archiveFile }
-        dependsOn(jarBuildTask)
+        dependsOn(build)
     }
     generateResourcesConfigFile { dependsOn(shadowJar) }
 }

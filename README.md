@@ -200,8 +200,8 @@ Gradle will automatically install the required Java version for compiling (curre
 
 Most useful gradle tasks:
 * `run` - Builds and runs a local dev instance
-* `jarBuild` - Builds an executable jar to `build/libs/ZenithProxy.jar`
-* `build` - Compiles and runs tests without building a jar
+* `build` - Builds an executable jar to `build/libs/ZenithProxy.jar`
+* `nativeCompile` - Builds a GraalVM native image to `build/native/nativeCompile/ZenithProxy` (requires GraalVM JDK)
 
 ## Special Thanks
 

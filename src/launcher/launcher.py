@@ -19,9 +19,9 @@ default_linux_args = ""
 
 def git_build():
     if platform.system() == "Windows":
-        os.system(".\\gradlew jarBuild --no-daemon")
+        os.system(".\\gradlew build --no-daemon")
     else:
-        os.system("./gradlew jarBuild --no-daemon")
+        os.system("./gradlew build --no-daemon")
 
 
 def launch_linux(config):

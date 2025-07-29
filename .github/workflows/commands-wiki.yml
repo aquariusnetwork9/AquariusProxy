@@ -30,7 +30,7 @@ jobs:
           dependency-graph: generate-and-submit
 
       - name: Build ZenithProxy Java
-        run: ./gradlew jarBuild
+        run: ./gradlew build
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
