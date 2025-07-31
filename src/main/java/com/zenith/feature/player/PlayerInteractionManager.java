@@ -58,7 +58,7 @@ public class PlayerInteractionManager {
         return this.isDestroying && this.sameDestroyTarget(x, y, z);
     }
 
-    public boolean startDestroyBlock(final int x, final int y, final int z, Direction face) {
+    protected boolean startDestroyBlock(final int x, final int y, final int z, Direction face) {
         if (CACHE.getPlayerCache().getGameMode() == GameMode.CREATIVE) {
             BOT.debug("[{}] [{}, {}, {}] StartDestroyBlock START: Creative break", System.currentTimeMillis(), x, y, z);
             Proxy.getInstance().getClient().sendAsync(
@@ -110,7 +110,7 @@ public class PlayerInteractionManager {
         return true;
     }
 
-    public void stopDestroyBlock() {
+    protected void stopDestroyBlock() {
         if (this.isDestroying) {
             BOT.debug("[{}] [{}, {}, {}] StopDestroyBlock CANCEL", System.currentTimeMillis(), this.destroyBlockPosX, this.destroyBlockPosY, this.destroyBlockPosZ);
             Proxy.getInstance().getClient()
@@ -125,7 +125,7 @@ public class PlayerInteractionManager {
         this.destroyProgress = 0;
     }
 
-    public boolean continueDestroyBlock(final int x, final int y, final int z, Direction directionFacing) {
+    protected boolean continueDestroyBlock(final int x, final int y, final int z, Direction directionFacing) {
         if (this.destroyDelay > 0) {
             --this.destroyDelay;
             return true;
@@ -300,7 +300,7 @@ public class PlayerInteractionManager {
             .setBlock(x & 15, y & 15, z & 15, BlockRegistry.AIR.id());
     }
 
-    public InteractionResult interact(Hand hand, EntityRaycastResult ray) {
+    protected InteractionResult interact(Hand hand, EntityRaycastResult ray) {
         Proxy.getInstance().getClient().send(new ServerboundInteractPacket(
             ray.entity().getEntityId(),
             InteractAction.INTERACT,
@@ -311,7 +311,7 @@ public class PlayerInteractionManager {
         return InteractionResult.PASS;
     }
 
-    public InteractionResult interactAt(Hand hand, EntityRaycastResult ray) {
+    protected InteractionResult interactAt(Hand hand, EntityRaycastResult ray) {
         Proxy.getInstance().getClient().send(new ServerboundInteractPacket(
             ray.entity().getEntityId(),
             InteractAction.INTERACT_AT,
@@ -322,7 +322,7 @@ public class PlayerInteractionManager {
         return InteractionResult.PASS;
     }
 
-    public InteractionResult useItemOn(Hand hand, BlockRaycastResult ray) {
+    protected InteractionResult useItemOn(Hand hand, BlockRaycastResult ray) {
         Proxy.getInstance().getClient().send(new ServerboundUseItemOnPacket(
             ray.x(), ray.y(), ray.z(),
             ray.direction().mcpl(),
@@ -339,7 +339,7 @@ public class PlayerInteractionManager {
     }
 
     // todo: is this allowed if we are not holding a usable item? or any item at all?
-    public InteractionResult useItem(Hand hand) {
+    protected InteractionResult useItem(Hand hand) {
         Proxy.getInstance().getClient().send(new ServerboundUseItemPacket(
             hand,
             CACHE.getPlayerCache().getSeqId().incrementAndGet(),
@@ -349,7 +349,7 @@ public class PlayerInteractionManager {
         return InteractionResult.PASS;
     }
 
-    public void attackEntity(final EntityRaycastResult entity) {
+    protected void attackEntity(final EntityRaycastResult entity) {
         BOT.debug("[{}] [{}, {}, {}] Attack Entity", System.currentTimeMillis(), entity.entity().getX(), entity.entity().getY(), entity.entity().getZ());
         Proxy.getInstance().getClient().sendAsync(new ServerboundInteractPacket(entity.entity().getEntityId(), InteractAction.ATTACK, false));
     }
