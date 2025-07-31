@@ -22,6 +22,7 @@ import com.zenith.util.timer.Timers;
 import lombok.Data;
 import lombok.Getter;
 import org.cloudburstmc.math.vector.Vector3d;
+import org.jetbrains.annotations.ApiStatus;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -160,6 +161,15 @@ public class Baritone implements Pathfinder {
     @Override
     public PathingRequestFuture breakBlock(int x, int y, int z, boolean autoTool) {
         return getInteractWithProcess().breakBlock(x, y, z, autoTool);
+    }
+
+    /**
+     * API may change or be removed in future updates
+     */
+    @ApiStatus.Experimental
+    @Override
+    public PathingRequestFuture placeBlock(int x, int y, int z, ItemData placeItem) {
+        return getInteractWithProcess().placeBlock(x, y, z, placeItem);
     }
 
     @Override

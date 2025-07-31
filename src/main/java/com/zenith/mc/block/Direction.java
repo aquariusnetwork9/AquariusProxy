@@ -57,6 +57,17 @@ public enum Direction implements StringRepresentable {
         return this.axis.getPlane();
     }
 
+    public Direction invert() {
+        return switch (this) {
+            case DOWN -> UP;
+            case UP -> DOWN;
+            case NORTH -> SOUTH;
+            case SOUTH -> NORTH;
+            case WEST -> EAST;
+            case EAST -> WEST;
+        };
+    }
+
     public org.geysermc.mcprotocollib.protocol.data.game.entity.object.Direction mcpl() {
         return switch (this) {
             case DOWN -> org.geysermc.mcprotocollib.protocol.data.game.entity.object.Direction.DOWN;

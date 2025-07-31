@@ -8,11 +8,13 @@ import com.zenith.command.api.CommandCategory;
 import com.zenith.command.api.CommandContext;
 import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
+import com.zenith.feature.inventory.util.InventoryUtil;
 import com.zenith.feature.player.World;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockPos;
 import com.zenith.mc.entity.EntityData;
 import com.zenith.mc.entity.EntityRegistry;
+import com.zenith.mc.item.ItemData;
 import com.zenith.util.math.MathHelper;
 
 import java.util.LinkedHashMap;
@@ -62,6 +64,7 @@ public class PathfinderCommand extends Command {
                 "click <left/right> <waypointId>",
                 "click <left/right> entity <type>",
                 "break <x> <y> <z>",
+                "place <x> <y> <z> <item>",
                 "pickup",
                 "pickup <item>",
                 "clearArea <pos1> <pos2>",
@@ -526,6 +529,35 @@ public class PathfinderCommand extends Command {
                         : "Coords disabled")
                     .primaryColor();
             })))
+            .then(literal("place").then(argument("pos", blockPos()).then(argument("item", item()).executes(c -> {
+                BlockPos pos = getBlockPos(c, "pos");
+                ItemData itemData = getItem(c, "item");
+                if (InventoryUtil.searchPlayerInventory(i -> i.getId() == itemData.id()) == -1) {
+                    c.getSource().getEmbed()
+                        .title("No Item Found")
+                        .description("Item not found in inventory: " + itemData.name())
+                        .errorColor();
+                    return ERROR;
+                }
+                BARITONE.placeBlock(pos.x(), pos.y(), pos.z(), itemData)
+                    .addExecutedListener(f -> {
+                        c.getSource().getSource().logEmbed(c.getSource(), Embed.builder()
+                            .title("Block Placed!")
+                            .addField("Position", CONFIG.discord.reportCoords
+                                ? "||[" + pos.x() + ", " + pos.y() + ", " + pos.z() + "]||"
+                                : "Coords disabled")
+                            .addField("Item", itemData.name())
+                            .primaryColor());
+                    });
+                c.getSource().getEmbed()
+                    .title("Placing Block")
+                    .addField("Position", CONFIG.discord.reportCoords
+                        ? "||[" + pos.x() + ", " + pos.y() + ", " + pos.z() + "]||"
+                        : "Coords disabled")
+                    .addField("Item", itemData.name())
+                    .primaryColor();
+                return OK;
+            }))))
             .then(literal("status").executes(c -> {
                 boolean isActive = BARITONE.isActive();
                 c.getSource().getEmbed()

@@ -21,7 +21,14 @@ public class InventoryUtil {
     // only searches player inventory
     public static int searchPlayerInventory(Predicate<ItemStack> predicate) {
         List<ItemStack> playerInventory = CACHE.getPlayerCache().getPlayerInventory();
-        // first check hotbar
+
+        // first check offhand
+        var offhandStack = playerInventory.get(45);
+        if (offhandStack != Container.EMPTY_STACK && predicate.test(offhandStack)) {
+            return 45;
+        }
+
+        // then hotbar
         for (int i = 36; i <= 44; i++) {
             ItemStack itemStack = playerInventory.get(i);
             if (itemStack == Container.EMPTY_STACK) continue;

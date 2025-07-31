@@ -24,6 +24,7 @@ public interface Pathfinder {
     PathingRequestFuture leftClickBlock(int x, int y, int z);
     PathingRequestFuture rightClickBlock(int x, int y, int z);
     PathingRequestFuture breakBlock(int x, int y, int z, boolean autoTool);
+    PathingRequestFuture placeBlock(int x, int y, int z, ItemData placeItem);
     PathingRequestFuture leftClickEntity(EntityLiving entity);
     PathingRequestFuture rightClickEntity(EntityLiving entity);
     PathingRequestFuture clearArea(BlockPos pos1, BlockPos pos2);
