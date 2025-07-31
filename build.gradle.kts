@@ -25,7 +25,7 @@ repositories {
     mavenLocal()
 }
 
-val mcplVersion = "1.21.4.26"
+val mcplVersion = "1.21.4.27"
 dependencies {
     api("com.github.rfresh2:JDA:6.0.16") {
         exclude(group = "club.minnced")
@@ -83,7 +83,7 @@ dependencies {
     api("com.mojang:brigadier:1.3.10")
     api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.19.2")
     api("org.jspecify:jspecify:1.0.0")
-    api("net.kyori:adventure-text-logger-slf4j:4.23.0")
+    api("net.kyori:adventure-text-logger-slf4j:4.24.0")
     api("dev.omega24:upnp4j:1.0")
     testImplementation("org.junit.jupiter:junit-jupiter:5.13.4")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
