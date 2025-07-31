@@ -3,7 +3,7 @@ package com.zenith.feature.pathfinder.process;
 import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.feature.pathfinder.PlayerContext;
 
-public abstract class BaritoneProcessHelper implements IBaritoneProcess {
+public abstract class BaritoneProcessHelper implements IBaritoneProcess, ProcessUtil {
 
     protected final Baritone baritone;
     protected final PlayerContext ctx;

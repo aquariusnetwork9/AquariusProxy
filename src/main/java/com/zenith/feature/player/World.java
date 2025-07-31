@@ -144,7 +144,7 @@ public class World {
     public List<LocalizedCollisionBox> getIntersectingCollisionBoxes(final LocalizedCollisionBox cb) {
         final List<LocalizedCollisionBox> boundingBoxList = new ArrayList<>();
         getSolidBlockCollisionBoxes(cb, boundingBoxList);
-        getEntityCollisionBoxes(cb, boundingBoxList);
+        getEntityBlockCollisionBoxes(cb, boundingBoxList);
         return boundingBoxList;
     }
 
@@ -158,13 +158,32 @@ public class World {
         }
     }
 
-    public void getEntityCollisionBoxes(final LocalizedCollisionBox cb, final List<LocalizedCollisionBox> results) {
+    public void getEntityBlockCollisionBoxes(final LocalizedCollisionBox cb, final List<LocalizedCollisionBox> results) {
         for (var entity : CACHE.getEntityCache().getEntities().values()) {
             EntityType entityType = entity.getEntityType();
             if (!(isBoat(entityType) || entityType == EntityType.SHULKER))
                 continue;
             if (entity.getPassengerIds().contains(CACHE.getPlayerCache().getThePlayer().getEntityId()))
                 continue;
+            var x = entity.getX();
+            var y = entity.getY();
+            var z = entity.getZ();
+            var dimensions = entity.dimensions();
+            double halfW = dimensions.getX() / 2.0;
+            double minX = x - halfW;
+            double minY = y;
+            double minZ = z - halfW;
+            double maxX = x + halfW;
+            double maxY = y + dimensions.getY();
+            double maxZ = z + halfW;
+            if (cb.intersects(minX, maxX, minY, maxY, minZ, maxZ)) {
+                results.add(new LocalizedCollisionBox(minX, maxX, minY, maxY, minZ, maxZ, x, y, z));
+            }
+        }
+    }
+
+    public void getEntityCollisionBoxes(final LocalizedCollisionBox cb, final List<LocalizedCollisionBox> results) {
+        for (var entity : CACHE.getEntityCache().getEntities().values()) {
             var x = entity.getX();
             var y = entity.getY();
             var z = entity.getZ();

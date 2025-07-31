@@ -108,7 +108,7 @@ public class InteractWithProcess extends BaritoneProcessHelper {
         return "InteractWith: " + target;
     }
 
-    public interface InteractTarget {
+    public interface InteractTarget extends ProcessUtil {
         PathingCommand pathingCommand();
         boolean succeeded();
     }
@@ -157,46 +157,66 @@ public class InteractWithProcess extends BaritoneProcessHelper {
 
         @Override
         public PathingCommand pathingCommand() {
-            if (!targetValid() || succeeded) return null;
-            var placeTargets = findPlaceTargets();
-            for (var placeTarget : placeTargets) {
-                var rotation = rotationToPlaceTarget(placeTarget);
-                if (rotation == null) {
-                    continue; // no valid rotation found
+            if (succeeded || !targetValid()) return null;
+            var distToTarget = MathHelper.distance3d(
+                CACHE.getPlayerCache().getX(), CACHE.getPlayerCache().getY(), CACHE.getPlayerCache().getZ(),
+                x, y, z
+            );
+//            if (selfInPlaceTarget()) {
+//                // todo: try to path away a block
+//                info("We are blocking the place position [{}, {}, {}], stopping", x, y, z);
+//                return null;
+//            }
+            if (distToTarget <= BOT.getBlockReachDistance() + 8) {
+                if (entityInPlaceTarget()) {
+                    info("An entity is blocking the place position [{}, {}, {}], stopping", x, y, z);
+                    return null;
                 }
-                Hand hand = Hand.MAIN_HAND;
-                // will never be -1 (missing) as it's checked in targetValid
-                var itemSlot = InventoryUtil.searchPlayerInventory(i -> i.getId() == placeItem.id());
-                if (itemSlot >= 36 && itemSlot <= 44) { // in hotbar
-                    INVENTORY.submit(InventoryActionRequest.builder()
-                        .owner(this)
-                        .priority(Baritone.MOVEMENT_PRIORITY + 1)
-                        .actions(new SetHeldItem(itemSlot - 36))
-                        .build());
-                } else if (itemSlot >= 9 && itemSlot <= 36) { // in main inv
-                    INVENTORY.submit(InventoryActionRequest.builder()
-                        .owner(this)
-                        .priority(Baritone.MOVEMENT_PRIORITY + 1)
-                        .actions(
-                            new MoveToHotbarSlot(itemSlot, MoveToHotbarAction.SLOT_6),
-                            new SetHeldItem(6))
-                        .build());
-                } else if (itemSlot == 45) { // in offhand
-                    INVENTORY.submit(InventoryActionRequest.builder()
-                        .owner(this)
-                        .priority(Baritone.MOVEMENT_PRIORITY + 1)
-                        .actions(new WaitAction())
-                        .build());
-                    hand = Hand.OFF_HAND;
+                var placeTargets = findPlaceTargets();
+                if (placeTargets.isEmpty()) {
+                    info("No valid blocks to place against, stopping");
+                    return null;
                 }
-                if (hand == Hand.MAIN_HAND) { // item will be in hotbar
-                    if (CACHE.getPlayerCache().getHeldItemSlot() == itemSlot - 36) {
-                        interact(Hand.MAIN_HAND, placeTarget, rotation);
+                for (int i = 0; i < placeTargets.size(); i++) {
+                    final var placeTarget = placeTargets.get(i);
+                    var rotation = rotationToPlaceTarget(placeTarget);
+                    if (rotation == null) {
+                        continue; // no valid rotation found
                     }
-                } else {
-                    interact(Hand.OFF_HAND, placeTarget, rotation);
+                    Hand hand = Hand.MAIN_HAND;
+                    // will never be -1 (missing) as it's checked in targetValid
+                    var itemSlot = InventoryUtil.searchPlayerInventory(item -> item.getId() == placeItem.id());
+                    if (itemSlot >= 36 && itemSlot <= 44) { // in hotbar
+                        INVENTORY.submit(InventoryActionRequest.builder()
+                            .owner(this)
+                            .priority(Baritone.MOVEMENT_PRIORITY + 1)
+                            .actions(new SetHeldItem(itemSlot - 36))
+                            .build());
+                    } else if (itemSlot >= 9 && itemSlot <= 36) { // in main inv
+                        INVENTORY.submit(InventoryActionRequest.builder()
+                            .owner(this)
+                            .priority(Baritone.MOVEMENT_PRIORITY + 1)
+                            .actions(
+                                new MoveToHotbarSlot(itemSlot, MoveToHotbarAction.SLOT_6),
+                                new SetHeldItem(6))
+                            .build());
+                    } else if (itemSlot == 45) { // in offhand
+                        INVENTORY.submit(InventoryActionRequest.builder()
+                            .owner(this)
+                            .priority(Baritone.MOVEMENT_PRIORITY + 1)
+                            .actions(new WaitAction())
+                            .build());
+                        hand = Hand.OFF_HAND;
+                    }
+                    if (hand == Hand.MAIN_HAND) { // item will be in hotbar
+                        if (CACHE.getPlayerCache().getHeldItemSlot() == itemSlot - 36) {
+                            interact(Hand.MAIN_HAND, placeTarget, rotation);
+                        }
+                    } else {
+                        interact(Hand.OFF_HAND, placeTarget, rotation);
+                    }
+                    return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
                 }
-                return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
             }
             // todo: some antistuck func here
             int rangeSq = MathHelper.clamp(((int) Math.pow(BOT.getBlockReachDistance(), 2)) - 1, 1, 4);
@@ -206,11 +226,15 @@ public class InteractWithProcess extends BaritoneProcessHelper {
         public boolean targetValid() {
             if (InventoryUtil.searchPlayerInventory(i -> i.getId() == placeItem.id()) == -1) {
                 // item not in inventory
+                info("Item: {} not in inventory, stopping", placeItem.name());
                 return false;
             }
             if (World.isChunkLoadedBlockPos(x, z)) {
                 Block block = World.getBlock(x, y, z);
-                if (!BLOCK_DATA.isAir(block)) return false;
+                if (!BLOCK_DATA.isAir(block)) {
+                    info("A block: {} is already at [{}, {}, {}], stopping", block.name(), x, y, z);
+                    return false;
+                }
             }
             return true;
         }
@@ -238,7 +262,6 @@ public class InteractWithProcess extends BaritoneProcessHelper {
                 if (raycastResult.hit() && raycastResult.x() == placeX && raycastResult.y() == placeY && raycastResult.z() == placeZ && raycastResult.direction() == placeTarget.direction()) {
                     return new Rotation(rotation.getX(), rotation.getY());
                 }
-                var a = 0;
             }
             return null; // no valid rotation found
         }
@@ -268,19 +291,35 @@ public class InteractWithProcess extends BaritoneProcessHelper {
             Direction direction
         ) { }
 
+        public boolean entityInPlaceTarget() {
+            var entityCbs = new ArrayList<LocalizedCollisionBox>();
+            var blockCb = new LocalizedCollisionBox(new CollisionBox(0, 1, 0, 1, 0, 1), x, y, z);
+            World.getEntityCollisionBoxes(blockCb, entityCbs);
+            if (!entityCbs.isEmpty()) {
+                return true;
+            }
+            return false;
+        }
+
+        public boolean selfInPlaceTarget() {
+            var blockCb = new LocalizedCollisionBox(new CollisionBox(0, 1, 0, 1, 0, 1), x, y, z);
+            if (BOT.getPlayerCollisionBox().intersects(blockCb)) {
+                return true;
+            }
+            return false;
+        }
+
         public List<PlaceTarget> findPlaceTargets() {
             ArrayList<PlaceTarget> validPlaces = new ArrayList<>();
             for (var plane : Direction.Plane.values()) {
-                var it = plane.iterator();
-                while (it.hasNext()) {
-                    var direction = it.next();
-                    int dx = x + direction.x();
-                    int dy = y + direction.y();
-                    int dz = z + direction.z();
+                for (var face : plane) {
+                    int dx = x + face.x();
+                    int dy = y + face.y();
+                    int dz = z + face.z();
                     int blockStateId = World.getBlockStateId(dx, dy, dz);
                     if (!MovementHelper.canPlaceAgainst(blockStateId)) continue;
                     var blockState = World.getBlockState(dx, dy, dz); // found a supporting block
-                    validPlaces.add(new PlaceTarget(blockState, direction.invert()));
+                    validPlaces.add(new PlaceTarget(blockState, face.invert()));
                 }
             }
             return validPlaces;
@@ -306,11 +345,13 @@ public class InteractWithProcess extends BaritoneProcessHelper {
         private final int y;
         private final int z;
         private final boolean autoTool;
+        private boolean isBreaking = false;
         private boolean succeeded = false;
 
         @Override
         public PathingCommand pathingCommand() {
-            if (!targetValid() || succeeded) return null;
+            if (succeeded || !targetValid()) return null;
+            isBreaking = BOT.getInteractions().isDestroying(x, y, z);
             if (canInteract()) {
                 Hand hand = Hand.MAIN_HAND;
                 if (autoTool) {
@@ -349,11 +390,28 @@ public class InteractWithProcess extends BaritoneProcessHelper {
         public boolean targetValid() {
             if (World.isChunkLoadedBlockPos(x, z)) {
                 Block block = World.getBlock(x, y, z);
-                if (BLOCK_DATA.isAir(block)) return false;
-                if (World.isFluid(block)) return false;
-                if (block.destroySpeed() < 0) return false;
+                if (BLOCK_DATA.isAir(block)) {
+                    if (isBreaking) {
+                        succeeded = true;
+                        info("Block [{}, {}, {}] broken!", x, y, z);
+                        return false;
+                    }
+                    info("No block is at [{}, {}, {}], stopping", x, y, z);
+                    return false;
+                }
+                if (World.isFluid(block)) {
+                    info("A fluid {} is at [{}, {}, {}], stopping", block.name(), x, y, z);
+                    return false;
+                }
+                if (block.destroySpeed() < 0) {
+                    info("An unbreakable block {} is at [{}, {}, {}], stopping", block.name(), x, y, z);
+                    return false;
+                }
                 var cbs = BLOCK_DATA.getInteractionBoxesFromBlockStateId(World.getBlockStateId(x, y, z));
-                if (cbs.isEmpty()) return false;
+                if (cbs.isEmpty()) {
+                    info("A block without interaction boxes is at target position, stopping");
+                    return false;
+                }
             }
             return true;
         }
@@ -382,7 +440,17 @@ public class InteractWithProcess extends BaritoneProcessHelper {
                     .pitch(rot.getY())
                     .priority(Baritone.MOVEMENT_PRIORITY + 1)
                     .build()
-            );
+            ).addInputExecutedListener(f -> {
+                if (futureSucceeded(f)) {
+                    isBreaking = true;
+                }
+            });
+        }
+
+        public boolean futureSucceeded(InputRequestFuture future) {
+            if (!future.getNow()) return false;
+            if (!(future.getClickResult() instanceof ClickResult.LeftClickResult leftClickResult)) return false;
+            return leftClickResult.getBlockX() == x && leftClickResult.getBlockY() == y && leftClickResult.getBlockZ() == z;
         }
     }
 
@@ -396,7 +464,7 @@ public class InteractWithProcess extends BaritoneProcessHelper {
 
         @Override
         public PathingCommand pathingCommand() {
-            if (!targetValid() || succeeded) return null;
+            if (succeeded || !targetValid()) return null;
             if (canInteract()) {
                 interact();
                 return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
@@ -414,9 +482,15 @@ public class InteractWithProcess extends BaritoneProcessHelper {
         public boolean targetValid() {
             if (World.isChunkLoadedBlockPos(x, z)) {
                 Block block = World.getBlock(x, y, z);
-                if (BLOCK_DATA.isAir(block)) return false;
+                if (BLOCK_DATA.isAir(block)) {
+                    info("No block is at [{}, {}, {}], stopping", x, y, z);
+                    return false;
+                }
                 var cbs = BLOCK_DATA.getInteractionBoxesFromBlockStateId(World.getBlockStateId(x, y, z));
-                if (cbs.isEmpty()) return false;
+                if (cbs.isEmpty()) {
+                    info("A block {} without interaction boxes is at [{}, {}, {}], stopping", block.name(), x, y, z);
+                    return false;
+                }
             }
             return true;
         }
@@ -451,7 +525,7 @@ public class InteractWithProcess extends BaritoneProcessHelper {
                     .build())
                 .addInputExecutedListener(future -> {
                     if (futureSucceeded(future)) {
-                        PATH_LOG.info("{} clicked block at: [{}, {}, {}]", leftClick ? "left" : "right", x, y, z);
+                        info("{} clicked block at: [{}, {}, {}]", leftClick ? "left" : "right", x, y, z);
                         succeeded = true;
                     }
                 });
@@ -477,9 +551,12 @@ public class InteractWithProcess extends BaritoneProcessHelper {
 
         @Override
         public PathingCommand pathingCommand() {
+            if (succeeded || !targetValid()) return null;
             var entity = entityRef.get();
-            if (entity == null) return null;
-            if (!targetValid() || succeeded) return null;
+            if (entity == null) {
+                info("Target entity not loaded, stopping");
+                return null;
+            }
             if (canInteract()) {
                 interact();
                 return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
@@ -496,10 +573,19 @@ public class InteractWithProcess extends BaritoneProcessHelper {
 
         public boolean targetValid() {
             var entity = entityRef.get();
-            if (entity == null) return false;
-            if (CACHE.getEntityCache().get(entity.getEntityId()) != entity) return false;
+            if (entity == null) {
+                info("Target entity not loaded, stopping");
+                return false;
+            }
+            if (CACHE.getEntityCache().get(entity.getEntityId()) != entity) {
+                info("Target entity {} [{}] not loaded, stopping (2)", entity.getEntityId(), entity.getEntityType());
+                return false;
+            }
             LocalizedCollisionBox cb = ENTITY_DATA.getCollisionBox(entity);
-            if (cb == null) return false;
+            if (cb == null) {
+                info("Target entity {} [{}] does not have collision boxes, stopping", entity.getEntityId(), entity.getEntityType());
+                return false;
+            }
             return true;
         }
 
@@ -536,7 +622,7 @@ public class InteractWithProcess extends BaritoneProcessHelper {
                 .addInputExecutedListener(future -> {
                     if (futureSucceeded(future)) {
                         var pos = entity.blockPos();
-                        PATH_LOG.info("{} clicked entity: {} at: [{}, {}, {}]", leftClick ? "left" : "right", entity.getEntityType(), pos.x(), pos.y(), pos.z());
+                        info("{} clicked entity: {} at: [{}, {}, {}]", leftClick ? "left" : "right", entity.getEntityType(), pos.x(), pos.y(), pos.z());
                         succeeded = true;
                     }
                 });

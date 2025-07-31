@@ -85,7 +85,10 @@ public class PlayerInteractionManager {
             }
 
             Block block = World.getBlock(x, y, z);
-            if (BLOCK_DATA.isAir(block) || blockBreakSpeed(block) < 1.0) {
+            if (!BLOCK_DATA.isAir(block) && blockBreakSpeed(block) >= 1.0) {
+                destroyBlock(x, y, z);
+                BOT.debug("[{}] [{}, {}, {}] StartDestroyBlock START: Instant break", System.currentTimeMillis(), x, y, z);
+            } else {
                 this.isDestroying = true;
                 this.destroyBlockPosX = x;
                 this.destroyBlockPosY = y;
@@ -94,9 +97,6 @@ public class PlayerInteractionManager {
                 this.destroyProgress = 0.0;
                 this.destroyTicks = 0.0F;
                 BOT.debug("[{}] [{}, {}, {}] StartDestroyBlock START: Start multi-tick break", System.currentTimeMillis(), x, y, z);
-            } else {
-                destroyBlock(x, y, z);
-                BOT.debug("[{}] [{}, {}, {}] StartDestroyBlock START: Instant break", System.currentTimeMillis(), x, y, z);
             }
 
             Proxy.getInstance().getClient().send(
