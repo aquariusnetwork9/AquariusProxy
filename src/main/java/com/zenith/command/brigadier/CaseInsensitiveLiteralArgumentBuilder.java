@@ -12,10 +12,12 @@ public class CaseInsensitiveLiteralArgumentBuilder<S> extends LiteralArgumentBui
     private static final CommandErrorHandler DEFAULT_ERROR_HANDLER = (m, c) -> {};
     private static final CommandSuccessHandler DEFAULT_SUCCESS_HANDLER = (c) -> {};
     private static final CommandExecutionErrorHandler DEFAULT_EXECUTION_ERROR_HANDLER = (c) -> {};
+    private static final CommandExecutionExceptionHandler DEFAULT_EXECUTION_EXCEPTION_HANDLER = (c, e) -> {};
 
     private @NonNull CommandErrorHandler errorHandler = DEFAULT_ERROR_HANDLER;
     private @NonNull CommandSuccessHandler successHandler = DEFAULT_SUCCESS_HANDLER;
     private @NonNull CommandExecutionErrorHandler executionErrorHandler = DEFAULT_EXECUTION_ERROR_HANDLER;
+    private @NonNull CommandExecutionExceptionHandler executionExceptionHandler = DEFAULT_EXECUTION_EXCEPTION_HANDLER;
 
     protected CaseInsensitiveLiteralArgumentBuilder(String literal) {
         super(literal);
@@ -45,6 +47,11 @@ public class CaseInsensitiveLiteralArgumentBuilder<S> extends LiteralArgumentBui
         return this;
     }
 
+    public CaseInsensitiveLiteralArgumentBuilder<S> withExecutionExceptionHandler(CommandExecutionExceptionHandler exceptionHandler) {
+        this.executionExceptionHandler = exceptionHandler;
+        return this;
+    }
+
     public CaseInsensitiveLiteralArgumentBuilder<S> requires(final Predicate<S> requirement) {
         super.requires(requirement);
         return this;
@@ -68,7 +75,9 @@ public class CaseInsensitiveLiteralArgumentBuilder<S> extends LiteralArgumentBui
             isFork(),
             errorHandler,
             successHandler,
-            executionErrorHandler);
+            executionErrorHandler,
+            executionExceptionHandler
+        );
 
         for (final CommandNode<S> argument : getArguments()) {
             result.addChild(argument);

@@ -198,6 +198,7 @@ public class CommandManager {
         var errorHandler = commandNode.getErrorHandler();
         var successHandler = commandNode.getSuccessHandler();
         var executionErrorHandler = commandNode.getExecutionErrorHandler();
+        var executionExceptionHandler = commandNode.getExecutionExceptionHandler();
 
         if (!parse.getExceptions().isEmpty() || parse.getReader().canRead()) {
             errorHandler.handle(parse.getExceptions(), context);
@@ -212,7 +213,11 @@ public class CommandManager {
             }
             else errorHandler.handle(parse.getExceptions(), context);
         });
-        dispatcher.execute(parse);
+        try {
+            dispatcher.execute(parse);
+        } catch (Exception e) {
+            executionExceptionHandler.handle(context, e);
+        }
     }
 
     public List<String> getCommandCompletions(final String input) {

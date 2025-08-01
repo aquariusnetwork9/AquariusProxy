@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.function.Predicate;
 
 import static com.zenith.Globals.DEFAULT_LOG;
+import static com.zenith.Globals.TERMINAL_LOG;
 
 public abstract class Command {
     public static <T> ZRequiredArgumentBuilder<CommandContext, T> argument(String name, ArgumentType<T> type) {
@@ -111,7 +112,8 @@ public abstract class Command {
         return literal(literal)
             .withErrorHandler(this::defaultErrorHandler)
             .withSuccessHandler(this::defaultSuccessHandler)
-            .withExecutionErrorHandler(this::defaultExecutionErrorHandler);
+            .withExecutionErrorHandler(this::defaultExecutionErrorHandler)
+            .withExecutionExceptionHandler(this::defaultExecutionExceptionHandler);
     }
 
     /**
@@ -152,6 +154,14 @@ public abstract class Command {
     public void defaultExecutionErrorHandler(CommandContext commandContext) {
         defaultEmbed(commandContext.getEmbed());
         commandContext.getEmbed()
+            .errorColor();
+    }
+
+    public void defaultExecutionExceptionHandler(CommandContext commandContext, Throwable e) {
+        TERMINAL_LOG.error("Exception while executing command: {}", commandContext.getInput(), e);
+        commandContext.getEmbed()
+            .title("Command Execution Error")
+            .description(e.getClass().getName() + "\n\n" + e.getMessage() + "\n\nFull stack trace in logs.")
             .errorColor();
     }
 }

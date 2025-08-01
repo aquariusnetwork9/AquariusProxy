@@ -13,6 +13,7 @@ import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.zenith.command.api.CommandErrorHandler;
 import com.zenith.command.api.CommandExecutionErrorHandler;
+import com.zenith.command.api.CommandExecutionExceptionHandler;
 import com.zenith.command.api.CommandSuccessHandler;
 import lombok.Getter;
 
@@ -27,6 +28,7 @@ public class CaseInsensitiveLiteralCommandNode<S> extends LiteralCommandNode<S> 
     private final CommandErrorHandler errorHandler;
     private final CommandSuccessHandler successHandler;
     private final CommandExecutionErrorHandler executionErrorHandler;
+    private final CommandExecutionExceptionHandler executionExceptionHandler;
 
     public CaseInsensitiveLiteralCommandNode(
         String literal,
@@ -37,7 +39,8 @@ public class CaseInsensitiveLiteralCommandNode<S> extends LiteralCommandNode<S> 
         boolean forks,
         CommandErrorHandler errorHandler,
         CommandSuccessHandler successHandler,
-        CommandExecutionErrorHandler executionErrorHandler
+        CommandExecutionErrorHandler executionErrorHandler,
+        CommandExecutionExceptionHandler executionExceptionHandler
     ) {
         super(literal.toLowerCase(), command, requirement, redirect, modifier, forks);
         this.literalOriginalCase = literal;
@@ -45,6 +48,7 @@ public class CaseInsensitiveLiteralCommandNode<S> extends LiteralCommandNode<S> 
         this.errorHandler = errorHandler;
         this.successHandler = successHandler;
         this.executionErrorHandler = executionErrorHandler;
+        this.executionExceptionHandler = executionExceptionHandler;
     }
 
     @Override
