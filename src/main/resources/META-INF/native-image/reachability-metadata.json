@@ -1331,6 +1331,14 @@
           "parameterTypes": []
         },
         {
+          "name": "getCredentialsProvider",
+          "parameterTypes": []
+        },
+        {
+          "name": "getCredentialsProviderClassName",
+          "parameterTypes": []
+        },
+        {
           "name": "getDataSource",
           "parameterTypes": []
         },
