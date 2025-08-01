@@ -22,10 +22,12 @@ public class InventoryUtil {
     public static int searchPlayerInventory(Predicate<ItemStack> predicate) {
         List<ItemStack> playerInventory = CACHE.getPlayerCache().getPlayerInventory();
 
-        // first check offhand
-        var offhandStack = playerInventory.get(45);
-        if (offhandStack != Container.EMPTY_STACK && predicate.test(offhandStack)) {
-            return 45;
+        if (CACHE.getPlayerCache().getInventoryCache().getOpenContainer().getContainerId() == 0) {
+            // first check offhand
+            var offhandStack = playerInventory.get(45);
+            if (offhandStack != Container.EMPTY_STACK && predicate.test(offhandStack)) {
+                return 45;
+            }
         }
 
         // then hotbar
