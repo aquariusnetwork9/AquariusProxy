@@ -189,10 +189,14 @@ tasks {
         }
     }
     nativeCompile {
+        notCompatibleWithConfigurationCache("not compatible with configuration cache")
         classpathJar = shadowJar.flatMap { it.archiveFile }
         dependsOn(build)
     }
-    generateResourcesConfigFile { dependsOn(shadowJar) }
+    generateResourcesConfigFile {
+        notCompatibleWithConfigurationCache("not compatible with configuration cache")
+        dependsOn(shadowJar)
+    }
 }
 
 graalvmNative {
