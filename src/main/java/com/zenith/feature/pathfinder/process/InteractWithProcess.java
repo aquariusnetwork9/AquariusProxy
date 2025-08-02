@@ -294,7 +294,7 @@ public class InteractWithProcess extends BaritoneProcessHelper {
         public boolean entityInPlaceTarget() {
             var entityCbs = new ArrayList<LocalizedCollisionBox>();
             var blockCb = new LocalizedCollisionBox(new CollisionBox(0, 1, 0, 1, 0, 1), x, y, z);
-            World.getEntityCollisionBoxes(blockCb, entityCbs);
+            World.getEntityCollisionBoxes(blockCb, entityCbs, entity -> entity.getEntityData().blocksBuilding());
             if (!entityCbs.isEmpty()) {
                 return true;
             }

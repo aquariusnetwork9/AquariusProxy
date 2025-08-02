@@ -1,6 +1,7 @@
 package com.zenith.feature.player;
 
 import com.zenith.cache.data.chunk.Chunk;
+import com.zenith.cache.data.entity.Entity;
 import com.zenith.cache.data.entity.EntityLiving;
 import com.zenith.mc.block.*;
 import com.zenith.mc.block.properties.api.BlockStateProperties;
@@ -22,6 +23,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import static com.zenith.Globals.*;
 
@@ -159,31 +161,19 @@ public class World {
     }
 
     public void getEntityBlockCollisionBoxes(final LocalizedCollisionBox cb, final List<LocalizedCollisionBox> results) {
-        for (var entity : CACHE.getEntityCache().getEntities().values()) {
+        getEntityCollisionBoxes(cb, results, entity -> {
             EntityType entityType = entity.getEntityType();
             if (!(isBoat(entityType) || entityType == EntityType.SHULKER))
-                continue;
+                return false;
             if (entity.getPassengerIds().contains(CACHE.getPlayerCache().getThePlayer().getEntityId()))
-                continue;
-            var x = entity.getX();
-            var y = entity.getY();
-            var z = entity.getZ();
-            var dimensions = entity.dimensions();
-            double halfW = dimensions.getX() / 2.0;
-            double minX = x - halfW;
-            double minY = y;
-            double minZ = z - halfW;
-            double maxX = x + halfW;
-            double maxY = y + dimensions.getY();
-            double maxZ = z + halfW;
-            if (cb.intersects(minX, maxX, minY, maxY, minZ, maxZ)) {
-                results.add(new LocalizedCollisionBox(minX, maxX, minY, maxY, minZ, maxZ, x, y, z));
-            }
-        }
+                return false;
+            return true;
+        });
     }
 
-    public void getEntityCollisionBoxes(final LocalizedCollisionBox cb, final List<LocalizedCollisionBox> results) {
+    public void getEntityCollisionBoxes(final LocalizedCollisionBox cb, final List<LocalizedCollisionBox> results, Predicate<Entity> filter) {
         for (var entity : CACHE.getEntityCache().getEntities().values()) {
+            if (!filter.test(entity)) continue;
             var x = entity.getX();
             var y = entity.getY();
             var z = entity.getZ();

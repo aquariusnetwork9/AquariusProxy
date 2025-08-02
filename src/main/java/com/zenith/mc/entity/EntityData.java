@@ -12,5 +12,6 @@ public record EntityData(
     boolean pickable,
     boolean livingEntity,
     boolean ageableMob,
+    boolean blocksBuilding,
     EntityType mcplType
 ) implements RegistryData { }
