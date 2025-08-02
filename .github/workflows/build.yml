@@ -32,3 +32,9 @@ jobs:
 
       - name: Build ZenithProxy
         run: ./gradlew build
+
+      - name: Upload Java Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZenithProxy-java
+          path: build/libs/ZenithProxy.jar
