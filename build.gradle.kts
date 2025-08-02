@@ -1,7 +1,7 @@
 plugins {
     `java-library`
     id("org.graalvm.buildtools.native") version "0.11.0"
-    id("com.gradleup.shadow") version "9.0.0-rc2"
+    id("com.gradleup.shadow") version "9.0.0-rc3"
     `maven-publish`
 }
 
@@ -187,6 +187,9 @@ tasks {
                 "Enable-Native-Access" to "ALL-UNNAMED"
             ))
         }
+    }
+    build {
+        dependsOn(shadowJar)
     }
     nativeCompile {
         notCompatibleWithConfigurationCache("not compatible with configuration cache")
