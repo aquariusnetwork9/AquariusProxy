@@ -28,7 +28,8 @@ public class AutoEatCommand extends Command {
                 "on/off",
                 "health <int>",
                 "hunger <int>",
-                "warning on/off"
+                "warning on/off",
+                "allowUnsafeFood on/off"
             )
             .build();
     }
@@ -43,44 +44,47 @@ public class AutoEatCommand extends Command {
                     .title("AutoEat " + toggleStrCaps(CONFIG.client.extra.autoEat.enabled));
                 return OK;
             }))
-            .then(literal("health")
-                      .then(argument("health", integer(1, 19)).executes(c -> {
-                          CONFIG.client.extra.autoEat.healthThreshold = IntegerArgumentType.getInteger(c, "health");
-                          c.getSource().getEmbed()
-                              .title("AutoEat Health Threshold Set")
-                              .primaryColor()
-                              .addField("Health Threshold", CONFIG.client.extra.autoEat.healthThreshold, false)
-                              .addField("Hunger Threshold", CONFIG.client.extra.autoEat.hungerThreshold, false)
-                              .addField("Warning", Boolean.toString(CONFIG.client.extra.autoEat.warning), false);
-                          return OK;
-                      })))
-            .then(literal("hunger")
-                      .then(argument("hunger", integer(1, 19)).executes(c -> {
-                          CONFIG.client.extra.autoEat.hungerThreshold = IntegerArgumentType.getInteger(c, "hunger");
-                          c.getSource().getEmbed()
-                              .title("AutoEat Hunger Threshold Set")
-                              .primaryColor()
-                              .addField("Health Threshold", CONFIG.client.extra.autoEat.healthThreshold, false)
-                              .addField("Hunger Threshold", CONFIG.client.extra.autoEat.hungerThreshold, false)
-                              .addField("Warning", Boolean.toString(CONFIG.client.extra.autoEat.warning), false);
-                          return OK;
-                      })))
-            .then(literal("warning")
-                      .then(argument("toggle", toggle()).executes(c -> {
-                            CONFIG.client.extra.autoEat.warning = getToggle(c, "toggle");
-                            c.getSource().getEmbed()
-                                .title("AutoEat Warning " + toggleStrCaps(CONFIG.client.extra.autoEat.warning));
-                            return OK;
-                      })));
+            .then(literal("health").then(argument("health", integer(1, 19)).executes(c -> {
+                CONFIG.client.extra.autoEat.healthThreshold = IntegerArgumentType.getInteger(c, "health");
+                c.getSource().getEmbed()
+                    .title("AutoEat Health Threshold Set")
+                    .primaryColor()
+                    .addField("Health Threshold", CONFIG.client.extra.autoEat.healthThreshold, false)
+                    .addField("Hunger Threshold", CONFIG.client.extra.autoEat.hungerThreshold, false)
+                    .addField("Warning", Boolean.toString(CONFIG.client.extra.autoEat.warning), false);
+                return OK;
+            })))
+            .then(literal("hunger").then(argument("hunger", integer(1, 19)).executes(c -> {
+                CONFIG.client.extra.autoEat.hungerThreshold = IntegerArgumentType.getInteger(c, "hunger");
+                c.getSource().getEmbed()
+                    .title("AutoEat Hunger Threshold Set")
+                    .primaryColor()
+                    .addField("Health Threshold", CONFIG.client.extra.autoEat.healthThreshold, false)
+                    .addField("Hunger Threshold", CONFIG.client.extra.autoEat.hungerThreshold, false)
+                    .addField("Warning", Boolean.toString(CONFIG.client.extra.autoEat.warning), false);
+                return OK;
+            })))
+            .then(literal("warning").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.autoEat.warning = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("AutoEat Warning " + toggleStrCaps(CONFIG.client.extra.autoEat.warning));
+                return OK;
+            })))
+            .then(literal("allowUnsafeFood").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.autoEat.allowUnsafeFood = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("AutoEat Allow Unsafe Food " + toggleStrCaps(CONFIG.client.extra.autoEat.allowUnsafeFood));
+            })));
     }
 
     @Override
     public void defaultEmbed(final Embed builder) {
         builder
-            .addField("AutoEat", toggleStr(CONFIG.client.extra.autoEat.enabled), false)
-            .addField("Health Threshold", CONFIG.client.extra.autoEat.healthThreshold, false)
-            .addField("Hunger Threshold", CONFIG.client.extra.autoEat.hungerThreshold, false)
-            .addField("Warning", Boolean.toString(CONFIG.client.extra.autoEat.warning), false)
+            .addField("AutoEat", toggleStr(CONFIG.client.extra.autoEat.enabled))
+            .addField("Health Threshold", CONFIG.client.extra.autoEat.healthThreshold)
+            .addField("Hunger Threshold", CONFIG.client.extra.autoEat.hungerThreshold)
+            .addField("Warning", Boolean.toString(CONFIG.client.extra.autoEat.warning))
+            .addField("Allow Unsafe Food", Boolean.toString(CONFIG.client.extra.autoEat.allowUnsafeFood))
             .primaryColor();
     }
 }

@@ -121,7 +121,9 @@ public class AutoEat extends AbstractInventoryModule {
     boolean hasFood(boolean ignoreHunger, ItemStack itemStack) {
         FoodData foodData = FoodRegistry.REGISTRY.get(itemStack.getId());
         boolean canEat = ignoreHunger || CACHE.getPlayerCache().getThePlayer().getFood() < 20;
-        return foodData != null && foodData.isSafeFood() && (canEat || foodData.canAlwaysEat());
+        return foodData != null
+            && (CONFIG.client.extra.autoEat.allowUnsafeFood || foodData.isSafeFood())
+            && (canEat || foodData.canAlwaysEat());
     }
 
     public boolean hasFoodIgnoreHunger(ItemStack itemStack) {

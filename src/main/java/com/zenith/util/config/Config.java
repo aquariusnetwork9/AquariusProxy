@@ -351,6 +351,7 @@ public final class Config {
                 public int hungerThreshold = 10;
                 public boolean warning = true;
                 public boolean warningMention = false;
+                public boolean allowUnsafeFood = false;
             }
 
             public static final class AutoOmen {
