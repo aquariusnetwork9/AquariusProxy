@@ -5,6 +5,7 @@ import com.zenith.Proxy;
 import com.zenith.event.client.ClientBotTick;
 import com.zenith.event.module.AutoEatOutOfFoodEvent;
 import com.zenith.feature.inventory.InventoryActionRequest;
+import com.zenith.feature.inventory.util.InventoryUtil;
 import com.zenith.feature.player.ClickTarget;
 import com.zenith.feature.player.Input;
 import com.zenith.feature.player.InputRequest;
@@ -61,6 +62,14 @@ public class AutoEat extends AbstractInventoryModule {
                 }
                 return;
             }
+            if (InventoryUtil.searchPlayerInventory(this::hasFoodIgnoreHunger) == -1) {
+                if (CONFIG.client.extra.autoEat.warning && Instant.now().minus(Duration.ofHours(7)).isAfter(lastAutoEatOutOfFoodWarning)) {
+                    warn("Out of food");
+                    EVENT_BUS.postAsync(new AutoEatOutOfFoodEvent());
+                    lastAutoEatOutOfFoodWarning = Instant.now();
+                }
+                return;
+            }
             if (switchToFood()) {
                 startEating();
             }
@@ -72,16 +81,7 @@ public class AutoEat extends AbstractInventoryModule {
     public boolean switchToFood() {
         delay = doInventoryActions();
         final boolean shouldStartEating = getHand() != null && delay == 0;
-        final boolean notHoldingFoodAndNotSwapping = getHand() == null && delay == 0;
-        final boolean holdingFoodOrSwapping = getHand() != null || delay != 0;
-        if (notHoldingFoodAndNotSwapping) {
-            if (CONFIG.client.extra.autoEat.warning && Instant.now().minus(Duration.ofHours(7)).isAfter(lastAutoEatOutOfFoodWarning)) {
-                CLIENT_LOG.warn("[AutoEat] Out of food");
-                EVENT_BUS.postAsync(new AutoEatOutOfFoodEvent());
-                lastAutoEatOutOfFoodWarning = Instant.now();
-            }
-        }
-        isEating = holdingFoodOrSwapping;
+        isEating = getHand() != null || delay != 0;
         return shouldStartEating;
     }
 
@@ -115,8 +115,20 @@ public class AutoEat extends AbstractInventoryModule {
 
     @Override
     public boolean itemPredicate(final ItemStack itemStack) {
+        return hasFood(itemStack);
+    }
+
+    boolean hasFood(boolean ignoreHunger, ItemStack itemStack) {
         FoodData foodData = FoodRegistry.REGISTRY.get(itemStack.getId());
-        boolean canEat = CACHE.getPlayerCache().getThePlayer().getFood() < 20;
+        boolean canEat = ignoreHunger || CACHE.getPlayerCache().getThePlayer().getFood() < 20;
         return foodData != null && foodData.isSafeFood() && (canEat || foodData.canAlwaysEat());
+    }
+
+    public boolean hasFoodIgnoreHunger(ItemStack itemStack) {
+        return hasFood(true, itemStack);
+    }
+
+    public boolean hasFood(ItemStack itemStack) {
+        return hasFood(false, itemStack);
     }
 }
