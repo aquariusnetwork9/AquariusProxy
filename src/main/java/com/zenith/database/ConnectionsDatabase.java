@@ -56,10 +56,12 @@ public class ConnectionsDatabase extends LiveDatabase {
     }
 
     public void handleServerPlayerConnectedEvent(ServerPlayerConnectedEvent event) {
+        if (!Proxy.getInstance().isOnlineOn2b2tForAtLeastDuration(Duration.ofSeconds(3))) return;
         writeConnection(Connectiontype.JOIN, event.playerEntry().getName(), event.playerEntry().getProfileId(), Instant.now().atOffset(ZoneOffset.UTC));
     }
 
     public void handleServerPlayerDisconnectedEvent(ServerPlayerDisconnectedEvent event) {
+        if (!Proxy.getInstance().isOnlineOn2b2tForAtLeastDuration(Duration.ofSeconds(3))) return;
         writeConnection(Connectiontype.LEAVE, event.playerEntry().getName(), event.playerEntry().getProfileId(), Instant.now().atOffset(ZoneOffset.UTC));
     }
 
@@ -81,7 +83,6 @@ public class ConnectionsDatabase extends LiveDatabase {
     //  need to think about a better approach for this
 
     public void writeConnection(final Connectiontype connectiontype, final String playerName, final UUID playerUUID, final OffsetDateTime time) {
-        if (!Proxy.getInstance().isOnlineOn2b2tForAtLeastDuration(Duration.ofSeconds(3))) return;
         insert(time.toInstant(), new ConnectionsRecord(time, connectiontype, playerName, playerUUID), handle ->
             handle.createUpdate("INSERT INTO connections (time, connection, player_name, player_uuid) VALUES (:time, :connection, :playerName, :playerUuid)")
                 .bind("time", time)
