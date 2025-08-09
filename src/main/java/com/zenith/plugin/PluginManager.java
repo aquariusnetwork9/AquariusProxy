@@ -65,6 +65,7 @@ public class PluginManager {
 
     public void initialize() {
         if (initialized.compareAndSet(false, true)) {
+            ensurePluginsFolderExists();
             if (!ImageInfo.inImageCode()) {
                 preLoadPlugins();
                 loadPlugins();
@@ -87,7 +88,7 @@ public class PluginManager {
         }
     }
 
-    private void preLoadPlugins() {
+    private void ensurePluginsFolderExists() {
         try {
             if (!PLUGINS_PATH.toFile().exists()) {
                 PLUGINS_PATH.toFile().mkdirs();
@@ -95,6 +96,9 @@ public class PluginManager {
         } catch (Exception e) {
             PLUGIN_LOG.error("Error creating plugins directory", e);
         }
+    }
+
+    private void preLoadPlugins() {
         var potentialPlugins = findPotentialPluginJars();
         for (var jar : potentialPlugins) {
             try {
