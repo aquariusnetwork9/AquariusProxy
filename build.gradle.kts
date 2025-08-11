@@ -2,6 +2,7 @@ plugins {
     `java-library`
     id("org.graalvm.buildtools.native") version "0.11.0"
     id("com.gradleup.shadow") version "9.0.0-rc3"
+    id("io.freefair.lombok") version "8.14"
     `maven-publish`
 }
 
@@ -87,13 +88,12 @@ dependencies {
     api("dev.omega24:upnp4j:1.0")
     testImplementation("org.junit.jupiter:junit-jupiter:5.13.4")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    val lombokVersion = "1.18.38"
-    compileOnly("org.projectlombok:lombok:$lombokVersion")
-    testCompileOnly("org.projectlombok:lombok:$lombokVersion")
-    annotationProcessor("org.projectlombok:lombok:$lombokVersion")
-    testAnnotationProcessor("org.projectlombok:lombok:$lombokVersion")
     compileOnly("com.google.auto.service:auto-service-annotations:1.1.1")
     annotationProcessor("com.google.auto.service:auto-service:1.1.1")
+}
+
+lombok {
+    version = "1.18.38"
 }
 
 tasks {
