@@ -620,6 +620,7 @@ public final class Config {
         public String proxyIP = "localhost";
         public int queueStatusRefreshMinutes = 5; // how often to refresh queue lengths
         public boolean dynamicQueueEtaEquation = true;
+        public boolean queueStatusRefreshWhileNotOn2b2t = true;
         public boolean healthCheck = true;
         public long playerListsRefreshIntervalMins = 1440L; // one day as default
         public final Spectator spectator = new Spectator();
