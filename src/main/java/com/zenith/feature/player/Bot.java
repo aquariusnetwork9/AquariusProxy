@@ -218,6 +218,8 @@ public final class Bot extends ModuleUtils {
                     inputRequestFuture.setClickResult(ClickResult.RightClickResult.useItem());
                 }
             }
+            // todo: track ongoing right click item consumes
+            //  and if one is cancelled, do interactions.releaseUsingItem()
             interactions.stopDestroyBlock();
             wasLeftClicking = false;
         } catch (final Exception e) {
