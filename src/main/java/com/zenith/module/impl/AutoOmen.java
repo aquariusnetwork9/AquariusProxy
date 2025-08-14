@@ -65,7 +65,7 @@ public class AutoOmen extends AbstractInventoryModule {
                 startEating();
             }
         } else {
-            if (isEating) {
+            if (isEating && !CONFIG.client.extra.autoOmen.whileOmenActive) {
                 delay = 20;
             }
             isEating = false;
