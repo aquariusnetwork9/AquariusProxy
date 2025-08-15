@@ -9,6 +9,7 @@ import com.zenith.feature.player.Input;
 import com.zenith.feature.player.InputRequest;
 import com.zenith.mc.item.ItemData;
 import com.zenith.mc.item.ItemRegistry;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TranslatableComponent;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
@@ -118,17 +119,19 @@ public class AutoOmen extends AbstractInventoryModule {
 
     private boolean isRaidActive() {
         for (var bossBar : CACHE.getBossBarCache().getBossBars().values()) {
-            if (bossBar.getTitle() instanceof TranslatableComponent translatableComponent) {
-                if (translatableComponent.key().startsWith("event.minecraft.raid")) {
+            if (isRaidActiveComponent(bossBar.getTitle())) return true;
+        }
+        return false;
+    }
+
+    private boolean isRaidActiveComponent(final Component component) {
+        if (component instanceof TranslatableComponent translatableComponent) {
+            var key = translatableComponent.key();
+            return key.startsWith("event.minecraft.raid") && !key.contains("victory");
+        } else {
+            for (var child : component.children()) {
+                if (isRaidActiveComponent(child)) {
                     return true;
-                }
-            }
-            var titleComponents = bossBar.getTitle().children();
-            for (int i = 0; i < titleComponents.size(); i++) {
-                if (titleComponents.get(i) instanceof TranslatableComponent translatableComponent) {
-                    if (translatableComponent.key().startsWith("event.minecraft.raid")) {
-                        return true;
-                    }
                 }
             }
         }
