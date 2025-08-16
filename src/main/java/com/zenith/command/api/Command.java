@@ -103,10 +103,17 @@ public abstract class Command {
     public abstract LiteralArgumentBuilder<CommandContext> register();
 
     /**
-     * Override to populate the embed builder after every execution, including both success and error cases.
+     * Override to populate the embed builder after every non-throwing execution, including both success and error cases.
      * Don't include sensitive info, there is no permission validation.
      */
     public void defaultEmbed(final Embed builder) {}
+
+    /**
+     * Called after every non-throwing execution, including both successes and error cases, overridable.
+     */
+    public void defaultHandler(final CommandContext context) {
+        defaultEmbed(context.getEmbed());
+    }
 
     public CaseInsensitiveLiteralArgumentBuilder<CommandContext> command(String literal) {
         return literal(literal)
@@ -133,7 +140,7 @@ public abstract class Command {
     }
 
     public void defaultSuccessHandler(CommandContext context) {
-        defaultEmbed(context.getEmbed());
+        defaultHandler(context);
     }
 
     public void defaultErrorHandler(Map<CommandNode<CommandContext>, CommandSyntaxException> exceptions, CommandContext context) {
@@ -141,7 +148,7 @@ public abstract class Command {
             .findFirst()
             .ifPresent(exception -> context.getEmbed()
                 .addField("Error", exception.getMessage(), false));
-        defaultEmbed(context.getEmbed());
+        defaultHandler(context);
         if (!context.getEmbed().isTitlePresent()) {
             context.getEmbed()
                 .title("Invalid command usage");
@@ -152,7 +159,7 @@ public abstract class Command {
     }
 
     public void defaultExecutionErrorHandler(CommandContext commandContext) {
-        defaultEmbed(commandContext.getEmbed());
+        defaultHandler(commandContext);
         commandContext.getEmbed()
             .errorColor();
     }
