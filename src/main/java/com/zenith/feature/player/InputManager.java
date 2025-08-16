@@ -1,17 +1,18 @@
 package com.zenith.feature.player;
 
 import com.zenith.event.client.ClientBotTick;
-import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullMarked;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Globals.BOT;
 import static com.zenith.Globals.EVENT_BUS;
 
+@NullMarked
 public class InputManager {
     private static final InputRequest DEFAULT_MOVEMENT_INPUT_REQUEST = new InputRequest(new Object(), null, null, null, Integer.MIN_VALUE);
     private static final InputRequestFuture DEFAULT_REQUEST_FUTURE = new InputRequestFuture();
-    private @NonNull InputRequest currentMovementInputRequest = DEFAULT_MOVEMENT_INPUT_REQUEST;
-    private @NonNull InputRequestFuture currentMovementInputRequestFuture = DEFAULT_REQUEST_FUTURE;
+    private InputRequest currentMovementInputRequest = DEFAULT_MOVEMENT_INPUT_REQUEST;
+    private InputRequestFuture currentMovementInputRequestFuture = DEFAULT_REQUEST_FUTURE;
 
     public InputManager() {
         EVENT_BUS.subscribe(
@@ -24,11 +25,11 @@ public class InputManager {
     }
 
     /**
-     * Interface to request movement on the next tick
+     * Requests movement to be executed at the end of the current tick
      */
-
     public synchronized InputRequestFuture submit(final InputRequest movementInputRequest) {
-        if (movementInputRequest.priority() < currentMovementInputRequest.priority()) return InputRequestFuture.rejected;
+        if (movementInputRequest.priority() <= currentMovementInputRequest.priority() && !hasActiveRequest())
+            return InputRequestFuture.rejected;
         currentMovementInputRequestFuture.complete(false);
         currentMovementInputRequest = movementInputRequest;
         currentMovementInputRequestFuture = new InputRequestFuture();
@@ -48,5 +49,9 @@ public class InputManager {
         currentMovementInputRequest = DEFAULT_MOVEMENT_INPUT_REQUEST;
         currentMovementInputRequestFuture.complete(true);
         currentMovementInputRequestFuture = DEFAULT_REQUEST_FUTURE;
+    }
+
+    public boolean hasActiveRequest() {
+        return currentMovementInputRequest != DEFAULT_MOVEMENT_INPUT_REQUEST;
     }
 }
