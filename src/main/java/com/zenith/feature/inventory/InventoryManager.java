@@ -18,6 +18,8 @@ import static java.util.Objects.requireNonNullElse;
 
 @NullMarked
 public class InventoryManager {
+    // after modules and InputManager, before player simulation
+    public static final int TICK_PRIORITY = -5000;
     private static final InventoryActionRequest DEFAULT_ACTION_REQUEST = new InventoryActionRequest(new Object(), Collections.emptyList(), Integer.MIN_VALUE, null);
     private static final RequestFuture DEFAULT_REQUEST_FUTURE = new RequestFuture();
     private final Timer tickTimer = Timers.tickTimer();
@@ -27,8 +29,7 @@ public class InventoryManager {
     public InventoryManager() {
         EVENT_BUS.subscribe(
             this,
-            // after modules, before player simulation
-            of(ClientBotTick.class, -5000, this::handleTick)
+            of(ClientBotTick.class, TICK_PRIORITY, this::handleTick)
         );
     }
 

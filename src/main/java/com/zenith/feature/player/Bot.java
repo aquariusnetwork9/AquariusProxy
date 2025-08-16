@@ -44,6 +44,8 @@ import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Globals.*;
 
 public final class Bot extends ModuleUtils {
+    public static final int TICK_PRIORITY = -20000;
+    public static final int POST_TICK_PRIORITY = -30000;
     @Getter private double x;
     @Getter private double y;
     @Getter private double z;
@@ -104,8 +106,8 @@ public final class Bot extends ModuleUtils {
             // we want this to be one of the last thing that happens in the tick
             // to allow other modules to update the player's input
             // other modules can also do actions after this tick by setting an even lower priority
-            of(ClientBotTick.class, -20000, this::tick),
-            of(ClientBotTick.class, -30000, this::postTick),
+            of(ClientBotTick.class, TICK_PRIORITY, this::tick),
+            of(ClientBotTick.class, POST_TICK_PRIORITY, this::postTick),
             of(ClientBotTick.Starting.class, this::handleClientTickStarting),
             of(ClientBotTick.Stopped.class, this::handleClientTickStopped)
         );

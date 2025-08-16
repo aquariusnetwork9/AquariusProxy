@@ -9,6 +9,8 @@ import static com.zenith.Globals.EVENT_BUS;
 
 @NullMarked
 public class InputManager {
+    // after modules and inventory manager, before player simulation
+    public static final int TICK_PRIORITY = -10000;
     private static final InputRequest DEFAULT_MOVEMENT_INPUT_REQUEST = new InputRequest(new Object(), null, null, null, Integer.MIN_VALUE);
     private static final InputRequestFuture DEFAULT_REQUEST_FUTURE = new InputRequestFuture();
     private InputRequest currentMovementInputRequest = DEFAULT_MOVEMENT_INPUT_REQUEST;
@@ -17,10 +19,7 @@ public class InputManager {
     public InputManager() {
         EVENT_BUS.subscribe(
             this,
-            // should be next to last in the tick handlers
-            // right before player simulation
-            // but after all modules that send movement inputs
-            of(ClientBotTick.class, -10000, this::handleTick)
+            of(ClientBotTick.class, TICK_PRIORITY, this::handleTick)
         );
     }
 
