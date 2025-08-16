@@ -707,7 +707,7 @@ public class Proxy {
             }
         }
         if (DISCORD.isRunning() && this.serverIcon != null)
-            if (CONFIG.discord.manageProfileImage) DISCORD.updateProfileImage(this.serverIcon);
+            if (CONFIG.discord.manageProfileImage) DISCORD.setProfileImage(this.serverIcon);
     }
 
     public boolean isOn2b2t() {

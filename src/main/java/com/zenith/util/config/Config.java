@@ -790,6 +790,7 @@ public final class Config {
         public boolean manageProfileImage = true;
         public boolean manageNickname = true;
         public boolean manageDescription = true;
+        public boolean managePresence = true;
         public boolean showNonWhitelistLoginIP = true;
         public boolean isUpdating = false; // internal use for update command state persistence
         public final ChatRelay chatRelay = new ChatRelay();
