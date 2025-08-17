@@ -302,6 +302,7 @@ public final class Bot extends ModuleUtils {
             velocity.set(0, 0, 0);
         } else {
             travel(movementInputVec);
+            tryCheckInsideBlocks();
         }
 
         if (CACHE.getPlayerCache().getThePlayer().isInVehicle()) {
@@ -705,7 +706,6 @@ public final class Bot extends ModuleUtils {
         this.y = movedPlayerCollisionBox.minY();
         this.z = ((movedPlayerCollisionBox.minZ() + movedPlayerCollisionBox.maxZ()) / 2.0);
         syncPlayerCollisionBox();
-        tryCheckInsideBlocks();
         float velocityMultiplier = MathHelper.lerp(movementEfficiency, this.getBlockSpeedFactor(), 1.0f);
         velocity.multiply(velocityMultiplier, 1.0, velocityMultiplier);
     }
@@ -746,17 +746,21 @@ public final class Bot extends ModuleUtils {
         if (collidingBlockStates.isEmpty()) return;
         for (int i = 0; i < collidingBlockStates.size(); i++) {
             var localState = collidingBlockStates.get(i);
-            if (localState.id() == BlockRegistry.BUBBLE_COLUMN.minStateId()) {
-                if (BLOCK_DATA.isAir(World.getBlock(localState.x(), localState.y() + 1, localState.z()))) {
-                    velocity.setY(Math.max(-0.9, velocity.getY() - 0.03));
+            if (localState.block() == BlockRegistry.BUBBLE_COLUMN) {
+                var dragDownState = World.getBlockStateProperty(localState.block(), localState.id(), BlockStateProperties.DRAG);
+                if (dragDownState == null) continue;
+                if (dragDownState) {
+                    if (BLOCK_DATA.isAir(World.getBlock(localState.x(), localState.y() + 1, localState.z()))) {
+                        velocity.setY(Math.max(-0.9, velocity.getY() - 0.03));
+                    } else {
+                        velocity.setY(Math.max(-0.3, velocity.getY() - 0.03));
+                    }
                 } else {
-                    velocity.setY(Math.max(-0.3, velocity.getY() - 0.03));
-                }
-            } else if (localState.id() == BlockRegistry.BUBBLE_COLUMN.maxStateId()) {
-                if (BLOCK_DATA.isAir(World.getBlock(localState.x(), localState.y() + 1, localState.z()))) {
-                    velocity.setY(Math.min(1.8, velocity.getY() + 0.1));
-                } else {
-                    velocity.setY(Math.min(0.7, velocity.getY() + 0.06));
+                    if (BLOCK_DATA.isAir(World.getBlock(localState.x(), localState.y() + 1, localState.z()))) {
+                        velocity.setY(Math.min(1.8, velocity.getY() + 0.1));
+                    } else {
+                        velocity.setY(Math.min(0.7, velocity.getY() + 0.06));
+                    }
                 }
             } else if (localState.block() == BlockRegistry.COBWEB) {
                 fallDistance = 0.0;
