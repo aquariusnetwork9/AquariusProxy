@@ -27,7 +27,7 @@ public class InputManager {
      * Requests movement to be executed at the end of the current tick
      */
     public synchronized InputRequestFuture submit(final InputRequest movementInputRequest) {
-        if (movementInputRequest.priority() <= currentMovementInputRequest.priority() && !hasActiveRequest())
+        if (movementInputRequest.priority() <= currentMovementInputRequest.priority() && hasActiveRequest())
             return InputRequestFuture.rejected;
         currentMovementInputRequestFuture.complete(false);
         currentMovementInputRequest = movementInputRequest;

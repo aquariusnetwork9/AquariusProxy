@@ -37,7 +37,7 @@ public class InventoryManager {
      * Requests inventory actions to be executed at the end of the current tick, and subsequent ticks if applicable
      */
     public synchronized RequestFuture submit(final InventoryActionRequest actionRequest) {
-        if (actionRequest.getPriority() <= currentActionRequest.getPriority() && !hasActiveRequest())
+        if (actionRequest.getPriority() <= currentActionRequest.getPriority() && hasActiveRequest())
             return RequestFuture.rejected;
         if (currentActionRequest.isExecuting()) return RequestFuture.rejected;
         currentRequestFuture.complete(false);
