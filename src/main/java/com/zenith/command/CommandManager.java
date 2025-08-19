@@ -179,7 +179,7 @@ public class CommandManager {
     private String downcaseFirstWord(final String sentence) {
         List<String> words = asList(sentence.split(" "));
         if (words.size() > 1) {
-            return words.getFirst().toLowerCase() + words.stream().skip(1).collect(Collectors.joining(" ", " ", ""));
+            return words.getFirst().toLowerCase() + sentence.substring(words.getFirst().length());
         } else {
             return sentence.toLowerCase();
         }
