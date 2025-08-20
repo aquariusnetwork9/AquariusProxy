@@ -11,7 +11,7 @@ import lombok.Getter;
 import java.util.concurrent.CompletableFuture;
 
 @Getter
-public class EnumStringArgumentType implements ArgumentType<String> {
+public class EnumStringArgumentType implements ArgumentType<String>, ServerCompletableArgument {
     private final String[] values;
 
     public EnumStringArgumentType(final String[] values) {

@@ -1,5 +1,6 @@
 package com.zenith.terminal;
 
+import com.zenith.command.api.CommandSources;
 import org.jline.reader.Candidate;
 import org.jline.reader.Completer;
 import org.jline.reader.LineReader;
@@ -13,7 +14,7 @@ public class TerminalCommandCompleter implements Completer {
     @Override
     public void complete(final LineReader lineReader, final ParsedLine parsedLine, final List<Candidate> list) {
         final String line = parsedLine.line();
-        COMMAND.getCommandCompletions(line).stream()
+        COMMAND.getCommandCompletions(line, CommandSources.TERMINAL).stream()
             .map(Candidate::new)
             .forEach(list::add);
     }

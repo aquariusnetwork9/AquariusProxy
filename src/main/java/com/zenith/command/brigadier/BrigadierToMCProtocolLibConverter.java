@@ -84,7 +84,7 @@ public class BrigadierToMCProtocolLibConverter {
         }
         CommandParser parser = null;
         CommandProperties properties = null;
-
+        String suggestionType = null;
         if (node instanceof ArgumentCommandNode<CommandContext,?> argumentNode) {
             switch (argumentNode.getType()) {
                 case CustomStringArgumentType t -> {
@@ -151,6 +151,9 @@ public class BrigadierToMCProtocolLibConverter {
                 }
                 default -> {}
             }
+            if (argumentNode.getType() instanceof ServerCompletableArgument) {
+                suggestionType = "minecraft:ask_server";
+            }
         }
         return new CommandNode(
             commandType,
@@ -160,7 +163,7 @@ public class BrigadierToMCProtocolLibConverter {
             name,
             parser,
             properties,
-            null // means the client should never ask for suggestions from the server
+            suggestionType // means the client should never ask for suggestions from the server
         );
     }
 }

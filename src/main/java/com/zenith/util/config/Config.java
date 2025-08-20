@@ -759,6 +759,7 @@ public final class Config {
         public boolean enable = true;
         public boolean slashCommands = true;
         public boolean slashCommandsReplacesServerCommands = false;
+        public boolean suggestions = true;
         public String prefix = "!";
         public boolean logToDiscord = true;
         public boolean allowWhitelistedToUseAccountOwnerCommands = false;
