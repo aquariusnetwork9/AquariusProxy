@@ -4,11 +4,15 @@ import com.mojang.brigadier.LiteralMessage;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.zenith.command.api.CommandContext;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandParser;
 import org.jspecify.annotations.NonNull;
+
+import java.util.concurrent.CompletableFuture;
 
 public class DimensionArgument implements SerializableArgumentType<DimensionData> {
     public static final SimpleCommandExceptionType INVALID_DIMENSION_EXCEPTION = new SimpleCommandExceptionType(
@@ -26,7 +30,7 @@ public class DimensionArgument implements SerializableArgumentType<DimensionData
     @Override
     public DimensionData parse(final StringReader stringReader) throws CommandSyntaxException {
         final String dimensionString = readDimensionString(stringReader);
-        DimensionData dimensionData = DimensionRegistry.REGISTRY.get(dimensionString);;
+        DimensionData dimensionData = DimensionRegistry.REGISTRY.get(dimensionString);
         if (dimensionData == null) {
             throw INVALID_DIMENSION_EXCEPTION.createWithContext(stringReader);
         }
@@ -59,5 +63,10 @@ public class DimensionArgument implements SerializableArgumentType<DimensionData
     @Override
     public @NonNull CommandParser commandParser() {
         return CommandParser.DIMENSION;
+    }
+
+    @Override
+    public CompletableFuture<Suggestions> listSuggestions(final com.mojang.brigadier.context.CommandContext context, final SuggestionsBuilder builder) {
+        return RegistryDataArgument.listRegistrySuggestions(context, builder, DimensionRegistry.REGISTRY.getLoadedRegistry());
     }
 }

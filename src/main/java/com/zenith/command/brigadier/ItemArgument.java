@@ -5,11 +5,15 @@ import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.zenith.mc.item.ItemData;
 import com.zenith.mc.item.ItemRegistry;
 import lombok.Data;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandParser;
 import org.jspecify.annotations.NonNull;
+
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Does not support the full vanilla item arg syntax with data components like `minecraft:stone{Count:1b}`
@@ -71,5 +75,10 @@ public class ItemArgument implements SerializableArgumentType<ItemData> {
     @Override
     public @NonNull CommandParser commandParser() {
         return CommandParser.ITEM_STACK;
+    }
+
+    @Override
+    public CompletableFuture<Suggestions> listSuggestions(final com.mojang.brigadier.context.CommandContext context, final SuggestionsBuilder builder) {
+        return RegistryDataArgument.listRegistrySuggestions(context, builder, ItemRegistry.REGISTRY);
     }
 }

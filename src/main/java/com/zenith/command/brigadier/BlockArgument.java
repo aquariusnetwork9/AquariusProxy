@@ -4,12 +4,16 @@ import com.mojang.brigadier.LiteralMessage;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.zenith.command.api.CommandContext;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockRegistry;
 import net.kyori.adventure.key.Key;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandParser;
 import org.jspecify.annotations.NonNull;
+
+import java.util.concurrent.CompletableFuture;
 
 public class BlockArgument implements SerializableArgumentType<Block> {
     public static final SimpleCommandExceptionType BLOCK_NOT_FOUND = new SimpleCommandExceptionType(
@@ -50,5 +54,10 @@ public class BlockArgument implements SerializableArgumentType<Block> {
     @Override
     public @NonNull CommandParser commandParser() {
         return CommandParser.BLOCK_STATE;
+    }
+
+    @Override
+    public CompletableFuture<Suggestions> listSuggestions(final com.mojang.brigadier.context.CommandContext context, final SuggestionsBuilder builder) {
+        return RegistryDataArgument.listRegistrySuggestions(context, builder, BlockRegistry.REGISTRY);
     }
 }

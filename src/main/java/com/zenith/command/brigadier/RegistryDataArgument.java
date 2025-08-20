@@ -2,8 +2,11 @@ package com.zenith.command.brigadier;
 
 import com.mojang.brigadier.LiteralMessage;
 import com.mojang.brigadier.StringReader;
+import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.zenith.mc.Registry;
 import com.zenith.mc.RegistryData;
 import com.zenith.mc.biome.Biome;
@@ -20,6 +23,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.command.properties.Resource
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 @Data
@@ -81,5 +85,24 @@ public class RegistryDataArgument<T extends RegistryData> implements Serializabl
     @Override
     public @Nullable CommandProperties commandProperties() {
         return new ResourceProperties(registryKey.asString());
+    }
+
+    public static <T extends RegistryData> CompletableFuture<Suggestions> listRegistrySuggestions(final CommandContext context, final SuggestionsBuilder builder, Registry<T> registry) {
+        String input = builder.getRemainingLowerCase();
+        if (Key.parseable(input)) {
+            var key = Key.key(input);
+            input = key.value();
+        }
+        for (var val : registry.getIdMap().values()) {
+            if (val.name().startsWith(input)) {
+                builder.suggest(val.name());
+            }
+        }
+        return builder.buildFuture();
+    }
+
+    @Override
+    public CompletableFuture<Suggestions> listSuggestions(final CommandContext context, final SuggestionsBuilder builder) {
+        return listRegistrySuggestions(context, builder, registry.get());
     }
 }
