@@ -90,9 +90,8 @@ public class BrigadierToMCProtocolLibConverter {
         if (node instanceof ArgumentCommandNode<CommandContext,?> argumentNode) {
             switch (argumentNode.getType()) {
                 case SerializableArgumentType t -> {
-                    var props = t.serializerProperties();
-                    parser = props.commandParser();
-                    properties = props.commandProperties();
+                    parser = t.commandParser();
+                    properties = t.commandProperties();
                 }
                 case BoolArgumentType t -> {
                     parser = CommandParser.BOOL;

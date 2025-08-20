@@ -9,6 +9,7 @@ import com.zenith.mc.item.ItemData;
 import com.zenith.mc.item.ItemRegistry;
 import lombok.Data;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandParser;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Does not support the full vanilla item arg syntax with data components like `minecraft:stone{Count:1b}`
@@ -68,7 +69,7 @@ public class ItemArgument implements SerializableArgumentType<ItemData> {
     }
 
     @Override
-    public ArgumentSerializerProperties serializerProperties() {
-        return new ArgumentSerializerProperties(CommandParser.ITEM_STACK, null);
+    public @NonNull CommandParser commandParser() {
+        return CommandParser.ITEM_STACK;
     }
 }

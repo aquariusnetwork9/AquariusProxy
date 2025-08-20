@@ -11,6 +11,7 @@ import net.kyori.adventure.text.Component;
 import org.cloudburstmc.math.vector.Vector2d;
 import org.cloudburstmc.math.vector.Vector3d;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandParser;
+import org.jspecify.annotations.NonNull;
 
 @Data
 public class Vec2Argument implements SerializableArgumentType<Coordinates> {
@@ -49,7 +50,7 @@ public class Vec2Argument implements SerializableArgumentType<Coordinates> {
     }
 
     @Override
-    public ArgumentSerializerProperties serializerProperties() {
-        return new ArgumentSerializerProperties(CommandParser.VEC2, null);
+    public @NonNull CommandParser commandParser() {
+        return CommandParser.VEC2;
     }
 }

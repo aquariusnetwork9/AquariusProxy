@@ -9,6 +9,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandParser;
+import org.jspecify.annotations.NonNull;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -55,7 +56,7 @@ public class ToggleArgumentType implements SerializableArgumentType<Boolean> {
     }
 
     @Override
-    public ArgumentSerializerProperties serializerProperties() {
-        return new ArgumentSerializerProperties(CommandParser.BOOL, null);
+    public @NonNull CommandParser commandParser() {
+        return CommandParser.BOOL;
     }
 }

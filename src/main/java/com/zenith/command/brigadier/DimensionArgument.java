@@ -8,6 +8,7 @@ import com.zenith.command.api.CommandContext;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandParser;
+import org.jspecify.annotations.NonNull;
 
 public class DimensionArgument implements SerializableArgumentType<DimensionData> {
     public static final SimpleCommandExceptionType INVALID_DIMENSION_EXCEPTION = new SimpleCommandExceptionType(
@@ -56,7 +57,7 @@ public class DimensionArgument implements SerializableArgumentType<DimensionData
     }
 
     @Override
-    public ArgumentSerializerProperties serializerProperties() {
-        return new ArgumentSerializerProperties(CommandParser.DIMENSION, null);
+    public @NonNull CommandParser commandParser() {
+        return CommandParser.DIMENSION;
     }
 }

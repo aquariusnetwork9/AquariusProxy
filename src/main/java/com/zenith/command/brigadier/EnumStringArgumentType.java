@@ -7,7 +7,10 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import lombok.Getter;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandParser;
+import org.geysermc.mcprotocollib.protocol.data.game.command.properties.CommandProperties;
 import org.geysermc.mcprotocollib.protocol.data.game.command.properties.StringProperties;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
@@ -62,7 +65,12 @@ public class EnumStringArgumentType implements SerializableArgumentType<String>,
     }
 
     @Override
-    public ArgumentSerializerProperties serializerProperties() {
-        return new ArgumentSerializerProperties(CommandParser.STRING, StringProperties.SINGLE_WORD);
+    public @NonNull CommandParser commandParser() {
+        return CommandParser.STRING;
+    }
+
+    @Override
+    public @Nullable CommandProperties commandProperties() {
+        return StringProperties.SINGLE_WORD;
     }
 }

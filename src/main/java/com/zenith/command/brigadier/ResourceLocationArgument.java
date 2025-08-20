@@ -7,6 +7,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.zenith.command.api.CommandContext;
 import net.kyori.adventure.key.Key;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandParser;
+import org.jspecify.annotations.NonNull;
 
 public class ResourceLocationArgument implements SerializableArgumentType<Key> {
     public static final SimpleCommandExceptionType INVALID_RESOURCE_LOCATION = new SimpleCommandExceptionType(
@@ -45,7 +46,7 @@ public class ResourceLocationArgument implements SerializableArgumentType<Key> {
     }
 
     @Override
-    public ArgumentSerializerProperties serializerProperties() {
-        return new ArgumentSerializerProperties(CommandParser.RESOURCE_LOCATION, null);
+    public @NonNull CommandParser commandParser() {
+        return CommandParser.RESOURCE_LOCATION;
     }
 }

@@ -9,6 +9,7 @@ import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockRegistry;
 import net.kyori.adventure.key.Key;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandParser;
+import org.jspecify.annotations.NonNull;
 
 public class BlockArgument implements SerializableArgumentType<Block> {
     public static final SimpleCommandExceptionType BLOCK_NOT_FOUND = new SimpleCommandExceptionType(
@@ -47,7 +48,7 @@ public class BlockArgument implements SerializableArgumentType<Block> {
     }
 
     @Override
-    public ArgumentSerializerProperties serializerProperties() {
-        return new ArgumentSerializerProperties(CommandParser.BLOCK_STATE, null);
+    public @NonNull CommandParser commandParser() {
+        return CommandParser.BLOCK_STATE;
     }
 }

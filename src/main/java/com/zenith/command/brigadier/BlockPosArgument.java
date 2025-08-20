@@ -11,6 +11,7 @@ import com.zenith.util.ComponentSerializer;
 import lombok.Data;
 import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandParser;
+import org.jspecify.annotations.NonNull;
 
 @Data
 public class BlockPosArgument implements SerializableArgumentType<Coordinates> {
@@ -46,7 +47,7 @@ public class BlockPosArgument implements SerializableArgumentType<Coordinates> {
     }
 
     @Override
-    public ArgumentSerializerProperties serializerProperties() {
-        return new ArgumentSerializerProperties(CommandParser.BLOCK_POS, null);
+    public @NonNull CommandParser commandParser() {
+        return CommandParser.BLOCK_POS;
     }
 }

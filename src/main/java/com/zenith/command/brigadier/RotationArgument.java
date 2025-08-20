@@ -10,6 +10,7 @@ import lombok.Data;
 import net.kyori.adventure.text.Component;
 import org.cloudburstmc.math.vector.Vector2d;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandParser;
+import org.jspecify.annotations.NonNull;
 
 @Data
 public class RotationArgument implements SerializableArgumentType<Coordinates> {
@@ -42,7 +43,7 @@ public class RotationArgument implements SerializableArgumentType<Coordinates> {
     }
 
     @Override
-    public ArgumentSerializerProperties serializerProperties() {
-        return new ArgumentSerializerProperties(CommandParser.ROTATION, null);
+    public @NonNull CommandParser commandParser() {
+        return CommandParser.ROTATION;
     }
 }

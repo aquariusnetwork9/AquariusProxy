@@ -10,6 +10,7 @@ import lombok.Data;
 import net.kyori.adventure.text.Component;
 import org.cloudburstmc.math.vector.Vector3d;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandParser;
+import org.jspecify.annotations.NonNull;
 
 @Data
 public class Vec3Argument implements SerializableArgumentType<Coordinates> {
@@ -40,7 +41,7 @@ public class Vec3Argument implements SerializableArgumentType<Coordinates> {
     }
 
     @Override
-    public ArgumentSerializerProperties serializerProperties() {
-        return new ArgumentSerializerProperties(CommandParser.VEC3, null);
+    public @NonNull CommandParser commandParser() {
+        return CommandParser.VEC3;
     }
 }
