@@ -8,6 +8,7 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import lombok.Getter;
 
+import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
 @Getter
@@ -16,6 +17,26 @@ public class EnumStringArgumentType implements ArgumentType<String>, ServerCompl
 
     public EnumStringArgumentType(final String[] values) {
         this.values = values;
+    }
+
+    public static EnumStringArgumentType enumStrings(String... strings) {
+        return new EnumStringArgumentType(strings);
+    }
+
+    public static EnumStringArgumentType enumStrings(Collection<String> strings) {
+        return enumStrings(strings.toArray(new String[0]));
+    }
+
+    public static EnumStringArgumentType enumStrings(Enum<?>[] enumValues) {
+        String[] names = new String[enumValues.length];
+        for (int i = 0; i < enumValues.length; i++) {
+            names[i] = enumValues[i].name().toLowerCase();
+        }
+        return enumStrings(names);
+    }
+
+    public static String getEnumString(final CommandContext<com.zenith.command.api.CommandContext> context, final String name) throws CommandSyntaxException {
+        return context.getArgument(name, String.class);
     }
 
     @Override

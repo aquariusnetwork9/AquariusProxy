@@ -9,6 +9,7 @@ import com.zenith.command.brigadier.EnumStringArgumentType;
 import com.zenith.command.brigadier.ZRequiredArgumentBuilder;
 import com.zenith.discord.Embed;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
@@ -73,15 +74,15 @@ public abstract class Command {
     }
 
     public static EnumStringArgumentType enumStrings(String... strings) {
-        return new EnumStringArgumentType(strings);
+        return EnumStringArgumentType.enumStrings(strings);
+    }
+
+    public static EnumStringArgumentType enumStrings(Collection<String> strings) {
+        return EnumStringArgumentType.enumStrings(strings);
     }
 
     public static EnumStringArgumentType enumStrings(Enum<?>[] enumValues) {
-        String[] names = new String[enumValues.length];
-        for (int i = 0; i < enumValues.length; i++) {
-            names[i] = enumValues[i].name().toLowerCase();
-        }
-        return enumStrings(names);
+        return EnumStringArgumentType.enumStrings(enumValues);
     }
 
     public static String toggleStr(boolean state) {

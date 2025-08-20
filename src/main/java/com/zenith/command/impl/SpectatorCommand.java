@@ -69,76 +69,76 @@ public class SpectatorCommand extends Command {
                 return OK;
             }))
             .then(literal("whitelist")
-                      .then(literal("add").then(argument("player", string()).executes(c -> {
-                          final String playerName = StringArgumentType.getString(c, "player");
-                          PLAYER_LISTS.getSpectatorWhitelist().add(playerName)
-                              .ifPresentOrElse(e ->
-                                                   c.getSource().getEmbed()
-                                                       .title("Added user: " + escape(e.getUsername()) + " To Spectator Whitelist")
-                                                       .primaryColor()
-                                                       .description(spectatorWhitelist()),
-                                               () -> c.getSource().getEmbed()
-                                                   .title("Failed to add user: " + escape(playerName) + " to whitelist. Unable to lookup profile.")
-                                                   .errorColor()
-                                                   .description(spectatorWhitelist()));
-                          return OK;
-                      })))
-                      .then(literal("del").then(argument("player", string()).executes(c -> {
-                          final String playerName = StringArgumentType.getString(c, "player");
-                          PLAYER_LISTS.getSpectatorWhitelist().remove(playerName);
-                          c.getSource().getEmbed()
-                              .title("Removed user: " + escape(playerName) + " From Spectator Whitelist")
-                              .primaryColor()
-                              .description(spectatorWhitelist());
-                          Proxy.getInstance().kickNonWhitelistedPlayers();
-                          return OK;
-                      })))
-                      .then(literal("clear").executes(c -> {
-                          PLAYER_LISTS.getSpectatorWhitelist().clear();
-                          c.getSource().getEmbed()
-                              .title("Spectator Whitelist Cleared")
-                              .errorColor()
-                              .description(spectatorWhitelist());
-                          Proxy.getInstance().kickNonWhitelistedPlayers();
-                      }))
-                      .then(literal("list").executes(c -> {
-                          c.getSource().getEmbed()
-                              .title("Spectator Whitelist")
-                              .primaryColor()
-                              .description(spectatorWhitelist());
-                      })))
+                .then(literal("add").then(argument("player", string()).executes(c -> {
+                    final String playerName = StringArgumentType.getString(c, "player");
+                    PLAYER_LISTS.getSpectatorWhitelist().add(playerName)
+                        .ifPresentOrElse(e ->
+                                c.getSource().getEmbed()
+                                    .title("Added user: " + escape(e.getUsername()) + " To Spectator Whitelist")
+                                    .primaryColor()
+                                    .description(spectatorWhitelist()),
+                            () -> c.getSource().getEmbed()
+                                .title("Failed to add user: " + escape(playerName) + " to whitelist. Unable to lookup profile.")
+                                .errorColor()
+                                .description(spectatorWhitelist()));
+                    return OK;
+                })))
+                .then(literal("del").then(argument("player", string()).executes(c -> {
+                    final String playerName = StringArgumentType.getString(c, "player");
+                    PLAYER_LISTS.getSpectatorWhitelist().remove(playerName);
+                    c.getSource().getEmbed()
+                        .title("Removed user: " + escape(playerName) + " From Spectator Whitelist")
+                        .primaryColor()
+                        .description(spectatorWhitelist());
+                    Proxy.getInstance().kickNonWhitelistedPlayers();
+                    return OK;
+                })))
+                .then(literal("clear").executes(c -> {
+                    PLAYER_LISTS.getSpectatorWhitelist().clear();
+                    c.getSource().getEmbed()
+                        .title("Spectator Whitelist Cleared")
+                        .errorColor()
+                        .description(spectatorWhitelist());
+                    Proxy.getInstance().kickNonWhitelistedPlayers();
+                }))
+                .then(literal("list").executes(c -> {
+                    c.getSource().getEmbed()
+                        .title("Spectator Whitelist")
+                        .primaryColor()
+                        .description(spectatorWhitelist());
+                })))
             .then(literal("entity")
-                      .then(literal("list").executes(c -> {
-                          c.getSource().getEmbed()
-                              .title("Entity List")
-                              .description(entityList())
-                              .primaryColor();
-                      }))
-                      .then(argument("entityID", string()).executes(c -> {
-                          final String entityInput = StringArgumentType.getString(c, "entityID");
-                          Optional<SpectatorEntity> spectatorEntity = SpectatorEntityRegistry.getSpectatorEntity(entityInput);
-                          if (spectatorEntity.isPresent()) {
-                              CONFIG.server.spectator.spectatorEntity = entityInput;
-                              c.getSource().getEmbed()
-                                  .title("Set Entity")
-                                  .primaryColor();
-                          } else {
-                              c.getSource().getEmbed()
-                                  .title("Invalid Entity")
-                                  .description(entityList())
-                                  .errorColor();
-                          }
-                          return OK;
-                      })))
+                .then(literal("list").executes(c -> {
+                    c.getSource().getEmbed()
+                        .title("Entity List")
+                        .description(entityList())
+                        .primaryColor();
+                }))
+                .then(argument("entityID", enumStrings(SpectatorEntityRegistry.getEntityIdentifiers())).executes(c -> {
+                    final String entityInput = StringArgumentType.getString(c, "entityID");
+                    Optional<SpectatorEntity> spectatorEntity = SpectatorEntityRegistry.getSpectatorEntity(entityInput);
+                    if (spectatorEntity.isPresent()) {
+                        CONFIG.server.spectator.spectatorEntity = entityInput;
+                        c.getSource().getEmbed()
+                            .title("Set Entity")
+                            .primaryColor();
+                    } else {
+                        c.getSource().getEmbed()
+                            .title("Invalid Entity")
+                            .description(entityList())
+                            .errorColor();
+                    }
+                    return OK;
+                })))
             .then(literal("chat")
-                      .then(argument("toggle", toggle()).executes(c -> {
-                            CONFIG.server.spectator.spectatorPublicChatEnabled = getToggle(c, "toggle");
-                            c.getSource().getEmbed()
-                                .title("Spectator Chat " + toggleStrCaps(CONFIG.server.spectator.spectatorPublicChatEnabled))
-                                .primaryColor()
-                                .description(spectatorWhitelist());
-                            return OK;
-                      })))
+                .then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.server.spectator.spectatorPublicChatEnabled = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                        .title("Spectator Chat " + toggleStrCaps(CONFIG.server.spectator.spectatorPublicChatEnabled))
+                        .primaryColor()
+                        .description(spectatorWhitelist());
+                    return OK;
+                })))
             .then(literal("playerCamOnJoin").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.server.spectator.playerCamOnJoin = getToggle(c, "toggle");
                 c.getSource().getEmbed()
@@ -147,27 +147,27 @@ public class SpectatorCommand extends Command {
                 return OK;
             })))
             .then(literal("fullCommands").requires(Command::validateAccountOwner)
-                      .then(argument("toggle", toggle()).executes(c -> {
-                          CONFIG.server.spectator.fullCommandsEnabled = getToggle(c, "toggle");
-                          c.getSource().getEmbed()
-                              .title("Full Spectator Commands " + toggleStrCaps(CONFIG.server.spectator.fullCommandsEnabled))
-                              .primaryColor();
-                          return OK;
-                      }))
-                      .then(literal("slashCommands").then(argument("toggle", toggle()).executes(c -> {
-                          CONFIG.server.spectator.fullCommandsAcceptSlashCommands = getToggle(c, "toggle");
-                          c.getSource().getEmbed()
-                              .title("Full Spectator Commands Accept Slash Commands " + toggleStrCaps(CONFIG.server.spectator.fullCommandsAcceptSlashCommands))
-                              .primaryColor();
-                          return OK;
-                      })))
-                      .then(literal("requireRegularWhitelist").then(argument("toggle", toggle()).executes(c -> {
-                          CONFIG.server.spectator.fullCommandsRequireRegularWhitelist = getToggle(c, "toggle");
-                          c.getSource().getEmbed()
-                              .title("Full Spectator Commands Require Regular Whitelist " + toggleStrCaps(CONFIG.server.spectator.fullCommandsRequireRegularWhitelist))
-                              .primaryColor();
-                          return OK;
-                      }))));
+                .then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.server.spectator.fullCommandsEnabled = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                        .title("Full Spectator Commands " + toggleStrCaps(CONFIG.server.spectator.fullCommandsEnabled))
+                        .primaryColor();
+                    return OK;
+                }))
+                .then(literal("slashCommands").then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.server.spectator.fullCommandsAcceptSlashCommands = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                        .title("Full Spectator Commands Accept Slash Commands " + toggleStrCaps(CONFIG.server.spectator.fullCommandsAcceptSlashCommands))
+                        .primaryColor();
+                    return OK;
+                })))
+                .then(literal("requireRegularWhitelist").then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.server.spectator.fullCommandsRequireRegularWhitelist = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                        .title("Full Spectator Commands Require Regular Whitelist " + toggleStrCaps(CONFIG.server.spectator.fullCommandsRequireRegularWhitelist))
+                        .primaryColor();
+                    return OK;
+                }))));
     }
 
     private String spectatorWhitelist() {
