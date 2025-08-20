@@ -2,14 +2,14 @@ package com.zenith.command.brigadier;
 
 import com.mojang.brigadier.LiteralMessage;
 import com.mojang.brigadier.StringReader;
-import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.zenith.command.api.CommandContext;
 import com.zenith.mc.dimension.DimensionData;
 import com.zenith.mc.dimension.DimensionRegistry;
+import org.geysermc.mcprotocollib.protocol.data.game.command.CommandParser;
 
-public class DimensionArgument implements ArgumentType<DimensionData> {
+public class DimensionArgument implements SerializableArgumentType<DimensionData> {
     public static final SimpleCommandExceptionType INVALID_DIMENSION_EXCEPTION = new SimpleCommandExceptionType(
         new LiteralMessage("Invalid dimension")
     );
@@ -53,5 +53,10 @@ public class DimensionArgument implements ArgumentType<DimensionData> {
         return c >= 'A' && c <= 'Z'
             || c >= 'a' && c <= 'z'
             || c == '_' || c == ':';
+    }
+
+    @Override
+    public ArgumentSerializerProperties serializerProperties() {
+        return new ArgumentSerializerProperties(CommandParser.DIMENSION, null);
     }
 }

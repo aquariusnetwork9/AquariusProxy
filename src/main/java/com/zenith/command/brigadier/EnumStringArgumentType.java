@@ -1,18 +1,19 @@
 package com.zenith.command.brigadier;
 
 import com.mojang.brigadier.StringReader;
-import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import lombok.Getter;
+import org.geysermc.mcprotocollib.protocol.data.game.command.CommandParser;
+import org.geysermc.mcprotocollib.protocol.data.game.command.properties.StringProperties;
 
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
 @Getter
-public class EnumStringArgumentType implements ArgumentType<String>, ServerCompletableArgument {
+public class EnumStringArgumentType implements SerializableArgumentType<String>, SuggestionProviderArgument {
     private final String[] values;
 
     public EnumStringArgumentType(final String[] values) {
@@ -58,5 +59,10 @@ public class EnumStringArgumentType implements ArgumentType<String>, ServerCompl
             }
         }
         return builder.buildFuture();
+    }
+
+    @Override
+    public ArgumentSerializerProperties serializerProperties() {
+        return new ArgumentSerializerProperties(CommandParser.STRING, StringProperties.SINGLE_WORD);
     }
 }

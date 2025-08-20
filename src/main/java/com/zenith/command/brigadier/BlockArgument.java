@@ -2,15 +2,15 @@ package com.zenith.command.brigadier;
 
 import com.mojang.brigadier.LiteralMessage;
 import com.mojang.brigadier.StringReader;
-import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.zenith.command.api.CommandContext;
 import com.zenith.mc.block.Block;
 import com.zenith.mc.block.BlockRegistry;
 import net.kyori.adventure.key.Key;
+import org.geysermc.mcprotocollib.protocol.data.game.command.CommandParser;
 
-public class BlockArgument implements ArgumentType<Block> {
+public class BlockArgument implements SerializableArgumentType<Block> {
     public static final SimpleCommandExceptionType BLOCK_NOT_FOUND = new SimpleCommandExceptionType(
             new LiteralMessage("Block type not found"));
     public static final SimpleCommandExceptionType UNSUPPORTED_ARGUMENT = new SimpleCommandExceptionType(
@@ -44,5 +44,10 @@ public class BlockArgument implements ArgumentType<Block> {
             throw UNSUPPORTED_ARGUMENT.create();
         }
         return block;
+    }
+
+    @Override
+    public ArgumentSerializerProperties serializerProperties() {
+        return new ArgumentSerializerProperties(CommandParser.BLOCK_STATE, null);
     }
 }

@@ -2,13 +2,13 @@ package com.zenith.command.brigadier;
 
 import com.mojang.brigadier.LiteralMessage;
 import com.mojang.brigadier.StringReader;
-import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.zenith.command.api.CommandContext;
 import net.kyori.adventure.key.Key;
+import org.geysermc.mcprotocollib.protocol.data.game.command.CommandParser;
 
-public class ResourceLocationArgument implements ArgumentType<Key> {
+public class ResourceLocationArgument implements SerializableArgumentType<Key> {
     public static final SimpleCommandExceptionType INVALID_RESOURCE_LOCATION = new SimpleCommandExceptionType(
         new LiteralMessage("Invalid resource location"));
 
@@ -42,5 +42,10 @@ public class ResourceLocationArgument implements ArgumentType<Key> {
             reader.setCursor(i);
             throw INVALID_RESOURCE_LOCATION.create();
         }
+    }
+
+    @Override
+    public ArgumentSerializerProperties serializerProperties() {
+        return new ArgumentSerializerProperties(CommandParser.RESOURCE_LOCATION, null);
     }
 }

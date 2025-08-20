@@ -2,7 +2,6 @@ package com.zenith.command.brigadier;
 
 import com.mojang.brigadier.LiteralMessage;
 import com.mojang.brigadier.StringReader;
-import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
@@ -10,9 +9,10 @@ import com.zenith.util.ComponentSerializer;
 import lombok.Data;
 import net.kyori.adventure.text.Component;
 import org.cloudburstmc.math.vector.Vector2d;
+import org.geysermc.mcprotocollib.protocol.data.game.command.CommandParser;
 
 @Data
-public class RotationArgument implements ArgumentType<Coordinates> {
+public class RotationArgument implements SerializableArgumentType<Coordinates> {
     public static final SimpleCommandExceptionType ERROR_NOT_COMPLETE = new SimpleCommandExceptionType(
         new LiteralMessage(ComponentSerializer.serializePlain(Component.translatable("argument.rotation.incomplete"))));
 
@@ -39,5 +39,10 @@ public class RotationArgument implements ArgumentType<Coordinates> {
                 throw ERROR_NOT_COMPLETE.createWithContext(reader);
             }
         }
+    }
+
+    @Override
+    public ArgumentSerializerProperties serializerProperties() {
+        return new ArgumentSerializerProperties(CommandParser.ROTATION, null);
     }
 }
