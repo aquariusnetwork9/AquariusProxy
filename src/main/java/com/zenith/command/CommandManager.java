@@ -6,7 +6,6 @@ import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.context.ParsedCommandNode;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.brigadier.suggestion.Suggestion;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.zenith.command.api.Command;
@@ -20,9 +19,8 @@ import lombok.Getter;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandNode;
 import org.jspecify.annotations.NonNull;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CompletableFuture;
 
 import static com.zenith.Globals.saveConfigAsync;
 import static java.util.Arrays.asList;
@@ -221,23 +219,12 @@ public class CommandManager {
         }
     }
 
-    public List<String> getCommandCompletions(final String input, CommandSource commandSource) {
-        var suggestions = getCommandSuggestions(input, commandSource);
-        return suggestions.getList().stream()
-            .map(Suggestion::getText)
-            .toList();
-    }
-
-    public Suggestions getCommandSuggestions(final String input, CommandSource commandSource) {
+    public CompletableFuture<Suggestions> suggestions(final String input, CommandSource commandSource) {
         var stringReader = new StringReader(downcaseFirstWord(input));
         if (stringReader.canRead() && stringReader.peek() == '/') {
             stringReader.skip();
         }
         final ParseResults<CommandContext> parse = this.dispatcher.parse(stringReader, CommandContext.create(input, commandSource));
-        try {
-            return this.dispatcher.getCompletionSuggestions(parse).get(2L, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            return Suggestions.create("", Collections.emptyList());
-        }
+        return this.dispatcher.getCompletionSuggestions(parse);
     }
 }
