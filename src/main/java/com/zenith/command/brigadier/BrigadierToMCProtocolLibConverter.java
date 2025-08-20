@@ -152,6 +152,7 @@ public class BrigadierToMCProtocolLibConverter {
                 default -> {}
             }
             if (argumentNode.getType() instanceof ServerCompletableArgument) {
+                // from mojmap 1.21.4: net.minecraft.commands.synchronization.SuggestionProviders
                 suggestionType = "minecraft:ask_server";
             }
         }
@@ -163,7 +164,7 @@ public class BrigadierToMCProtocolLibConverter {
             name,
             parser,
             properties,
-            suggestionType // means the client should never ask for suggestions from the server
+            suggestionType // if null, the client should never ask for suggestions from the server
         );
     }
 }
