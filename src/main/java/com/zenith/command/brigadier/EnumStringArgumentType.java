@@ -16,7 +16,7 @@ import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
 @Getter
-public class EnumStringArgumentType implements SerializableArgumentType<String>, SuggestionProviderArgument {
+public class EnumStringArgumentType implements SerializableArgumentType<String> {
     private final String[] values;
 
     public EnumStringArgumentType(final String[] values) {
@@ -72,5 +72,10 @@ public class EnumStringArgumentType implements SerializableArgumentType<String>,
     @Override
     public @Nullable CommandProperties commandProperties() {
         return StringProperties.SINGLE_WORD;
+    }
+
+    @Override
+    public boolean askServerForSuggestions() {
+        return true;
     }
 }

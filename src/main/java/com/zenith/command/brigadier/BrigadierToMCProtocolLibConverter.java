@@ -92,6 +92,9 @@ public class BrigadierToMCProtocolLibConverter {
                 case SerializableArgumentType t -> {
                     parser = t.commandParser();
                     properties = t.commandProperties();
+                    if (t.askServerForSuggestions()) {
+                        suggestionType = "minecraft:ask_server";
+                    }
                 }
                 case BoolArgumentType t -> {
                     parser = CommandParser.BOOL;
@@ -123,10 +126,6 @@ public class BrigadierToMCProtocolLibConverter {
                 default -> {
                     SERVER_LOG.error("Unable to serialize unknown command argument type: {} : {}", argumentNode.getType(), name);
                 }
-            }
-            if (argumentNode.getType() instanceof SuggestionProviderArgument arg) {
-                // from mojmap 1.21.4: net.minecraft.commands.synchronization.SuggestionProviders
-                suggestionType = arg.suggestionType();
             }
         }
         return new CommandNode(

@@ -12,4 +12,12 @@ public interface SerializableArgumentType<T> extends ArgumentType<T> {
     default @Nullable CommandProperties commandProperties() {
         return null;
     }
+
+    /**
+     * Whether ingame players should query the zenith mc server for command suggestions
+     * i.e. for non-vanilla commands without built-in completions
+     */
+    default boolean askServerForSuggestions() {
+        return false;
+    }
 }
