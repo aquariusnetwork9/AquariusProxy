@@ -12,6 +12,7 @@ import com.zenith.cache.DataCache;
 import com.zenith.command.CommandManager;
 import com.zenith.database.DatabaseManager;
 import com.zenith.discord.DiscordBot;
+import com.zenith.feature.gui.InGameGuiManager;
 import com.zenith.feature.inventory.InventoryManager;
 import com.zenith.feature.pathfinder.Baritone;
 import com.zenith.feature.player.Bot;
@@ -82,6 +83,7 @@ public class Globals {
     public static final InventoryManager INVENTORY;
     public static final ZenithViaInitializer VIA_INITIALIZER;
     public static final PluginManager PLUGIN_MANAGER;
+    public static final InGameGuiManager GUI;
     public static final String MC_VERSION;
     public static synchronized Config loadConfig() {
         try {
@@ -234,6 +236,7 @@ public class Globals {
             PLAYER_LISTS.init(); // must be init after config
             BOT = new Bot();
             BARITONE = new Baritone();
+            GUI = new InGameGuiManager();
         } catch (final Throwable e) {
             DEFAULT_LOG.error("Unable to initialize!", e);
             throw e;
