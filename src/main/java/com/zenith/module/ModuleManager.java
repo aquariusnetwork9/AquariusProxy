@@ -27,6 +27,8 @@ public class ModuleManager {
             new AutoDrop(),
             new AutoEat(),
             new AutoFish(),
+            new AutoDetectModule(),
+            new AutoLoadModule(),
             new AutoMend(),
             new AutoOmen(),
             new AutoReconnect(),

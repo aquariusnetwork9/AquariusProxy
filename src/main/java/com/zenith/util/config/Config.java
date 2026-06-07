@@ -168,6 +168,61 @@ public final class Config {
             public int tpsBufferSize = 20;
             public final Tasks tasks = new Tasks();
             public final AquariusMiner aquariusMiner = new AquariusMiner();
+            public final PearlPlus pearlPlus = new PearlPlus();
+
+            /**
+             * PearlPlus — stasis-pearl loader baked in from the PearlPlus 2.0.9 plugin (by duccss / steve2b2t).
+             * Players whisper "load" / "load &lt;id&gt;" and the bot pulls their pearl. Holds per-player stored
+             * pearls + a whitelist. Read everywhere via {@code CONFIG.client.extra.pearlPlus.*}.
+             */
+            public static class PearlPlus {
+                public final AutoLoadConfig autoLoad = new AutoLoadConfig();
+                public final AutoDetectConfig autoDetect = new AutoDetectConfig();
+
+                public String defaultPearlId = "Base";
+
+                public final Map<UUID, PlayerPearls> players = new LinkedHashMap<>();
+                public final Map<UUID, WhitelistedPlayer> whitelist = new LinkedHashMap<>();
+
+                public static class AutoLoadConfig {
+                    public boolean enabled = true;
+                    public boolean allowNoiseAfterPearl = true;
+                    public boolean returnToStartPos = true;
+                    public boolean autoDefaultToPresent = true;
+                    public boolean whitelistEnabled = false;
+                    public boolean dropPearlAfterLoad = true;
+                }
+
+                public static final class AutoDetectConfig {
+                    public boolean enabled = true;
+                    public boolean temporaryMode = false;
+                    public boolean distanceCheck = false;
+                    public int temporaryRemovalRange = 32; // blocks
+                }
+
+                public static final class PlayerPearls {
+                    public String playerName = "";
+                    public String defaultPearlId = "";
+                    public Map<String, StoredPearl> pearls = new LinkedHashMap<>();
+                }
+
+                public static final class StoredPearl {
+                    public String pearlId = "";
+                    public int x;
+                    public int y;
+                    public int z;
+                }
+
+                public static final class WhitelistedPlayer {
+                    public String username = "";
+                    public @Nullable UUID uuid;
+
+                    public WhitelistedPlayer(String username, UUID uuid) {
+                        this.username = username;
+                        this.uuid = uuid;
+                    }
+                }
+            }
 
             public static final class Tasks {
                 public boolean enabled = true;

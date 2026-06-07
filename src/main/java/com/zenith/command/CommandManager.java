@@ -77,6 +77,7 @@ public class CommandManager {
         new MultiCommand(),
         new PathfinderCommand(),
         new PearlLoader(),
+        new PearlPlusCommand(),
         new PlaytimeCommand(),
         new PluginsCommand(),
         new PrioCommand(),
