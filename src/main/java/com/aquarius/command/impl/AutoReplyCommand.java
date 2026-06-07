@@ -1,0 +1,74 @@
+package com.aquarius.command.impl;
+
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.aquarius.command.api.Command;
+import com.aquarius.command.api.CommandCategory;
+import com.aquarius.command.api.CommandContext;
+import com.aquarius.command.api.CommandUsage;
+import com.aquarius.discord.Embed;
+import com.aquarius.module.impl.AutoReply;
+import com.aquarius.util.ChatUtil;
+
+import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
+import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
+import static com.aquarius.Globals.CONFIG;
+import static com.aquarius.Globals.MODULE;
+import static com.aquarius.command.brigadier.ToggleArgumentType.getToggle;
+import static com.aquarius.command.brigadier.ToggleArgumentType.toggle;
+
+public class AutoReplyCommand extends Command {
+    @Override
+    public CommandUsage commandUsage() {
+        return CommandUsage.builder()
+            .name("autoReply")
+            .category(CommandCategory.MODULE)
+            .description("""
+            Automatically replies to whispers with a custom message.
+            """)
+            .usageLines(
+                "on/off",
+                "cooldown <seconds>",
+                "message <message>"
+            )
+            .build();
+    }
+
+    @Override
+    public LiteralArgumentBuilder<CommandContext> register() {
+        return command("autoReply")
+            .then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.autoReply.enabled = getToggle(c, "toggle");
+                MODULE.get(AutoReply.class).syncEnabledFromConfig();
+                c.getSource().getEmbed()
+                    .title("AutoReply " + toggleStrCaps(CONFIG.client.extra.autoReply.enabled));
+                return OK;
+            }))
+            .then(literal("cooldown").then(argument("secs", integer(0, 1000)).executes(c -> {
+                int delay = IntegerArgumentType.getInteger(c, "secs");
+                MODULE.get(AutoReply.class).updateCooldown(delay);
+                c.getSource().getEmbed()
+                    .title("AutoReply Cooldown Updated!");
+                return OK;
+            })))
+            .then(literal("message").then(argument("messageStr", greedyString()).executes(c -> {
+                String message = ChatUtil.sanitizeChatMessage(StringArgumentType.getString(c, "messageStr"));
+                if (message.length() > 236)
+                    message = message.substring(0, 236);
+                CONFIG.client.extra.autoReply.message = message;
+                c.getSource().getEmbed()
+                    .title("AutoReply Message Updated!");
+                return OK;
+            })));
+    }
+
+    @Override
+    public void defaultEmbed(final Embed builder) {
+        builder
+            .addField("AutoReply", toggleStr(CONFIG.client.extra.autoReply.enabled), false)
+            .addField("Cooldown Seconds", CONFIG.client.extra.autoReply.cooldownSeconds, false)
+            .addField("Message", CONFIG.client.extra.autoReply.message, false)
+            .primaryColor();
+    }
+}

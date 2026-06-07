@@ -11,25 +11,25 @@
     <import class="ch.qos.logback.core.ConsoleAppender"/>
     <import class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy"/>
 
-    <statusListener class="com.zenith.terminal.logback.PrintOnlyErrorLogbackStatusListener"/>
+    <statusListener class="com.aquarius.terminal.logback.PrintOnlyErrorLogbackStatusListener"/>
     <!-- Prevent logback compression failing during JVM stop https://logback.qos.ch/manual/configuration.html#shutdownHook -->
     <shutdownHook/>
 
-    <appender name="FILE" class="com.zenith.terminal.logback.LazyInitRollingFileAppender">
+    <appender name="FILE" class="com.aquarius.terminal.logback.LazyInitRollingFileAppender">
         <file>log/latest.log</file>
-        <encoder class="com.zenith.terminal.logback.AnsiStripEncoder">
+        <encoder class="com.aquarius.terminal.logback.AnsiStripEncoder">
             <pattern>[%d{yyyy/MM/dd HH:mm:ss}] [%logger{36}] [%level] %stripAnsi%n</pattern>
         </encoder>
         <rollingPolicy class="TimeBasedRollingPolicy">
             <fileNamePattern>log/proxy-%d{yyyy-MM-dd}.%i.log.zip</fileNamePattern>
             <maxHistory>1000</maxHistory>
             <totalSizeCap>250MB</totalSizeCap>
-            <TimeBasedFileNamingAndTriggeringPolicy class="com.zenith.terminal.logback.StartupSizeAndTimeBasedTriggeringPolicy">
+            <TimeBasedFileNamingAndTriggeringPolicy class="com.aquarius.terminal.logback.StartupSizeAndTimeBasedTriggeringPolicy">
                 <MaxFileSize>250MB</MaxFileSize>
             </TimeBasedFileNamingAndTriggeringPolicy>
             <cleanHistoryOnStart>true</cleanHistoryOnStart>
         </rollingPolicy>
-        <filter class="com.zenith.terminal.logback.LogSourceFilter"/>
+        <filter class="com.aquarius.terminal.logback.LogSourceFilter"/>
         <filter class="ThresholdFilter">
             <level>INFO</level>
         </filter>
@@ -39,37 +39,37 @@
         <discardingThreshold>0</discardingThreshold>
     </appender>
 
-    <appender name="DEBUG_FILE" class="com.zenith.terminal.logback.LazyInitRollingFileAppender">
+    <appender name="DEBUG_FILE" class="com.aquarius.terminal.logback.LazyInitRollingFileAppender">
         <file>log/debug.log</file>
-        <encoder class="com.zenith.terminal.logback.AnsiStripEncoder">
+        <encoder class="com.aquarius.terminal.logback.AnsiStripEncoder">
             <pattern>[%d{yyyy/MM/dd HH:mm:ss.SSS}] [%logger{36}] [%level] %stripAnsi%n</pattern>
         </encoder>
         <rollingPolicy class="TimeBasedRollingPolicy">
             <fileNamePattern>log/proxy-%d{yyyy-MM-dd}.%i.debug.log.zip</fileNamePattern>
             <maxHistory>1000</maxHistory>
             <totalSizeCap>250MB</totalSizeCap>
-            <TimeBasedFileNamingAndTriggeringPolicy class="com.zenith.terminal.logback.StartupSizeAndTimeBasedTriggeringPolicy">
+            <TimeBasedFileNamingAndTriggeringPolicy class="com.aquarius.terminal.logback.StartupSizeAndTimeBasedTriggeringPolicy">
                 <MaxFileSize>250MB</MaxFileSize>
             </TimeBasedFileNamingAndTriggeringPolicy>
             <cleanHistoryOnStart>true</cleanHistoryOnStart>
         </rollingPolicy>
-        <filter class="com.zenith.terminal.logback.LogSourceFilter"/>
+        <filter class="com.aquarius.terminal.logback.LogSourceFilter"/>
         <filter class="ThresholdFilter">
             <level>TRACE</level>
         </filter>
-        <filter class="com.zenith.terminal.logback.DebugLogConfigurationFilter"/>
+        <filter class="com.aquarius.terminal.logback.DebugLogConfigurationFilter"/>
     </appender>
     <appender name="ASYNC_DEBUG_FILE" class="ch.qos.logback.classic.AsyncAppender">
         <appender-ref ref="DEBUG_FILE"/>
         <discardingThreshold>0</discardingThreshold>
     </appender>
 
-    <appender name="TERMINAL" class="com.zenith.terminal.logback.TerminalConsoleAppender">
+    <appender name="TERMINAL" class="com.aquarius.terminal.logback.TerminalConsoleAppender">
         <encoder>
             <pattern>[%d{yyyy/MM/dd HH:mm:ss}] [%logger{36}] [%level] %msg%n</pattern>
         </encoder>
-        <filter class="com.zenith.terminal.logback.LogSourceFilter"/>
-        <filter class="com.zenith.terminal.logback.TerminalDebugLogFilter"/>
+        <filter class="com.aquarius.terminal.logback.LogSourceFilter"/>
+        <filter class="com.aquarius.terminal.logback.TerminalDebugLogFilter"/>
     </appender>
     <appender name="ASYNC_TERMINAL" class="ch.qos.logback.classic.AsyncAppender">
         <appender-ref ref="TERMINAL"/>

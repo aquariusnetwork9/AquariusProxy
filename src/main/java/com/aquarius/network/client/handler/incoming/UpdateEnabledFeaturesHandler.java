@@ -1,0 +1,15 @@
+package com.aquarius.network.client.handler.incoming;
+
+import com.aquarius.network.client.ClientSession;
+import com.aquarius.network.codec.ClientEventLoopPacketHandler;
+import org.geysermc.mcprotocollib.protocol.packet.configuration.clientbound.ClientboundUpdateEnabledFeaturesPacket;
+
+import static com.aquarius.Globals.CACHE;
+
+public class UpdateEnabledFeaturesHandler implements ClientEventLoopPacketHandler<ClientboundUpdateEnabledFeaturesPacket, ClientSession> {
+    @Override
+    public boolean applyAsync(final ClientboundUpdateEnabledFeaturesPacket packet, final ClientSession session) {
+        CACHE.getConfigurationCache().setEnabledFeatures(packet.getFeatures());
+        return true;
+    }
+}

@@ -1,0 +1,142 @@
+package com.aquarius.module.impl;
+
+import com.github.rfresh2.EventConsumer;
+import com.aquarius.cache.data.inventory.Container;
+import com.aquarius.event.player.PlayerConnectionRemovedEvent;
+import com.aquarius.event.player.PlayerLoginEvent;
+import com.aquarius.feature.actionlimiter.handlers.inbound.*;
+import com.aquarius.feature.actionlimiter.handlers.outbound.*;
+import com.aquarius.mc.item.ItemData;
+import com.aquarius.mc.item.ItemRegistry;
+import com.aquarius.module.api.Module;
+import com.aquarius.network.codec.PacketHandlerCodec;
+import com.aquarius.network.codec.PacketHandlerStateCodec;
+import com.aquarius.network.server.ServerSession;
+import com.aquarius.util.math.MathHelper;
+import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
+import it.unimi.dsi.fastutil.objects.ReferenceSet;
+import org.geysermc.mcprotocollib.protocol.data.ProtocolState;
+import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundCommandSuggestionsPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundMoveMinecartPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundMoveVehiclePacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundTeleportEntityPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerSetContentPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerSetSlotPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundSetCursorItemPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundSetPlayerInventoryPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundForgetLevelChunkPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundLevelChunkWithLightPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.*;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClickPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundEditBookPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundMoveVehiclePacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.*;
+
+import java.util.List;
+
+import static com.github.rfresh2.EventConsumer.of;
+import static com.aquarius.Globals.CACHE;
+import static com.aquarius.Globals.CONFIG;
+
+public class ActionLimiter extends Module {
+    private final ReferenceSet<ServerSession> limitedConnections = new ReferenceOpenHashSet<>();
+
+    @Override
+    public PacketHandlerCodec registerServerPacketHandlerCodec() {
+        return PacketHandlerCodec.serverBuilder()
+            .setId("action-limiter")
+            .setPriority(1000)
+            .setActivePredicate(this::shouldLimit)
+            .state(ProtocolState.GAME, PacketHandlerStateCodec.serverBuilder()
+                .inbound(ServerboundChatCommandPacket.class, new ALChatCommandHandler())
+                .inbound(ServerboundChatCommandSignedPacket.class, new ALSignedChatCommandHandler())
+                .inbound(ServerboundChatPacket.class, new ALChatHandler())
+                .inbound(ServerboundClientCommandPacket.class, new ALClientCommandHandler())
+                .inbound(ServerboundCommandSuggestionPacket.class, new ALSCommandSuggestionHandler())
+                .inbound(ServerboundContainerClickPacket.class, new ALContainerClickHandler())
+                .inbound(ServerboundInteractPacket.class, new ALInteractHandler())
+                .inbound(ServerboundMovePlayerPosPacket.class, new ALMovePlayerPosHandler())
+                .inbound(ServerboundMovePlayerPosRotPacket.class, new ALMovePlayerPosRotHandler())
+                .inbound(ServerboundMoveVehiclePacket.class, new ALMoveVehicleHandler())
+                .inbound(ServerboundPlayerActionPacket.class, new ALPlayerActionHandler())
+                .inbound(ServerboundUseItemOnPacket.class, new ALUseItemOnHandler())
+                .inbound(ServerboundUseItemPacket.class, new ALUseItemHandler())
+                .inbound(ServerboundEditBookPacket.class, new ALEditBookHandler())
+                .outbound(ClientboundMoveVehiclePacket.class, new ALCMoveVehicleHandler())
+                .outbound(ClientboundForgetLevelChunkPacket.class, new ALForgetLevelChunkHandler())
+                .outbound(ClientboundLevelChunkWithLightPacket.class, new ALLevelChunkWithLightHandler())
+                .outbound(ClientboundCommandSuggestionsPacket.class, new ALCCommandSuggestionsHandler())
+                .outbound(ClientboundLoginPacket.class, new ALLoginHandler())
+                .outbound(ClientboundPlayerPositionPacket.class, new ALPlayerPositionHandler())
+                .outbound(ClientboundTeleportEntityPacket.class, new ALTeleportEntityHandler())
+                .outbound(ClientboundMoveMinecartPacket.class, new ALMoveMinecartHandler())
+                .outbound(ClientboundContainerSetContentPacket.class, new ALContainerSetContentHandler())
+                .outbound(ClientboundContainerSetSlotPacket.class, new ALContainerSetSlotHandler())
+                .outbound(ClientboundSetPlayerInventoryPacket.class, new ALSetPlayerInventoryHandler())
+                .outbound(ClientboundSetCursorItemPacket.class, new ALSetCursorItemHandler())
+                .build())
+            .build();
+    }
+
+    @Override
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
+            of(PlayerLoginEvent.Pre.class, this::onPlayerLoginEvent),
+            of(PlayerConnectionRemovedEvent.class, this::onServerConnectionRemoved)
+        );
+    }
+
+    @Override
+    public boolean enabledSetting() {
+        return CONFIG.client.extra.actionLimiter.enabled;
+    }
+
+    public void onPlayerLoginEvent(final PlayerLoginEvent.Pre event) {
+        ServerSession session = event.session();
+        if (CONFIG.client.extra.actionLimiter.exemptProxyAccount) {
+            var profile = session.getProfileCache().getProfile();
+            var proxyProfile = CACHE.getProfileCache().getProfile();
+            if (profile != null && proxyProfile != null && profile.getId().equals(proxyProfile.getId())) {
+                // exempt by not adding to limited connection set
+            } else {
+                limitedConnections.add(session);
+            }
+        } else {
+            limitedConnections.add(session);
+        }
+        if (!CONFIG.client.extra.actionLimiter.allowMovement) {
+            if (CACHE.getPlayerCache().getY() <= CONFIG.client.extra.actionLimiter.movementMinY) {
+                info("Below home min Y");
+                disconnect(session, "Movement not allowed");
+            } else if (MathHelper.distance2d(
+                CONFIG.client.extra.actionLimiter.movementHomeX,
+                CONFIG.client.extra.actionLimiter.movementHomeZ,
+                CACHE.getPlayerCache().getX(),
+                CACHE.getPlayerCache().getZ()
+            ) > CONFIG.client.extra.actionLimiter.movementDistance
+            ) {
+                info("Too far from home");
+                disconnect(session, "Movement not allowed");
+            }
+        }
+    }
+
+    public void onServerConnectionRemoved(final PlayerConnectionRemovedEvent event) {
+        limitedConnections.remove(event.serverConnection());
+    }
+
+    public boolean shouldLimit(final ServerSession serverConnection) {
+        return limitedConnections.contains(serverConnection);
+    }
+
+    public boolean isBlacklistedItem(final ItemStack item) {
+        if (item == Container.EMPTY_STACK) return false;
+        ItemData itemData = ItemRegistry.REGISTRY.get(item.getId());
+        if (itemData == null) return false;
+        String id = itemData.name();
+        return CONFIG.client.extra.actionLimiter.itemsBlacklist.contains(id);
+    }
+}

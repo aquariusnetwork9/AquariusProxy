@@ -11,15 +11,15 @@
     <import class="ch.qos.logback.core.ConsoleAppender"/>
     <import class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy"/>
 
-    <statusListener class="com.zenith.terminal.logback.PrintOnlyErrorLogbackStatusListener"/>
+    <statusListener class="com.aquarius.terminal.logback.PrintOnlyErrorLogbackStatusListener"/>
     <!-- Prevent logback compression failing during JVM stop https://logback.qos.ch/manual/configuration.html#shutdownHook -->
     <shutdownHook/>
 
-    <appender name="TERMINAL" class="com.zenith.terminal.logback.TerminalConsoleAppender">
-        <encoder class="com.zenith.terminal.logback.MCTextFormatANSIEncoder">
+    <appender name="TERMINAL" class="com.aquarius.terminal.logback.TerminalConsoleAppender">
+        <encoder class="com.aquarius.terminal.logback.MCTextFormatANSIEncoder">
             <pattern>[%d{yyyy/MM/dd HH:mm:ss}] [%logger{36}] [%level] %minecraftText%n</pattern>
         </encoder>
-        <filter class="com.zenith.terminal.logback.LogSourceFilter"/>
+        <filter class="com.aquarius.terminal.logback.LogSourceFilter"/>
         <filter class="ThresholdFilter">
             <level>INFO</level>
         </filter>
@@ -28,8 +28,8 @@
         <appender-ref ref="TERMINAL"/>
         <discardingThreshold>0</discardingThreshold>
     </appender>
-    <appender name="TEST_CAPTURE" class="com.zenith.TestLogCaptureAppender">
-        <filter class="com.zenith.terminal.logback.LogSourceFilter"/>
+    <appender name="TEST_CAPTURE" class="com.aquarius.TestLogCaptureAppender">
+        <filter class="com.aquarius.terminal.logback.LogSourceFilter"/>
         <filter class="ThresholdFilter">
             <level>INFO</level>
         </filter>

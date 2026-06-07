@@ -1,0 +1,15 @@
+package com.aquarius.mc.block;
+
+import com.aquarius.mc.JsonRegistrySpec;
+
+public class BlockRegistrySpec implements JsonRegistrySpec<Block> {
+    @Override
+    public String filePath() {
+        return "/mcdata/blocks.smile";
+    }
+
+    @Override
+    public Class<Block> dataClass() {
+        return Block.class;
+    }
+}

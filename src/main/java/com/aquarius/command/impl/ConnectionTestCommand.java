@@ -1,0 +1,170 @@
+package com.aquarius.command.impl;
+
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.aquarius.Proxy;
+import com.aquarius.command.api.Command;
+import com.aquarius.command.api.CommandCategory;
+import com.aquarius.command.api.CommandContext;
+import com.aquarius.command.api.CommandUsage;
+import com.aquarius.discord.Embed;
+import com.aquarius.feature.api.mcsrvstatus.MCSrvStatusApi;
+
+import java.util.function.Supplier;
+
+import static com.aquarius.Globals.CONFIG;
+import static com.aquarius.command.brigadier.CustomStringArgumentType.getString;
+import static com.aquarius.command.brigadier.CustomStringArgumentType.wordWithChars;
+import static com.aquarius.command.brigadier.ToggleArgumentType.getToggle;
+import static com.aquarius.command.brigadier.ToggleArgumentType.toggle;
+
+public class ConnectionTestCommand extends Command {
+    @Override
+    public CommandUsage commandUsage() {
+        return CommandUsage.builder()
+            .name("connectionTest")
+            .category(CommandCategory.INFO)
+            .description("""
+            Tests whether this proxy or another MC server is accessible from the public internet.
+            
+            If the test succeeds, that means other people can connect.
+            
+            If the test fails, either the `proxyIP` setting is not set to a public IP address or your instance is not
+            exposed on the public internet.
+            
+            To configure the `proxyIP` use the `help serverConnection` command
+            
+            On a VPS this is usually due to a firewall needing to be disabled.
+            
+            On a home PC you would need both disable any firewall and configure port forwarding in your router.
+            """)
+            .usageLines(
+                "",
+                "<address>",
+                "testOnStart on/off"
+            )
+            .build();
+    }
+
+    @Override
+    public LiteralArgumentBuilder<CommandContext> register() {
+        return command("connectionTest")
+            .executes(c -> {
+                if (!CONFIG.server.enabled) {
+                    c.getSource().getEmbed()
+                        .title("AquariusProxy Server Is Disabled")
+                        .errorColor()
+                        .description("""
+                            Not running connection test.
+                            
+                            Enable the server in the config.json
+                            """);
+                    return;
+                }
+                if (Proxy.getInstance().getServer() == null || !Proxy.getInstance().getServer().isListening()) {
+                    c.getSource().getEmbed()
+                        .title("AquariusProxy Server Not Listening")
+                        .errorColor()
+                        .description("""
+                            Not running connection test.
+                            
+                            The AquariusProxy server is not listening for connections
+                            """);
+                    return;
+                }
+                if (!CONFIG.server.ping.enabled) {
+                    c.getSource().getEmbed()
+                        .title("Pings Disabled")
+                        .errorColor()
+                        .description("""
+                            Pings must be enabled to perform the connection test.
+                            
+                            See `help serverConnection` to configure pings
+                            """);
+                    return;
+                }
+                var proxyAddress = CONFIG.server.getProxyAddress();
+                if (proxyAddress.startsWith("localhost")) {
+                    // we could still test if we queried for our own IP
+                    c.getSource().getEmbed()
+                        .title("Connection Test Failed")
+                        .errorColor()
+                        .description(
+                            """
+                            The `proxyIP` you have configured is currently set to `localhost`.
+                            
+                            This means you are either hosting AquariusProxy on your home PC or you have not set the public IP yet.
+                            
+                            To configure the `proxyIP` use the `help serverConnection` command.
+                            """);
+                    return;
+                }
+                executeConnectionTest(
+                    c.getSource().getEmbed(),
+                    proxyAddress,
+                    () -> """
+                        Unable to connect to configured `proxyIP`: %s
+                             
+                        This test is most likely failing due to your firewall needing to be disabled.
+                        
+                        For instructions on how to disable the firewall consult with your VPS provider. Each provider varies in steps.
+                         """.formatted(proxyAddress),
+                    () -> """
+                         Internal error while querying the MC server status API.
+                        
+                         This issue is not related to your proxy being inaccessible, try again later.
+                         """);
+            })
+            .then(argument("address", wordWithChars()).executes(c -> {
+                var proxyAddress = getString(c, "address");
+                executeConnectionTest(
+                    c.getSource().getEmbed(),
+                    proxyAddress,
+                    () -> """
+                        Unable to connect to: %s
+                        """.formatted(proxyAddress),
+                    () -> """
+                        Internal error while querying the MC server status API.
+                        
+                        This issue is not related to the server being inaccessible, try again later.
+                        """);
+                return OK;
+            }))
+            .then(literal("testOnStart")
+                      .then(argument("toggle", toggle()).executes(c -> {
+                          CONFIG.server.connectionTestOnStart = getToggle(c, "toggle");
+                          c.getSource().getEmbed()
+                              .title("Connection Test On Start " + toggleStrCaps(CONFIG.server.connectionTestOnStart))
+                              .primaryColor();
+                          return OK;
+                      })));
+    }
+
+    private void executeConnectionTest(
+        Embed embed,
+        String address,
+        Supplier<String> descriptionOnFailure,
+        Supplier<String> descriptionOnInternalFailure) {
+        MCSrvStatusApi.INSTANCE.getMCSrvStatus(address).ifPresentOrElse(response -> {
+            if (response.online()) {
+                embed
+                    .title("Connection Test Successful")
+                    .successColor()
+                    .addField("Address", address, false)
+                    .addField("Host Response", response.ip(), false)
+                    .addField("Port Response", response.port(), false);
+            } else {
+                embed
+                    .title("Connection Test Failed")
+                    .errorColor()
+                    .description(descriptionOnFailure.get())
+                    .addField("Address", address, false);
+            }
+        }, () -> {
+            embed
+                .title("Connection Test Error")
+                .errorColor()
+                .description(descriptionOnInternalFailure.get())
+                .addField("Address", address, false);
+        });
+    }
+}

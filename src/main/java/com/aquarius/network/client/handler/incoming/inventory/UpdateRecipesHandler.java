@@ -1,0 +1,16 @@
+package com.aquarius.network.client.handler.incoming.inventory;
+
+import com.aquarius.network.client.ClientSession;
+import com.aquarius.network.codec.ClientEventLoopPacketHandler;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundUpdateRecipesPacket;
+import org.jspecify.annotations.NonNull;
+
+import static com.aquarius.Globals.CACHE;
+
+public class UpdateRecipesHandler implements ClientEventLoopPacketHandler<ClientboundUpdateRecipesPacket, ClientSession> {
+    @Override
+    public boolean applyAsync(@NonNull ClientboundUpdateRecipesPacket packet, @NonNull ClientSession session) {
+        CACHE.getRecipeCache().setRecipeRegistry(packet);
+        return true;
+    }
+}

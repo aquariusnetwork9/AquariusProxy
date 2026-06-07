@@ -1,0 +1,30 @@
+package com.aquarius.feature.inventory.actions;
+
+import lombok.Data;
+import org.geysermc.mcprotocollib.protocol.codec.MinecraftPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundSetCarriedItemPacket;
+
+import static com.aquarius.Globals.CACHE;
+import static com.aquarius.Globals.CLIENT_LOG;
+
+@Data
+public class SetHeldItem implements InventoryAction {
+    private final int hotbarSlotId;
+
+    @Override
+    public MinecraftPacket packet() {
+        if (CACHE.getPlayerCache().getHeldItemSlot() == hotbarSlotId) {
+            return null;
+        }
+        if (hotbarSlotId < 0 || hotbarSlotId > 8) {
+            CLIENT_LOG.debug("Invalid slot ID: {}", this);
+            return null;
+        }
+        return new ServerboundSetCarriedItemPacket(hotbarSlotId);
+    }
+
+    @Override
+    public int containerId() {
+        return 0;
+    }
+}

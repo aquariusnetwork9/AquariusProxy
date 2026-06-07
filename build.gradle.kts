@@ -6,7 +6,7 @@ plugins {
     `maven-publish`
 }
 
-group = "com.zenith"
+group = "com.aquarius"
 version = "1.21.4"
 
 val javaReleaseVersion = 21
@@ -131,7 +131,7 @@ tasks {
         javaLauncher = javaLauncherProvider
         workingDir = layout.projectDirectory.dir("run").asFile
         classpath = sourceSets.main.get().runtimeClasspath
-        mainClass.set("com.zenith.Proxy")
+        mainClass.set("com.aquarius.Proxy")
         val args = listOf(
 			"-Xmx300m", "-XX:+UseG1GC", "-XX:+UseCompactObjectHeaders",
 			"--enable-native-access=ALL-UNNAMED", "--sun-misc-unsafe-memory-access=allow"
@@ -150,7 +150,7 @@ tasks {
         javaLauncher = javaLauncherProvider
         workingDir = layout.projectDirectory.dir("run").asFile
         classpath = sourceSets.main.get().runtimeClasspath
-        mainClass.set("com.zenith.util.CommandDocsGenerator")
+        mainClass.set("com.aquarius.util.CommandDocsGenerator")
         val outputFile = project.layout.buildDirectory.file("Commands.md")
         args = listOf(outputFile.get().asFile.absolutePath)
         environment("ZENITH_DEV", "true")
@@ -163,7 +163,7 @@ tasks {
         javaLauncher = javaLauncherProvider
         workingDir = layout.projectDirectory.dir("run").asFile
         classpath = sourceSets.main.get().runtimeClasspath
-        mainClass.set("com.zenith.Proxy")
+        mainClass.set("com.aquarius.Proxy")
     }
     val updateWikiTask = register<UpdateWikiTask>("updateWiki") {
         inputs.files(generateCommandDocsTask.get().outputs.files)
@@ -211,9 +211,9 @@ tasks {
 
         manifest {
             attributes(mapOf(
-                "Implementation-Title" to "ZenithProxy",
+                "Implementation-Title" to "AquariusProxy",
                 "Implementation-Version" to project.version,
-                "Main-Class" to "com.zenith.Proxy",
+                "Main-Class" to "com.aquarius.Proxy",
                 "Multi-Release" to "true",
                 "Enable-Native-Access" to "ALL-UNNAMED"
             ))
@@ -237,12 +237,12 @@ graalvmNative {
     binaries {
         named("main") {
             javaLauncher = javaLauncherProvider
-            imageName = "ZenithProxy"
-            mainClass = "com.zenith.Proxy"
+            imageName = "AquariusProxy"
+            mainClass = "com.aquarius.Proxy"
             quickBuild = false
             verbose = true
             sharedLibrary = false
-            // additional config in: `src/main/resources/META-INF/native-image/com.zenith/zenithproxy/native-image.properties
+            // additional config in: `src/main/resources/META-INF/native-image/com.aquarius/aquariusproxy/native-image.properties
             buildArgs.addAll(
                 "-H:DeadlockWatchdogInterval=30",
                 "-H:+CompactingOldGen",
@@ -285,7 +285,7 @@ graalvmNative {
             quickBuild = true
             verbose = true
             debug = true
-            // additional config in: `src/main/resources/META-INF/native-image/com.zenith/zenithproxy/native-image.properties
+            // additional config in: `src/main/resources/META-INF/native-image/com.aquarius/aquariusproxy/native-image.properties
             buildArgs.addAll(
                 "-H:DeadlockWatchdogInterval=30",
                 "-H:+CompactingOldGen",
@@ -335,14 +335,14 @@ publishing {
     }
     publications {
         create<MavenPublication>("snapshot") {
-            groupId = "com.zenith"
-            artifactId = "ZenithProxy"
+            groupId = "com.aquarius"
+            artifactId = "AquariusProxy"
             version = "${project.version}-SNAPSHOT"
             from(components["java"])
         }
         create<MavenPublication>("release") {
-            groupId = "com.zenith"
-            artifactId = "ZenithProxy"
+            groupId = "com.aquarius"
+            artifactId = "AquariusProxy"
             version = providers.environmentVariable("ZENITH_RELEASE_TAG").orElse("0.0.0+${project.version}").get()
             from(components["java"])
         }
