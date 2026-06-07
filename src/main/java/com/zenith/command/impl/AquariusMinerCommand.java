@@ -13,6 +13,8 @@ import com.zenith.command.api.CommandContext;
 import com.zenith.command.api.CommandUsage;
 import com.zenith.discord.Embed;
 
+import static com.mojang.brigadier.arguments.DoubleArgumentType.doubleArg;
+import static com.mojang.brigadier.arguments.DoubleArgumentType.getDouble;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
@@ -46,6 +48,8 @@ public class AquariusMinerCommand extends Command {
                 "keep add <item> | remove <item> | list | clear | reset",
                 "cave on/off",
                 "legit on/off  (break only blocks in line of sight)",
+                "reach <blocks>  (legit reach; lower = closer, better pickup; ~4.5 vanilla)",
+                "sprint on/off  (faster repositioning; off/on to apply)",
                 "fullstacks on/off",
                 "freeslots <n>  (store margin when full-stacks is off)",
                 "dryrun on/off  (log echest shulkers + abort, no pull/store)",
@@ -231,6 +235,18 @@ public class AquariusMinerCommand extends Command {
                     .description(CONFIG.client.extra.aquariusMiner.legitMine
                         ? "Breaks only blocks the bot can see (no reaching through walls)."
                         : "Fast engine - may reach through walls to occluded blocks.");
+            })))
+            .then(literal("reach").then(argument("blocks", doubleArg(1.0, 6.0)).executes(c -> {
+                CONFIG.client.extra.aquariusMiner.miningReach = getDouble(c, "blocks");
+                c.getSource().getEmbed()
+                    .title("Mining reach " + String.format("%.1f", CONFIG.client.extra.aquariusMiner.miningReach))
+                    .description("Lower keeps the bot close to what it mines (drops land next to it -> picked up better); higher reaches further (drops scatter). Vanilla is ~4.5. Live - applies on the next block.");
+            })))
+            .then(literal("sprint").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.aquariusMiner.sprint = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("Sprint " + toggleStrCaps(CONFIG.client.extra.aquariusMiner.sprint))
+                    .description("Faster repositioning, sub-box hops, and drop chasing. Toggle the miner off/on to apply (it's pushed when the module enables).");
             })))
             .then(literal("fullstacks").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.aquariusMiner.requireFullStacks = getToggle(c, "toggle");
@@ -460,7 +476,9 @@ public class AquariusMinerCommand extends Command {
                 + (CONFIG.client.extra.aquariusMiner.dropBadFood ? " (+bad food)" : ""))
             .addField("Cave Handling", toggleStr(CONFIG.client.extra.aquariusMiner.caveHandling)
                 + (CONFIG.client.extra.aquariusMiner.caveHandling ? " (fall " + CONFIG.client.extra.aquariusMiner.maxFallHeight + ")" : ""))
-            .addField("Mining", CONFIG.client.extra.aquariusMiner.legitMine ? "legit (line of sight)" : "fast (can reach through walls)")
+            .addField("Mining", (CONFIG.client.extra.aquariusMiner.legitMine ? "legit (line of sight)" : "fast (can reach through walls)")
+                + ", reach " + String.format("%.1f", CONFIG.client.extra.aquariusMiner.miningReach)
+                + ", sprint " + toggleStr(CONFIG.client.extra.aquariusMiner.sprint))
             .addField("Storage", toggleStr(CONFIG.client.extra.aquariusMiner.storageEnabled)
                 + (CONFIG.client.extra.aquariusMiner.requireFullStacks ? " (full stacks)" : " (margin " + CONFIG.client.extra.aquariusMiner.freeSlotsBeforeFull + ")")
                 + (CONFIG.client.extra.aquariusMiner.breakAndCollect ? ", break & collect" : ", leave"))

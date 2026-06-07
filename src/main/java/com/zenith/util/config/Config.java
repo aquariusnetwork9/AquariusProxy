@@ -395,6 +395,23 @@ public final class Config {
                  */
                 public boolean legitMine = true;
 
+                /**
+                 * Block reach (in blocks) the LEGIT miner uses to decide what it can break. LOWER keeps the bot
+                 * close to what it's mining, so broken blocks drop right next to it and get picked up as it moves
+                 * (the quarry mines from within the ore body); HIGHER lets it break from further (fewer repositions,
+                 * but drops scatter and the vacuum pass has to chase them). Vanilla interaction reach is ~4.5.
+                 * Only affects legit mining. The reposition goal tracks this so the bot always gets within reach.
+                 */
+                public double miningReach = 2.5;
+
+                /**
+                 * Let the pathfinder SPRINT while the miner is active — faster repositioning between blocks, sub-box
+                 * hops, and drop chasing. Pushed into CONFIG.client.extra.pathfinder.allowSprint on enable, restored
+                 * on disable. (The per-block DIG speed is vanilla physics — set by your pickaxe's Efficiency and any
+                 * Haste, not by this — so for faster digging give the bot an Efficiency NON-silk pickaxe.)
+                 */
+                public boolean sprint = true;
+
                 // --- drop collection ---
 
                 /**
