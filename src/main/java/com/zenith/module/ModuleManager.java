@@ -48,6 +48,7 @@ public class ModuleManager {
             new Spook(),
             new SpawnPatrol(),
             new Tasks(),
+            new VillagerTrader(),
             new VisualRange()
         ).forEach(m -> {
             addModule(m);
