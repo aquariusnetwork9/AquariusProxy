@@ -38,6 +38,7 @@ import java.util.List;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.zenith.Globals.BARITONE;
+import static com.zenith.Globals.BOT;
 import static com.zenith.Globals.CACHE;
 import static com.zenith.Globals.CONFIG;
 import static com.zenith.Globals.INVENTORY;
@@ -539,13 +540,16 @@ public class AquariusMiner extends Module {
             info("Clear - resuming mining.");
         }
 
-        // 1) drop junk so the inventory fills with keep-items only
-        if (cfg.dropJunk && junkTimer.tick(cfg.junkDropDelayTicks)) dropOneJunk();
-
-        // 1b) keep target blocks OUT of the hotbar (vanilla pickup fills hotbar slots first, which fights the
-        //     break auto-tool and never clears until a store). Shift one back into the main inventory per free
-        //     manager tick. Paced internally; falls through to mining when there's nothing to sweep.
-        sweepHotbarTargets();
+        // 1) hotbar discipline + junk disposal, both paced by the inventory manager (one action per
+        //    CONFIG.client.inventory.actionDelayTicks = the proxy's anticheat-safe inventory rate). The hotbar
+        //    is reserved for tools / ender chest / food, so first shift any TARGET block that vanilla pickup
+        //    dumped there back into the main inventory; when there's nothing to sweep, use the free manager
+        //    slot to DROP one junk stack. This dumps junk as aggressively as the manager allows without bursting.
+        if (!INVENTORY.hasActiveRequest()) {
+            if (!sweepHotbarTargets()) {
+                if (cfg.dropJunk) dropOneJunk();
+            }
+        }
 
         // 2) inventory full -> store, or pause if we can't. Only trigger when there's something to
         //    store (keep items present); a full-of-junk inventory self-resolves as junk is dropped.
@@ -865,11 +869,23 @@ public class AquariusMiner extends Module {
         // 2) break the nearest block the bot can actually SEE
         BlockPos los = nearestLineOfSightBlock();
         if (los != null) {
+            // Reserve the silk-touch pickaxe for ender-chest recovery: pick the best NON-silk tool ourselves and
+            // break with auto-tool OFF, so Baritone's auto-tool can't grab the silk pick (which would silk-mine
+            // deepslate -> drops as deepslate, not cobbled_deepslate, then tossed as non-keep). Switch the held
+            // tool first if needed, then break NEXT tick (selecting + breaking the same tick breaks with the
+            // previously-held tool - the same race the echest silk recovery guards against).
+            int tool = bestNonSilkToolSlot(los);
+            if (tool >= 0 && tool != CACHE.getPlayerCache().getHeldItemSlot()) {
+                if (!INVENTORY.hasActiveRequest())
+                    INVENTORY.submit(InventoryActionRequest.builder().owner(this)
+                        .actions(new SetHeldItem(tool)).priority(ACTION_PRIORITY).build());
+                return;
+            }
             legitBreakPos = los;
             legitBreakTicks = 0;
             legitRepathTicks = 0;
             legitRepathTarget = Long.MIN_VALUE;
-            BARITONE.breakBlock(los.x(), los.y(), los.z(), true);
+            BARITONE.breakBlock(los.x(), los.y(), los.z(), tool < 0);  // auto-tool only if no non-silk tool is held
             return;
         }
 
@@ -1384,6 +1400,27 @@ public class AquariusMiner extends Module {
             echBreakIssued = true;
         }
         echTimeout("break ender chest");
+    }
+
+    /**
+     * Hotbar slot (0-8) of the best NON-silk tool for breaking the block at {@code p}, by break speed — mirrors
+     * Baritone's ToolSet (which only scans the hotbar) but NEVER returns the silk pick, which is reserved for
+     * ender-chest recovery. -1 if the hotbar holds no non-silk tool. So a deepslate quarry mines with the
+     * fortune/plain pick (-> cobbled_deepslate), gravel/sand with a shovel, and the silk pick is left untouched
+     * even though it lives in the hotbar alongside the other tools.
+     */
+    private int bestNonSilkToolSlot(BlockPos p) {
+        var block = World.getBlock(p.x(), p.y(), p.z());
+        List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+        int best = -1;
+        double bestSpeed = -1;
+        for (int i = 36; i <= 44; i++) {
+            ItemStack s = inv.get(i);
+            if (s == Container.EMPTY_STACK || isSilkPick(s)) continue;
+            double speed = BOT.getInteractions().blockBreakSpeed(block, s);
+            if (speed > bestSpeed) { bestSpeed = speed; best = i - 36; }
+        }
+        return best;
     }
 
     /** Inventory slot (9-44) of a silk-touch pickaxe, or -1. */
@@ -2466,7 +2503,14 @@ public class AquariusMiner extends Module {
     }
 
     private void dropOneJunk() {
-        int slot = InventoryUtil.searchPlayerInventory(this::isJunk);
+        // Scan ONLY the main inventory + hotbar (9-44). Never the offhand (45 - the totem), armour (5-8),
+        // or crafting (0-4). InventoryUtil.searchPlayerInventory checks the offhand FIRST, which would
+        // happily drop the bot's life-insurance totem; iterate the safe slots ourselves instead.
+        List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+        int slot = -1;
+        for (int i = 9; i <= 44; i++) {
+            if (isJunk(inv.get(i))) { slot = i; break; }
+        }
         if (slot == -1) return;
         INVENTORY.submit(InventoryActionRequest.builder()
             .owner(this)
@@ -2478,7 +2522,9 @@ public class AquariusMiner extends Module {
     /**
      * Junk = anything we don't deliberately retain. PROTECTED (never dropped, checked FIRST so a keep-item
      * that also appears on the junk list still survives — e.g. "tuff"): keep-items, shulker boxes, the ender
-     * chest (field buffer), configured storage items, tools (damageable gear) and good food (for AutoEat).
+     * chest (field buffer), configured storage items, the totem of undying, the bot's working tools
+     * (pickaxe/shovel/sword via {@link #isWorkingTool}) and good food (for AutoEat). NOTE: other damageable
+     * gear — mob-dropped armour, stray axes/bows/etc. — is NOT protected and is dropped as junk.
      * Then the explicit {@link MinerConfig#junkItems} always-drop list and risky foods. Finally, with
      * {@code dropNonKeep} on, EVERYTHING else not protected is junk too — so stray cobblestone/dirt/gravel/
      * ores you don't keep are tossed and the inventory fills with keep-items only (mirrors Foreman's
@@ -2494,7 +2540,8 @@ public class AquariusMiner extends Module {
         if (isShulkerBox(stack)) return false;
         if (isEnderChestItem(stack)) return false;
         if (cfg.storageItems.contains(name)) return false;
-        if (isDamageable(stack)) return false;                 // tools / weapons / armour
+        if (name.equals("totem_of_undying")) return false;     // never drop a totem (AutoTotem's life insurance)
+        if (isWorkingTool(name)) return false;                 // the bot's own pickaxe / shovel / sword (incl. the silk pick)
         if (isGoodFood(stack)) return false;                   // edible food kept for AutoEat
         // explicit always-drop list + risky foods
         if (cfg.junkItems.contains(name)) return true;
@@ -2503,11 +2550,16 @@ public class AquariusMiner extends Module {
         return cfg.dropNonKeep;
     }
 
-    /** A damageable item (has a MAX_DAMAGE component) — tools, weapons, armour. Never treated as junk. */
-    private boolean isDamageable(@Nullable ItemStack s) {
-        if (s == null || s == Container.EMPTY_STACK) return false;
-        var data = ItemRegistry.REGISTRY.get(s.getId());
-        return data != null && data.components().get(DataComponentTypes.MAX_DAMAGE) != null;
+    /**
+     * The tools the bot actually uses and must keep: pickaxes (mining + the silk-touch recovery pick), shovels
+     * (gravel/sand), and swords (KillAura's weapon). Matched by name suffix. Everything else damageable —
+     * mob-dropped armour, random axes/hoes, bows, crossbows, tridents, shields, fishing rods, etc. — is NOT
+     * protected and is dropped as junk (the old logic blanket-protected ALL damageable gear, so picked-up mob
+     * armour piled up forever). The bot's EQUIPPED armour lives in the armour slots (5-8), which the junk scan
+     * never touches, so this only drops spare/junk gear sitting in the main inventory or hotbar.
+     */
+    private boolean isWorkingTool(@Nullable String name) {
+        return name != null && (name.endsWith("pickaxe") || name.endsWith("shovel") || name.endsWith("sword"));
     }
 
     private boolean isKeep(@Nullable ItemStack stack) {
