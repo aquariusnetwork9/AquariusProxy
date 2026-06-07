@@ -1,6 +1,7 @@
 package com.zenith.feature.inventory.actions;
 
 import com.zenith.cache.data.inventory.Container;
+import com.zenith.mc.item.ItemRegistry;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import lombok.Data;
@@ -11,7 +12,10 @@ import org.geysermc.mcprotocollib.protocol.data.game.inventory.ShiftClickItemAct
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClickPacket;
 
+import java.util.Objects;
+
 import static com.zenith.Globals.CACHE;
+import static com.zenith.Globals.CONFIG;
 import static com.zenith.Globals.CLIENT_LOG;
 
 @Data
@@ -33,37 +37,64 @@ public class ShiftClick implements InventoryAction {
             CLIENT_LOG.debug("Can't shift click, mouse stack is not empty: {}", this);
             return null;
         }
-        var itemStack = container.getItemStack(slotId);
-        if (isStackEmpty(itemStack)) {
+        var srcStack = container.getItemStack(slotId);
+        if (isStackEmpty(srcStack)) {
             CLIENT_LOG.debug("Can't shift click, item stack is empty: {}", this);
             return null;
         }
 
-        // todo: find potential destination slot
-        //  may cause anticheat issues as our changed slots are empty
-        //  and may also cause cache issues as we are relying on the server to send us back updated slots
+        // Compute the quick-move destination + a real changed-slots prediction (the old code left it empty,
+        // which anticheat servers like 2b2t/Grim reject - the item never moves). The item moves to the OTHER
+        // section of the window: for an open container (id != 0) that's the container slots <-> the 36 player
+        // slots; for the player inventory (id 0) it's main(9-35) <-> hotbar(36-44). We merge into matching
+        // partial stacks first, then fill empty slots - matching vanilla AbstractContainerMenu.quickMoveStack.
+        // handleContainerClick then applies these slots to the local cache (no reliance on a server resync).
+        final int size = container.getSize();
+        final int tgtStart, tgtEnd;
+        if (containerId == 0) {
+            if (slotId >= 36 && slotId <= 44) { tgtStart = 9; tgtEnd = 36; }     // hotbar -> main inventory
+            else { tgtStart = 36; tgtEnd = 45; }                                 // elsewhere -> hotbar
+        } else {
+            final int playerStart = size - 36;
+            if (slotId < playerStart) { tgtStart = playerStart; tgtEnd = size; } // container -> player
+            else { tgtStart = 0; tgtEnd = playerStart; }                         // player -> container
+        }
 
-        Int2ObjectMap<ItemStack> changedSlots = new Int2ObjectArrayMap<>();
+        final int maxStack = ItemRegistry.REGISTRY.get(srcStack.getId()).stackSize();
+        int remaining = srcStack.getAmount();
+        final Int2ObjectMap<ItemStack> changedSlots = new Int2ObjectArrayMap<>();
 
-        if (action == ShiftClickItemAction.LEFT_CLICK) {
-            if (container.getContainerId() == 0) {
-                // if src is a hotbar slot, destination is the first empty slot in the main inventory
-                //  and if src is an equippable item, destination is the first matching slot in armor equipment slots
-
-                // if src is a main inventory slot, destination is the first empty hotbar slot
-                //  and if src is an equippable item, destination is the first matching slot in armor equipment slots
-
-                // if src is an equipment or crafting slot, destination is the first empty main inventory slot
-
-                // and logic to combine stacked items
-            } else {
-                // very different logic depending on container type
+        if (maxStack > 1) {                                                      // 1) merge into matching partial stacks
+            for (int i = tgtStart; i < tgtEnd && remaining > 0; i++) {
+                final var s = container.getItemStack(i);
+                if (isStackEmpty(s) || s.getId() != srcStack.getId()
+                    || !Objects.equals(s.getDataComponents(), srcStack.getDataComponents())
+                    || s.getAmount() >= maxStack) continue;
+                final int moved = Math.min(maxStack - s.getAmount(), remaining);
+                changedSlots.put(i, new ItemStack(s.getId(), s.getAmount() + moved, s.getDataComponents()));
+                remaining -= moved;
             }
         }
+        for (int i = tgtStart; i < tgtEnd && remaining > 0; i++) {               // 2) fill empty slots
+            if (!isStackEmpty(container.getItemStack(i))) continue;
+            final int moved = Math.min(maxStack, remaining);
+            changedSlots.put(i, new ItemStack(srcStack.getId(), moved, srcStack.getDataComponents()));
+            remaining -= moved;
+        }
+
+        if (remaining == srcStack.getAmount()) {                                // nothing fit in the target section
+            CLIENT_LOG.debug("Can't shift click, no room in target section: {}", this);
+            return null;
+        }
+        changedSlots.put(slotId, remaining == 0                                 // 3) source slot emptied or reduced
+            ? Container.EMPTY_STACK
+            : new ItemStack(srcStack.getId(), remaining, srcStack.getDataComponents()));
 
         return new ServerboundContainerClickPacket(
             containerId,
-            CACHE.getPlayerCache().getActionId().get() + 1, // todo: logic unhandled, always requesting full state response from server
+            CONFIG.debug.inventoryRequestServerSyncOnAction
+                ? CACHE.getPlayerCache().getActionId().get() + 1
+                : CACHE.getPlayerCache().getActionId().get(),
             slotId,
             containerActionType,
             action,
