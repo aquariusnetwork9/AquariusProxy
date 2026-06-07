@@ -34,6 +34,7 @@ public class CommandManager {
         new AntiAFKCommand(),
         new AntiKickCommand(),
         new AntiLeakCommand(),
+        new AquariusMinerCommand(),
         new AuthCommand(),
         new AutoArmorCommand(),
         new AutoDisconnectCommand(),

@@ -167,12 +167,410 @@ public final class Config {
             public String whisperCommand = "msg";
             public int tpsBufferSize = 20;
             public final Tasks tasks = new Tasks();
+            public final AquariusMiner aquariusMiner = new AquariusMiner();
 
             public static final class Tasks {
                 public boolean enabled = true;
                 public final LinkedHashMap<String, Task> tasks = new LinkedHashMap<>();
                 public boolean logCommandActionOutput = true;
                 public boolean taskCommandExecutedNotification = true;
+            }
+
+            /**
+             * AquariusMiner — AFK bulk single-block quarry miner (baked in from the standalone
+             * AquariusMiner plugin). Quarries a chunk within a Y band then spirals to the next.
+             * Read everywhere via {@code CONFIG.client.extra.aquariusMiner.*}.
+             */
+            public static class AquariusMiner {
+                /** How a finite mining area is defined (or Unlimited = infinite outward spiral). */
+                public enum AreaMode { Unlimited, ChunksFromStart, Corners }
+
+                /** Where a ChunksFromStart box sits relative to the chunk the bot is in when enabled. */
+                public enum AreaAnchor { Center, Corner }
+
+                /** Whether the module is enabled on startup. */
+                public boolean enabled = false;
+
+                /**
+                 * Lowest Y level the quarry will mine (inclusive). Default sits just above bedrock
+                 * in the 1.21 deepslate layer.
+                 */
+                public int minY = -59;
+
+                /** Highest Y level the quarry will mine (inclusive). A thin band keeps holes shallow. */
+                public int maxY = -50;
+
+                // --- area ---
+
+                /**
+                 * How the mining area is bounded. Unlimited = infinite outward chunk spiral from where the
+                 * bot is when enabled. ChunksFromStart = a width x length box of chunks placed by
+                 * {@link #areaAnchor}. Corners = an explicit box between two X/Z coordinates (Y uses the
+                 * minY/maxY band). When a finite area is fully cleared the bot stores any remaining haul and
+                 * the run completes.
+                 */
+                public AreaMode areaMode = AreaMode.Unlimited;
+
+                /**
+                 * ChunksFromStart only: where the box sits relative to the start chunk. Center = the bot is
+                 * in the middle. Corner = the start chunk is a corner and the box extends in the direction
+                 * the bot is FACING (so face the area before enabling). Set width = length for a square.
+                 */
+                public AreaAnchor areaAnchor = AreaAnchor.Center;
+
+                /** ChunksFromStart only: area size along X, in chunks (1 chunk = 16 blocks). */
+                public int areaWidthChunks = 3;
+
+                /** ChunksFromStart only: area size along Z, in chunks (1 chunk = 16 blocks). */
+                public int areaLengthChunks = 3;
+
+                /** Corners only: first corner X/Z (block coords). The Y span comes from minY/maxY. */
+                public int corner1X = 0;
+                public int corner1Z = 0;
+                /** Corners only: second corner X/Z (block coords). */
+                public int corner2X = 0;
+                public int corner2Z = 0;
+
+                /** Ticks between mining drive steps / starting the next chunk (pacing, anti-spam). */
+                public int delayTicks = 4;
+
+                /** Drop "junk" items while mining so the inventory fills with keep-items only. */
+                public boolean dropJunk = true;
+
+                /** Ticks between junk-drop attempts. */
+                public int junkDropDelayTicks = 10;
+
+                /**
+                 * Drop ANYTHING that isn't deliberately retained, not just the {@link #junkItems} list. Protected
+                 * (never dropped): {@link #keepItems}, shulker boxes, the ender chest, {@link #storageItems}, tools
+                 * (damageable gear), and good food. With this on the inventory fills with keep-items only - stray
+                 * cobblestone, dirt, gravel, ores you don't keep, etc. are all tossed (mirrors the Foreman mod, which
+                 * drops anything that isn't a target/tool/food/echest/shulker). Off = legacy blacklist-only behaviour
+                 * (drop just the {@link #junkItems} below). Only applies when {@link #dropJunk} is on.
+                 */
+                public boolean dropNonKeep = true;
+
+                /**
+                 * Explicit always-drop list (in addition to {@link #dropNonKeep}'s catch-all). A keep-item is never
+                 * dropped even if it appears here - {@link #keepItems} takes precedence - so a default entry like
+                 * "tuff" is harmless once tuff is added to the keep-list.
+                 */
+                public List<String> junkItems = new ArrayList<>(List.of(
+                    "cobblestone", "stone", "diorite", "granite", "andesite",
+                    "gravel", "dirt", "smooth_basalt"
+                ));
+
+                /**
+                 * Also drop "risky" foods (see {@link #riskyFoods}) as junk. Normal foods (bread, cooked
+                 * meat, carrots, golden apples) are NOT in that list, so they're kept for an AutoEat module.
+                 * Only applies when {@link #dropJunk} is on.
+                 */
+                public boolean dropBadFood = true;
+
+                /**
+                 * Foods treated as junk when {@link #dropBadFood} is on: harmful-effect / teleport foods and
+                 * the (non-stackable) stews. Kept out of the main {@link #junkItems} list so it can be toggled
+                 * separately.
+                 */
+                public List<String> riskyFoods = new ArrayList<>(List.of(
+                    "rotten_flesh", "spider_eye", "poisonous_potato", "pufferfish",
+                    "chicken", "chorus_fruit",
+                    "suspicious_stew", "mushroom_stew", "rabbit_stew", "beetroot_soup"
+                ));
+
+                /**
+                 * The items the miner keeps and stores - the haul. Everything mined that isn't on this list is
+                 * dropped (when {@link #dropNonKeep} is on), the inventory-full trigger counts only these, and
+                 * shulkers are filled with them. Default is a normal-pickaxe deepslate quarry (cobbled_deepslate +
+                 * tuff); add "deepslate" if you mine WITH silk touch. Editable at runtime via the keep command.
+                 */
+                public List<String> keepItems = new ArrayList<>(List.of(
+                    "cobbled_deepslate", "tuff"
+                ));
+
+                /**
+                 * Only begin a storage cycle once the inventory is COMPLETELY packed — every keep stack at its
+                 * max count and no empty slots left — so shulkers fill with whole stacks. Turn off to use the
+                 * looser {@link #freeSlotsBeforeFull} margin instead (which can fire on partial stacks).
+                 */
+                public boolean requireFullStacks = true;
+
+                /**
+                 * Used only when {@link #requireFullStacks} is false. When the number of empty main-inventory
+                 * slots drops to this value or below, the inventory is considered full and the storage cycle
+                 * runs (or mining pauses if storage is disabled / no storage item is available).
+                 */
+                public int freeSlotsBeforeFull = 1;
+
+                // --- storage cycle ---
+                // PRIMARY model (mirrors the Foreman mod): whenever the bot carries an ENDER CHEST it is the field
+                // buffer - an empty shulker is pulled out of it, filled with the haul, and the FILLED shulker is
+                // stored back INTO the ender chest. Filled shulkers are never left on the ground or carried in the
+                // mining inventory. The settings below are only the FALLBACK for when no ender chest is carried.
+
+                /**
+                 * FALLBACK (no ender chest): when the inventory fills, place a shulker beside the bot and deposit
+                 * {@link #keepItems} into it. If false (and no ender chest), mining simply pauses when full. Ignored
+                 * when an ender chest is carried (the ender-chest buffer is used instead).
+                 */
+                public boolean storageEnabled = true;
+
+                /**
+                 * FALLBACK only (no ender chest): after depositing into the placed shulker, break it and pick it up
+                 * again (carry it) instead of leaving it behind full. Has no effect when an ender chest is carried -
+                 * there, filled shulkers always go back into the chest.
+                 */
+                public boolean breakAndCollect = false;
+
+                /**
+                 * Extra exact item names to treat as a storage container. Any "*_shulker_box" is detected
+                 * automatically; add e.g. "ender_chest" here to use one.
+                 */
+                public List<String> storageItems = new ArrayList<>();
+
+                /** Ticks between individual deposit shift-clicks (lets the inventory cache settle). */
+                public int depositDelayTicks = 2;
+
+                /**
+                 * Ticks a single storage step (place / open / close / break / pickup) may wait before the
+                 * cycle is aborted and mining pauses. 20 ticks/sec.
+                 */
+                public int storeStepTimeoutTicks = 300;
+
+                /**
+                 * Settle delay (ticks) the storage cycle waits BEFORE each rotation-driven action — placing,
+                 * opening/right-clicking, and breaking the ender chest / shulker. 2b2t's movement & rotation
+                 * anticheat is strict and the cycle otherwise fires these back-to-back (one per tick), which
+                 * desyncs the bot's position and trips "entity blocking the place position" / place timeouts.
+                 * Higher = slower but far more 2b2t-legit. 10 ticks = 0.5s; raise on a laggy/high-ping link.
+                 */
+                public int storeStepSettleTicks = 10;
+
+                /**
+                 * Break the field ender chest with a SILK-TOUCH pickaxe so it drops as an ENDER CHEST and is recovered
+                 * — not the 8 obsidian a normal/fortune pick yields (which destroys the chest). The bot picks a
+                 * silk-touch pickaxe from its inventory just for that break, then mining returns to its normal tool.
+                 * Keep a silk-touch pickaxe on the bot. If this is ON and none is found, the cycle pauses (after the
+                 * haul is already stored safely) rather than destroy the chest. Turn OFF only if you accept losing the
+                 * ender chest each cycle. Shulkers are unaffected (they drop themselves with any tool).
+                 */
+                public boolean silkTouchEchest = true;
+
+                /**
+                 * DRY-RUN diagnostic (default off). When the storage cycle opens the ender chest, log every
+                 * shulker inside it - item name, custom name, inner-stack count, and the empty/full verdict the
+                 * bot would use to pick a buffer - then ABORT without pulling or storing anything (the echest is
+                 * recovered and mining pauses). Use this to verify the server actually sends shulker contents so
+                 * the bot can tell empty buffers from your valuable full shulkers. If a full/named shulker logs
+                 * "0 inner stacks, isEmpty=true", content-reading is broken and storage is unsafe on that account.
+                 */
+                public boolean dryRunStorage = false;
+
+                /**
+                 * Safety cap: if a single chunk's clear runs this many ticks without finishing
+                 * (e.g. the box reaches into an unloaded chunk), force-advance to the next chunk.
+                 * 20 ticks/sec, so 3600 = 3 minutes.
+                 */
+                public int maxClearTicks = 3600;
+
+                /**
+                 * After a sub-box clears (or times out), VERIFY it: scan that cell for any solid blocks still
+                 * standing. A lag spike / desync can make clearArea report a box DONE (or give up on the stall
+                 * cap) with blocks left, leaving gaps. If leftovers are found, re-issue the SAME sub-box up to
+                 * {@link #clearRetries} times before moving on.
+                 */
+                public boolean verifyClears = true;
+
+                /** Max times to re-run a sub-box that still has blocks after a clear/stall (see {@link #verifyClears}). */
+                public int clearRetries = 2;
+
+                // --- mining style ---
+
+                /**
+                 * LEGIT mining (line-of-sight). On (default), the bot breaks ONLY blocks it can actually see - the
+                 * same reach/sightline the server enforces - instead of letting the quarry engine "ghost-hand" through
+                 * walls to occluded blocks. It breaks the nearest visible block and repositions when none is in view,
+                 * so a quarry mines from exposed faces inward like a player would. Turn OFF for the faster batch engine
+                 * (which can reach through blocks) when looking legit doesn't matter. Slightly slower while on.
+                 */
+                public boolean legitMine = true;
+
+                // --- drop collection ---
+
+                /**
+                 * Clear each chunk in clearBoxSize x clearBoxSize sub-boxes (full height) instead of the whole
+                 * 16x16 chunk in one go. The bot repositions between sub-boxes and walks back over the ground it
+                 * just dug, so it picks up the drops instead of leaving them on the floor to despawn. Smaller =
+                 * more thorough collection (more repositioning); 16 = the whole chunk at once (old behaviour).
+                 */
+                public int clearBoxSize = 8;
+
+                /**
+                 * Mine a bounded area in horizontal LAYERS this many blocks tall, TOP-DOWN: the bot clears this
+                 * slice across the whole area before dropping to the next, so it never tunnels one cell to minY
+                 * while the rest stands untouched. 1 = peel one block-level at a time across the area (most even,
+                 * most travel); larger = fewer full-area passes (faster) but it digs this many deep per spot first.
+                 * Set it to your full Y band (maxY-minY+1) for the old per-cell full-height behaviour. The
+                 * unbounded spiral always clears full-height per chunk (no infinite top to pre-sweep).
+                 */
+                public int layerHeight = 1;
+
+                /**
+                 * After each sub-box clears, do a VACUUM pass: walk over every kept item (in {@link #keepItems})
+                 * still lying on the ground in that box and pick it up before moving on, so nothing despawns.
+                 * Time-capped by {@link #collectMaxSeconds} and skips anything unreachable, so it can't hang.
+                 */
+                public boolean collectDrops = true;
+
+                /** Cap (seconds) on the vacuum pass per sub-box; past it, the bot gives up the stragglers and moves on. */
+                public int collectMaxSeconds = 20;
+
+                // --- deposit chests (haul filled shulkers to a base) ---
+                // Adds base trips ON TOP of the ender-chest buffer for a near-unlimited run. The buffer always
+                // stores filled shulkers back into the ender chest; with this on, once the chest fills with filled
+                // shulkers the bot hauls them to fixed DEPOSIT chests at a base, then visits a separate SUPPLY chest
+                // to restock empty shulkers. With this OFF, the run simply ends once the ender chest is packed full.
+                // Chest locations are set by command (the proxy is headless, so there is no in-world crosshair).
+
+                /** Add base-chest hauling trips on top of the ender-chest buffer (off = end the run when the chest is full). */
+                public boolean depositToChests = false;
+
+                /** DEPOSIT chest locations ("x y z" each) where FILLED shulkers are dropped off. */
+                public List<String> depositChests = new ArrayList<>();
+
+                /**
+                 * SUPPLY chest locations ("x y z" each) where EMPTY shulkers are taken from. Keep these SEPARATE
+                 * from the deposit chests. Only used when {@link #refillEmpties} is on.
+                 */
+                public List<String> supplyChests = new ArrayList<>();
+
+                // (No "deposit after N shulkers" knob: the ender chest is the field buffer, so a trip fires once it
+                // runs out of empties - the batch size is just how many empty shulkers you keep stocked / refill.)
+
+                /**
+                 * On a trip, after dropping off filled shulkers, visit a supply chest and pull a fresh batch of
+                 * empty shulkers. This is what makes a run effectively unlimited. Off = drop-offs only, and the
+                 * run ends when the empties you started with run out.
+                 */
+                public boolean refillEmpties = true;
+
+                /** How many empty shulkers to grab from a supply chest per trip. */
+                public int emptiesPerTrip = 6;
+
+                /** Don't walk to a chest farther than this many blocks (straight-line); past it the bot pauses. 0 = no limit. */
+                public int maxDepositDistance = 1024;
+
+                // --- cave handling ---
+                // Relax ZenithProxy's pathfinder fall/jump limits while the module is active so the bot drops
+                // into caves to reach blocks instead of detouring or stalling. These are pushed into
+                // CONFIG.client.extra.pathfinder.* on enable and restored on disable. Lava is still never
+                // walked/fallen into (the pathfinder costs it out). Balanced defaults; raise for more reach.
+
+                /** Master toggle for the relaxed cave movement profile below. */
+                public boolean caveHandling = true;
+
+                /** Tallest no-water drop the bot will take (pathfinder maxFallHeightNoWater; stock default 3). */
+                public int maxFallHeight = 20;
+
+                /** Allow placing a block mid-jump to bridge a parkour gap (pathfinder allowParkourPlace). */
+                public boolean allowParkourPlace = true;
+
+                /** Allow stepping diagonally downward into caves (pathfinder allowDiagonalDescend). */
+                public boolean allowDiagonalDescend = true;
+
+                /** Allow running parkour jumps across gaps (pathfinder allowParkour). Off for Balanced. */
+                public boolean allowParkour = false;
+
+                /** Allow stepping diagonally upward (pathfinder allowDiagonalAscend). Off for Balanced. */
+                public boolean allowDiagonalAscend = false;
+
+                // --- safety / lifecycle ---
+
+                /**
+                 * When the run ends — the finite area is fully cleared, or storage is exhausted (no shulkers
+                 * left / chest full) — also disconnect the bot from the server. Handy for an AFK run so it
+                 * leaves cleanly once everything is packed. Off = just stop and stay connected.
+                 */
+                public boolean autoDisconnect = false;
+
+                /** Pause mining while another (non-self) player is within {@link #playerPauseRange} blocks. */
+                public boolean pauseOnPlayer = true;
+
+                /** Range in blocks for {@link #pauseOnPlayer}. */
+                public double playerPauseRange = 48.0;
+
+                // --- tool restock ---
+
+                /**
+                 * When the bot runs out of fresh tools, run a restock cycle: place the {@link #restockSourceItem}
+                 * (an ender chest), pull out the tool-shulker (a shulker that contains a fresh tool), place it,
+                 * take a fresh tool, break and recover the shulker, put it back in the ender chest, then recover
+                 * the chest. Lets one ender-chest slot hold a whole shulker of spare pickaxes.
+                 *
+                 * SETUP: the tool-shulker must be a DIFFERENT colour from any empty loot shulkers you carry —
+                 * the bot places shulkers by item type, so a unique colour guarantees it places the right one.
+                 */
+                public boolean restockTools = false;
+
+                /** The source container the tool-shulker lives in (placed/opened during a restock). */
+                public String restockSourceItem = "ender_chest";
+
+                /** Remaining-durability threshold below which a tool is considered spent and gets restocked. */
+                public int restockBelowDurability = 60;
+
+                /** Item-name suffix identifying the tool to restock (e.g. "pickaxe", "shovel"). */
+                public String restockToolKeyword = "pickaxe";
+
+                /**
+                 * Also keep a fresh SHOVEL alongside the main restock tool, so gravel/sand mines fast instead of
+                 * being slogged through with a pickaxe. The tool-shulker must also hold spare shovels. Off, or when
+                 * {@link #restockToolKeyword} is already "shovel", this does nothing.
+                 */
+                public boolean alsoRestockShovel = true;
+
+                // --- packet sniffer (debug) ---
+                // A separate module that taps ZenithProxy's CLIENT_REGISTRY (bot <-> 2b2t): every packet to/from the
+                // server is captured into a rolling {@link #sniffBufferLines}-line buffer, dumpable on demand. Enabling
+                // it registers the codec; disabling unregisters it (zero overhead when off). See /aquariusminer sniff.
+
+                /** Master toggle for the packet sniffer. Enabling registers the client packet codec. */
+                public boolean sniffEnabled = false;
+
+                /** Also log every captured packet live as it arrives (vs. quietly filling the rolling buffer only). */
+                public boolean sniffLive = false;
+
+                /** Include the full packet contents (toString) instead of just the class name. */
+                public boolean sniffBody = false;
+
+                /** Which direction to capture: "in" (from server), "out" (to server), or "both". */
+                public String sniffDir = "both";
+
+                /** Only capture packets whose class name contains this (case-insensitive). Empty = no filter. */
+                public String sniffFilter = "";
+
+                /** Scenario template name limiting capture to a packet group (e.g. movement/combat/chunks). Empty = all. */
+                public String sniffTemplate = "";
+
+                /** The rolling buffer keeps only the most recent N captured lines (oldest evicted). */
+                public int sniffBufferLines = 250;
+
+                // --- food restock ---
+                // 2b bots keep food (golden carrots, enchanted/normal golden apples, cooked meat) in a FOOD-SHULKER
+                // inside the ender chest. The built-in AutoEat module eats it; this tops it up. When the carried food
+                // drops below {@link #minFoodOnHand} the bot cracks that food-shulker - the SAME place/open/take/break/
+                // return cycle as the tool-shulker - and refills by preference: golden carrot > enchanted golden apple
+                // > golden apple > cooked > other safe food (safety per ZenithProxy's food registry; risky foods are
+                // never taken). It triggers on COUNT, not hunger, so food is staged before AutoEat goes hungry.
+                // BEST-EFFORT: with no food-shulker in the ender chest the bot just warns and keeps mining (no pause).
+
+                /** Restock food from a FOOD-SHULKER in the ender chest when the carried food runs low. */
+                public boolean restockFood = false;
+
+                /** Trigger the food restock when the total carried (safe) food drops below this count. 1 = last bite. */
+                public int minFoodOnHand = 1;
+
+                /** Take food from the shulker until the carried (safe) food reaches this count (or the shulker empties). */
+                public int foodRestockCount = 64;
             }
 
             public static final class Waypoints {
