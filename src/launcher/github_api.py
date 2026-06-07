@@ -15,7 +15,7 @@ class GitHubAPI:
         self.launch_config = launch_config
 
     def _get_base_url(self):
-        if self.launch_config.repo_owner == "rfresh2" and self.launch_config.repo_name == "ZenithProxy":
+        if self.launch_config.repo_owner == "rfresh2" and self.launch_config.repo_name == "AquariusProxy":
             host = "github.2b2t.vc"
         else:
             host = "api.github.com"
@@ -23,7 +23,7 @@ class GitHubAPI:
 
     def _get_headers(self):
         return {
-            "User-Agent": "ZenithProxy/" + self.launch_config.local_version,
+            "User-Agent": "AquariusProxy/" + self.launch_config.local_version,
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
             "Connection": "close",

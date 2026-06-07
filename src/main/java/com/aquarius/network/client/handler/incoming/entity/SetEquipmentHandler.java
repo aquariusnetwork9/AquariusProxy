@@ -1,0 +1,27 @@
+package com.aquarius.network.client.handler.incoming.entity;
+
+import com.aquarius.cache.data.entity.EntityLiving;
+import com.aquarius.network.client.ClientSession;
+import com.aquarius.network.codec.ClientEventLoopPacketHandler;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.Equipment;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundSetEquipmentPacket;
+import org.jspecify.annotations.NonNull;
+
+import static com.aquarius.Globals.CACHE;
+
+public class SetEquipmentHandler implements ClientEventLoopPacketHandler<ClientboundSetEquipmentPacket, ClientSession> {
+    @Override
+    public boolean applyAsync(@NonNull ClientboundSetEquipmentPacket packet, @NonNull ClientSession session) {
+        var entity = CACHE.getEntityCache().get(packet.getEntityId());
+        if (entity instanceof EntityLiving e) {
+            var equipmentMap = e.getEquipment();
+            var packetEquipment = packet.getEquipment();
+            for (int i = 0; i < packetEquipment.size(); i++) {
+                final Equipment equipment = packetEquipment.get(i);
+                equipmentMap.put(equipment.getSlot(), equipment.getItem());
+            }
+        }
+        return true;
+    }
+
+}

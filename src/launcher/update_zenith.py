@@ -29,7 +29,7 @@ def rest_update_check(config: LaunchConfig, api: GitHubAPI, asset_name, executab
     if not latest_release_and_ver:
         raise RestUpdateError("Failed to get latest release for channel: " + config.release_channel)
     if latest_release_and_ver[1] == config.version and os.path.isfile(config.launch_dir + executable_name):
-        info(f"ZenithProxy up-to-date: {config.version}")
+        info(f"AquariusProxy up-to-date: {config.version}")
         return
     rest_get_assets(config, api, asset_name, latest_release_and_ver)
 
@@ -72,21 +72,21 @@ def rest_get_assets(config: LaunchConfig, api: GitHubAPI, asset_name, release_an
 
 
 def java_update_check(config: LaunchConfig, api: GitHubAPI):
-    rest_update_check(config, api, "ZenithProxy.jar", "ZenithProxy.jar")
+    rest_update_check(config, api, "AquariusProxy.jar", "AquariusProxy.jar")
 
 
 def java_get_version(config: LaunchConfig, api: GitHubAPI, target_version):
     info(f"Getting version: {target_version}")
-    rest_get_version(config, api, "ZenithProxy.jar", target_version)
+    rest_get_version(config, api, "AquariusProxy.jar", target_version)
 
 
 def linux_native_update_check(config: LaunchConfig, api: GitHubAPI):
-    rest_update_check(config, api, "ZenithProxy.zip", "ZenithProxy")
+    rest_update_check(config, api, "AquariusProxy.zip", "AquariusProxy")
 
 
 def linux_native_get_version(config: LaunchConfig, api: GitHubAPI, target_version):
     info(f"Getting version: {target_version}")
-    rest_get_version(config, api, "ZenithProxy.zip", target_version)
+    rest_get_version(config, api, "AquariusProxy.zip", target_version)
 
 
 def git_read_version(config: LaunchConfig):
@@ -107,7 +107,7 @@ def git_read_version(config: LaunchConfig):
 def update_zenith_exec(config, api):
     try:
         if config.auto_update:
-            info("Checking for ZenithProxy update...")
+            info("Checking for AquariusProxy update...")
             if config.release_channel == "git":
                 git_update_check()
             elif config.release_channel.startswith("java"):
@@ -126,4 +126,4 @@ def update_zenith_exec(config, api):
             git_read_version(config)
         config.write_launch_config()
     except:
-        exception("Error checking for ZenithProxy update")
+        exception("Error checking for AquariusProxy update")

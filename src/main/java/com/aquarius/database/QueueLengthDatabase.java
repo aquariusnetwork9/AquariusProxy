@@ -1,0 +1,53 @@
+package com.aquarius.database;
+
+import com.aquarius.event.db.DatabaseTickEvent;
+import com.aquarius.feature.queue.Queue;
+
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+
+import static com.aquarius.Globals.DATABASE_LOG;
+import static com.aquarius.Globals.EVENT_BUS;
+
+public class QueueLengthDatabase extends LockingDatabase {
+    public QueueLengthDatabase(QueryExecutor queryExecutor, RedisClient redisClient) {
+        super(queryExecutor, redisClient);
+    }
+
+    @Override
+    public void subscribeEvents() {
+        EVENT_BUS.subscribe(this,
+            DatabaseTickEvent.class, this::handleTickEvent
+        );
+    }
+
+    @Override
+    public String getLockKey() {
+        return "QueueLength";
+    }
+
+    @Override
+    public Instant getLastEntryTime() {
+        try (var handle = this.queryExecutor.jdbi().open()) {
+            var result = handle.select("SELECT time FROM queuelength ORDER BY time DESC LIMIT 1;")
+                .mapTo(OffsetDateTime.class)
+                .findOne();
+            if (result.isEmpty()) {
+                DATABASE_LOG.warn("QueueLength database unable to sync. Database empty?");
+                return Instant.EPOCH;
+            }
+            return result.get().toInstant();
+        }
+    }
+
+    public void handleTickEvent(final DatabaseTickEvent event) {
+        var queueStatus = Queue.getQueueStatus();
+        this.insert(Instant.now(), handle ->
+            handle.createUpdate("INSERT INTO queuelength (time, regular, prio) VALUES (:time, :regular, :prio)")
+                .bind("time", Instant.now().atOffset(ZoneOffset.UTC))
+                .bind("regular", (short) queueStatus.regular())
+                .bind("prio", (short) queueStatus.prio())
+                .execute());
+    }
+}

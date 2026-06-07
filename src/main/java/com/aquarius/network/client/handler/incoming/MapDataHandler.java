@@ -1,0 +1,15 @@
+package com.aquarius.network.client.handler.incoming;
+
+import com.aquarius.network.client.ClientSession;
+import com.aquarius.network.codec.ClientEventLoopPacketHandler;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundMapItemDataPacket;
+
+import static com.aquarius.Globals.CACHE;
+
+public class MapDataHandler implements ClientEventLoopPacketHandler<ClientboundMapItemDataPacket, ClientSession> {
+    @Override
+    public boolean applyAsync(ClientboundMapItemDataPacket packet, ClientSession session) {
+        CACHE.getMapDataCache().upsert(packet);
+        return true;
+    }
+}

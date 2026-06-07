@@ -1,0 +1,38 @@
+package com.aquarius.feature.actionlimiter.handlers.outbound;
+
+import com.aquarius.network.codec.PacketHandler;
+import com.aquarius.network.server.ServerSession;
+import com.aquarius.util.math.MathHelper;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PositionElement;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundTeleportEntityPacket;
+
+import static com.aquarius.Globals.CACHE;
+import static com.aquarius.Globals.CONFIG;
+
+public class ALTeleportEntityHandler implements PacketHandler<ClientboundTeleportEntityPacket, ServerSession> {
+    @Override
+    public ClientboundTeleportEntityPacket apply(final ClientboundTeleportEntityPacket packet, final ServerSession session) {
+        if (CONFIG.client.extra.actionLimiter.allowMovement) return packet;
+        var entity = CACHE.getEntityCache().get(packet.getId());
+        if (entity == null) return packet;
+        if (entity.getPassengerIds().isEmpty()) return packet;
+        if (entity.getPassengerIds().contains(CACHE.getPlayerCache().getEntityId())) {
+            // player is passenger and their pos will now match the vehicle pos
+            if (MathHelper.distance2d(
+                CONFIG.client.extra.actionLimiter.movementHomeX,
+                CONFIG.client.extra.actionLimiter.movementHomeZ,
+                packet.getRelatives().contains(PositionElement.X)
+                    ? packet.getX() + CACHE.getPlayerCache().getX()
+                    : packet.getX(),
+                packet.getRelatives().contains(PositionElement.Z)
+                    ? packet.getZ() + CACHE.getPlayerCache().getZ()
+                    : packet.getZ()
+            ) > CONFIG.client.extra.actionLimiter.movementDistance
+            ) {
+                session.disconnect("ActionLimiter: Movement not allowed");
+                return null;
+            }
+        }
+        return packet;
+    }
+}

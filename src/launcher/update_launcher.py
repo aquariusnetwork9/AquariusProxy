@@ -68,11 +68,11 @@ def update_launcher_exec(config: LaunchConfig, api: GitHubAPI):
 
 def get_launcher_asset_zip_file_name(is_pyinstaller, is_windows_python, os_platform: OperatingSystem, os_arch: CpuArch):
     if is_pyinstaller:
-        return f"ZenithProxy-launcher-{os_platform.value}-{os_arch.value}.zip"
+        return f"AquariusProxy-launcher-{os_platform.value}-{os_arch.value}.zip"
     elif is_windows_python:
-        return "ZenithProxy-launcher-windows-python-amd64.zip"
+        return "AquariusProxy-launcher-windows-python-amd64.zip"
     else:
-        return "ZenithProxy-launcher-python.zip"
+        return "AquariusProxy-launcher-python.zip"
 
 
 # The executable name we're currently running

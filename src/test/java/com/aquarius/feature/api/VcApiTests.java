@@ -1,0 +1,29 @@
+package com.aquarius.feature.api;
+
+import com.aquarius.feature.api.vcapi.VcApi;
+import com.aquarius.feature.api.vcapi.model.PlaytimeResponse;
+import com.aquarius.feature.api.vcapi.model.SeenResponse;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+public class VcApiTests {
+
+    final VcApi api = new VcApi();
+
+
+//    @Test
+    public void seen() {
+        SeenResponse seenResponse = api.getSeen("rfresh2").get();
+        assertNotNull(seenResponse);
+        System.out.println(seenResponse);
+    }
+
+//    @Test
+    public void playtime() {
+        PlaytimeResponse playtime = api.getPlaytime("rfresh2").get();
+        assertNotNull(playtime);
+        assertTrue(playtime.playtimeSeconds() > 0);
+        System.out.println(playtime);
+    }
+}

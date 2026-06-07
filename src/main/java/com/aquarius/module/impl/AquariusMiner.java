@@ -1,0 +1,2662 @@
+package com.aquarius.module.impl;
+
+import com.github.rfresh2.EventConsumer;
+import com.aquarius.Proxy;
+import com.aquarius.cache.data.entity.Entity;
+import com.aquarius.cache.data.entity.EntityPlayer;
+import com.aquarius.cache.data.inventory.Container;
+import com.aquarius.event.client.ClientBotTick;
+import com.aquarius.feature.inventory.InventoryActionRequest;
+import com.aquarius.feature.inventory.actions.CloseContainer;
+import com.aquarius.feature.inventory.actions.DropItem;
+import com.aquarius.feature.inventory.actions.MoveToHotbarSlot;
+import com.aquarius.feature.inventory.actions.SetHeldItem;
+import com.aquarius.feature.inventory.actions.ShiftClick;
+import com.aquarius.feature.inventory.util.InventoryUtil;
+import com.aquarius.feature.pathfinder.goals.GoalNear;
+import com.aquarius.feature.pathfinder.util.RotationUtils;
+import com.aquarius.feature.player.World;
+import com.aquarius.mc.block.BlockPos;
+import com.aquarius.mc.food.FoodData;
+import com.aquarius.mc.food.FoodRegistry;
+import com.aquarius.mc.item.ItemData;
+import com.aquarius.mc.item.ItemRegistry;
+import com.aquarius.module.api.Module;
+import com.aquarius.util.math.MathHelper;
+import com.aquarius.util.timer.Timer;
+import com.aquarius.util.timer.Timers;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.MetadataTypes;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
+import org.geysermc.mcprotocollib.protocol.data.game.inventory.DropItemAction;
+import org.geysermc.mcprotocollib.protocol.data.game.inventory.MoveToHotbarAction;
+import org.geysermc.mcprotocollib.protocol.data.game.inventory.ShiftClickItemAction;
+import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
+import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
+import org.jspecify.annotations.Nullable;
+
+import java.util.List;
+
+import static com.github.rfresh2.EventConsumer.of;
+import static com.aquarius.Globals.BARITONE;
+import static com.aquarius.Globals.BOT;
+import static com.aquarius.Globals.CACHE;
+import static com.aquarius.Globals.CONFIG;
+import static com.aquarius.Globals.INVENTORY;
+import com.aquarius.util.config.Config.Client.Extra.AquariusMiner.AreaAnchor;
+import com.aquarius.util.config.Config.Client.Extra.AquariusMiner.AreaMode;
+
+/**
+ * The mining brain. Drives stock AquariusProxy's {@code BARITONE.clearArea} to quarry one chunk at a
+ * time, walking an outward square spiral of chunks starting from wherever the bot is when enabled.
+ * When the inventory fills it runs a storage cycle: places a container (shulker box) beside the bot,
+ * deposits only the kept items, then resumes mining.
+ *
+ * {@code clearArea} is itself a box-confined, bottom-up, nearest-first quarry (see
+ * {@code ClearAreaProcess}), so it inherently avoids the wandering / whole-world rescans that the
+ * type-targeted {@code mine()} process suffers from. Both the mining drive and the storage cycle are
+ * polling state machines run from the client tick thread, so no cross-thread state is shared with
+ * Baritone's pathing executor.
+ */
+public class AquariusMiner extends Module {
+    private static final int ACTION_PRIORITY = 3000;
+
+    private final Timer mineTimer = Timers.tickTimer();
+    private final Timer junkTimer = Timers.tickTimer();
+    private final Timer depositTimer = Timers.tickTimer();
+
+    // outward-spiral state, expressed as a chunk offset from the spiral-centre chunk
+    private int startCX, startCZ;
+    private int sx, sz, sdx, sdz, segLen, segRemaining, segsDone;
+    private int curCX, curCZ;
+
+    // bounded-area state (resolved at enable / reconnect from the configured area mode). When
+    // areaLimited is false the spiral is infinite and the grid/bounds fields are unused.
+    private boolean areaLimited = false;
+    private int areaMinX, areaMaxX, areaMinZ, areaMaxZ;     // block coords inclusive (X/Z); Y = minY..maxY
+    private int gridCxMin, gridCxMax, gridCzMin, gridCzMax; // chunk grid covering the box
+    private int areaChunksTotal, areaChunksDone;            // progress (per horizontal layer) + completion detection
+    private int curLayerTopY = 0;                          // bounded area: top Y of the layer being swept (descends top-down)
+    private boolean finishAfterStore = false;              // area cleared -> store remainder -> complete
+
+    // cave-handling snapshot of CONFIG.client.extra.pathfinder.* (restored on disable)
+    private boolean cavePushed = false;
+    private int savedMaxFall;
+    private boolean savedParkour, savedParkourPlace, savedDiagDescend, savedDiagAscend, savedSprint;
+
+    // live re-anchor: an area command (e.g. '.aqm here L W') sets the area config on the command thread and
+    // raises this flag; the TICK thread re-resolves the area + re-seeds the spiral, so there's no cross-thread
+    // mutation of the spiral state.
+    private volatile boolean reanchorRequested = false;
+
+    // mining state machine
+    private boolean areaActive = false; // we've asked clearArea to run for (curCX,curCZ)
+    private boolean sawActive = false;  // we've observed Baritone pick the clear up (1-tick lag guard)
+    private int clearTicks = 0;         // ticks the current clear has been running
+
+    // sub-box subdivision: clear each chunk in clearBoxSize cells so the bot repositions and walks back
+    // over (and collects) its drops. subBoxes holds the {x1,z1,x2,z2} cells of the current chunk.
+    private final java.util.List<int[]> subBoxes = new java.util.ArrayList<>();
+    private int subBoxIdx = 0;
+    private int subBoxRetries = 0;      // re-runs of the current sub-box after a verify found leftovers (1.3.2 port)
+
+    // legit (line-of-sight) break driver: when legitMine is on, the plugin breaks blocks ITSELF - only ones the
+    // bot can actually SEE (RotationUtils.reachable) - instead of letting clearArea ghost-hand through walls.
+    private boolean legitActive = false;             // a sub-box is being cleared by the legit driver
+    private @Nullable BlockPos legitBreakPos = null; // the block currently being broken
+    private int legitBreakTicks = 0;                 // ghost-block / stuck cap on the current block
+    private int legitRepathTicks = 0;                // ticks spent repositioning to get a sightline
+    private long legitRepathTarget = Long.MIN_VALUE; // packed pos currently being repositioned toward (none = MIN)
+    private final java.util.Set<Long> legitSkip = new java.util.HashSet<>(); // blocks given up on (verify re-runs the box)
+    private static final int LEGIT_BREAK_TICKS = 20 * 12;  // 12s stuck on one block (deepslate is slow) -> skip as ghost
+    private static final int LEGIT_REPATH_TICKS = 20 * 8;  // 8s trying to get a sightline on a block -> skip it
+    private static final int LEGIT_SCAN_REACH_CHECKS = 32; // cap raycasts per target pick (nearest-first)
+    private boolean paused = false;     // hard pause (inventory full + can't store) -> needs toggle
+    private boolean hazardPaused = false; // soft pause (player nearby) -> auto-resumes when clear
+    private boolean complete = false;   // the run finished (finite area fully cleared)
+
+    // vacuum pass: after a sub-box clears, walk over its dropped keep-items before moving on
+    private boolean collecting = false;
+    private int collectTargetId = -1;                 // entity id of the drop we're walking to (-1 = none)
+    private int collectTargetTicks = 0;               // ticks spent reaching the current drop (give-up watch)
+    private int collectTotalTicks = 0;                // ticks spent on this whole sub-box's vacuum (overall cap)
+    private final java.util.Set<Integer> collectSkip = new java.util.HashSet<>(); // drops we gave up reaching
+    private static final int COLLECT_ITEM_TICKS = 20 * 8; // 8s to reach one drop, else skip it
+
+    // restock: tool keyword latched at the start of a cycle (primary, or "shovel" when also-restock-shovel)
+    private String restockKeyword = "pickaxe";
+
+    // resource scan (pre-mine): the last scan's formatted lines, replayed by '/aquariusminer scan'
+    private java.util.List<String> scanLines = new java.util.ArrayList<>();
+
+    // storage sub state machine
+    private enum StorePhase { FIND_SPOT, PLACE, OPEN, DEPOSIT, CLOSE, BREAK, PICKUP, RESUME }
+    private boolean storing = false;
+    private StorePhase storePhase = StorePhase.FIND_SPOT;
+    private int storeStepTicks = 0;
+    private int storeStartEmpty = 0;       // empty slots when this store cycle began
+    private @Nullable BlockPos storePos = null;
+    private @Nullable ItemData storeItem = null;
+    private int lastKeepTotal = -1;        // deposit progress tracker
+    private int depositStall = 0;
+
+    // restock sub state machine (pull a tool-shulker out of the ender chest, take a tool, put it back)
+    private enum RestockPhase {
+        PLACE_ECHEST, OPEN_ECHEST, TAKE_SHULKER, CLOSE_ECHEST,
+        PLACE_SHULKER, OPEN_SHULKER, TAKE_TOOL, CLOSE_SHULKER, BREAK_SHULKER, PICKUP_SHULKER,
+        REOPEN_ECHEST, RETURN_SHULKER, CLOSE_ECHEST2, BREAK_ECHEST, PICKUP_ECHEST, DONE
+    }
+    private boolean restocking = false;
+    private RestockPhase restockPhase = RestockPhase.PLACE_ECHEST;
+    private int restockStepTicks = 0;
+    private @Nullable BlockPos restockEchestPos = null;
+    private @Nullable BlockPos restockShulkerPos = null;
+    private @Nullable ItemData restockEchestItem = null;
+    private @Nullable ItemData restockShulkerItem = null;
+
+    // food restock sub state machine (crack a FOOD-shulker from the ender chest and top up carried food).
+    // Mirrors the tool restock cycle but pulls food by preference; BEST-EFFORT (a missing food-shulker never
+    // pauses the run - it latches foodRestockExhausted and keeps mining).
+    private enum FoodPhase {
+        PLACE_ECHEST, OPEN_ECHEST, TAKE_SHULKER, CLOSE_ECHEST,
+        PLACE_SHULKER, OPEN_SHULKER, TAKE_FOOD, CLOSE_SHULKER, BREAK_SHULKER, PICKUP_SHULKER,
+        REOPEN_ECHEST, RETURN_SHULKER, CLOSE_ECHEST2, BREAK_ECHEST, PICKUP_ECHEST, DONE
+    }
+    private boolean foodRestocking = false;
+    private FoodPhase foodPhase = FoodPhase.PLACE_ECHEST;
+    private int foodStepTicks = 0;
+    private boolean foodRestockExhausted = false;   // no food-shulker in the echest -> stop retrying this run
+    private int foodTakeStall = 0;                   // food-take stall detector (shulker empty / no room)
+    private int lastFoodCount = -1;
+    private @Nullable BlockPos foodEchestPos = null;
+    private @Nullable BlockPos foodShulkerPos = null;
+    private @Nullable ItemData foodEchestItem = null;
+    private @Nullable ItemData foodShulkerItem = null;
+
+    // echest-buffer storage cycle (deposit mode): the ender chest is the FIELD buffer. Pull an empty
+    // shulker out of it, fill it with the haul, store the FILLED shulker back in - so filled shulkers
+    // never clog the mining inventory. A deposit trip fires only once the echest runs out of empties.
+    private enum EchestPhase {
+        PLACE_ECHEST, OPEN_ECHEST, STOCK_EMPTIES, TAKE_EMPTY, CLOSE_ECHEST,
+        PLACE_SHULKER, OPEN_SHULKER, FILL_SHULKER, CLOSE_SHULKER, BREAK_SHULKER, PICKUP_SHULKER,
+        REOPEN_ECHEST, STORE_FILLED, CLOSE_ECHEST2, BREAK_ECHEST, PICKUP_ECHEST, DONE
+    }
+    private boolean echestCycle = false;
+    private EchestPhase echestPhase = EchestPhase.PLACE_ECHEST;
+    private int echestStepTicks = 0;
+    private int echestReopens = 0;                   // bounded re-opens after a server-side early container close
+    private static final int MAX_ECHEST_REOPENS = 5; // 2b can close the echest mid-deposit on lag - re-open, don't abort
+    private boolean dryRunActive = false;            // dry-run-storage: dumped the echest's shulkers, abort without pulling/storing
+    private boolean echActionPending = false;        // a rotation-driven action (place/open/break) is queued, firing after the settle delay
+    private boolean echBreakIssued = false;          // the silk-confirmed ender-chest break has been issued (issue once)
+    private int echPlaceRetries = 0;                  // bounded re-tries of a failed place (re-pick a clear spot)
+    private static final int MAX_PLACE_RETRIES = 3;
+    private @Nullable BlockPos echAvoidSpot = null;   // a spot a place just failed at - skip it when re-selecting
+    private @Nullable BlockPos echPos = null;       // ender chest placed this cycle
+    private @Nullable BlockPos shulkPos = null;     // shulker placed this cycle
+    private @Nullable ItemData echItem = null;      // the ender chest item type
+    private @Nullable ItemData shulkItem = null;    // the empty shulker item type pulled from the echest
+    private boolean echestExhausted = false;        // the echest has no empty shulkers left -> trip / end run
+    private boolean finishAfterEchest = false;      // bounded-area final pack into the echest -> complete the run
+    private int echFillStall = 0;                   // shulker-full / echest-full stall detector
+    private int lastEchCount = -1;
+
+    // deposit trips: the ender chest is the field buffer; a trip walks to the nearest DEPOSIT chest FIRST
+    // with a clean inventory (filled shulkers stay in the global echest until the bot is there), EXTRACTs
+    // them at the chest, drops them in, then refills empties from a separate SUPPLY chest - only as many as
+    // fit in the echest - and STOCKs them straight back into the echest. Pathing via BARITONE.pathTo(GoalNear).
+    private enum DepositPhase {
+        PATH_TO_DEPOSIT,
+        PULL_PLACE, PULL_OPEN, PULL_FILLED, PULL_CLOSE, PULL_BREAK, PULL_PICKUP,
+        OPEN_DEPOSIT, DEPOSIT_FILLED, CLOSE_DEPOSIT,
+        PATH_TO_SUPPLY, OPEN_SUPPLY, TAKE_EMPTIES, CLOSE_SUPPLY,
+        STOCK_PLACE, STOCK_OPEN, STOCK_EMPTIES, STOCK_CLOSE, STOCK_BREAK, STOCK_PICKUP,
+        DONE
+    }
+    private boolean depositing = false;
+    private DepositPhase depositPhase = DepositPhase.PATH_TO_DEPOSIT;
+    private @Nullable BlockPos depositChest = null;
+    private @Nullable GoalNear depositGoal = null;
+    private int depositTripTicks = 0;
+    private boolean nextDepositLeg = false;      // after CLOSE_DEPOSIT, re-travel to another deposit chest (full)
+    private boolean nextSupplyLeg = false;       // after CLOSE_SUPPLY, re-travel to another supply chest (empty)
+    private boolean finishAfterDeposit = false;  // bounded-area final drop-off -> complete the run after
+    private boolean tripExtracted = false;       // filled shulkers have been pulled out of the echest this trip
+    private boolean tripRefilled = false;        // at least one empty was stocked back into the echest this trip
+    private int echestFreeAfterExtract = 0;      // echest free slots after the extract = empties that may refill
+    private @Nullable BlockPos tripEchPos = null; // ender chest placed at a base chest (extract / stock)
+    private @Nullable ItemData tripEchItem = null;
+    private @Nullable String pendingDepositPause = null; // pause with this message once the container closes
+    private final java.util.List<BlockPos> triedChests = new java.util.ArrayList<>();
+    private int depositTripStall = 0;            // deposit/take stall (chest full / empty) detection
+    private int lastTripCount = -1;
+
+    @Override
+    public boolean enabledSetting() {
+        return CONFIG.client.extra.aquariusMiner.enabled;
+    }
+
+    @Override
+    public List<EventConsumer<?>> registerEvents() {
+        return List.of(
+            of(ClientBotTick.class, this::onTick),
+            of(ClientBotTick.Starting.class, this::onStarting)
+        );
+    }
+
+    @Override
+    public void onEnable() {
+        pushCaveSettings();
+        resetToStart();
+    }
+
+    @Override
+    public void onDisable() {
+        if (BARITONE.isActive()) BARITONE.stop();
+        areaActive = false;
+        sawActive = false;
+        legitActive = false;
+        legitBreakPos = null;
+        legitSkip.clear();
+        storing = false;
+        echestCycle = false;
+        echestExhausted = false;
+        restocking = false;
+        foodRestocking = false;
+        foodRestockExhausted = false;
+        depositing = false;
+        collecting = false;
+        finishAfterDeposit = false;
+        finishAfterEchest = false;
+        paused = false;
+        hazardPaused = false;
+        complete = false;
+        finishAfterStore = false;
+        restoreCaveSettings();
+    }
+
+    // ---- cave handling: relax the pathfinder's fall/jump limits while active, restore on disable ----
+
+    private void pushCaveSettings() {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        if (cavePushed) return;
+        var pf = CONFIG.client.extra.pathfinder;
+        // snapshot everything we may mutate (so it restores cleanly on disable)
+        savedSprint = pf.allowSprint;
+        savedMaxFall = pf.maxFallHeightNoWater;
+        savedParkour = pf.allowParkour;
+        savedParkourPlace = pf.allowParkourPlace;
+        savedDiagDescend = pf.allowDiagonalDescend;
+        savedDiagAscend = pf.allowDiagonalAscend;
+        // sprint: faster repositioning / sub-box hops / drop chasing (independent of cave handling)
+        if (cfg.sprint) pf.allowSprint = true;
+        // cave handling: relaxed fall/jump limits so the bot drops into caves to reach blocks
+        if (cfg.caveHandling) {
+            pf.maxFallHeightNoWater = cfg.maxFallHeight;
+            pf.allowParkour = cfg.allowParkour;
+            pf.allowParkourPlace = cfg.allowParkourPlace;
+            pf.allowDiagonalDescend = cfg.allowDiagonalDescend;
+            pf.allowDiagonalAscend = cfg.allowDiagonalAscend;
+        }
+        cavePushed = true;
+        info("Movement: sprint={}, caveHandling={} (maxFall={} parkourPlace={})",
+            cfg.sprint, cfg.caveHandling, cfg.maxFallHeight, cfg.allowParkourPlace);
+    }
+
+    private void restoreCaveSettings() {
+        if (!cavePushed) return;
+        var pf = CONFIG.client.extra.pathfinder;
+        pf.allowSprint = savedSprint;
+        pf.maxFallHeightNoWater = savedMaxFall;
+        pf.allowParkour = savedParkour;
+        pf.allowParkourPlace = savedParkourPlace;
+        pf.allowDiagonalDescend = savedDiagDescend;
+        pf.allowDiagonalAscend = savedDiagAscend;
+        cavePushed = false;
+    }
+
+    private void onStarting(ClientBotTick.Starting event) {
+        // bot (re)connected / world (re)loaded: re-anchor the spiral to the current position
+        resetToStart();
+    }
+
+    private void resetToStart() {
+        int px = MathHelper.floorI(CACHE.getPlayerCache().getX());
+        int pz = MathHelper.floorI(CACHE.getPlayerCache().getZ());
+        resolveArea(px >> 4, pz >> 4);
+        seedSpiral();
+        areaActive = false; sawActive = false; clearTicks = 0; subBoxRetries = 0;
+        legitActive = false; legitBreakPos = null; legitBreakTicks = 0; legitRepathTicks = 0; legitRepathTarget = Long.MIN_VALUE; legitSkip.clear();
+        storing = false; restocking = false; storePos = null; storeItem = null;
+        foodRestocking = false; foodRestockExhausted = false; foodEchestPos = null; foodShulkerPos = null;
+        echestCycle = false; echestExhausted = false; finishAfterEchest = false; echPos = null; shulkPos = null;
+        depositing = false; finishAfterDeposit = false; tripExtracted = false; tripRefilled = false; triedChests.clear();
+        collecting = false; collectTargetId = -1; collectSkip.clear();
+        restockKeyword = CONFIG.client.extra.aquariusMiner.restockToolKeyword;
+        paused = false; hazardPaused = false; complete = false; finishAfterStore = false;
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        if (areaLimited) {
+            info("Starting quarry: {} chunks, X[{}..{}] Z[{}..{}], Y {}..{}",
+                areaChunksTotal, areaMinX, areaMaxX, areaMinZ, areaMaxZ, cfg.minY, cfg.maxY);
+        } else {
+            info("Starting quarry at chunk [{}, {}] (unlimited), Y {}..{}",
+                startCX, startCZ, cfg.minY, cfg.maxY);
+        }
+        runChunkScan();   // one-time pre-mine resource scan (logged + replayable via /aquariusminer scan)
+    }
+
+    /** Work out the chunk grid + spiral-centre chunk for this run from the configured area mode. */
+    private void resolveArea(int startChunkCX, int startChunkCZ) {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        if (cfg.areaMode == AreaMode.ChunksFromStart) {
+            areaLimited = true;
+            int w = Math.max(1, cfg.areaWidthChunks);
+            int l = Math.max(1, cfg.areaLengthChunks);
+            if (cfg.areaAnchor == AreaAnchor.Corner) {
+                // start chunk is a corner; extend the box in the bot's horizontal facing
+                int[] dir = facingExtend();
+                if (dir[0] >= 0) { gridCxMin = startChunkCX; gridCxMax = startChunkCX + w - 1; }
+                else             { gridCxMax = startChunkCX; gridCxMin = startChunkCX - (w - 1); }
+                if (dir[1] >= 0) { gridCzMin = startChunkCZ; gridCzMax = startChunkCZ + l - 1; }
+                else             { gridCzMax = startChunkCZ; gridCzMin = startChunkCZ - (l - 1); }
+            } else { // Center
+                gridCxMin = startChunkCX - (w - 1) / 2; gridCxMax = gridCxMin + w - 1;
+                gridCzMin = startChunkCZ - (l - 1) / 2; gridCzMax = gridCzMin + l - 1;
+            }
+            areaMinX = gridCxMin << 4; areaMaxX = (gridCxMax << 4) + 15;
+            areaMinZ = gridCzMin << 4; areaMaxZ = (gridCzMax << 4) + 15;
+            startCX = (gridCxMin + gridCxMax) >> 1;
+            startCZ = (gridCzMin + gridCzMax) >> 1;
+        } else if (cfg.areaMode == AreaMode.Corners) {
+            areaLimited = true;
+            areaMinX = Math.min(cfg.corner1X, cfg.corner2X);
+            areaMaxX = Math.max(cfg.corner1X, cfg.corner2X);
+            areaMinZ = Math.min(cfg.corner1Z, cfg.corner2Z);
+            areaMaxZ = Math.max(cfg.corner1Z, cfg.corner2Z);
+            gridCxMin = areaMinX >> 4; gridCxMax = areaMaxX >> 4;
+            gridCzMin = areaMinZ >> 4; gridCzMax = areaMaxZ >> 4;
+            startCX = (gridCxMin + gridCxMax) >> 1;
+            startCZ = (gridCzMin + gridCzMax) >> 1;
+        } else { // Unlimited
+            areaLimited = false;
+            startCX = startChunkCX; startCZ = startChunkCZ;
+        }
+    }
+
+    /** Reset the outward-square spiral stepper to the centre and recompute the area chunk count. */
+    /** Reset just the spiral cursor (used at run start AND at the start of each new horizontal layer). */
+    private void resetSpiralStepper() {
+        sx = 0; sz = 0; sdx = 1; sdz = 0;
+        segLen = 1; segRemaining = 1; segsDone = 0;
+        curCX = startCX; curCZ = startCZ;
+        subBoxes.clear(); subBoxIdx = 0;
+        areaChunksDone = 0;
+    }
+
+    private void seedSpiral() {
+        resetSpiralStepper();
+        curLayerTopY = CONFIG.client.extra.aquariusMiner.maxY;   // bounded: sweep from the top layer downward
+        areaChunksTotal = areaLimited
+            ? (gridCxMax - gridCxMin + 1) * (gridCzMax - gridCzMin + 1)
+            : 0;
+    }
+
+    /** Vertical thickness of each top-down horizontal layer (bounded areas), clamped to >= 1. */
+    private int layerThickness() { return Math.max(1, CONFIG.client.extra.aquariusMiner.layerHeight); }
+
+    /** Y floor of the layer currently being swept (bounded), clamped to the area floor (minY). */
+    private int curLayerBottomY() { return Math.max(CONFIG.client.extra.aquariusMiner.minY, curLayerTopY - layerThickness() + 1); }
+
+    // ---------------------------------------------------------------- resource scan (pre-mine)
+
+    /**
+     * Scan the mining area ONCE before mining and log the most-abundant blocks/ores. Headless, so there's
+     * no HUD — the result is logged and shown via in-game alert, and replayable with {@code /aquariusminer
+     * scan}. Footprint is EXACTLY the area to be mined: the bounded box, else the start chunk for the
+     * infinite spiral. Y span is the mining band (never above maxY). Only loaded chunks are read; a block
+     * budget caps the one-time work.
+     */
+    private void runChunkScan() {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        int topY = cfg.maxY, botY = cfg.minY;
+        int x1, z1, x2, z2;
+        if (areaLimited) { x1 = areaMinX; z1 = areaMinZ; x2 = areaMaxX; z2 = areaMaxZ; }
+        else { int bx = startCX << 4, bz = startCZ << 4; x1 = bx; z1 = bz; x2 = bx + 15; z2 = bz + 15; }
+
+        java.util.HashMap<String, Integer> counts = new java.util.HashMap<>();
+        int chunks = 0;
+        long budget = 0;
+        final long BUDGET_MAX = 16_000_000L;
+        for (int cx = (x1 >> 4); cx <= (x2 >> 4); cx++) {
+            for (int cz = (z1 >> 4); cz <= (z2 >> 4); cz++) {
+                if (!World.isChunkLoadedChunkPos(cx, cz)) continue; // can't read ungenerated chunks
+                chunks++;
+                int bxMin = Math.max(x1, cx << 4), bxMax = Math.min(x2, (cx << 4) + 15);
+                int bzMin = Math.max(z1, cz << 4), bzMax = Math.min(z2, (cz << 4) + 15);
+                for (int bx = bxMin; bx <= bxMax; bx++)
+                    for (int bz = bzMin; bz <= bzMax; bz++)
+                        for (int by = botY; by <= topY; by++) {
+                            if (++budget > BUDGET_MAX) { buildScanLines(counts, chunks, botY, topY); return; }
+                            var block = World.getBlock(bx, by, bz);
+                            if (block.isAir()) continue;            // ignore air (dominates a quarry)
+                            counts.merge(block.name(), 1, Integer::sum); // water/lava count like any block
+                        }
+            }
+        }
+        buildScanLines(counts, chunks, botY, topY);
+    }
+
+    /** Rank the tally into the top 3 blocks + top 5 ores, store the lines, and print them. */
+    private void buildScanLines(java.util.Map<String, Integer> counts, int chunks, int botY, int topY) {
+        java.util.List<java.util.Map.Entry<String, Integer>> blocks = new java.util.ArrayList<>();
+        java.util.List<java.util.Map.Entry<String, Integer>> ores = new java.util.ArrayList<>();
+        for (var e : counts.entrySet()) (isOreName(e.getKey()) ? ores : blocks).add(e);
+        java.util.Comparator<java.util.Map.Entry<String, Integer>> byDesc = (a, b) -> Integer.compare(b.getValue(), a.getValue());
+        blocks.sort(byDesc);
+        ores.sort(byDesc);
+
+        scanLines = new java.util.ArrayList<>();
+        scanLines.add(String.format("Resource scan: %d chunk%s, y%d..%d", chunks, chunks == 1 ? "" : "s", botY, topY));
+        scanLines.add("Top blocks:");
+        if (blocks.isEmpty()) scanLines.add("  (none)");
+        else for (int i = 0; i < Math.min(3, blocks.size()); i++)
+            scanLines.add("  " + blocks.get(i).getKey() + "  " + fmtCount(blocks.get(i).getValue()));
+        scanLines.add("Top ores:");
+        if (ores.isEmpty()) scanLines.add("  (none)");
+        else for (int i = 0; i < Math.min(5, ores.size()); i++)
+            scanLines.add("  " + ores.get(i).getKey() + "  " + fmtCount(ores.get(i).getValue()));
+        printScan();
+    }
+
+    /** Log the last scan and flash it as an in-game alert. Called after a scan and by the 'scan' command. */
+    public void printScan() {
+        if (scanLines.isEmpty()) { info("No scan yet - enable the miner to scan the area."); return; }
+        for (String l : scanLines) info(l);
+        inGameAlertActivePlayer("<aqua>" + String.join("  |  ", scanLines));
+    }
+
+    private boolean isOreName(String n) { return n.contains("_ore") || n.equals("ancient_debris"); }
+
+    /** Counts run into the 100k+ for deepslate; cap the displayed number to 6 digits. */
+    private String fmtCount(int n) { return n > 999999 ? "999999+" : Integer.toString(n); }
+
+    /** Sign (+1/-1) of the bot's horizontal facing per axis {x, z} (yaw only). East=+X, South=+Z. */
+    private int[] facingExtend() {
+        double yaw = Math.toRadians(CACHE.getPlayerCache().getYaw());
+        double lx = -Math.sin(yaw);
+        double lz = Math.cos(yaw);
+        return new int[] { lx >= 0 ? 1 : -1, lz >= 0 ? 1 : -1 };
+    }
+
+    private boolean chunkInGrid(int cx, int cz) {
+        return cx >= gridCxMin && cx <= gridCxMax && cz >= gridCzMin && cz <= gridCzMax;
+    }
+
+    private void onTick(ClientBotTick event) {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        if (!CACHE.getPlayerCache().isAlive()) return;
+        // an area command asked us to re-anchor: re-resolve the area + re-seed here, now. Deferred while a
+        // container cycle is mid-flight (so we never strand a placed shulker/echest); still fires while
+        // paused/complete so the command can redirect a stuck or finished bot.
+        if (reanchorRequested && !storing && !echestCycle && !restocking && !foodRestocking && !depositing) {
+            reanchorRequested = false;
+            if (BARITONE.isActive()) BARITONE.stop();
+            info("Re-anchoring to a new area (command).");
+            resetToStart();
+            return;
+        }
+        if (complete || paused) return;
+
+        // storage / echest / restock / deposit cycles take over the bot entirely while they run
+        if (storing) {
+            storeTick();
+            return;
+        }
+        if (echestCycle) {
+            echestTick();
+            return;
+        }
+        if (restocking) {
+            restockTick();
+            return;
+        }
+        if (foodRestocking) {
+            foodTick();
+            return;
+        }
+        if (depositing) {
+            depositTripTick();
+            return;
+        }
+        if (collecting) {
+            collectTick();
+            return;
+        }
+
+        // hazard: soft-pause mining while a non-self player is within range (auto-resumes when clear)
+        if (cfg.pauseOnPlayer && playerNearby(cfg.playerPauseRange)) {
+            if (!hazardPaused) {
+                hazardPaused = true;
+                if (BARITONE.isActive()) BARITONE.stop();
+                areaActive = false; sawActive = false;
+                warn("Player within {} blocks - pausing mining.", (int) cfg.playerPauseRange);
+                inGameAlertActivePlayer("<yellow>Aquarius Miner paused: player nearby");
+            }
+            return;
+        }
+        if (hazardPaused) {
+            hazardPaused = false;
+            info("Clear - resuming mining.");
+        }
+
+        // 1) hotbar discipline + junk disposal, both paced by the inventory manager (one action per
+        //    CONFIG.client.inventory.actionDelayTicks = the proxy's anticheat-safe inventory rate). The hotbar
+        //    is reserved for tools / ender chest / food, so first shift any TARGET block that vanilla pickup
+        //    dumped there back into the main inventory; when there's nothing to sweep, use the free manager
+        //    slot to DROP one junk stack. This dumps junk as aggressively as the manager allows without bursting.
+        if (!INVENTORY.hasActiveRequest()) {
+            if (!sweepHotbarTargets()) {
+                if (cfg.dropJunk) dropOneJunk();
+            }
+        }
+
+        // 2) inventory full -> store, or pause if we can't. Only trigger when there's something to
+        //    store (keep items present); a full-of-junk inventory self-resolves as junk is dropped.
+        boolean invFull = cfg.requireFullStacks
+            ? !canHoldMoreKeep()                                // every keep stack at max, no empty slot
+            : emptyMainSlots() <= cfg.freeSlotsBeforeFull;      // looser empty-slot margin
+        if (invFull && hasKeepItems()) {
+            // Mirror Foreman: the ENDER CHEST is the field buffer whenever the bot carries one - pull an
+            // empty shulker out, fill it, and store the FILLED shulker back IN. Filled shulkers are never
+            // left on the ground or carried in the mining inventory. Deposit chests just add base trips on
+            // top. Only with no ender chest do we fall back to placing a shulker beside the bot.
+            if (hasEnderChest()) {
+                beginEchestCycle();
+            } else if (cfg.depositToChests) {
+                pauseInvFull("no ender chest (the deposit buffer)");
+            } else if (cfg.storageEnabled && hasStorageItem()) {
+                beginStore();
+            } else {
+                pauseInvFull(!cfg.storageEnabled ? "storage disabled" : "no ender chest or storage item");
+            }
+            return;
+        }
+
+        // 2.5) tool spent -> restock a fresh one from the tool-shulker in the ender chest
+        if (cfg.restockTools && toolNeedsRestock() && hasRestockSource()) {
+            beginRestock();
+            return;
+        }
+
+        // 2.6) carried food low -> top up from a FOOD-shulker in the ender chest (best-effort, never pauses)
+        if (cfg.restockFood && !foodRestockExhausted && countGoodFood() < cfg.minFoodOnHand && hasRestockSource()) {
+            beginFoodRestock();
+            return;
+        }
+
+        // 3) mining drive
+        // legit engine: the plugin breaks line-of-sight blocks itself (no clearArea ghost-hand)
+        if (cfg.legitMine) {
+            if (legitActive) { legitClearTick(); return; }
+            if (!mineTimer.tick(cfg.delayTicks)) return;
+            startClear(curCX, curCZ);
+            return;
+        }
+        // fast engine: hand the sub-box to clearArea (can reach through walls)
+        if (areaActive) {
+            if (!sawActive) {
+                if (BARITONE.isActive()) {
+                    sawActive = true; // clear was picked up by the pathing control manager
+                } else if (++clearTicks > 40) {
+                    areaActive = false; // never started; fall through to retry (paced)
+                }
+                return;
+            }
+            if (BARITONE.isActive()) {
+                if (++clearTicks > cfg.maxClearTicks) {
+                    warn("Chunk [{}, {}] sub-box {}/{} timed out after {} ticks.",
+                        curCX, curCZ, subBoxIdx + 1, subBoxes.size(), clearTicks);
+                    BARITONE.stop();
+                    if (retrySubBoxIfDirty(true)) return;   // lag left blocks -> re-run the box first
+                    afterSubBox();
+                }
+                return;
+            }
+            // this sub-box completed naturally (box is clear) -> verify, then vacuum its drops, then advance
+            if (retrySubBoxIfDirty(false)) return;
+            beginCollect();
+            return;
+        }
+
+        // not clearing right now: start the next chunk (paced)
+        if (!mineTimer.tick(cfg.delayTicks)) return;
+        startClear(curCX, curCZ);
+    }
+
+    // ---------------------------------------------------------------- mining
+
+    /** A sub-box finished (or timed out): start the next sub-box, or finish the chunk if it was the last. */
+    private void afterSubBox() {
+        subBoxRetries = 0;   // we're leaving this cell; the next one starts with a fresh retry budget
+        if (subBoxIdx + 1 < subBoxes.size()) {
+            subBoxIdx++;
+            issueSubBox();
+        } else {
+            finishChunkAndAdvance();
+        }
+    }
+
+    // ----- COLLECT: vacuum the just-cleared sub-box's drops before moving on -----
+
+    /** Sub-box cleared: if there's a kept drop on the floor (and room to hold it), vacuum it; else advance. */
+    private void beginCollect() {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        if (!cfg.collectDrops || !canHoldMoreKeep() || nearestDrop() == null) { afterSubBox(); return; }
+        collecting = true;
+        collectTargetId = -1;
+        collectTargetTicks = 0;
+        collectTotalTicks = 0;
+        collectSkip.clear();
+        areaActive = false; sawActive = false; legitActive = false;   // the builder/legit driver is done with this box
+        info("Vacuuming drops in sub-box {}/{}.", subBoxIdx + 1, subBoxes.size());
+    }
+
+    private void collectTick() {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        if (!canHoldMoreKeep()) { finishCollect(); return; }                    // no room -> storage fires next
+        if (++collectTotalTicks > cfg.collectMaxSeconds * 20) { finishCollect(); return; } // overall cap
+
+        if (collectTargetId != -1) {
+            Entity e = CACHE.getEntityCache().getEntities().get(collectTargetId);
+            if (e != null && !e.isRemoved() && e.getEntityType() == EntityType.ITEM) {
+                if (++collectTargetTicks > COLLECT_ITEM_TICKS) { collectSkip.add(collectTargetId); collectTargetId = -1; }
+                else return;                                                    // keep heading to it (goal set)
+            } else collectTargetId = -1;                                        // picked up / gone
+        }
+
+        Entity next = nearestDrop();
+        if (next == null) { finishCollect(); return; }                          // all drops grabbed
+        collectTargetId = next.getEntityId();
+        collectTargetTicks = 0;
+        BlockPos p = next.blockPos();
+        BARITONE.pathTo(new GoalNear(p.x(), p.y(), p.z(), 2));                  // within ~1.4 blocks -> vanilla pickup
+    }
+
+    /** Nearest kept-item drop still on the floor in (or just around) the sub-box we're vacuuming. */
+    private @Nullable Entity nearestDrop() {
+        if (subBoxes.isEmpty()) return null;
+        int[] sb = subBoxes.get(subBoxIdx);
+        int x1 = sb[0] - 2, x2 = sb[2] + 2, z1 = sb[1] - 2, z2 = sb[3] + 2;
+        int yLo = (areaLimited ? curLayerBottomY() : CONFIG.client.extra.aquariusMiner.minY) - 2;
+        int yHi = (areaLimited ? curLayerTopY : CONFIG.client.extra.aquariusMiner.maxY) + 2;
+        Entity best = null;
+        double bestD = Double.MAX_VALUE;
+        for (Entity e : CACHE.getEntityCache().getEntities().values()) {
+            if (e.isRemoved() || e.getEntityType() != EntityType.ITEM) continue;
+            if (collectSkip.contains(e.getEntityId())) continue;
+            BlockPos p = e.blockPos();
+            if (p.x() < x1 || p.x() > x2 || p.z() < z1 || p.z() > z2 || p.y() < yLo || p.y() > yHi) continue;
+            if (!isKeepDrop(e)) continue;
+            double d = CACHE.getPlayerCache().distanceSqToSelf(e);
+            if (d < bestD) { bestD = d; best = e; }
+        }
+        return best;
+    }
+
+    /** True if the dropped item entity holds one of our keep-items. */
+    private boolean isKeepDrop(Entity e) {
+        ItemStack stack = e.getMetadataValue(8, MetadataTypes.ITEM, ItemStack.class);
+        return stack != null && isKeep(stack);
+    }
+
+    /** Done vacuuming this sub-box: stop walking and advance the quarry. */
+    private void finishCollect() {
+        if (BARITONE.isActive()) BARITONE.stop();
+        collecting = false;
+        collectTargetId = -1;
+        afterSubBox();
+    }
+
+    private void finishChunkAndAdvance() {
+        areaActive = false;
+        sawActive = false;
+        clearTicks = 0;
+        info("Chunk [{}, {}] cleared.", curCX, curCZ);
+        // bounded area: count this chunk toward the CURRENT LAYER. Once every chunk in the layer is done,
+        // drop one layer and re-sweep the whole area; finish the run when the layer reaches the floor.
+        if (areaLimited && ++areaChunksDone >= areaChunksTotal) {
+            if (curLayerBottomY() <= CONFIG.client.extra.aquariusMiner.minY) {
+                onAreaComplete();
+                return;
+            }
+            curLayerTopY -= layerThickness();
+            resetSpiralStepper();              // re-sweep every chunk at the new, lower layer
+            info("Layer cleared - dropping to y[{}..{}] and sweeping the area.", curLayerBottomY(), curLayerTopY);
+            return;                            // next tick starts the new layer's first sub-box (paced)
+        }
+        advanceSpiral();
+    }
+
+    /** Every in-box chunk is cleared: store any remaining haul, then complete the run. */
+    private void onAreaComplete() {
+        if (BARITONE.isActive()) BARITONE.stop();
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        // deposit mode: deliver the filled shulkers accumulated in the ender chest, then complete
+        if (cfg.depositToChests && hasEnderChest() && !depositChestList().isEmpty()) {
+            finishAfterDeposit = true;
+            info("Area cleared - delivering the last of the haul from the ender chest.");
+            beginDepositTrip();
+            return;
+        }
+        // ender-chest buffer: pack the last partial inventory into the echest before finishing
+        if (hasEnderChest() && hasKeepItems()) {
+            finishAfterEchest = true;      // resumeFromEchest() will route to completeRun()
+            info("Area cleared - packing the last of the haul into the ender chest.");
+            beginEchestCycle();
+            return;
+        }
+        if (cfg.storageEnabled && hasStorageItem() && hasKeepItems()) {
+            finishAfterStore = true;       // resumeFromStore() will route to completeRun()
+            info("Area cleared - storing the last of the haul.");
+            beginStore();
+            return;
+        }
+        completeRun();
+    }
+
+    private void completeRun() {
+        complete = true;
+        info("Quarry complete: cleared the {}-chunk area.", areaChunksTotal);
+        inGameAlertActivePlayer("<green>Aquarius Miner complete");
+        endRun("area cleared");
+    }
+
+    private boolean hasKeepItems() {
+        return InventoryUtil.searchPlayerInventory(this::isKeep) != -1;
+    }
+
+    /** End-of-run hook: optionally disconnect the bot from the server (auto-disconnect). */
+    private void endRun(String reason) {
+        if (CONFIG.client.extra.aquariusMiner.autoDisconnect) {
+            info("Auto-disconnect ({}).", reason);
+            Proxy.getInstance().disconnect("Aquarius Miner: " + reason);
+        }
+    }
+
+    /** True if any non-self player is within {@code range} blocks of the bot. */
+    private boolean playerNearby(double range) {
+        double r2 = range * range;
+        return CACHE.getEntityCache().getEntities().values().stream()
+            .anyMatch(e -> e instanceof EntityPlayer p && !p.isSelfPlayer()
+                && CACHE.getPlayerCache().distanceSqToSelf(p) <= r2);
+    }
+
+    private void startClear(int cx, int cz) {
+        int x1 = cx << 4, z1 = cz << 4, x2 = x1 + 15, z2 = z1 + 15;
+        if (areaLimited) {
+            // clamp the chunk box to the area bounds so edge chunks never mine outside the box
+            x1 = Math.max(x1, areaMinX); x2 = Math.min(x2, areaMaxX);
+            z1 = Math.max(z1, areaMinZ); z2 = Math.min(z2, areaMaxZ);
+        }
+        buildSubBoxes(x1, z1, x2, z2);
+        subBoxIdx = 0;
+        issueSubBox();
+    }
+
+    /** Divide the chunk's clamped XZ footprint into clearBoxSize x clearBoxSize cells (row-major). */
+    private void buildSubBoxes(int x1, int z1, int x2, int z2) {
+        subBoxes.clear();
+        subBoxRetries = 0;
+        int s = Math.max(1, CONFIG.client.extra.aquariusMiner.clearBoxSize);
+        for (int bx = x1; bx <= x2; bx += s) {
+            for (int bz = z1; bz <= z2; bz += s) {
+                subBoxes.add(new int[]{ bx, bz, Math.min(bx + s - 1, x2), Math.min(bz + s - 1, z2) });
+            }
+        }
+        if (subBoxes.isEmpty()) subBoxes.add(new int[]{ x1, z1, x2, z2 }); // safety (degenerate bounds)
+    }
+
+    /**
+     * Issue clearArea for the current sub-box. A bounded area mines ONE horizontal layer at a time (the
+     * [curLayerBottomY..curLayerTopY] slice) so the whole area's top is swept before descending; the
+     * unbounded spiral clears the full Y band per chunk.
+     */
+    private void issueSubBox() {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        int[] sb = subBoxes.get(subBoxIdx);
+        int y1 = areaLimited ? curLayerBottomY() : cfg.minY;
+        int y2 = areaLimited ? curLayerTopY      : cfg.maxY;
+        if (cfg.legitMine) {
+            legitActive = true;
+            legitBreakPos = null; legitBreakTicks = 0; legitRepathTicks = 0; legitRepathTarget = Long.MIN_VALUE;
+            legitSkip.clear();
+            clearTicks = 0;
+            info("Clearing (legit) chunk [{}, {}] sub-box {}/{} y[{}..{}]", curCX, curCZ, subBoxIdx + 1, subBoxes.size(), y1, y2);
+            return;
+        }
+        BlockPos a = new BlockPos(sb[0], y1, sb[1]);
+        BlockPos b = new BlockPos(sb[2], y2, sb[3]);
+        areaActive = true;
+        sawActive = false;
+        clearTicks = 0;
+        info("Clearing chunk [{}, {}] sub-box {}/{} y[{}..{}] {} -> {}", curCX, curCZ, subBoxIdx + 1, subBoxes.size(), y1, y2, a, b);
+        BARITONE.clearArea(a, b);
+    }
+
+    // ----- legit (line-of-sight) break driver -----
+    // Break only blocks the bot can actually SEE, one at a time, repositioning when none is in view, so a
+    // quarry mines from exposed faces inward like a player would (no ghost-hand). Reuses the proven break-and-
+    // poll pattern (call breakBlock, poll the block to air). Skips/repath-timeouts feed verify-retry.
+
+    private void legitClearTick() {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        clearTicks++;
+
+        // overall cap (parity with the fast engine's maxClearTicks) -> verify-retry, then advance
+        if (clearTicks > cfg.maxClearTicks) {
+            warn("Chunk [{}, {}] sub-box {}/{} (legit) timed out after {} ticks.",
+                curCX, curCZ, subBoxIdx + 1, subBoxes.size(), clearTicks);
+            endLegitSubBox();
+            if (retrySubBoxIfDirty(true)) return;
+            afterSubBox();
+            return;
+        }
+
+        // 1) a block is mid-break: wait for it to vanish (with a ghost-block / stuck cap)
+        if (legitBreakPos != null) {
+            if (isAir(legitBreakPos)) {
+                legitBreakPos = null; legitBreakTicks = 0;          // broken -> pick the next this tick
+            } else if (++legitBreakTicks > LEGIT_BREAK_TICKS) {
+                legitSkip.add(packPos(legitBreakPos));               // stuck/ghost -> skip (verify re-runs the box)
+                legitBreakPos = null; legitBreakTicks = 0;
+                if (BARITONE.isActive()) BARITONE.stop();
+            } else {
+                return;                                              // keep digging
+            }
+        }
+
+        // 2) break the nearest block the bot can actually SEE
+        BlockPos los = nearestLineOfSightBlock();
+        if (los != null) {
+            // Reserve the silk-touch pickaxe for ender-chest recovery: pick the best NON-silk tool ourselves and
+            // break with auto-tool OFF, so Baritone's auto-tool can't grab the silk pick (which would silk-mine
+            // deepslate -> drops as deepslate, not cobbled_deepslate, then tossed as non-keep). Switch the held
+            // tool first if needed, then break NEXT tick (selecting + breaking the same tick breaks with the
+            // previously-held tool - the same race the echest silk recovery guards against).
+            int tool = bestNonSilkToolSlot(los);
+            if (tool >= 0 && tool != CACHE.getPlayerCache().getHeldItemSlot()) {
+                if (!INVENTORY.hasActiveRequest())
+                    INVENTORY.submit(InventoryActionRequest.builder().owner(this)
+                        .actions(new SetHeldItem(tool)).priority(ACTION_PRIORITY).build());
+                return;
+            }
+            legitBreakPos = los;
+            legitBreakTicks = 0;
+            legitRepathTicks = 0;
+            legitRepathTarget = Long.MIN_VALUE;
+            BARITONE.breakBlock(los.x(), los.y(), los.z(), tool < 0);  // auto-tool only if no non-silk tool is held
+            return;
+        }
+
+        // 3) nothing visible: reposition ONCE toward the nearest remaining block to try for a sightline. If the
+        //    bot arrives (path finished) and STILL can't see it, walking can't help - it's occluded, so skip it
+        //    immediately instead of idling the full repath timeout. (A pocket of occluded blocks used to cost
+        //    ~8s EACH here, stacking into multi-minute "stalls".) Skipped blocks feed verify-retry.
+        BlockPos remaining = nearestSolidBlock();
+        if (remaining == null) {
+            endLegitSubBox();
+            if (retrySubBoxIfDirty(false)) return;
+            beginCollect();
+            return;
+        }
+        long rkey = packPos(remaining);
+        if (rkey != legitRepathTarget) {                             // new target -> path toward a vantage, once
+            legitRepathTarget = rkey;
+            legitRepathTicks = 0;
+            // Path close enough that the target lands within mining reach (so it's actually breakable on arrival,
+            // not stopped just outside reach -> skipped). Range tracks miningReach (squared), floored so the goal
+            // stays pathable in an open quarry.
+            int rsq = Math.max(4, (int) (cfg.miningReach * cfg.miningReach));
+            BARITONE.pathTo(new GoalNear(remaining.x(), remaining.y(), remaining.z(), rsq));
+            return;
+        }
+        if (BARITONE.isActive()) {                                   // still walking to the vantage - bounded wait
+            if (++legitRepathTicks > LEGIT_REPATH_TICKS) {
+                legitSkip.add(rkey);
+                legitRepathTarget = Long.MIN_VALUE; legitRepathTicks = 0;
+                BARITONE.stop();
+            }
+            return;
+        }
+        legitSkip.add(rkey);                                         // arrived, still no sightline -> occluded, skip
+        legitRepathTarget = Long.MIN_VALUE; legitRepathTicks = 0;
+    }
+
+    private void endLegitSubBox() {
+        legitActive = false;
+        legitBreakPos = null;
+        legitBreakTicks = 0;
+        legitRepathTicks = 0;
+        legitRepathTarget = Long.MIN_VALUE;
+        legitSkip.clear();
+        if (BARITONE.isActive()) BARITONE.stop();
+    }
+
+    /** Nearest solid block in the current sub-box that the bot has a real line of sight to, or null. */
+    private @Nullable BlockPos nearestLineOfSightBlock() {
+        var ctx = BARITONE.getPlayerContext();
+        double reach = CONFIG.client.extra.aquariusMiner.miningReach;
+        java.util.List<BlockPos> solids = collectSubBoxSolids();
+        int checks = 0;
+        for (BlockPos p : solids) {
+            if (++checks > LEGIT_SCAN_REACH_CHECKS) break;           // bound raycasts; the rest wait their turn
+            if (RotationUtils.reachable(ctx, p, reach).isPresent()) return p;
+        }
+        return null;
+    }
+
+    /** Nearest solid (breakable, non-skipped) block in the current sub-box, ignoring sightline, or null. */
+    private @Nullable BlockPos nearestSolidBlock() {
+        java.util.List<BlockPos> solids = collectSubBoxSolids();
+        return solids.isEmpty() ? null : solids.get(0);
+    }
+
+    /** Solid, breakable, non-skipped blocks in the current sub-box's active Y band, nearest-first to the bot. */
+    private java.util.List<BlockPos> collectSubBoxSolids() {
+        java.util.List<BlockPos> out = new java.util.ArrayList<>();
+        if (subBoxes.isEmpty() || !World.isChunkLoadedChunkPos(curCX, curCZ)) return out;
+        int[] sb = subBoxes.get(subBoxIdx);
+        int y1 = areaLimited ? curLayerBottomY() : CONFIG.client.extra.aquariusMiner.minY;
+        int y2 = areaLimited ? curLayerTopY      : CONFIG.client.extra.aquariusMiner.maxY;
+        for (int x = sb[0]; x <= sb[2]; x++)
+            for (int z = sb[1]; z <= sb[3]; z++)
+                for (int y = y1; y <= y2; y++) {
+                    var b = World.getBlock(x, y, z);
+                    if (b.isAir() || World.isFluid(b) || b.destroySpeed() < 0) continue; // air/fluid/unbreakable
+                    if (legitSkip.contains(packPos(x, y, z))) continue;
+                    out.add(new BlockPos(x, y, z));
+                }
+        BlockPos feet = BARITONE.getPlayerContext().playerFeet();
+        out.sort((p, q) -> Long.compare(distSq(feet, p), distSq(feet, q)));
+        return out;
+    }
+
+    private static long distSq(BlockPos a, BlockPos b) {
+        long dx = a.x() - b.x(), dy = a.y() - b.y(), dz = a.z() - b.z();
+        return dx * dx + dy * dy + dz * dz;
+    }
+
+    private static long packPos(BlockPos p) { return packPos(p.x(), p.y(), p.z()); }
+    private static long packPos(int x, int y, int z) {
+        return ((long) (x & 0x3FFFFFF) << 38) | ((long) (z & 0x3FFFFFF) << 12) | (y & 0xFFF);
+    }
+
+    // ----- verify & retry: a lag spike can leave blocks standing in a "cleared" sub-box; re-run it -----
+
+    /** If verify is on and the current sub-box still has solid blocks, re-issue it (up to clearRetries). */
+    private boolean retrySubBoxIfDirty(boolean stalled) {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        if (!cfg.verifyClears || subBoxRetries >= cfg.clearRetries) return false;
+        if (!subBoxHasLeftovers()) return false;
+        subBoxRetries++;
+        warn("Sub-box {}/{} of chunk [{}, {}] still has blocks after {} - retry {}/{}.",
+            subBoxIdx + 1, subBoxes.size(), curCX, curCZ, stalled ? "a stall" : "clearing",
+            subBoxRetries, cfg.clearRetries);
+        issueSubBox();   // re-run the SAME cell (clearArea skips the blocks already gone)
+        return true;
+    }
+
+    /** True if any breakable solid block remains in the current sub-box's active Y band (cost-capped). */
+    private boolean subBoxHasLeftovers() {
+        if (subBoxes.isEmpty()) return false;
+        if (!World.isChunkLoadedChunkPos(curCX, curCZ)) return false;   // can't read it -> assume clean
+        int[] sb = subBoxes.get(subBoxIdx);
+        int y1 = areaLimited ? curLayerBottomY() : CONFIG.client.extra.aquariusMiner.minY;
+        int y2 = areaLimited ? curLayerTopY      : CONFIG.client.extra.aquariusMiner.maxY;
+        BlockPos feet = BARITONE.getPlayerContext().playerFeet();
+        long budget = 0;
+        final long BUDGET = 8192;
+        for (int x = sb[0]; x <= sb[2]; x++)
+            for (int z = sb[1]; z <= sb[3]; z++)
+                for (int y = y1; y <= y2; y++) {
+                    if (++budget > BUDGET) return false;                // too big to verify -> don't loop
+                    var b = World.getBlock(x, y, z);
+                    if (b.isAir() || World.isFluid(b)) continue;
+                    if (b.name().equals("bedrock")) continue;            // unbreakable; clearArea skips it
+                    // the bot stands on the band floor: ignore its feet + the block under them
+                    if (x == feet.x() && z == feet.z() && (y == feet.y() || y == feet.y() - 1)) continue;
+                    return true;
+                }
+        return false;
+    }
+
+    /**
+     * Steps the outward square spiral one chunk. When the area is bounded it skips any chunk outside
+     * the grid (a guard cap stops a runaway). The caller only advances while in-box chunks remain,
+     * so an in-grid chunk is always found.
+     */
+    private void advanceSpiral() {
+        if (areaLimited) {
+            int guard = 0;
+            do { stepSpiral(); } while (!chunkInGrid(startCX + sx, startCZ + sz) && ++guard < 100000);
+        } else {
+            stepSpiral();
+        }
+        curCX = startCX + sx;
+        curCZ = startCZ + sz;
+    }
+
+    private void stepSpiral() {
+        sx += sdx;
+        sz += sdz;
+        if (--segRemaining == 0) {
+            int ndx = -sdz; // rotate direction 90 degrees
+            int ndz = sdx;
+            sdx = ndx;
+            sdz = ndz;
+            if (++segsDone % 2 == 0) segLen++;
+            segRemaining = segLen;
+        }
+    }
+
+    // -------------------------------------------------------------- storage
+
+    private void beginStore() {
+        if (BARITONE.isActive()) BARITONE.stop();
+        areaActive = false;
+        sawActive = false;
+        storing = true;
+        storeStartEmpty = emptyMainSlots();
+        storePos = null;
+        storeItem = null;
+        setStorePhase(StorePhase.FIND_SPOT);
+        info("Inventory full - starting storage cycle.");
+    }
+
+    private void setStorePhase(StorePhase phase) {
+        storePhase = phase;
+        storeStepTicks = 0;
+        switch (phase) {
+            case PLACE -> {
+                if (storePos != null && storeItem != null) {
+                    BARITONE.placeBlock(storePos.x(), storePos.y(), storePos.z(), storeItem);
+                }
+            }
+            case OPEN -> {
+                if (storePos != null) {
+                    BARITONE.rightClickBlock(storePos.x(), storePos.y(), storePos.z());
+                }
+            }
+            case DEPOSIT -> {
+                lastKeepTotal = -1;
+                depositStall = 0;
+            }
+            case CLOSE -> INVENTORY.submit(InventoryActionRequest.builder()
+                .owner(this)
+                .actions(new CloseContainer())
+                .priority(ACTION_PRIORITY)
+                .build());
+            case BREAK -> {
+                if (storePos != null) {
+                    BARITONE.breakBlock(storePos.x(), storePos.y(), storePos.z(), true);
+                }
+            }
+            case PICKUP -> BARITONE.pickup();
+            default -> { /* FIND_SPOT, RESUME: handled in storeTick */ }
+        }
+    }
+
+    private void storeTick() {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        storeStepTicks++;
+
+        switch (storePhase) {
+            case FIND_SPOT -> {
+                int slot = InventoryUtil.searchPlayerInventory(this::isStorageItem);
+                if (slot == -1) {
+                    abortStore("ran out of storage items");
+                    return;
+                }
+                ItemStack stack = CACHE.getPlayerCache().getPlayerInventory().get(slot);
+                storeItem = ItemRegistry.REGISTRY.get(stack.getId());
+                storePos = selectStorageSpot();
+                if (storePos == null || storeItem == null) {
+                    abortStore("no valid spot to place a container");
+                    return;
+                }
+                info("Placing {} at {}", storeItem.name(), storePos);
+                setStorePhase(StorePhase.PLACE);
+            }
+            case PLACE -> {
+                if (storePos != null && !World.getBlock(storePos.x(), storePos.y(), storePos.z()).isAir()) {
+                    info("Container placed; opening.");
+                    setStorePhase(StorePhase.OPEN);
+                } else if (storeStepTicks > cfg.storeStepTimeoutTicks) {
+                    abortStore("place timed out");
+                }
+            }
+            case OPEN -> {
+                if (CACHE.getPlayerCache().getInventoryCache().getOpenContainerId() != 0) {
+                    info("Container open; depositing kept items.");
+                    setStorePhase(StorePhase.DEPOSIT);
+                } else if (storeStepTicks > cfg.storeStepTimeoutTicks) {
+                    abortStore("open timed out");
+                }
+            }
+            case DEPOSIT -> depositTick();
+            case CLOSE -> {
+                if (CACHE.getPlayerCache().getInventoryCache().getOpenContainerId() == 0) {
+                    // (deposit mode uses the echest-buffer cycle instead, never this simple storeTick)
+                    setStorePhase(cfg.breakAndCollect ? StorePhase.BREAK : StorePhase.RESUME);
+                } else if (storeStepTicks > cfg.storeStepTimeoutTicks) {
+                    // resend close once, then give up
+                    if (storeStepTicks == cfg.storeStepTimeoutTicks + 1) {
+                        INVENTORY.submit(InventoryActionRequest.builder()
+                            .owner(this).actions(new CloseContainer()).priority(ACTION_PRIORITY).build());
+                    } else if (storeStepTicks > cfg.storeStepTimeoutTicks * 2) {
+                        abortStore("close timed out");
+                    }
+                }
+            }
+            case BREAK -> {
+                if (storePos != null && World.getBlock(storePos.x(), storePos.y(), storePos.z()).isAir()) {
+                    setStorePhase(StorePhase.PICKUP);
+                } else if (storeStepTicks > cfg.storeStepTimeoutTicks) {
+                    abortStore("break timed out");
+                }
+            }
+            case PICKUP -> {
+                // give the pickup a moment, then resume regardless
+                if (!BARITONE.isActive() && storeStepTicks > 20) {
+                    setStorePhase(StorePhase.RESUME);
+                } else if (storeStepTicks > cfg.storeStepTimeoutTicks) {
+                    setStorePhase(StorePhase.RESUME);
+                }
+            }
+            case RESUME -> resumeFromStore();
+        }
+    }
+
+    private void depositTick() {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        int openId = CACHE.getPlayerCache().getInventoryCache().getOpenContainerId();
+        if (openId == 0) {
+            // container closed unexpectedly; treat as done
+            setStorePhase(StorePhase.RESUME);
+            return;
+        }
+        if (!depositTimer.tick(cfg.depositDelayTicks)) return;
+
+        Container container = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+        int size = container.getSize();
+        int playerStart = Math.max(0, size - 36); // last 36 window slots are the player's inventory
+
+        // find next kept item in the player portion of the window
+        int srcSlot = -1;
+        for (int i = playerStart; i < size; i++) {
+            if (isKeep(container.getItemStack(i))) {
+                srcSlot = i;
+                break;
+            }
+        }
+        if (srcSlot == -1) {
+            // nothing left to deposit
+            setStorePhase(StorePhase.CLOSE);
+            return;
+        }
+
+        // stall detection: if the kept-item total isn't dropping, the chest is full
+        int keepTotal = keepTotalInPlayer(container, playerStart, size);
+        if (keepTotal == lastKeepTotal) {
+            if (++depositStall > 6) {
+                info("Container full (kept items remain); closing.");
+                setStorePhase(StorePhase.CLOSE);
+                return;
+            }
+        } else {
+            depositStall = 0;
+            lastKeepTotal = keepTotal;
+        }
+
+        INVENTORY.submit(InventoryActionRequest.builder()
+            .owner(this)
+            .actions(new ShiftClick(container.getContainerId(), srcSlot, ShiftClickItemAction.LEFT_CLICK))
+            .priority(ACTION_PRIORITY)
+            .build());
+    }
+
+    private void resumeFromStore() {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        storing = false;
+        if (finishAfterStore) {            // this was the final store after the area was cleared
+            finishAfterStore = false;
+            completeRun();
+            return;
+        }
+        int nowEmpty = emptyMainSlots();
+        if (nowEmpty <= cfg.freeSlotsBeforeFull) {
+            // still full after a cycle
+            boolean progress = nowEmpty > storeStartEmpty;
+            if (progress && hasStorageItem()) {
+                // freed some space but more to store -> place another container
+                beginStore();
+                return;
+            }
+            paused = true;
+            if (BARITONE.isActive()) BARITONE.stop();
+            warn("Storage cycle freed no space (out of containers or all full). Mining paused.");
+            inGameAlertActivePlayer("<red>Aquarius Miner paused: storage exhausted");
+            endRun("storage exhausted");
+            return;
+        }
+        // resume mining: re-clear the current chunk (clearArea skips already-air blocks)
+        areaActive = false;
+        sawActive = false;
+        info("Storage done ({} slots free); resuming mining.", nowEmpty);
+    }
+
+    private void abortStore(String reason) {
+        storing = false;
+        paused = true;
+        if (CACHE.getPlayerCache().getInventoryCache().getOpenContainerId() != 0) {
+            INVENTORY.submit(InventoryActionRequest.builder()
+                .owner(this).actions(new CloseContainer()).priority(ACTION_PRIORITY).build());
+        }
+        if (BARITONE.isActive()) BARITONE.stop();
+        warn("Storage cycle aborted: {}. Mining paused - toggle /aquariusminer off/on to retry.", reason);
+        inGameAlertActivePlayer("<red>Aquarius Miner storage failed: " + reason);
+    }
+
+    /**
+     * Picks an air block beside the bot that has a solid floor under it (so a shulker can be placed
+     * on the floor face). After a quarry the bot stands on the band floor, whose underside is solid,
+     * so a horizontal neighbour at feet level normally qualifies.
+     */
+    private @Nullable BlockPos selectStorageSpot() {
+        BlockPos pf = BARITONE.getPlayerContext().playerFeet();
+        int[][] dirs = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
+        for (int dy = 0; dy <= 1; dy++) {
+            for (int[] d : dirs) {
+                BlockPos cand = pf.add(d[0], dy, d[1]);
+                if (cand.equals(pf) || cand.equals(pf.above())) continue;
+                if (echAvoidSpot != null && cand.equals(echAvoidSpot)) continue;     // skip a spot a place just failed at
+                if (!World.getBlock(cand.x(), cand.y(), cand.z()).isAir()) continue;
+                var floor = World.getBlock(cand.x(), cand.y() - 1, cand.z());
+                if (floor.isAir() || World.isFluid(floor)) continue;
+                if (entityOccupies(cand)) continue;                                  // a mob/dropped item there would block the place
+                return cand;
+            }
+        }
+        return null;
+    }
+
+    /** True if a cached entity (mob, dropped junk item, ...) sits in the block at p - placing there fails with
+     *  "entity blocking the place position", so we skip such spots when choosing where to place. */
+    private boolean entityOccupies(BlockPos p) {
+        for (var e : CACHE.getEntityCache().getEntities().values()) {
+            if (e == null) continue;
+            if ((int) Math.floor(e.getX()) != p.x() || (int) Math.floor(e.getZ()) != p.z()) continue;
+            double feetY = e.getY();
+            if (feetY < p.y() + 1 && feetY + 2.0 > p.y()) return true;   // entity column overlaps the block (generous height)
+        }
+        return false;
+    }
+
+    /**
+     * A place hasn't landed yet. Keep waiting within this attempt's window; once it's clearly failed (desync /
+     * an entity wandered into the spot), re-pick a CLEAR spot (skipping the one that just failed) and try again,
+     * up to {@link #MAX_PLACE_RETRIES} times, before aborting. Re-entering PLACE_* re-queues the place behind a
+     * fresh settle delay, so each retry is paced too.
+     */
+    private void retryPlaceOrAbort(boolean echest) {
+        int window = Math.min(80, CONFIG.client.extra.aquariusMiner.storeStepTimeoutTicks);   // per-attempt wait before re-picking
+        if (echestStepTicks <= window) return;                                  // still waiting on this attempt
+        String what = echest ? "ender chest" : "shulker";
+        if (++echPlaceRetries > MAX_PLACE_RETRIES) { abortEchest("place " + what + " failed after " + MAX_PLACE_RETRIES + " retries"); return; }
+        echAvoidSpot = echest ? echPos : shulkPos;                              // don't re-pick the spot that just failed
+        BlockPos spot = selectStorageSpot();
+        echAvoidSpot = null;
+        if (spot == null) { abortEchest("no clear spot to place " + what); return; }
+        info("Re-trying {} placement at a different spot ({}/{}).", what, echPlaceRetries, MAX_PLACE_RETRIES);
+        if (echest) { echPos = spot; setEchestPhase(EchestPhase.PLACE_ECHEST); }
+        else { shulkPos = spot; setEchestPhase(EchestPhase.PLACE_SHULKER); }
+    }
+
+    /** Mining-full pause helper for deposit/storage modes. */
+    private void pauseInvFull(String why) {
+        paused = true;
+        if (BARITONE.isActive()) BARITONE.stop();
+        areaActive = false; sawActive = false;
+        warn("Inventory full and cannot store ({}). Mining paused. Resolve, then toggle /aquariusminer off/on.", why);
+        inGameAlertActivePlayer("<red>Aquarius Miner paused: inventory full (" + why + ")");
+        if (CONFIG.client.extra.aquariusMiner.storageEnabled) endRun("storage exhausted (" + why + ")");
+    }
+
+    // ------------------------------------------------ echest-buffer storage cycle (deposit mode)
+    // The ender chest is the FIELD buffer. One cycle: place the echest -> open -> stock any carried empties
+    // -> pull ONE empty shulker out -> close -> place + fill that shulker with the haul -> break + collect
+    // it (now filled) -> reopen the echest -> store the filled shulker back in -> break the echest. Filled
+    // shulkers live in the echest, never in the mining inventory. When the echest runs out of empties
+    // (detected from STORE_FILLED with a clean inventory) a deposit trip fires.
+
+    private void beginEchestCycle() {
+        if (BARITONE.isActive()) BARITONE.stop();
+        areaActive = false; sawActive = false;
+        echestCycle = true;
+        echestExhausted = false;
+        echestReopens = 0;
+        echActionPending = false; echBreakIssued = false; echPlaceRetries = 0; echAvoidSpot = null;
+        shulkPos = null; shulkItem = null;
+        int echSlot = InventoryUtil.searchPlayerInventory(this::isEnderChestItem);
+        echItem = echSlot == -1 ? null
+            : ItemRegistry.REGISTRY.get(CACHE.getPlayerCache().getPlayerInventory().get(echSlot).getId());
+        echPos = selectStorageSpot();
+        if (echItem == null || echPos == null) { abortEchest("no ender chest or no spot to place it"); return; }
+        info("Inventory full - storing into the ender chest buffer.");
+        setEchestPhase(EchestPhase.PLACE_ECHEST);
+    }
+
+    private void setEchestPhase(EchestPhase phase) {
+        echestPhase = phase;
+        echestStepTicks = 0;
+        switch (phase) {
+            // Rotation-driven actions (place / open / break / pickup) are QUEUED, then fired only after the
+            // settle delay (fireEchestAction). 2b2t's movement+rotation anticheat dislikes back-to-back snap
+            // rotations, and rushing them desyncs the bot's position (-> "entity blocking the place position").
+            case PLACE_ECHEST, OPEN_ECHEST, REOPEN_ECHEST, PLACE_SHULKER, OPEN_SHULKER,
+                 BREAK_SHULKER, PICKUP_SHULKER, PICKUP_ECHEST -> echActionPending = true;
+            case BREAK_ECHEST -> echBreakIssued = false;   // handled in breakEchestTick - it selects + confirms the silk pick first
+            case STOCK_EMPTIES, FILL_SHULKER, STORE_FILLED -> { echFillStall = 0; lastEchCount = -1; }
+            case CLOSE_ECHEST, CLOSE_SHULKER, CLOSE_ECHEST2 -> closeContainer();   // closing involves no rotation - fire now
+            default -> { /* DONE / TAKE_EMPTY handled in echestTick */ }
+        }
+    }
+
+    /** Fire the queued rotation-driven action for the current echest phase, after the settle delay. */
+    private void fireEchestAction() {
+        echActionPending = false;
+        switch (echestPhase) {
+            case PLACE_ECHEST -> { if (echPos != null && echItem != null) BARITONE.placeBlock(echPos.x(), echPos.y(), echPos.z(), echItem); }
+            case OPEN_ECHEST, REOPEN_ECHEST -> { if (echPos != null) BARITONE.rightClickBlock(echPos.x(), echPos.y(), echPos.z()); }
+            case PLACE_SHULKER -> { if (shulkPos != null && shulkItem != null) BARITONE.placeBlock(shulkPos.x(), shulkPos.y(), shulkPos.z(), shulkItem); }
+            case OPEN_SHULKER -> { if (shulkPos != null) BARITONE.rightClickBlock(shulkPos.x(), shulkPos.y(), shulkPos.z()); }
+            case BREAK_SHULKER -> { if (shulkPos != null) BARITONE.breakBlock(shulkPos.x(), shulkPos.y(), shulkPos.z(), true); } // shulkers drop themselves with any tool
+            case PICKUP_SHULKER, PICKUP_ECHEST -> BARITONE.pickup();
+            default -> { }
+        }
+    }
+
+    /**
+     * Break the field ender chest so it's RECOVERED (drops as an ender chest), not destroyed into obsidian.
+     * An ender chest only drops itself when mined with SILK TOUCH; AquariusProxy's auto-tool picks the FASTEST
+     * pickaxe (fortune/efficiency), which yields obsidian. So we select a silk-touch pickaxe, WAIT until it's
+     * actually the held item (selecting it and breaking in the same tick was the bug — the break started with
+     * the still-held fortune pick and destroyed the chest), THEN break with auto-tool OFF. BreakBlock re-paths
+     * on its own if the bot falls out of reach. With silk-echest on and no silk pick, we DON'T break (the haul
+     * is already stored) — abort so the chest survives, placed, until a silk pick is provided.
+     */
+    private void breakEchestTick() {
+        if (echPos == null || isAir(echPos)) { setEchestPhase(EchestPhase.PICKUP_ECHEST); return; }   // broken -> recovered
+        boolean wantSilk = CONFIG.client.extra.aquariusMiner.silkTouchEchest;
+        if (wantSilk) {
+            int silk = findSilkPick();
+            if (silk == -1) { abortEchest("no silk-touch pickaxe to recover the ender chest - add one (or turn silk-echest off)"); return; }
+            List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+            ItemStack held = inv.get(36 + CACHE.getPlayerCache().getHeldItemSlot());
+            if (!isSilkPick(held)) {                                  // not holding silk yet -> select it, then WAIT for it to take
+                if (!INVENTORY.hasActiveRequest()) holdItemAt(silk);
+                echTimeout("select silk pickaxe");
+                return;
+            }
+        }
+        if (!echBreakIssued) {                                        // silk confirmed held (or silk off) -> break, auto-tool OFF so it uses the held pick
+            BARITONE.breakBlock(echPos.x(), echPos.y(), echPos.z(), !wantSilk);
+            echBreakIssued = true;
+        }
+        echTimeout("break ender chest");
+    }
+
+    /**
+     * Hotbar slot (0-8) of the best NON-silk tool for breaking the block at {@code p}, by break speed — mirrors
+     * Baritone's ToolSet (which only scans the hotbar) but NEVER returns the silk pick, which is reserved for
+     * ender-chest recovery. -1 if the hotbar holds no non-silk tool. So a deepslate quarry mines with the
+     * fortune/plain pick (-> cobbled_deepslate), gravel/sand with a shovel, and the silk pick is left untouched
+     * even though it lives in the hotbar alongside the other tools.
+     */
+    private int bestNonSilkToolSlot(BlockPos p) {
+        var block = World.getBlock(p.x(), p.y(), p.z());
+        List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+        int best = -1;
+        double bestSpeed = -1;
+        for (int i = 36; i <= 44; i++) {
+            ItemStack s = inv.get(i);
+            if (s == Container.EMPTY_STACK || isSilkPick(s)) continue;
+            double speed = BOT.getInteractions().blockBreakSpeed(block, s);
+            if (speed > bestSpeed) { bestSpeed = speed; best = i - 36; }
+        }
+        return best;
+    }
+
+    /** Inventory slot (9-44) of a silk-touch pickaxe, or -1. */
+    private int findSilkPick() {
+        List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+        for (int i = 9; i <= 44; i++) if (isSilkPick(inv.get(i))) return i;
+        return -1;
+    }
+
+    /** A pickaxe carrying the silk-touch enchantment. */
+    private boolean isSilkPick(@Nullable ItemStack s) {
+        String n = itemName(s);
+        if (n == null || !n.endsWith("pickaxe")) return false;
+        var ench = s.getDataComponentsOrEmpty().get(DataComponentTypes.ENCHANTMENTS);
+        return ench != null && ench.getEnchantments().containsKey(com.aquarius.mc.enchantment.EnchantmentRegistry.SILK_TOUCH.get().id());
+    }
+
+    /** Select the item at a player-inventory slot (9-44) as the held hotbar item (one swap if it's in the main inv). */
+    private void holdItemAt(int slot) {
+        if (slot >= 36 && slot <= 44) {
+            INVENTORY.submit(InventoryActionRequest.builder().owner(this)
+                .actions(new SetHeldItem(slot - 36)).priority(ACTION_PRIORITY).build());
+        } else if (slot >= 9 && slot <= 35) {
+            INVENTORY.submit(InventoryActionRequest.builder().owner(this)
+                .actions(new MoveToHotbarSlot(slot, MoveToHotbarAction.from(0)), new SetHeldItem(0)).priority(ACTION_PRIORITY).build());
+        }
+    }
+
+    private void echestTick() {
+        echestStepTicks++;
+        if (echActionPending) {   // settle (let the position/rotation sync) before firing the queued action
+            if (echestStepTicks >= CONFIG.client.extra.aquariusMiner.storeStepSettleTicks) fireEchestAction();
+            return;
+        }
+        int openId = CACHE.getPlayerCache().getInventoryCache().getOpenContainerId();
+        switch (echestPhase) {
+            case PLACE_ECHEST -> { if (placed(echPos)) { echPlaceRetries = 0; setEchestPhase(EchestPhase.OPEN_ECHEST); } else retryPlaceOrAbort(true); }
+            case OPEN_ECHEST -> {
+                if (openId != 0) {
+                    if (CONFIG.client.extra.aquariusMiner.dryRunStorage) {     // diagnostic: log shulkers, then clean up WITHOUT pulling/storing
+                        dumpEchestShulkers();
+                        dryRunActive = true;
+                        setEchestPhase(EchestPhase.CLOSE_ECHEST2);
+                        return;
+                    }
+                    setEchestPhase(EchestPhase.STOCK_EMPTIES);
+                } else echTimeout("open ender chest");
+            }
+            case STOCK_EMPTIES -> { // push any carried empties into the echest first (so refilled empties live there)
+                if (openId == 0) { reopenEchestOrAbort("ender chest closed early"); return; }
+                Container c = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+                int src = c == null ? -1 : findPlayerWindowSlot(c, this::isEmptyShulker);
+                if (src != -1 && containerHasRoom(c)) { shiftClick(c, src); return; } // manager paces via hasActiveRequest
+                setEchestPhase(EchestPhase.TAKE_EMPTY);
+            }
+            case TAKE_EMPTY -> {
+                if (openId == 0) { reopenEchestOrAbort("ender chest closed early"); return; }
+                Container c = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+                if (c == null) { echTimeout("open ender chest"); return; }
+                // CRITICAL: while a container is open, a pull lands in the OPEN window's player slots, NOT the
+                // standalone player-inventory cache (container 0, which only re-syncs on close). So detect our
+                // own pulled empty via the OPEN window (findPlayerWindowSlot) - reading countInInv (container 0)
+                // here never sees the pull, so the bot would pull ALL empties into the window without noticing.
+                if (findPlayerWindowSlot(c, this::isEmptyShulker) != -1) { setEchestPhase(EchestPhase.CLOSE_ECHEST); return; }
+                // Don't scan an unsynced window: the echest is full of shulkers, so an all-empty container half
+                // just means SetContainerContent hasn't arrived yet (-> false "out of empty shulkers"). Wait.
+                if (!containerLoaded(c)) { echTimeout("load ender chest contents"); return; }
+                int src = findContainerSlot(c, this::isEmptyShulker);
+                if (src != -1) { shiftClick(c, src); return; }  // pull ONE empty into our window (manager paces)
+                // container is loaded and genuinely holds no empty shulker -> can't pack the haul.
+                abortEchest("out of empty shulkers - load empties or stock a supply chest");
+            }
+            case CLOSE_ECHEST -> {
+                if (openId == 0) {
+                    int s = InventoryUtil.searchPlayerInventory(this::isEmptyShulker);
+                    if (s == -1) { reopenEchestOrAbort("empty shulker lost after pull"); return; } // re-open + re-pull instead of failing
+                    shulkItem = ItemRegistry.REGISTRY.get(CACHE.getPlayerCache().getPlayerInventory().get(s).getId());
+                    shulkPos = selectStorageSpot();
+                    if (shulkPos == null) { abortEchest("no spot to place the shulker"); return; }
+                    setEchestPhase(EchestPhase.PLACE_SHULKER);
+                } else echTimeout("close ender chest");
+            }
+            case PLACE_SHULKER -> { if (placed(shulkPos)) { echPlaceRetries = 0; setEchestPhase(EchestPhase.OPEN_SHULKER); } else retryPlaceOrAbort(false); }
+            case OPEN_SHULKER -> { if (openId != 0) setEchestPhase(EchestPhase.FILL_SHULKER); else echTimeout("open shulker"); }
+            case FILL_SHULKER -> echFillTick();
+            case CLOSE_SHULKER -> { if (openId == 0) setEchestPhase(EchestPhase.BREAK_SHULKER); else echTimeout("close shulker"); }
+            case BREAK_SHULKER -> { if (isAir(shulkPos)) setEchestPhase(EchestPhase.PICKUP_SHULKER); else echTimeout("break shulker"); }
+            case PICKUP_SHULKER -> { if (countInInv(this::isFilledShulker) > 0 || echestStepTicks > 60) setEchestPhase(EchestPhase.REOPEN_ECHEST); }
+            case REOPEN_ECHEST -> { if (openId != 0) setEchestPhase(EchestPhase.STORE_FILLED); else echTimeout("reopen ender chest"); }
+            case STORE_FILLED -> echStoreTick();
+            case CLOSE_ECHEST2 -> { if (openId == 0) setEchestPhase(EchestPhase.BREAK_ECHEST); else echTimeout("close ender chest"); }
+            case BREAK_ECHEST -> breakEchestTick();
+            case PICKUP_ECHEST -> { if (echestStepTicks > 60 || !BARITONE.isActive()) setEchestPhase(EchestPhase.DONE); }
+            case DONE -> {
+                echestCycle = false;
+                if (dryRunActive) {                              // dry-run: don't resume into another store; pause for inspection
+                    dryRunActive = false;
+                    paused = true;
+                    warn("[dry-run] Storage dry-run complete - NOTHING pulled or stored, ender chest recovered. Read the [dry-run] shulker scan above, then set dry-run-storage off and re-enable to store for real.");
+                    return;
+                }
+                resumeFromEchest();
+            }
+        }
+    }
+
+    /** Shift keep-items into the open shulker, one per tick; full (or none left) -> close. */
+    private void echFillTick() {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        int openId = CACHE.getPlayerCache().getInventoryCache().getOpenContainerId();
+        if (openId == 0) { setEchestPhase(EchestPhase.CLOSE_SHULKER); return; }
+        if (!depositTimer.tick(cfg.depositDelayTicks)) return;
+        Container c = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+        int src = c == null ? -1 : findPlayerWindowSlot(c, this::isKeep);
+        if (src == -1) { setEchestPhase(EchestPhase.CLOSE_SHULKER); return; }       // no keep items left
+        int total = keepTotalInWindow(c);
+        if (total == lastEchCount) {
+            if (++echFillStall > 6) { setEchestPhase(EchestPhase.CLOSE_SHULKER); return; } // shulker full
+        } else { echFillStall = 0; lastEchCount = total; }
+        shiftClick(c, src);
+    }
+
+    /** Shift the filled shulker(s) into the open echest, one per tick; detect exhaustion -> close. */
+    private void echStoreTick() {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        int openId = CACHE.getPlayerCache().getInventoryCache().getOpenContainerId();
+        if (openId == 0) { setEchestPhase(EchestPhase.CLOSE_ECHEST2); return; }
+        Container c = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+        int src = c == null ? -1 : findPlayerWindowSlot(c, this::isFilledShulker);
+        if (src == -1) {
+            // done storing, inventory clean: if the echest now holds no empty shulker (and none carried),
+            // it's exhausted -> a deposit trip fires from this clean state (so the trip's extract has room).
+            if (c != null && findContainerSlot(c, this::isEmptyShulker) == -1 && countInInv(this::isEmptyShulker) == 0) {
+                echestExhausted = true;
+                info("Used the last empty shulker - ender chest is full of filled shulkers.");
+            }
+            setEchestPhase(EchestPhase.CLOSE_ECHEST2);
+            return;
+        }
+        if (c != null && !containerHasRoom(c)) {        // echest full of shulkers -> exhausted
+            echestExhausted = true;
+            info("Ender chest is full of filled shulkers.");
+            setEchestPhase(EchestPhase.CLOSE_ECHEST2);
+            return;
+        }
+        if (!depositTimer.tick(cfg.depositDelayTicks)) return;
+        shiftClick(c, src);
+    }
+
+    private void resumeFromEchest() {
+        echestCycle = false;
+        if (finishAfterEchest) {         // bounded-area final pack just finished -> complete the run
+            finishAfterEchest = false;
+            completeRun();
+            return;
+        }
+        if (echestExhausted) {
+            echestExhausted = false;
+            // Echest is full of filled shulkers. With deposit chests set, haul them out to base for an
+            // unlimited run; otherwise (Foreman's EnderChest mode) the haul is safely packed in the global
+            // ender chest - end the run rather than leaving shulkers behind.
+            if (CONFIG.client.extra.aquariusMiner.depositToChests && !depositChestList().isEmpty()) {
+                beginDepositTrip();
+            } else {
+                complete = true;
+                info("Ender chest is full of filled shulkers - run complete. (Set deposit chests for an unlimited run.)");
+                inGameAlertActivePlayer("<green>Aquarius Miner: ender chest packed full - done");
+                endRun("ender chest full");
+            }
+            return;
+        }
+        areaActive = false; sawActive = false;
+        info("Stored into the ender chest; resuming mining.");
+    }
+
+    /** The echest window closed mid-deposit (2b lag / server desync) but the chest block is still placed.
+     *  Re-open it and retry, up to {@link #MAX_ECHEST_REOPENS} times per cycle, before giving up. */
+    private void reopenEchestOrAbort(String reason) {
+        if (echPos != null && !isAir(echPos) && ++echestReopens <= MAX_ECHEST_REOPENS) {
+            info("Ender chest closed early ({}) - re-opening, retry {}/{}.", reason, echestReopens, MAX_ECHEST_REOPENS);
+            setEchestPhase(EchestPhase.OPEN_ECHEST);   // re-right-clicks echPos; resets step ticks
+            return;
+        }
+        abortEchest(reason);
+    }
+
+    private void abortEchest(String reason) {
+        echestCycle = false;
+        paused = true;
+        if (CACHE.getPlayerCache().getInventoryCache().getOpenContainerId() != 0) closeContainer();
+        if (BARITONE.isActive()) BARITONE.stop();
+        warn("Storage cycle aborted: {}. Mining paused - toggle /aquariusminer off/on to retry.", reason);
+        inGameAlertActivePlayer("<red>Aquarius Miner storage failed: " + reason);
+    }
+
+    private void echTimeout(String what) {
+        if (echestStepTicks > CONFIG.client.extra.aquariusMiner.storeStepTimeoutTicks) abortEchest(what + " timed out");
+    }
+
+    /**
+     * DRY-RUN diagnostic (see {@code dryRunStorage}): dump every shulker in the OPEN ender chest — its item
+     * name, custom name, inner-stack count, and the empty/full verdict the bot would use to pick a buffer.
+     * If a NAMED/full shulker logs "0 inner stacks, isEmpty=true", the server isn't sending shulker contents
+     * and empty-detection is UNSAFE on this account (the bot could grab a valuable shulker).
+     */
+    private void dumpEchestShulkers() {
+        Container c = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+        if (c == null) { warn("[dry-run] ender chest container is null - cannot read contents"); return; }
+        int chestSlots = Math.max(0, c.getSize() - 36);
+        info("[dry-run] ===== Ender chest shulker scan ({} container slots) =====", chestSlots);
+        int shulkers = 0, readEmpty = 0;
+        for (int i = 0; i < chestSlots; i++) {
+            ItemStack s = c.getItemStack(i);
+            if (s == Container.EMPTY_STACK) continue;
+            String name = itemName(s);
+            if (name == null || !name.endsWith("shulker_box")) {
+                info("[dry-run]  slot {}: {} (not a shulker)", i, name);
+                continue;
+            }
+            shulkers++;
+            int inner = containerContents(s).size();
+            boolean empty = isEmptyShulker(s);
+            if (empty) readEmpty++;
+            String cn = customName(s);
+            info("[dry-run]  slot {}: {}{} -> {} inner stacks, isEmpty={}{}",
+                i, name, cn == null ? "" : " \"" + cn + "\"", inner, empty,
+                empty ? "  <-- would use as buffer" : "");
+        }
+        info("[dry-run] ===== {} shulkers, {} read as EMPTY (buffer candidates) =====", shulkers, readEmpty);
+        info("[dry-run] If any NAMED/full shulker above shows 0 inner stacks + isEmpty=true, content-reading is BROKEN - do NOT store.");
+    }
+
+    /** The custom (anvil) name of an item as plain text, or null if it has none. */
+    private @Nullable String customName(@Nullable ItemStack s) {
+        if (s == null || s == Container.EMPTY_STACK) return null;
+        var comp = s.getDataComponentsOrEmpty().get(DataComponentTypes.CUSTOM_NAME);
+        return comp == null ? null : com.aquarius.util.ComponentSerializer.serializePlain(comp);
+    }
+
+    /** True once the container half has synced at least one item. The echest is full of shulkers, so an
+     *  all-empty container half means SetContainerContent hasn't arrived yet — don't scan it prematurely. */
+    private boolean containerLoaded(Container c) {
+        int chestSlots = Math.max(0, c.getSize() - 36);
+        for (int i = 0; i < chestSlots; i++) if (c.getItemStack(i) != Container.EMPTY_STACK) return true;
+        return false;
+    }
+
+    /** True if the container half (the chest/shulker) has at least one empty slot. */
+    private boolean containerHasRoom(Container c) {
+        int chestSlots = Math.max(0, c.getSize() - 36);
+        for (int i = 0; i < chestSlots; i++) if (c.getItemStack(i) == Container.EMPTY_STACK) return true;
+        return false;
+    }
+
+    /** Count the empty slots in the container half (used to size a refill to the echest's free space). */
+    private int echestFreeSlots(Container c) {
+        int chestSlots = Math.max(0, c.getSize() - 36);
+        int free = 0;
+        for (int i = 0; i < chestSlots; i++) if (c.getItemStack(i) == Container.EMPTY_STACK) free++;
+        return free;
+    }
+
+    private int keepTotalInWindow(Container c) {
+        return keepTotalInPlayer(c, Math.max(0, c.getSize() - 36), c.getSize());
+    }
+
+    // ----------------------------------------------------- deposit trips
+    // Haul collected filled shulkers to fixed DEPOSIT chests at a base, then refill empty shulkers from a
+    // separate SUPPLY chest. A two-leg FSM: pathTo(GoalNear) the nearest deposit chest -> open -> shift
+    // filled shulkers in -> pathTo the nearest supply chest -> open -> pull empties out -> resume mining.
+    // Each leg has a travel/step timeout that moves on to the next chest or pauses, so a wrong/blocked/
+    // out-of-range chest can't hang the run.
+
+    private int countFilledShulkers() { return countInInv(this::isFilledShulker); }
+    private boolean hasEmptyShulker() { return InventoryUtil.searchPlayerInventory(this::isEmptyShulker) != -1; }
+
+    private int countInInv(java.util.function.Predicate<ItemStack> pred) {
+        List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+        int n = 0;
+        for (int i = 9; i <= 44; i++) if (pred.test(inv.get(i))) n++;
+        return n;
+    }
+
+    /** Empties to take this trip: capped to what fits in the echest after the deposit (and empties-per-trip). */
+    private int tripEmptiesTarget() {
+        return Math.min(CONFIG.client.extra.aquariusMiner.emptiesPerTrip, echestFreeAfterExtract);
+    }
+
+    private java.util.List<BlockPos> depositChestList() { return parseChests(CONFIG.client.extra.aquariusMiner.depositChests); }
+    private java.util.List<BlockPos> supplyChestList()  { return parseChests(CONFIG.client.extra.aquariusMiner.supplyChests); }
+
+    private java.util.List<BlockPos> parseChests(List<String> raw) {
+        java.util.List<BlockPos> out = new java.util.ArrayList<>();
+        for (String s : raw) {
+            String[] p = s.trim().split("\\s+");
+            if (p.length != 3) continue;
+            try { out.add(new BlockPos(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2]))); }
+            catch (NumberFormatException ignored) {}
+        }
+        return out;
+    }
+
+    /** Nearest chest in {@code list} not tried this trip, within maxDepositDistance (or null). */
+    private @Nullable BlockPos nearestChest(java.util.List<BlockPos> list) {
+        BlockPos feet = BARITONE.getPlayerContext().playerFeet();
+        BlockPos best = null;
+        double bestD = Double.MAX_VALUE;
+        for (BlockPos c : list) {
+            if (triedChests.contains(c)) continue;
+            double dx = c.x() - feet.x(), dy = c.y() - feet.y(), dz = c.z() - feet.z();
+            double d = dx * dx + dy * dy + dz * dz;
+            if (d < bestD) { bestD = d; best = c; }
+        }
+        int max = CONFIG.client.extra.aquariusMiner.maxDepositDistance;
+        if (best != null && max > 0 && bestD > (double) max * max) return null; // every untried chest is out of range
+        return best;
+    }
+
+    /** Begin a deposit trip: walk to the nearest deposit chest FIRST with a clean inventory - the filled
+     *  shulkers stay in the global ender chest until the bot is there (a death en route can't strand them). */
+    private void beginDepositTrip() {
+        if (BARITONE.isActive()) BARITONE.stop();
+        areaActive = false; sawActive = false; storing = false; echestCycle = false;
+        triedChests.clear();
+        nextDepositLeg = false; nextSupplyLeg = false; pendingDepositPause = null;
+        tripExtracted = false; tripRefilled = false; echestFreeAfterExtract = 0;
+        tripEchPos = null;
+        int echSlot = InventoryUtil.searchPlayerInventory(this::isEnderChestItem);
+        if (echSlot == -1) { depositPauseMsg("no ender chest to open the shulker buffer"); return; }
+        tripEchItem = ItemRegistry.REGISTRY.get(CACHE.getPlayerCache().getPlayerInventory().get(echSlot).getId());
+        BlockPos c = nearestChest(depositChestList());
+        if (c == null) { depositPause(depositChestList(), "deposit"); return; }
+        depositChest = c;
+        depositing = true;
+        startTravel(c, DepositPhase.PATH_TO_DEPOSIT);
+        info("Deposit trip: heading to deposit chest {} (filled shulkers stay in the ender chest until I'm there).", depositChest);
+    }
+
+    private void startTravel(BlockPos chest, DepositPhase phase) {
+        depositPhase = phase;
+        depositTripTicks = 0;
+        depositGoal = new GoalNear(chest.x(), chest.y(), chest.z(), 9); // within ~3 blocks (interact reach)
+        BARITONE.pathTo(depositGoal);
+    }
+
+    /** Start the supply leg by routing to the nearest supply chest (refill empties). */
+    private void startSupplyLeg() {
+        triedChests.clear();
+        BlockPos c = nearestChest(supplyChestList());
+        if (c == null) {
+            if (countInInv(this::isEmptyShulker) > 0) gotoStockOrDone();  // nothing reachable, but we grabbed some
+            else depositPause(supplyChestList(), "supply");
+            return;
+        }
+        depositChest = c;
+        startTravel(c, DepositPhase.PATH_TO_SUPPLY);
+    }
+
+    /** At the deposit chest: place an ender chest beside the bot to pull the filled shulkers out of it. */
+    private void beginExtract() {
+        tripEchPos = selectStorageSpot();
+        if (tripEchPos == null || tripEchItem == null) { depositPauseMsg("no spot to place the ender chest at the deposit chest"); return; }
+        BARITONE.placeBlock(tripEchPos.x(), tripEchPos.y(), tripEchPos.z(), tripEchItem);
+        depositPhase = DepositPhase.PULL_PLACE; depositTripTicks = 0;
+    }
+
+    /** After the filled shulkers are dumped: refill empties (if wanted and the echest has room), else stock/finish. */
+    private void afterDeposit() {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        if (!finishAfterDeposit && cfg.refillEmpties
+                && tripEmptiesTarget() > 0
+                && countInInv(this::isEmptyShulker) < tripEmptiesTarget()) {
+            startSupplyLeg();
+        } else {
+            gotoStockOrDone();
+        }
+    }
+
+    /** Place an ender chest and stock the carried empties into it, or finish the trip if there are none. */
+    private void gotoStockOrDone() {
+        if (countInInv(this::isEmptyShulker) > 0 && isEnderChestInInv()) {
+            tripEchPos = selectStorageSpot();
+            if (tripEchPos != null && tripEchItem != null) {
+                tripRefilled = true;
+                BARITONE.placeBlock(tripEchPos.x(), tripEchPos.y(), tripEchPos.z(), tripEchItem);
+                depositPhase = DepositPhase.STOCK_PLACE; depositTripTicks = 0;
+                return;
+            }
+        }
+        depositPhase = DepositPhase.DONE;
+    }
+
+    private void depositPause(java.util.List<BlockPos> list, String kind) {
+        depositPauseMsg(list.isEmpty() ? "no " + kind + " chests set" : "no reachable " + kind + " chest");
+    }
+
+    private void depositPauseMsg(String msg) {
+        depositing = false; paused = true;
+        if (BARITONE.isActive()) BARITONE.stop();
+        warn("Deposit trip: {}. Mining paused - toggle /aquariusminer off/on to retry.", msg);
+        inGameAlertActivePlayer("<red>Aquarius Miner: " + msg);
+    }
+
+    private void depositTripTick() {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        depositTripTicks++;
+        int openId = CACHE.getPlayerCache().getInventoryCache().getOpenContainerId();
+        switch (depositPhase) {
+            case PATH_TO_DEPOSIT, PATH_TO_SUPPLY -> {
+                boolean supply = depositPhase == DepositPhase.PATH_TO_SUPPLY;
+                BlockPos feet = BARITONE.getPlayerContext().playerFeet();
+                if (depositGoal != null && depositGoal.isInGoal(feet.x(), feet.y(), feet.z())) {
+                    if (BARITONE.isActive()) BARITONE.stop();
+                    if (supply) { open(depositChest); depositPhase = DepositPhase.OPEN_SUPPLY; depositTripTicks = 0; }
+                    else if (!tripExtracted) beginExtract();             // pull the filled shulkers out of the echest here
+                    else { open(depositChest); depositPhase = DepositPhase.OPEN_DEPOSIT; depositTripTicks = 0; }
+                } else if (!BARITONE.isActive() || depositTripTicks > cfg.maxClearTicks) {
+                    warn("Couldn't reach {} chest {} - trying another.", supply ? "supply" : "deposit", depositChest);
+                    tryNextChest(supply);
+                }
+            }
+            // --- EXTRACT: place echest at the deposit chest, pull the filled loot shulkers out, break it ---
+            case PULL_PLACE -> { if (placed(tripEchPos)) { depositPhase = DepositPhase.PULL_OPEN; depositTripTicks = 0; } else if (depositTripTicks > cfg.storeStepTimeoutTicks) depositPauseMsg("couldn't place the ender chest to collect filled shulkers"); }
+            case PULL_OPEN -> { if (openId != 0) { depositPhase = DepositPhase.PULL_FILLED; depositTripTicks = 0; } else if (depositTripTicks > cfg.storeStepTimeoutTicks) depositPauseMsg("ender chest didn't open (collecting filled shulkers)"); }
+            case PULL_FILLED -> pullFilledTick();
+            case PULL_CLOSE -> { if (openId == 0) { breakAt(tripEchPos); depositPhase = DepositPhase.PULL_BREAK; depositTripTicks = 0; } else if (depositTripTicks > cfg.storeStepTimeoutTicks) closeContainer(); }
+            case PULL_BREAK -> { if (isAir(tripEchPos)) { BARITONE.pickup(); depositPhase = DepositPhase.PULL_PICKUP; depositTripTicks = 0; } else if (depositTripTicks > cfg.storeStepTimeoutTicks) breakAt(tripEchPos); }
+            case PULL_PICKUP -> {
+                if (depositTripTicks > 30 || !BARITONE.isActive()) {
+                    tripExtracted = true; tripEchPos = null;
+                    if (countInInv(this::isLootFilledShulker) > 0) { open(depositChest); depositPhase = DepositPhase.OPEN_DEPOSIT; depositTripTicks = 0; }
+                    else afterDeposit();                                 // echest held no filled shulkers (edge)
+                }
+            }
+            case OPEN_DEPOSIT -> {
+                if (openId != 0) { depositPhase = DepositPhase.DEPOSIT_FILLED; depositTripTicks = 0; depositTripStall = 0; lastTripCount = -1; }
+                else if (depositTripTicks > cfg.storeStepTimeoutTicks) tryNextChest(false);
+            }
+            case DEPOSIT_FILLED -> depositFilledTick();
+            case CLOSE_DEPOSIT -> {
+                if (openId == 0) {
+                    if (pendingDepositPause != null) { String m = pendingDepositPause; pendingDepositPause = null; depositPauseMsg(m); }
+                    else if (nextDepositLeg) { nextDepositLeg = false; startTravel(depositChest, DepositPhase.PATH_TO_DEPOSIT); }
+                    else afterDeposit();
+                } else if (depositTripTicks > cfg.storeStepTimeoutTicks) closeContainer();
+            }
+            case OPEN_SUPPLY -> {
+                if (openId != 0) { depositPhase = DepositPhase.TAKE_EMPTIES; depositTripTicks = 0; }
+                else if (depositTripTicks > cfg.storeStepTimeoutTicks) tryNextChest(true);
+            }
+            case TAKE_EMPTIES -> takeEmptiesTick();
+            case CLOSE_SUPPLY -> {
+                if (openId == 0) {
+                    if (nextSupplyLeg) { nextSupplyLeg = false; startTravel(depositChest, DepositPhase.PATH_TO_SUPPLY); }
+                    else gotoStockOrDone();
+                } else if (depositTripTicks > cfg.storeStepTimeoutTicks) closeContainer();
+            }
+            // --- STOCK: place echest near the supply chest, push the empties into it, break it ---
+            case STOCK_PLACE -> { if (placed(tripEchPos)) { depositPhase = DepositPhase.STOCK_OPEN; depositTripTicks = 0; } else if (depositTripTicks > cfg.storeStepTimeoutTicks) depositPauseMsg("couldn't place the ender chest to stock empties"); }
+            case STOCK_OPEN -> { if (openId != 0) { depositPhase = DepositPhase.STOCK_EMPTIES; depositTripTicks = 0; } else if (depositTripTicks > cfg.storeStepTimeoutTicks) depositPauseMsg("ender chest didn't open (stocking empties)"); }
+            case STOCK_EMPTIES -> stockEmptiesTick();
+            case STOCK_CLOSE -> { if (openId == 0) { breakAt(tripEchPos); depositPhase = DepositPhase.STOCK_BREAK; depositTripTicks = 0; } else if (depositTripTicks > cfg.storeStepTimeoutTicks) closeContainer(); }
+            case STOCK_BREAK -> { if (isAir(tripEchPos)) { BARITONE.pickup(); depositPhase = DepositPhase.STOCK_PICKUP; depositTripTicks = 0; } else if (depositTripTicks > cfg.storeStepTimeoutTicks) breakAt(tripEchPos); }
+            case STOCK_PICKUP -> { if (depositTripTicks > 30 || !BARITONE.isActive()) { tripEchPos = null; finishTrip(); } }
+            case DONE -> finishTrip();
+        }
+    }
+
+    /** Pull filled loot shulkers (NOT the tool-shulker) out of the open echest, one per tick; record free space. */
+    private void pullFilledTick() {
+        int openId = CACHE.getPlayerCache().getInventoryCache().getOpenContainerId();
+        if (openId == 0) { depositPhase = DepositPhase.PULL_CLOSE; return; }
+        if (!depositTimer.tick(CONFIG.client.extra.aquariusMiner.depositDelayTicks)) return;
+        Container c = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+        int src = c == null ? -1 : findContainerSlot(c, this::isLootFilledShulker);
+        if (src == -1 || emptyMainSlots() == 0) {                 // pulled them all (or inventory full, rare)
+            echestFreeAfterExtract = c == null ? 0 : echestFreeSlots(c);
+            closeContainer(); depositPhase = DepositPhase.PULL_CLOSE; depositTripTicks = 0; return;
+        }
+        shiftClick(c, src);
+    }
+
+    /** Push the carried empty shulkers into the open echest, one per tick. */
+    private void stockEmptiesTick() {
+        int openId = CACHE.getPlayerCache().getInventoryCache().getOpenContainerId();
+        if (openId == 0) { depositPhase = DepositPhase.STOCK_CLOSE; return; }
+        if (!depositTimer.tick(CONFIG.client.extra.aquariusMiner.depositDelayTicks)) return;
+        Container c = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+        int src = c == null ? -1 : findPlayerWindowSlot(c, this::isEmptyShulker);
+        if (src == -1 || (c != null && !containerHasRoom(c))) {   // all stocked (or echest full)
+            closeContainer(); depositPhase = DepositPhase.STOCK_CLOSE; depositTripTicks = 0; return;
+        }
+        shiftClick(c, src);
+    }
+
+    private void depositFilledTick() {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        int openId = CACHE.getPlayerCache().getInventoryCache().getOpenContainerId();
+        if (openId == 0) { depositPhase = DepositPhase.CLOSE_DEPOSIT; return; }
+        if (!depositTimer.tick(cfg.depositDelayTicks)) return;
+        Container c = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+        int src = findPlayerWindowSlot(c, this::isLootFilledShulker);
+        if (src == -1) { closeContainer(); depositPhase = DepositPhase.CLOSE_DEPOSIT; depositTripTicks = 0; return; } // all dropped off
+        // chest-full detection: if the filled-shulker count in the player window stops dropping, the chest is full
+        int cnt = countLootFilledInWindow(c);
+        if (cnt == lastTripCount) {
+            if (++depositTripStall > 6) {
+                triedChests.add(depositChest);
+                BlockPos next = nearestChest(depositChestList());
+                closeContainer();
+                depositPhase = DepositPhase.CLOSE_DEPOSIT;
+                depositTripTicks = 0;
+                if (next != null) { depositChest = next; nextDepositLeg = true; }
+                else pendingDepositPause = "all deposit chests full";
+                return;
+            }
+        } else { depositTripStall = 0; lastTripCount = cnt; }
+        shiftClick(c, src);
+    }
+
+    private void takeEmptiesTick() {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        int openId = CACHE.getPlayerCache().getInventoryCache().getOpenContainerId();
+        if (openId == 0) { depositPhase = DepositPhase.CLOSE_SUPPLY; return; }
+        if (countInInv(this::isEmptyShulker) >= tripEmptiesTarget() || emptyMainSlots() == 0) {
+            closeContainer(); depositPhase = DepositPhase.CLOSE_SUPPLY; depositTripTicks = 0; return;
+        }
+        if (!depositTimer.tick(cfg.depositDelayTicks)) return;
+        Container c = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+        int src = findContainerSlot(c, this::isEmptyShulker);
+        if (src == -1) {                                    // this supply chest is out of empties
+            triedChests.add(depositChest);
+            BlockPos next = nearestChest(supplyChestList());
+            closeContainer();
+            depositPhase = DepositPhase.CLOSE_SUPPLY;
+            depositTripTicks = 0;
+            if (next != null) { depositChest = next; nextSupplyLeg = true; } // else finish with what we grabbed
+            return;
+        }
+        shiftClick(c, src);
+    }
+
+    private int countLootFilledInWindow(Container c) {
+        int size = c.getSize();
+        int n = 0;
+        for (int i = Math.max(0, size - 36); i < size; i++) if (isLootFilledShulker(c.getItemStack(i))) n++;
+        return n;
+    }
+
+    /** A chest of the current leg was full/unreachable: try the next nearest, else continue or pause. */
+    private void tryNextChest(boolean supply) {
+        if (BARITONE.isActive()) BARITONE.stop();
+        triedChests.add(depositChest);
+        BlockPos next = nearestChest(supply ? supplyChestList() : depositChestList());
+        if (next == null) {
+            if (supply) {
+                if (countInInv(this::isEmptyShulker) > 0) gotoStockOrDone();
+                else depositPauseMsg("no reachable supply chest");
+            } else {
+                if (tripExtracted && countInInv(this::isLootFilledShulker) == 0) afterDeposit();
+                else depositPauseMsg("no reachable deposit chest");
+            }
+            return;
+        }
+        depositChest = next;
+        startTravel(next, supply ? DepositPhase.PATH_TO_SUPPLY : DepositPhase.PATH_TO_DEPOSIT);
+    }
+
+    private void finishTrip() {
+        depositing = false;
+        if (BARITONE.isActive()) BARITONE.stop();
+        if (finishAfterDeposit) { finishAfterDeposit = false; completeRun(); return; }
+        if (!tripRefilled) {
+            // stocked no empties into the echest (supply empty / refill off) -> can't keep mining
+            depositPauseMsg(CONFIG.client.extra.aquariusMiner.refillEmpties
+                ? "out of empty shulkers (supply chests had none)"
+                : "out of empty shulkers (refill is off)");
+            return;
+        }
+        areaActive = false; sawActive = false;
+        info("Deposit trip done; resuming mining.");
+    }
+
+    // ----------------------------------------------------------- inventory
+
+    private int emptyMainSlots() {
+        List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+        int empty = 0;
+        for (int i = 9; i <= 44; i++) { // main inventory + hotbar (skip armor/offhand/crafting)
+            if (inv.get(i) == Container.EMPTY_STACK) empty++;
+        }
+        return empty;
+    }
+
+    /**
+     * Can the inventory (main + hotbar, slots 9-44) take even one more keep item? True if any slot is
+     * empty or any keep stack is below its max. When false the inventory is completely packed, so a
+     * storage cycle fills shulkers with whole stacks (the require-full-stacks trigger).
+     */
+    private boolean canHoldMoreKeep() {
+        List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+        for (int i = 9; i <= 44; i++) {
+            ItemStack s = inv.get(i);
+            if (s == Container.EMPTY_STACK) return true;
+            if (isKeep(s) && s.getAmount() < maxStackSize(s)) return true;
+        }
+        return false;
+    }
+
+    private int maxStackSize(ItemStack s) {
+        var data = ItemRegistry.REGISTRY.get(s.getId());
+        return data == null ? 64 : data.stackSize();
+    }
+
+    /**
+     * Keep target (keep) blocks OUT of the hotbar. Vanilla item pickup fills the empty HOTBAR slots (36-44)
+     * before the main inventory (9-35), so mined blocks pile into the hotbar — which fights the break
+     * auto-tool (every break swaps the pickaxe into a hotbar slot, bumping a target back out) and is never
+     * cleared until a store. Shift ONE keep-stack from the hotbar back into the main inventory per free
+     * manager tick — one {@link ShiftClick} packet (the proxy quick-move moves 36-44 → 9-35 for the player
+     * inventory, container 0), never bursts. Only when NO container is open (it acts on the player's own
+     * window) and the main inventory can actually receive the stack, so it can't spin with no progress.
+     * Mirrors Foreman's sweepHotbarTargets. Returns true if it moved one.
+     */
+    private boolean sweepHotbarTargets() {
+        if (CACHE.getPlayerCache().getInventoryCache().getOpenContainerId() != 0) return false;
+        if (INVENTORY.hasActiveRequest()) return false;                 // paced by the manager, never bursts
+        Container inv = CACHE.getPlayerCache().getInventoryCache().getOpenContainer(); // player inventory, id 0
+        if (inv == null) return false;
+        for (int i = 36; i <= 44; i++) {                                // hotbar slots in the 46-slot window
+            ItemStack s = inv.getItemStack(i);
+            if (!isKeep(s)) continue;
+            if (!mainInvHasRoomFor(inv, s)) continue;                   // no room now → it'll go in the shulker at store time
+            shiftClick(inv, i);                                         // 36-44 → 9-35
+            return true;
+        }
+        return false;
+    }
+
+    /** True if the main inventory (player-window slots 9-35) has an empty slot or a non-full matching stack. */
+    private boolean mainInvHasRoomFor(Container inv, ItemStack s) {
+        int max = maxStackSize(s);
+        for (int i = 9; i <= 35; i++) {
+            ItemStack m = inv.getItemStack(i);
+            if (m == Container.EMPTY_STACK) return true;
+            if (m.getId() == s.getId()
+                && java.util.Objects.equals(m.getDataComponents(), s.getDataComponents())
+                && m.getAmount() < max) return true;
+        }
+        return false;
+    }
+
+    // ---- tool restock: during a storage cycle, pull a fresh tool from the open container if ours is spent ----
+
+    /**
+     * Restock cycle: place the ender chest, pull out the tool-shulker (a shulker holding a fresh tool),
+     * place it, take one fresh tool, break + recover the shulker, return it to the ender chest, then
+     * recover the chest. Driven as a polling FSM like the storage cycle; every wait phase times out to
+     * {@link #abortRestock}. The tool-shulker is placed by item TYPE, so it must be a unique colour
+     * among any shulkers the bot carries (see config note).
+     */
+    private void beginRestock() {
+        if (BARITONE.isActive()) BARITONE.stop();
+        areaActive = false; sawActive = false;
+        restockKeyword = currentToolKeyword();   // latch which tool this cycle restocks (primary or shovel)
+        restockShulkerPos = null; restockShulkerItem = null;
+        int echestSlot = InventoryUtil.searchPlayerInventory(s -> matchesName(s, CONFIG.client.extra.aquariusMiner.restockSourceItem));
+        restockEchestItem = echestSlot == -1 ? null
+            : ItemRegistry.REGISTRY.get(CACHE.getPlayerCache().getPlayerInventory().get(echestSlot).getId());
+        restockEchestPos = selectStorageSpot();
+        if (restockEchestItem == null || restockEchestPos == null) { warn("Cannot restock: no ender chest or no spot."); return; }
+        restocking = true;
+        info("Tool spent - starting restock cycle.");
+        setRestockPhase(RestockPhase.PLACE_ECHEST);
+    }
+
+    private void setRestockPhase(RestockPhase phase) {
+        restockPhase = phase;
+        restockStepTicks = 0;
+        Container c = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+        switch (phase) {
+            case PLACE_ECHEST -> place(restockEchestPos, restockEchestItem);
+            case OPEN_ECHEST, REOPEN_ECHEST -> open(restockEchestPos);
+            case PLACE_SHULKER -> place(restockShulkerPos, restockShulkerItem);
+            case OPEN_SHULKER -> open(restockShulkerPos);
+            case CLOSE_ECHEST, CLOSE_SHULKER, CLOSE_ECHEST2 -> closeContainer();
+            case BREAK_SHULKER -> breakAt(restockShulkerPos);
+            case BREAK_ECHEST -> breakAt(restockEchestPos);
+            case PICKUP_SHULKER, PICKUP_ECHEST -> BARITONE.pickup();
+            case TAKE_SHULKER -> { // shift the tool-shulker out of the open ender chest
+                int slot = c == null ? -1 : findContainerSlot(c, this::isToolShulker);
+                if (slot >= 0) { restockShulkerItem = ItemRegistry.REGISTRY.get(c.getItemStack(slot).getId()); shiftClick(c, slot); }
+            }
+            case TAKE_TOOL -> { // shift one fresh tool out of the open shulker
+                int slot = c == null ? -1 : findContainerSlot(c, this::isFreshTool);
+                if (slot >= 0) shiftClick(c, slot);
+            }
+            case RETURN_SHULKER -> { // shift the tool-shulker back into the open ender chest
+                int slot = c == null ? -1 : findPlayerWindowSlot(c, this::isToolShulker);
+                if (slot >= 0) shiftClick(c, slot);
+            }
+            default -> { /* DONE handled in tick */ }
+        }
+    }
+
+    private void restockTick() {
+        restockStepTicks++;
+        int openId = CACHE.getPlayerCache().getInventoryCache().getOpenContainerId();
+        switch (restockPhase) {
+            case PLACE_ECHEST -> { if (placed(restockEchestPos)) setRestockPhase(RestockPhase.OPEN_ECHEST); else timeoutRestock("place ender chest"); }
+            case OPEN_ECHEST -> { if (openId != 0) setRestockPhase(RestockPhase.TAKE_SHULKER); else timeoutRestock("open ender chest"); }
+            case TAKE_SHULKER -> {
+                if (InventoryUtil.searchPlayerInventory(this::isToolShulker) != -1) { setRestockPhase(RestockPhase.CLOSE_ECHEST); return; }
+                Container c = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+                if (c == null) { abortRestock("ender chest closed early"); return; }
+                if (findContainerSlot(c, this::isToolShulker) == -1) { abortRestock("no tool-shulker in the ender chest"); return; }
+                timeoutRestock("take tool-shulker");
+            }
+            case CLOSE_ECHEST -> {
+                if (openId == 0) {
+                    restockShulkerPos = selectStorageSpot();
+                    if (restockShulkerPos == null) { abortRestock("no spot to place the tool-shulker"); return; }
+                    setRestockPhase(RestockPhase.PLACE_SHULKER);
+                } else timeoutRestock("close ender chest");
+            }
+            case PLACE_SHULKER -> { if (placed(restockShulkerPos)) setRestockPhase(RestockPhase.OPEN_SHULKER); else timeoutRestock("place tool-shulker"); }
+            case OPEN_SHULKER -> { if (openId != 0) setRestockPhase(RestockPhase.TAKE_TOOL); else timeoutRestock("open tool-shulker"); }
+            case TAKE_TOOL -> {
+                if (!toolNeedsRestock()) { setRestockPhase(RestockPhase.CLOSE_SHULKER); return; }
+                Container c = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+                if (c == null) { abortRestock("tool-shulker closed early"); return; }
+                if (findContainerSlot(c, this::isFreshTool) == -1) { abortRestock("no fresh tool in the tool-shulker"); return; }
+                timeoutRestock("take tool");
+            }
+            case CLOSE_SHULKER -> { if (openId == 0) setRestockPhase(RestockPhase.BREAK_SHULKER); else timeoutRestock("close tool-shulker"); }
+            case BREAK_SHULKER -> { if (isAir(restockShulkerPos)) setRestockPhase(RestockPhase.PICKUP_SHULKER); else timeoutRestock("break tool-shulker"); }
+            case PICKUP_SHULKER -> { if (hasShulkerType(restockShulkerItem) || restockStepTicks > 60) setRestockPhase(RestockPhase.REOPEN_ECHEST); }
+            case REOPEN_ECHEST -> { if (openId != 0) setRestockPhase(RestockPhase.RETURN_SHULKER); else timeoutRestock("reopen ender chest"); }
+            case RETURN_SHULKER -> {
+                if (InventoryUtil.searchPlayerInventory(this::isToolShulker) == -1
+                    && !hasShulkerType(restockShulkerItem)) { setRestockPhase(RestockPhase.CLOSE_ECHEST2); return; }
+                Container c = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+                if (c == null) { abortRestock("ender chest closed early"); return; }
+                timeoutRestock("return tool-shulker");
+            }
+            case CLOSE_ECHEST2 -> { if (openId == 0) setRestockPhase(RestockPhase.BREAK_ECHEST); else timeoutRestock("close ender chest"); }
+            case BREAK_ECHEST -> { if (isAir(restockEchestPos)) setRestockPhase(RestockPhase.PICKUP_ECHEST); else timeoutRestock("break ender chest"); }
+            case PICKUP_ECHEST -> { if (restockStepTicks > 60 || !BARITONE.isActive()) setRestockPhase(RestockPhase.DONE); }
+            case DONE -> {
+                restocking = false;
+                areaActive = false; sawActive = false;
+                info("Restock done; resuming mining.");
+            }
+        }
+    }
+
+    private void abortRestock(String reason) {
+        restocking = false;
+        paused = true;
+        if (CACHE.getPlayerCache().getInventoryCache().getOpenContainerId() != 0) closeContainer();
+        if (BARITONE.isActive()) BARITONE.stop();
+        warn("Restock cycle aborted: {}. Mining paused - toggle /aquariusminer off/on to retry.", reason);
+        inGameAlertActivePlayer("<red>Aquarius Miner restock failed: " + reason);
+    }
+
+    private void timeoutRestock(String what) {
+        if (restockStepTicks > CONFIG.client.extra.aquariusMiner.storeStepTimeoutTicks) abortRestock(what + " timed out");
+    }
+
+    // ------------------------------------------------ food restock cycle (best-effort)
+    // Crack a FOOD-shulker kept in the ender chest and top up the carried food. Structurally identical to the
+    // tool restock cycle (place echest -> pull the shulker out -> place + open it -> take food by preference ->
+    // break + recover the shulker -> return it to the echest -> recover the echest) but pulls FOOD, not a tool.
+    // BEST-EFFORT: if there's no food-shulker to crack, it latches foodRestockExhausted, warns, and keeps mining
+    // (food is never worth pausing the run). A genuine mechanical timeout still pauses, like the tool cycle.
+
+    private void beginFoodRestock() {
+        if (BARITONE.isActive()) BARITONE.stop();
+        areaActive = false; sawActive = false;
+        foodShulkerPos = null; foodShulkerItem = null;
+        int echestSlot = InventoryUtil.searchPlayerInventory(this::isEnderChestItem);
+        foodEchestItem = echestSlot == -1 ? null
+            : ItemRegistry.REGISTRY.get(CACHE.getPlayerCache().getPlayerInventory().get(echestSlot).getId());
+        foodEchestPos = selectStorageSpot();
+        if (foodEchestItem == null || foodEchestPos == null) { warn("Cannot restock food: no ender chest or no spot."); return; }
+        foodRestocking = true;
+        info("Food low - starting food restock cycle.");
+        setFoodPhase(FoodPhase.PLACE_ECHEST);
+    }
+
+    private void setFoodPhase(FoodPhase phase) {
+        foodPhase = phase;
+        foodStepTicks = 0;
+        Container c = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+        switch (phase) {
+            case PLACE_ECHEST -> place(foodEchestPos, foodEchestItem);
+            case OPEN_ECHEST, REOPEN_ECHEST -> open(foodEchestPos);
+            case PLACE_SHULKER -> place(foodShulkerPos, foodShulkerItem);
+            case OPEN_SHULKER -> open(foodShulkerPos);
+            case CLOSE_ECHEST, CLOSE_SHULKER, CLOSE_ECHEST2 -> closeContainer();
+            case BREAK_SHULKER -> breakAt(foodShulkerPos);
+            case BREAK_ECHEST -> breakAt(foodEchestPos);
+            case PICKUP_SHULKER, PICKUP_ECHEST -> BARITONE.pickup();
+            case TAKE_SHULKER -> { // shift the food-shulker out of the open ender chest
+                int slot = c == null ? -1 : findContainerSlot(c, this::isFoodShulker);
+                if (slot >= 0) { foodShulkerItem = ItemRegistry.REGISTRY.get(c.getItemStack(slot).getId()); shiftClick(c, slot); }
+            }
+            case RETURN_SHULKER -> { // shift the (now part-empty) food-shulker back into the open ender chest, by TYPE
+                int slot = c == null ? -1 : findPlayerWindowSlot(c, s -> foodShulkerItem != null && matchesName(s, foodShulkerItem.name()));
+                if (slot >= 0) shiftClick(c, slot);
+            }
+            case TAKE_FOOD -> { foodTakeStall = 0; lastFoodCount = -1; } // tick-driven multi-shift below
+            default -> { /* DONE handled in foodTick */ }
+        }
+    }
+
+    private void foodTick() {
+        foodStepTicks++;
+        int openId = CACHE.getPlayerCache().getInventoryCache().getOpenContainerId();
+        switch (foodPhase) {
+            case PLACE_ECHEST -> { if (placed(foodEchestPos)) setFoodPhase(FoodPhase.OPEN_ECHEST); else timeoutFood("place ender chest"); }
+            case OPEN_ECHEST -> { if (openId != 0) setFoodPhase(FoodPhase.TAKE_SHULKER); else timeoutFood("open ender chest"); }
+            case TAKE_SHULKER -> {
+                if (InventoryUtil.searchPlayerInventory(this::isFoodShulker) != -1) { setFoodPhase(FoodPhase.CLOSE_ECHEST); return; }
+                Container c = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+                if (c == null) { abortFood("ender chest closed early"); return; }
+                if (findContainerSlot(c, this::isFoodShulker) == -1) {
+                    // no food-shulker to crack: best-effort - stop trying this run and recover the placed echest
+                    foodRestockExhausted = true;
+                    warn("No food-shulker in the ender chest - food restock disabled for this run.");
+                    inGameAlertActivePlayer("<yellow>Aquarius Miner: no food-shulker to restock");
+                    setFoodPhase(FoodPhase.CLOSE_ECHEST2);   // close + break + pick up the echest, then resume
+                    return;
+                }
+                timeoutFood("take food-shulker");
+            }
+            case CLOSE_ECHEST -> {
+                if (openId == 0) {
+                    foodShulkerPos = selectStorageSpot();
+                    if (foodShulkerPos == null) { abortFood("no spot to place the food-shulker"); return; }
+                    setFoodPhase(FoodPhase.PLACE_SHULKER);
+                } else timeoutFood("close ender chest");
+            }
+            case PLACE_SHULKER -> { if (placed(foodShulkerPos)) setFoodPhase(FoodPhase.OPEN_SHULKER); else timeoutFood("place food-shulker"); }
+            case OPEN_SHULKER -> { if (openId != 0) setFoodPhase(FoodPhase.TAKE_FOOD); else timeoutFood("open food-shulker"); }
+            case TAKE_FOOD -> takeFoodTick();
+            case CLOSE_SHULKER -> { if (openId == 0) setFoodPhase(FoodPhase.BREAK_SHULKER); else timeoutFood("close food-shulker"); }
+            case BREAK_SHULKER -> { if (isAir(foodShulkerPos)) setFoodPhase(FoodPhase.PICKUP_SHULKER); else timeoutFood("break food-shulker"); }
+            case PICKUP_SHULKER -> { if (hasShulkerType(foodShulkerItem) || foodStepTicks > 60) setFoodPhase(FoodPhase.REOPEN_ECHEST); }
+            case REOPEN_ECHEST -> { if (openId != 0) setFoodPhase(FoodPhase.RETURN_SHULKER); else timeoutFood("reopen ender chest"); }
+            case RETURN_SHULKER -> {
+                if (!hasShulkerType(foodShulkerItem)) { setFoodPhase(FoodPhase.CLOSE_ECHEST2); return; } // shulker is back in the echest
+                Container c = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+                if (c == null) { abortFood("ender chest closed early"); return; }
+                timeoutFood("return food-shulker");
+            }
+            case CLOSE_ECHEST2 -> { if (openId == 0) setFoodPhase(FoodPhase.BREAK_ECHEST); else timeoutFood("close ender chest"); }
+            case BREAK_ECHEST -> { if (isAir(foodEchestPos)) setFoodPhase(FoodPhase.PICKUP_ECHEST); else timeoutFood("break ender chest"); }
+            case PICKUP_ECHEST -> { if (foodStepTicks > 60 || !BARITONE.isActive()) setFoodPhase(FoodPhase.DONE); }
+            case DONE -> {
+                foodRestocking = false;
+                areaActive = false; sawActive = false;
+                info("Food restock done ({} food on hand); resuming mining.", countGoodFood());
+            }
+        }
+    }
+
+    /** Shift the highest-preference food out of the open food-shulker until we have enough (or it's empty/no room). */
+    private void takeFoodTick() {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        int openId = CACHE.getPlayerCache().getInventoryCache().getOpenContainerId();
+        if (openId == 0) { setFoodPhase(FoodPhase.CLOSE_SHULKER); return; }
+        if (countGoodFood() >= cfg.foodRestockCount) { setFoodPhase(FoodPhase.CLOSE_SHULKER); return; }
+        Container c = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+        int slot = c == null ? -1 : findBestFoodSlot(c);
+        if (slot == -1) { setFoodPhase(FoodPhase.CLOSE_SHULKER); return; }   // shulker out of food
+        if (!depositTimer.tick(cfg.depositDelayTicks)) return;
+        int cur = countGoodFood();
+        if (cur == lastFoodCount) {
+            if (++foodTakeStall > 6) { setFoodPhase(FoodPhase.CLOSE_SHULKER); return; } // can't unload (no room) -> stop
+        } else { foodTakeStall = 0; lastFoodCount = cur; }
+        shiftClick(c, slot);
+    }
+
+    private void abortFood(String reason) {
+        foodRestocking = false;
+        paused = true;
+        if (CACHE.getPlayerCache().getInventoryCache().getOpenContainerId() != 0) closeContainer();
+        if (BARITONE.isActive()) BARITONE.stop();
+        warn("Food restock aborted: {}. Mining paused - toggle /aquariusminer off/on to retry.", reason);
+        inGameAlertActivePlayer("<red>Aquarius Miner food restock failed: " + reason);
+    }
+
+    private void timeoutFood(String what) {
+        if (foodStepTicks > CONFIG.client.extra.aquariusMiner.storeStepTimeoutTicks) abortFood(what + " timed out");
+    }
+
+    // ---- food predicates (AquariusProxy's FoodRegistry gives safe-food + always-eat flags per item) ----
+
+    private @Nullable FoodData foodData(@Nullable ItemStack s) {
+        if (s == null || s == Container.EMPTY_STACK) return null;
+        return FoodRegistry.REGISTRY.get(s.getId());
+    }
+
+    /** A safe, edible food (per FoodRegistry) that isn't on the risky-food denylist. */
+    private boolean isGoodFood(@Nullable ItemStack s) {
+        FoodData f = foodData(s);
+        if (f == null || !f.isSafeFood()) return false;
+        return !CONFIG.client.extra.aquariusMiner.riskyFoods.contains(f.name());
+    }
+
+    /** Total carried good food (summed counts across main inventory + hotbar). */
+    private int countGoodFood() {
+        List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+        int n = 0;
+        for (int i = 9; i <= 44; i++) { ItemStack s = inv.get(i); if (isGoodFood(s)) n += s.getAmount(); }
+        return n;
+    }
+
+    /** Preference rank (lower = better): golden carrot > ench golden apple > golden apple/always-eat > cooked > other. */
+    private int foodPriority(@Nullable ItemStack s) {
+        String n = itemName(s);
+        if (n == null) return Integer.MAX_VALUE;
+        if (n.equals("golden_carrot")) return 1;
+        if (n.equals("enchanted_golden_apple")) return 2;
+        if (n.equals("golden_apple")) return 3;
+        FoodData f = foodData(s);
+        if (f != null && f.canAlwaysEat()) return 3;   // other always-eat foods rank with the golden apple
+        if (n.startsWith("cooked_") || n.equals("bread") || n.equals("baked_potato")) return 4;
+        return 5;                                       // natural / other safe foods
+    }
+
+    /** Container (chest-half) slot holding the highest-preference food, or -1. */
+    private int findBestFoodSlot(Container c) {
+        int chestSlots = Math.max(0, c.getSize() - 36);
+        int best = -1, bestPri = Integer.MAX_VALUE;
+        for (int i = 0; i < chestSlots; i++) {
+            ItemStack s = c.getItemStack(i);
+            if (!isGoodFood(s)) continue;
+            int pri = foodPriority(s);
+            if (pri < bestPri) { bestPri = pri; best = i; }
+        }
+        return best;
+    }
+
+    /** A shulker box item whose CONTAINER contents include good food. */
+    private boolean isFoodShulker(@Nullable ItemStack s) {
+        String n = itemName(s);
+        if (n == null || !n.endsWith("shulker_box")) return false;
+        for (ItemStack inner : containerContents(s)) if (isGoodFood(inner)) return true;
+        return false;
+    }
+
+    // ---- restock primitives + predicates ----
+
+    private void place(@Nullable BlockPos pos, @Nullable ItemData item) {
+        if (pos != null && item != null) BARITONE.placeBlock(pos.x(), pos.y(), pos.z(), item);
+    }
+    private void open(@Nullable BlockPos pos) {
+        if (pos != null) BARITONE.rightClickBlock(pos.x(), pos.y(), pos.z());
+    }
+    private void breakAt(@Nullable BlockPos pos) {
+        if (pos != null) BARITONE.breakBlock(pos.x(), pos.y(), pos.z(), true);
+    }
+    private void closeContainer() {
+        INVENTORY.submit(InventoryActionRequest.builder().owner(this).actions(new CloseContainer()).priority(ACTION_PRIORITY).build());
+    }
+    private void shiftClick(Container c, int slot) {
+        INVENTORY.submit(InventoryActionRequest.builder()
+            .owner(this).actions(new ShiftClick(c.getContainerId(), slot, ShiftClickItemAction.LEFT_CLICK)).priority(ACTION_PRIORITY).build());
+    }
+    private boolean placed(@Nullable BlockPos p) { return p != null && !World.getBlock(p.x(), p.y(), p.z()).isAir(); }
+    private boolean isAir(@Nullable BlockPos p) { return p != null && World.getBlock(p.x(), p.y(), p.z()).isAir(); }
+
+    private int findContainerSlot(Container c, java.util.function.Predicate<ItemStack> pred) {
+        int chestSlots = Math.max(0, c.getSize() - 36);
+        for (int i = 0; i < chestSlots; i++) if (pred.test(c.getItemStack(i))) return i;
+        return -1;
+    }
+    private int findPlayerWindowSlot(Container c, java.util.function.Predicate<ItemStack> pred) {
+        int size = c.getSize();
+        for (int i = Math.max(0, size - 36); i < size; i++) if (pred.test(c.getItemStack(i))) return i;
+        return -1;
+    }
+
+    private boolean matchesName(@Nullable ItemStack s, String name) {
+        String n = itemName(s);
+        return n != null && n.equals(name);
+    }
+    private boolean hasShulkerType(@Nullable ItemData type) {
+        if (type == null) return false;
+        return InventoryUtil.searchPlayerInventory(s -> matchesName(s, type.name())) != -1;
+    }
+    private boolean hasRestockSource() {
+        return InventoryUtil.searchPlayerInventory(s -> matchesName(s, CONFIG.client.extra.aquariusMiner.restockSourceItem)) != -1;
+    }
+
+    /** A shulker box item whose CONTAINER contents include a fresh tool. */
+    private boolean isToolShulker(@Nullable ItemStack s) {
+        String n = itemName(s);
+        if (n == null || !n.endsWith("shulker_box")) return false;
+        for (ItemStack inner : containerContents(s)) if (isFreshTool(inner)) return true;
+        return false;
+    }
+
+    /** Items inside a container item (shulker) via its CONTAINER component; empty if none. */
+    private List<ItemStack> containerContents(@Nullable ItemStack s) {
+        if (s == null || s == Container.EMPTY_STACK) return List.of();
+        List<ItemStack> c = s.getDataComponentsOrEmpty().get(DataComponentTypes.CONTAINER);
+        return c == null ? List.of() : c;
+    }
+
+    /**
+     * True if a tool we keep stocked is spent: no fresh PRIMARY tool, OR (also-restock-shovel on) no fresh
+     * shovel AND a fresh shovel actually exists in the tool-shulker to pull (best-effort — a missing shovel
+     * never triggers/pauses the run, unlike the primary tool).
+     */
+    private boolean toolNeedsRestock() {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        if (!hasFreshToolKw(cfg.restockToolKeyword)) return true;
+        if (cfg.alsoRestockShovel && !cfg.restockToolKeyword.equals("shovel")
+            && !hasFreshToolKw("shovel") && hasFreshToolInShulker("shovel")) return true;
+        return false;
+    }
+
+    /** Which tool the CURRENT restock cycle pulls: the primary if it's missing, else the shovel. */
+    private String currentToolKeyword() {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        return hasFreshToolKw(cfg.restockToolKeyword) ? "shovel" : cfg.restockToolKeyword;
+    }
+
+    /** A fresh tool (the one the FSM is pulling this cycle) — keyed to the latched restock keyword. */
+    private boolean isFreshTool(@Nullable ItemStack s) { return isFreshToolKw(s, restockKeyword); }
+
+    /** A tool whose name ends with {@code kw} and still has at least the threshold durability. */
+    private boolean isFreshToolKw(@Nullable ItemStack s, String kw) {
+        String name = itemName(s);
+        if (name == null || !name.endsWith(kw)) return false;
+        return remainingDurability(s) >= CONFIG.client.extra.aquariusMiner.restockBelowDurability;
+    }
+
+    /** True if the inventory already holds a fresh tool ending with {@code kw}. */
+    private boolean hasFreshToolKw(String kw) {
+        List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+        for (int i = 9; i <= 44; i++) if (isFreshToolKw(inv.get(i), kw)) return true;
+        return false;
+    }
+
+    /** True if a carried tool-shulker holds a fresh tool ending with {@code kw} (so we could restock it). */
+    private boolean hasFreshToolInShulker(String kw) {
+        return InventoryUtil.searchPlayerInventory(s -> {
+            String n = itemName(s);
+            if (n == null || !n.endsWith("shulker_box")) return false;
+            for (ItemStack inner : containerContents(s)) if (isFreshToolKw(inner, kw)) return true;
+            return false;
+        }) != -1;
+    }
+
+    /** Remaining durability of a stack (MAX_DAMAGE - DAMAGE). Non-damageable items count as unlimited. */
+    private int remainingDurability(ItemStack s) {
+        var data = ItemRegistry.REGISTRY.get(s.getId());
+        if (data == null) return 0;
+        Integer maxDamage = data.components().get(DataComponentTypes.MAX_DAMAGE);
+        if (maxDamage == null) return Integer.MAX_VALUE; // not a damageable item
+        Integer damage = s.getDataComponentsOrEmpty().get(DataComponentTypes.DAMAGE);
+        return maxDamage - (damage == null ? 0 : damage);
+    }
+
+    private int keepTotalInPlayer(Container container, int from, int to) {
+        int total = 0;
+        for (int i = from; i < to; i++) {
+            ItemStack st = container.getItemStack(i);
+            if (isKeep(st)) total += st.getAmount();
+        }
+        return total;
+    }
+
+    private boolean hasStorageItem() {
+        return InventoryUtil.searchPlayerInventory(this::isStorageItem) != -1;
+    }
+
+    private void dropOneJunk() {
+        // Scan ONLY the main inventory + hotbar (9-44). Never the offhand (45 - the totem), armour (5-8),
+        // or crafting (0-4). InventoryUtil.searchPlayerInventory checks the offhand FIRST, which would
+        // happily drop the bot's life-insurance totem; iterate the safe slots ourselves instead.
+        List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+        int slot = -1;
+        for (int i = 9; i <= 44; i++) {
+            if (isJunk(inv.get(i))) { slot = i; break; }
+        }
+        if (slot == -1) return;
+        INVENTORY.submit(InventoryActionRequest.builder()
+            .owner(this)
+            .actions(new DropItem(slot, DropItemAction.DROP_SELECTED_STACK))
+            .priority(ACTION_PRIORITY)
+            .build());
+    }
+
+    /**
+     * Junk = anything we don't deliberately retain. PROTECTED (never dropped, checked FIRST so a keep-item
+     * that also appears on the junk list still survives — e.g. "tuff"): keep-items, shulker boxes, the ender
+     * chest (field buffer), configured storage items, the totem of undying, the bot's working tools
+     * (pickaxe/shovel/sword via {@link #isWorkingTool}) and good food (for AutoEat). NOTE: other damageable
+     * gear — mob-dropped armour, stray axes/bows/etc. — is NOT protected and is dropped as junk.
+     * Then the explicit {@link MinerConfig#junkItems} always-drop list and risky foods. Finally, with
+     * {@code dropNonKeep} on, EVERYTHING else not protected is junk too — so stray cobblestone/dirt/gravel/
+     * ores you don't keep are tossed and the inventory fills with keep-items only (mirrors Foreman's
+     * dropOneJunk, which drops anything that isn't a target/tool/food/echest/shulker).
+     */
+    private boolean isJunk(@Nullable ItemStack stack) {
+        if (stack == null || stack == Container.EMPTY_STACK) return false;
+        String name = itemName(stack);
+        if (name == null) return false;
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        // protected set — never dropped (keep takes precedence over the junk list below)
+        if (isKeep(stack)) return false;
+        if (isShulkerBox(stack)) return false;
+        if (isEnderChestItem(stack)) return false;
+        if (cfg.storageItems.contains(name)) return false;
+        if (name.equals("totem_of_undying")) return false;     // never drop a totem (AutoTotem's life insurance)
+        if (isWorkingTool(name)) return false;                 // the bot's own pickaxe / shovel / sword (incl. the silk pick)
+        if (isGoodFood(stack)) return false;                   // edible food kept for AutoEat
+        // explicit always-drop list + risky foods
+        if (cfg.junkItems.contains(name)) return true;
+        if (cfg.dropBadFood && cfg.riskyFoods.contains(name)) return true;
+        // catch-all: drop anything else that isn't a keep-item
+        return cfg.dropNonKeep;
+    }
+
+    /**
+     * The tools the bot actually uses and must keep: pickaxes (mining + the silk-touch recovery pick), shovels
+     * (gravel/sand), and swords (KillAura's weapon). Matched by name suffix. Everything else damageable —
+     * mob-dropped armour, random axes/hoes, bows, crossbows, tridents, shields, fishing rods, etc. — is NOT
+     * protected and is dropped as junk (the old logic blanket-protected ALL damageable gear, so picked-up mob
+     * armour piled up forever). The bot's EQUIPPED armour lives in the armour slots (5-8), which the junk scan
+     * never touches, so this only drops spare/junk gear sitting in the main inventory or hotbar.
+     */
+    private boolean isWorkingTool(@Nullable String name) {
+        return name != null && (name.endsWith("pickaxe") || name.endsWith("shovel") || name.endsWith("sword"));
+    }
+
+    private boolean isKeep(@Nullable ItemStack stack) {
+        String name = itemName(stack);
+        return name != null && CONFIG.client.extra.aquariusMiner.keepItems.contains(name);
+    }
+
+    private boolean isStorageItem(@Nullable ItemStack stack) {
+        String name = itemName(stack);
+        if (name == null) return false;
+        boolean shulker = name.endsWith("shulker_box");
+        // In deposit mode a FILLED shulker is haul to carry off, not a container to place and fill.
+        if (shulker && CONFIG.client.extra.aquariusMiner.depositToChests && !containerContents(stack).isEmpty()) return false;
+        return shulker || CONFIG.client.extra.aquariusMiner.storageItems.contains(name);
+    }
+
+    private boolean isShulkerBox(@Nullable ItemStack s) {
+        String n = itemName(s);
+        return n != null && n.endsWith("shulker_box");
+    }
+    private boolean isEmptyShulker(@Nullable ItemStack s) { return isShulkerBox(s) && containerContents(s).isEmpty(); }
+    private boolean isFilledShulker(@Nullable ItemStack s) { return isShulkerBox(s) && !containerContents(s).isEmpty(); }
+
+    /** The ender chest item used as the field buffer (and restock source). */
+    private boolean isEnderChestItem(@Nullable ItemStack s) { return matchesName(s, CONFIG.client.extra.aquariusMiner.restockSourceItem); }
+    private boolean isEnderChestInInv() { return InventoryUtil.searchPlayerInventory(this::isEnderChestItem) != -1; }
+    private boolean hasEnderChest() { return isEnderChestInInv(); }
+
+    /** A shulker holding any tool of the restock type (fresh or worn) - excluded from the loot haul. */
+    private boolean isToolBearingShulker(@Nullable ItemStack s) {
+        String n = itemName(s);
+        if (n == null || !n.endsWith("shulker_box")) return false;
+        for (ItemStack inner : containerContents(s)) {
+            String in = itemName(inner);
+            if (in != null && in.endsWith(CONFIG.client.extra.aquariusMiner.restockToolKeyword)) return true;
+        }
+        return false;
+    }
+
+    /** A FILLED loot shulker (has contents) that is NOT the tool- or food-shulker - i.e. mined haul to haul off. */
+    private boolean isLootFilledShulker(@Nullable ItemStack s) {
+        return isFilledShulker(s) && !isToolBearingShulker(s) && !isFoodShulker(s);
+    }
+
+    private @Nullable String itemName(@Nullable ItemStack stack) {
+        if (stack == null || stack == Container.EMPTY_STACK) return null;
+        var data = ItemRegistry.REGISTRY.get(stack.getId());
+        return data == null ? null : data.name();
+    }
+
+    // --------------------------------------------------- status accessors
+
+    /**
+     * Ask the mining loop to re-resolve the area + re-anchor the spiral on the NEXT tick (thread-safe). Called
+     * by area commands after they write new area config, so a change takes effect live without an off/on toggle.
+     */
+    public void requestReanchor() {
+        reanchorRequested = true;
+    }
+
+    public boolean isPaused() {
+        return paused;
+    }
+
+    public boolean isComplete() {
+        return complete;
+    }
+
+    public boolean isStoring() {
+        return storing;
+    }
+
+    public String statusLine() {
+        if (!CONFIG.client.extra.aquariusMiner.enabled) return "Off";
+        if (complete) return "Complete";
+        if (paused) return "Paused";
+        if (hazardPaused) return "Paused (player nearby)";
+        if (storing) return "Storing (" + storePhase + ")";
+        if (echestCycle) return "Buffering (" + echestPhase + ")";
+        if (restocking) return "Restocking (" + restockPhase + ")";
+        if (foodRestocking) return "Food restock (" + foodPhase + ")";
+        if (depositing) return "Depositing (" + depositPhase + ")";
+        String eng = CONFIG.client.extra.aquariusMiner.legitMine ? " (legit)" : "";
+        if (areaLimited) return "Mining [" + curCX + ", " + curCZ + "]" + eng + " " + areaChunksDone + "/" + areaChunksTotal;
+        return "Mining [" + curCX + ", " + curCZ + "]" + eng;
+    }
+}

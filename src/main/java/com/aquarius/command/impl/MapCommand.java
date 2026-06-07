@@ -1,0 +1,113 @@
+package com.aquarius.command.impl;
+
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.aquarius.command.api.Command;
+import com.aquarius.command.api.CommandCategory;
+import com.aquarius.command.api.CommandContext;
+import com.aquarius.command.api.CommandUsage;
+import com.aquarius.discord.Embed;
+import com.aquarius.feature.map.MapGenerator;
+import com.aquarius.feature.map.MapRenderer;
+
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+
+import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
+import static com.aquarius.Globals.CACHE;
+
+public class MapCommand extends Command {
+    @Override
+    public CommandUsage commandUsage() {
+        return CommandUsage.builder()
+            .name("map")
+            .category(CommandCategory.INFO)
+            .description("""
+            Generate and render map images.
+            Map ID's to render must be cached during the current session
+            Generated maps can optionally be aligned to the vanilla map grid, or generated with a custom view distance.
+            Generated maps cannot be larger than what chunks are currently cached in the proxy
+            """)
+            .usageLines(
+                "render <mapId>",
+                "render all",
+                "generate",
+                "generate align",
+                "generate <viewDistance>"
+            )
+            .build();
+    }
+
+    @Override
+    public LiteralArgumentBuilder<CommandContext> register() {
+        return command("map")
+            .then(literal("render")
+                      .then(argument("mapId", integer()).executes(c -> {
+                          final int id = c.getArgument("mapId", Integer.class);
+                          var mapData = CACHE.getMapDataCache().getMapDataMap().get(id);
+                          if (mapData == null) {
+                              var knownIdList = CACHE.getMapDataCache().getMapDataMap().keySet().stream()
+                                  .map(String::valueOf)
+                                  .collect(Collectors.joining(", ", "[", "]"));
+                              c.getSource().getEmbed()
+                                  .title("Map Not Found")
+                                  .description("**Known Map ID's**\n" + knownIdList)
+                                  .addField("Map ID", id, true)
+                                  .errorColor();
+                              return OK;
+                          }
+                          var bytes = MapRenderer.render(mapData.getData(), id);
+                          var attachmentName = "map_" + id + ".png";
+                          c.getSource().getEmbed()
+                              .title("Map Rendered!")
+                              .addField("Map ID", id, true)
+                              .fileAttachment(new Embed.FileAttachment(
+                                  attachmentName,
+                                  bytes
+                              ))
+                              .image("attachment://" + attachmentName)
+                              .primaryColor();
+                          return OK;
+                      }))
+                      .then(literal("all").executes(c -> {
+                          final AtomicInteger count = new AtomicInteger(0);
+                          CACHE.getMapDataCache().getMapDataMap().forEach((id, mapData) -> {
+                              MapRenderer.render(mapData.getData(), id);
+                              count.incrementAndGet();
+                          });
+                          c.getSource().getEmbed()
+                              .title("All Cached Maps Rendered")
+                              .primaryColor()
+                              .addField("Map Count", count.get(), false);
+                          return OK;
+                      })))
+            .then(literal("generate")
+                      .executes(c -> {
+                          generate(c.getSource().getEmbed(), 4, false);
+                          return OK;
+                      })
+                      .then(literal("align").executes(c -> {
+                          generate(c.getSource().getEmbed(), 4, true);
+                          return OK;
+                      }))
+                      .then(argument("viewDistance", integer(1, 16)).executes(c -> {
+                          var viewDistance = c.getArgument("viewDistance", Integer.class);
+                          generate(c.getSource().getEmbed(), viewDistance, false);
+                          return OK;
+                      })));
+    }
+
+    private void generate(final Embed embed, final int viewDistance, final boolean vanillaAlign) {
+        final int chunkSquareWidth = viewDistance * 2;
+        final int blockSquareWidth = chunkSquareWidth * 16;
+        var bytes = MapRenderer.render(MapGenerator.generateMapData(blockSquareWidth, vanillaAlign), -1, blockSquareWidth);
+        var attachmentName = "map.png";
+        embed
+            .title("Map Generated!")
+            .fileAttachment(new Embed.FileAttachment(
+                attachmentName,
+                bytes
+            ))
+            .image("attachment://" + attachmentName)
+            .primaryColor();
+    }
+}

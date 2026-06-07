@@ -36,7 +36,7 @@ class LaunchConfig:
         self.version = "0.0.0"
         self.local_version = "0.0.0"
         self.repo_owner = "rfresh2"
-        self.repo_name = "ZenithProxy"
+        self.repo_name = "AquariusProxy"
         self.custom_jvm_args = None
         self.launch_dir = "launcher/"
 

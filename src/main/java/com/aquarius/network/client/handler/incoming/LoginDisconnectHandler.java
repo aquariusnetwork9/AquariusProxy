@@ -1,0 +1,13 @@
+package com.aquarius.network.client.handler.incoming;
+
+import com.aquarius.network.client.ClientSession;
+import com.aquarius.network.codec.PacketHandler;
+import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.ClientboundLoginDisconnectPacket;
+
+public class LoginDisconnectHandler implements PacketHandler<ClientboundLoginDisconnectPacket, ClientSession> {
+    @Override
+    public ClientboundLoginDisconnectPacket apply(final ClientboundLoginDisconnectPacket packet, final ClientSession session) {
+        session.disconnect(packet.getReason());
+        return null;
+    }
+}

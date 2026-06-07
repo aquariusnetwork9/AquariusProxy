@@ -1,0 +1,70 @@
+package com.aquarius.command.impl;
+
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.aquarius.command.api.Command;
+import com.aquarius.command.api.CommandCategory;
+import com.aquarius.command.api.CommandContext;
+import com.aquarius.command.api.CommandUsage;
+import com.aquarius.discord.Embed;
+import com.aquarius.module.impl.AutoReconnect;
+
+import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
+import static com.aquarius.Globals.CONFIG;
+import static com.aquarius.Globals.MODULE;
+import static com.aquarius.command.brigadier.ToggleArgumentType.getToggle;
+import static com.aquarius.command.brigadier.ToggleArgumentType.toggle;
+
+public class AutoReconnectCommand extends Command {
+    @Override
+    public CommandUsage commandUsage() {
+        return CommandUsage.builder()
+            .name("autoReconnect")
+            .category(CommandCategory.MODULE)
+            .description("""
+             Automatically reconnects the bot when it is disconnected.
+             """)
+            .usageLines(
+                "on/off",
+                "delay <seconds>",
+                "maxAttempts <number>"
+            )
+            .build();
+    }
+
+    @Override
+    public LiteralArgumentBuilder<CommandContext> register() {
+        return command("autoReconnect")
+            .then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.autoReconnect.enabled = getToggle(c, "toggle");
+                MODULE.get(AutoReconnect.class).syncEnabledFromConfig();
+                MODULE.get(AutoReconnect.class).cancelAutoReconnect();
+                c.getSource().getEmbed()
+                    .title("AutoReconnect " + toggleStrCaps(CONFIG.client.extra.autoReconnect.enabled));
+                return OK;
+            }))
+            .then(literal("delay")
+                      .then(argument("delaySec", integer(0, 1000)).executes(c -> {
+                          CONFIG.client.extra.autoReconnect.delaySeconds = IntegerArgumentType.getInteger(c, "delaySec");
+                          c.getSource().getEmbed()
+                              .title("AutoReconnect Delay Updated!");
+                          return OK;
+                      })))
+            .then(literal("maxAttempts")
+                      .then(argument("maxAttempts", integer(1)).executes(c -> {
+                          CONFIG.client.extra.autoReconnect.maxAttempts = IntegerArgumentType.getInteger(c, "maxAttempts");
+                          c.getSource().getEmbed()
+                              .title("AutoReconnect Max Attempts Updated!");
+                          return OK;
+                      })));
+    }
+
+    @Override
+    public void defaultEmbed(final Embed builder) {
+        builder
+            .addField("AutoReconnect", toggleStr(CONFIG.client.extra.autoReconnect.enabled), false)
+            .addField("Delay", CONFIG.client.extra.autoReconnect.delaySeconds, true)
+            .addField("Max Attempts", CONFIG.client.extra.autoReconnect.maxAttempts, true)
+            .primaryColor();
+    }
+}

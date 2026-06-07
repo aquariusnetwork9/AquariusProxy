@@ -17,7 +17,7 @@ from log import info, error, critical_error, exception
 def setup_execute(config: LaunchConfig):
     if validate_linux_system(config):  # otherwise we will always select java
         while True:
-            info("Select a ZenithProxy platform: (1/2)")
+            info("Select a AquariusProxy platform: (1/2)")
             info("More info: https://wiki.2b2t.vc/Setup/#release-channels")
             info("1. java")
             info("2. linux (Recommended)")
@@ -66,7 +66,7 @@ def setup_execute(config: LaunchConfig):
     config.version = "0.0.0"
     config.local_version = "0.0.0"
     config.repo_owner = "rfresh2"
-    config.repo_name = "ZenithProxy"
+    config.repo_name = "AquariusProxy"
     config.write_launch_config()
     info("launch_config.json written successfully!")
     info("")
@@ -84,7 +84,7 @@ def setup_execute(config: LaunchConfig):
         info("")
 
     while True:
-        info("Select the type of environment you are running ZenithProxy on.")
+        info("Select the type of environment you are running AquariusProxy on.")
         info("1. PC or other computer in your home")
         info("2. VPS or server outside your home")
         i1 = input("> ")
@@ -104,7 +104,7 @@ def setup_execute(config: LaunchConfig):
     info("")
 
     while True:
-        info("Select the port ZenithProxy will be hosted on.")
+        info("Select the port AquariusProxy will be hosted on.")
         info("If you are unsure, press enter to select a random port.")
         port = input("> ")
         if port == "":
@@ -174,7 +174,7 @@ def setup_execute(config: LaunchConfig):
             discord_verify_verbose = True # verbose on second attempt
         info("")
         while True:
-            info("Enter a Discord channel ID to manage ZenithProxy in:")
+            info("Enter a Discord channel ID to manage AquariusProxy in:")
             discord_channel_id = input("> ")
             try:
                 discord_channel_id = int(discord_channel_id)
@@ -305,7 +305,7 @@ def rescue_invalid_system(config: LaunchConfig):
 def verify_discord_bot_token(token, verbose=False):
     headers = {
         "Authorization": "Bot " + token,
-        "User-Agent": "DiscordBot (https://github.com/rfresh2/ZenithProxy, 1.0)"
+        "User-Agent": "DiscordBot (https://github.com/rfresh2/AquariusProxy, 1.0)"
     }
     try:
         response = requests.get("https://discord.com/api/applications/@me", headers=headers, timeout=10)
@@ -331,7 +331,7 @@ def verify_discord_bot_token(token, verbose=False):
 def verify_discord_channel(token, channel_id):
     headers = {
         "Authorization": "Bot " + token,
-        "User-Agent": "DiscordBot (https://github.com/rfresh2/ZenithProxy, 1.0)"
+        "User-Agent": "DiscordBot (https://github.com/rfresh2/AquariusProxy, 1.0)"
     }
     try:
         response = requests.get("https://discord.com/api/channels/" + channel_id, headers=headers, timeout=10)
@@ -347,7 +347,7 @@ def verify_discord_channel(token, channel_id):
 def get_discord_guild(token, guild_id):
     headers = {
         "Authorization": "Bot " + token,
-        "User-Agent": "DiscordBot (https://github.com/rfresh2/ZenithProxy, 1.0)"
+        "User-Agent": "DiscordBot (https://github.com/rfresh2/AquariusProxy, 1.0)"
     }
     try:
         response = requests.get("https://discord.com/api/guilds/" + guild_id, headers=headers, timeout=10)
@@ -364,7 +364,7 @@ def get_discord_guild(token, guild_id):
 def verify_discord_role(token, guild_id, role_id):
     headers = {
         "Authorization": "Bot " + token,
-        "User-Agent": "DiscordBot (https://github.com/rfresh2/ZenithProxy, 1.0)"
+        "User-Agent": "DiscordBot (https://github.com/rfresh2/AquariusProxy, 1.0)"
     }
     try:
         response = requests.get(f"https://discord.com/api/guilds/{guild_id}/roles", headers=headers, timeout=10)
