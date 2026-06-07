@@ -20,6 +20,8 @@ public class ModuleManager {
             new AntiAFK(),
             new AntiKick(),
             new AntiLeak(),
+            new AquariusMiner(),
+            new AquariusSniffer(),
             new AutoArmor(),
             new AutoDisconnect(),
             new AutoDrop(),
