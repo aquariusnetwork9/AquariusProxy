@@ -119,6 +119,7 @@ public class CommandManager {
         new UnsupportedCommand(),
         new UpdateCommand(),
         new ViaVersionCommand(),
+        new VillagerTraderCommand(),
         new VisualRangeCommand(),
         new WaypointsCommand(),
         new WhitelistCommand()
