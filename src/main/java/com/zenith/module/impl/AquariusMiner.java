@@ -81,7 +81,7 @@ public class AquariusMiner extends Module {
     // cave-handling snapshot of CONFIG.client.extra.pathfinder.* (restored on disable)
     private boolean cavePushed = false;
     private int savedMaxFall;
-    private boolean savedParkour, savedParkourPlace, savedDiagDescend, savedDiagAscend;
+    private boolean savedParkour, savedParkourPlace, savedDiagDescend, savedDiagAscend, savedSprint;
 
     // live re-anchor: an area command (e.g. '.aqm here L W') sets the area config on the command thread and
     // raises this flag; the TICK thread re-resolves the area + re-seeds the spiral, so there's no cross-thread
@@ -278,26 +278,34 @@ public class AquariusMiner extends Module {
 
     private void pushCaveSettings() {
         var cfg = CONFIG.client.extra.aquariusMiner;
-        if (!cfg.caveHandling || cavePushed) return;
+        if (cavePushed) return;
         var pf = CONFIG.client.extra.pathfinder;
+        // snapshot everything we may mutate (so it restores cleanly on disable)
+        savedSprint = pf.allowSprint;
         savedMaxFall = pf.maxFallHeightNoWater;
         savedParkour = pf.allowParkour;
         savedParkourPlace = pf.allowParkourPlace;
         savedDiagDescend = pf.allowDiagonalDescend;
         savedDiagAscend = pf.allowDiagonalAscend;
-        pf.maxFallHeightNoWater = cfg.maxFallHeight;
-        pf.allowParkour = cfg.allowParkour;
-        pf.allowParkourPlace = cfg.allowParkourPlace;
-        pf.allowDiagonalDescend = cfg.allowDiagonalDescend;
-        pf.allowDiagonalAscend = cfg.allowDiagonalAscend;
+        // sprint: faster repositioning / sub-box hops / drop chasing (independent of cave handling)
+        if (cfg.sprint) pf.allowSprint = true;
+        // cave handling: relaxed fall/jump limits so the bot drops into caves to reach blocks
+        if (cfg.caveHandling) {
+            pf.maxFallHeightNoWater = cfg.maxFallHeight;
+            pf.allowParkour = cfg.allowParkour;
+            pf.allowParkourPlace = cfg.allowParkourPlace;
+            pf.allowDiagonalDescend = cfg.allowDiagonalDescend;
+            pf.allowDiagonalAscend = cfg.allowDiagonalAscend;
+        }
         cavePushed = true;
-        info("Cave handling on: maxFall={} parkourPlace={} diagDescend={}",
-            cfg.maxFallHeight, cfg.allowParkourPlace, cfg.allowDiagonalDescend);
+        info("Movement: sprint={}, caveHandling={} (maxFall={} parkourPlace={})",
+            cfg.sprint, cfg.caveHandling, cfg.maxFallHeight, cfg.allowParkourPlace);
     }
 
     private void restoreCaveSettings() {
         if (!cavePushed) return;
         var pf = CONFIG.client.extra.pathfinder;
+        pf.allowSprint = savedSprint;
         pf.maxFallHeightNoWater = savedMaxFall;
         pf.allowParkour = savedParkour;
         pf.allowParkourPlace = savedParkourPlace;
@@ -904,7 +912,11 @@ public class AquariusMiner extends Module {
         if (rkey != legitRepathTarget) {                             // new target -> path toward a vantage, once
             legitRepathTarget = rkey;
             legitRepathTicks = 0;
-            BARITONE.pathTo(new GoalNear(remaining.x(), remaining.y(), remaining.z(), 9));
+            // Path close enough that the target lands within mining reach (so it's actually breakable on arrival,
+            // not stopped just outside reach -> skipped). Range tracks miningReach (squared), floored so the goal
+            // stays pathable in an open quarry.
+            int rsq = Math.max(4, (int) (cfg.miningReach * cfg.miningReach));
+            BARITONE.pathTo(new GoalNear(remaining.x(), remaining.y(), remaining.z(), rsq));
             return;
         }
         if (BARITONE.isActive()) {                                   // still walking to the vantage - bounded wait
@@ -932,11 +944,12 @@ public class AquariusMiner extends Module {
     /** Nearest solid block in the current sub-box that the bot has a real line of sight to, or null. */
     private @Nullable BlockPos nearestLineOfSightBlock() {
         var ctx = BARITONE.getPlayerContext();
+        double reach = CONFIG.client.extra.aquariusMiner.miningReach;
         java.util.List<BlockPos> solids = collectSubBoxSolids();
         int checks = 0;
         for (BlockPos p : solids) {
             if (++checks > LEGIT_SCAN_REACH_CHECKS) break;           // bound raycasts; the rest wait their turn
-            if (RotationUtils.reachable(ctx, p).isPresent()) return p;
+            if (RotationUtils.reachable(ctx, p, reach).isPresent()) return p;
         }
         return null;
     }
