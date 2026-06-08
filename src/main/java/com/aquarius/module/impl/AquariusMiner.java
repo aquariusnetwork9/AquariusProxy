@@ -1547,7 +1547,7 @@ public class AquariusMiner extends Module {
         if (openId == 0) { setEchestPhase(EchestPhase.CLOSE_SHULKER); return; }
         if (!depositTimer.tick(cfg.depositDelayTicks)) return;
         Container c = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
-        int src = c == null ? -1 : findPlayerWindowSlot(c, this::isKeep);
+        int src = c == null ? -1 : findWindowKeepHotbarFirst(c);                     // hotbar keep blocks first
         if (src == -1) { setEchestPhase(EchestPhase.CLOSE_SHULKER); return; }       // no keep items left
         int total = keepTotalInWindow(c);
         if (total == lastEchCount) {
@@ -2019,23 +2019,32 @@ public class AquariusMiner extends Module {
 
     // ----------------------------------------------------------- inventory
 
+    /**
+     * Empty slots in the MAIN inventory only (9-35). The hotbar (36-44) is RESERVED for tools / ender chest
+     * / food, so it is deliberately NOT counted - storage must trigger when the main inventory fills, not
+     * after keep blocks have also packed the reserved hotbar (which fights the auto-tool and breaks the
+     * storage cycle). Transient keep blocks that vanilla pickup drops into the hotbar are moved back to the
+     * main inventory by {@link #sweepHotbarTargets()} and swept into the shulker at store time.
+     */
     private int emptyMainSlots() {
         List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
         int empty = 0;
-        for (int i = 9; i <= 44; i++) { // main inventory + hotbar (skip armor/offhand/crafting)
+        for (int i = 9; i <= 35; i++) { // main inventory only (hotbar 36-44 is reserved)
             if (inv.get(i) == Container.EMPTY_STACK) empty++;
         }
         return empty;
     }
 
     /**
-     * Can the inventory (main + hotbar, slots 9-44) take even one more keep item? True if any slot is
-     * empty or any keep stack is below its max. When false the inventory is completely packed, so a
-     * storage cycle fills shulkers with whole stacks (the require-full-stacks trigger).
+     * Can the MAIN inventory (slots 9-35) take even one more keep item? True if any main slot is empty or
+     * any main keep stack is below its max. The reserved hotbar (36-44) is excluded on purpose, so the
+     * require-full-stacks trigger fires when MAIN is packed rather than waiting for keep blocks to also fill
+     * the hotbar's tool/echest/food slots' neighbours. When false the main inventory is completely packed,
+     * so a storage cycle fills shulkers (sweeping the whole window, hotbar included) with whole stacks.
      */
     private boolean canHoldMoreKeep() {
         List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
-        for (int i = 9; i <= 44; i++) {
+        for (int i = 9; i <= 35; i++) {
             ItemStack s = inv.get(i);
             if (s == Container.EMPTY_STACK) return true;
             if (isKeep(s) && s.getAmount() < maxStackSize(s)) return true;
@@ -2416,6 +2425,21 @@ public class AquariusMiner extends Module {
     private int findPlayerWindowSlot(Container c, java.util.function.Predicate<ItemStack> pred) {
         int size = c.getSize();
         for (int i = Math.max(0, size - 36); i < size; i++) if (pred.test(c.getItemStack(i))) return i;
+        return -1;
+    }
+
+    /**
+     * Like {@link #findPlayerWindowSlot} for keep items, but scans the HOTBAR portion of the window (the
+     * last 9 player slots) FIRST, then the main inventory. The hotbar is reserved, so a storage fill pulls
+     * any keep blocks that vanilla pickup dropped there before the main haul - guaranteeing the hotbar is
+     * left clean each cycle even when a single shulker fills before the whole haul fits.
+     */
+    private int findWindowKeepHotbarFirst(Container c) {
+        int size = c.getSize();
+        int playerStart = Math.max(0, size - 36);
+        int hotbarStart = Math.max(playerStart, size - 9);
+        for (int i = hotbarStart; i < size; i++) if (isKeep(c.getItemStack(i))) return i;          // hotbar 36-44
+        for (int i = playerStart; i < hotbarStart; i++) if (isKeep(c.getItemStack(i))) return i;   // main 9-35
         return -1;
     }
 
