@@ -567,9 +567,16 @@ public class AquariusMiner extends Module {
 
         // 2) inventory full -> store, or pause if we can't. Only trigger when there's something to
         //    store (keep items present); a full-of-junk inventory self-resolves as junk is dropped.
-        boolean invFull = cfg.requireFullStacks
-            ? !canHoldMoreKeep()                                // every keep stack at max, no empty slot
-            : emptyMainSlots() <= cfg.freeSlotsBeforeFull;      // looser empty-slot margin
+        // ALWAYS keep a few player-inventory slots free (main OR hotbar) so the storage cycle can pull an
+        // empty shulker out of the echest and place it. With full-stacks on the inventory would otherwise
+        // pack to 100% (target blocks fill even the hotbar's free slots), leaving no slot to pull the shulker
+        // into -> the echest opens, can't pull, closes "early", and the cycle aborts. Placing the echest does
+        // NOT reliably free a slot (a STACK of ender chests leaves the rest behind), so this reserve is the
+        // only guarantee. The reserved slots are reclaimed the moment the shulker fill starts.
+        boolean invFull = emptyPlayerSlots() <= STORE_RESERVE_SLOTS
+            || (cfg.requireFullStacks
+                ? !canHoldMoreKeep()                            // main (9-35) packed with max keep stacks
+                : emptyMainSlots() <= cfg.freeSlotsBeforeFull); // looser main empty-slot margin
         if (invFull && hasKeepItems()) {
             // Don't start a storage cycle until the reserved hotbar is clear of junk. The cycle's fill only
             // moves KEEP items into the shulker, so any junk sitting in the hotbar would ride through the
@@ -2030,6 +2037,11 @@ public class AquariusMiner extends Module {
 
     // ----------------------------------------------------------- inventory
 
+    /** Free player-inventory slots (main OR hotbar) kept available at store time so the storage cycle can
+     *  pull an empty shulker out of the echest and place it. Without this the inventory packs 100% full and
+     *  the cycle can't pull a shulker (echest "closes early" -> abort). */
+    private static final int STORE_RESERVE_SLOTS = 2;
+
     /**
      * Empty slots in the MAIN inventory only (9-35). The hotbar (36-44) is RESERVED for tools / ender chest
      * / food, so it is deliberately NOT counted - storage must trigger when the main inventory fills, not
@@ -2043,6 +2055,19 @@ public class AquariusMiner extends Module {
         for (int i = 9; i <= 35; i++) { // main inventory only (hotbar 36-44 is reserved)
             if (inv.get(i) == Container.EMPTY_STACK) empty++;
         }
+        return empty;
+    }
+
+    /**
+     * Empty slots across the WHOLE player inventory (main + hotbar, 9-44). Unlike {@link #emptyMainSlots()}
+     * this DOES count the hotbar, because the free slot the storage cycle needs to pull/place a shulker can
+     * be anywhere. Used only for the {@link #STORE_RESERVE_SLOTS} reserve that keeps the inventory from ever
+     * packing to 100% full.
+     */
+    private int emptyPlayerSlots() {
+        List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+        int empty = 0;
+        for (int i = 9; i <= 44; i++) if (inv.get(i) == Container.EMPTY_STACK) empty++;
         return empty;
     }
 
