@@ -176,7 +176,7 @@ public class AquariusMiner extends Module {
     // shulker out of it, fill it with the haul, store the FILLED shulker back in - so filled shulkers
     // never clog the mining inventory. A deposit trip fires only once the echest runs out of empties.
     private enum EchestPhase {
-        PLACE_ECHEST, OPEN_ECHEST, STOCK_EMPTIES, TAKE_EMPTY, CLOSE_ECHEST,
+        RELOCATE, PLACE_ECHEST, OPEN_ECHEST, STOCK_EMPTIES, TAKE_EMPTY, CLOSE_ECHEST,
         PLACE_SHULKER, OPEN_SHULKER, FILL_SHULKER, CLOSE_SHULKER, BREAK_SHULKER, PICKUP_SHULKER,
         REOPEN_ECHEST, STORE_FILLED, CLOSE_ECHEST2, BREAK_ECHEST, PICKUP_ECHEST, DONE
     }
@@ -191,6 +191,17 @@ public class AquariusMiner extends Module {
     private int echPlaceRetries = 0;                  // bounded re-tries of a failed place (re-pick a clear spot)
     private static final int MAX_PLACE_RETRIES = 3;
     private @Nullable BlockPos echAvoidSpot = null;   // a spot a place just failed at - skip it when re-selecting
+    // walk-to-open-ground: when every nearby cell is blocked (our own hitbox / a mob / litter) we can't place
+    // the echest/shulker here. Rather than abort, path (WITHOUT breaking, so a full inventory makes no litter)
+    // to nearby open ground that has a clear spot, then place there. Bounded per cycle.
+    private boolean echRelocateForShulker = false;    // after arriving: place the shulker (true) or the ender chest (false)
+    private @Nullable GoalNear echRelocateGoal = null;
+    private int echRelocateTries = 0;
+    private boolean echBreakOverridden = false;       // we forced pathfinder.allowBreak off for a relocate
+    private boolean echBreakSaved = true;             // its value before we forced it off (restore after)
+    private static final int MAX_RELOCATES = 3;
+    private static final int RELOCATE_RADIUS = 8;     // how far to look for open ground (blocks)
+    private static final int RELOCATE_TIMEOUT_TICKS = 200; // ~10s walking before we re-evaluate where we are
     private @Nullable BlockPos echPos = null;       // ender chest placed this cycle
     private @Nullable BlockPos shulkPos = null;     // shulker placed this cycle
     private @Nullable ItemData echItem = null;      // the ender chest item type
@@ -272,6 +283,7 @@ public class AquariusMiner extends Module {
         complete = false;
         finishAfterStore = false;
         restoreCaveSettings();
+        restoreEchBreak();
     }
 
     // ---- cave handling: relax the pathfinder's fall/jump limits while active, restore on disable ----
@@ -1300,6 +1312,7 @@ public class AquariusMiner extends Module {
                 if (!World.getBlock(cand.x(), cand.y(), cand.z()).isAir()) continue;
                 var floor = World.getBlock(cand.x(), cand.y() - 1, cand.z());
                 if (floor.isAir() || World.isFluid(floor)) continue;
+                if (playerBoxIntersects(cand)) continue;                             // OUR OWN body in the cell blocks the place ("entity blocking")
                 if (entityOccupies(cand)) continue;                                  // a mob/dropped item there would block the place
                 return cand;
             }
@@ -1319,6 +1332,90 @@ public class AquariusMiner extends Module {
         return false;
     }
 
+    /** True if OUR OWN bounding box intersects the block at {@code p}. Baritone refuses to place into any block
+     *  an entity (including the local player) overlaps - "entity blocking the place position" - so when the bot
+     *  stands off-centre on a boundary its 0.6-wide hitbox spills into the adjacent cells and every place there
+     *  fails. Mirror that AABB test so we never even pick a self-blocked cell. */
+    private boolean playerBoxIntersects(BlockPos p) {
+        double px = CACHE.getPlayerCache().getX(), py = CACHE.getPlayerCache().getY(), pz = CACHE.getPlayerCache().getZ();
+        double half = 0.32;          // player half-width ~0.3 + a small safety margin
+        double height = 1.8;
+        boolean xo = p.x() < px + half && p.x() + 1 > px - half;
+        boolean zo = p.z() < pz + half && p.z() + 1 > pz - half;
+        boolean yo = p.y() < py + height && p.y() + 1 > py;
+        return xo && yo && zo;
+    }
+
+    /**
+     * No placeable spot from where we stand (wedged in a tight cut, surrounded by mobs/litter, ...). Walk to
+     * the nearest open ground that has one and place there instead of aborting. Breaking is disabled for the
+     * move so a full inventory can't drop blocks that would litter the new spot too. Bounded per cycle; returns
+     * false (-> caller aborts) when there's nowhere suitable within reach or we've relocated too many times.
+     */
+    private boolean relocateForStorage(boolean forShulker) {
+        if (echRelocateTries >= MAX_RELOCATES) return false;
+        BlockPos stand = findOpenStand(RELOCATE_RADIUS);
+        if (stand == null) return false;
+        echRelocateTries++;
+        echRelocateForShulker = forShulker;
+        if (!echBreakOverridden) { echBreakSaved = CONFIG.client.extra.pathfinder.allowBreak; echBreakOverridden = true; }
+        CONFIG.client.extra.pathfinder.allowBreak = false;
+        echRelocateGoal = new GoalNear(stand.x(), stand.y(), stand.z(), 1);
+        BARITONE.pathTo(echRelocateGoal);
+        info("No clear spot for the {} here - walking to open ground at {}.", forShulker ? "shulker" : "ender chest", stand);
+        setEchestPhase(EchestPhase.RELOCATE);
+        return true;
+    }
+
+    /** Restore pathfinder.allowBreak after a no-break relocate (always call before resuming the cycle / on abort). */
+    private void restoreEchBreak() {
+        if (echBreakOverridden) { CONFIG.client.extra.pathfinder.allowBreak = echBreakSaved; echBreakOverridden = false; }
+    }
+
+    /** Nearest standable, open spot (within {@code radius}) that has at least one clear cell beside it to place
+     *  into - i.e. real open ground the storage block can go on. Null if none. */
+    private @Nullable BlockPos findOpenStand(int radius) {
+        BlockPos pf = BARITONE.getPlayerContext().playerFeet();
+        BlockPos best = null;
+        int bestDist = Integer.MAX_VALUE;
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                if (dx == 0 && dz == 0) continue;
+                for (int dy = -2; dy <= 2; dy++) {
+                    BlockPos stand = pf.add(dx, dy, dz);
+                    if (!isStandable(stand) || !hasPlaceableNeighbor(stand)) continue;
+                    int dist = dx * dx + dy * dy + dz * dz;
+                    if (dist < bestDist) { bestDist = dist; best = stand; }
+                }
+            }
+        }
+        return best;
+    }
+
+    /** A spot the bot can stand in: the block + the one above are air, a solid (non-fluid) floor below, no entity. */
+    private boolean isStandable(BlockPos stand) {
+        if (!World.getBlock(stand.x(), stand.y(), stand.z()).isAir()) return false;
+        if (!World.getBlock(stand.x(), stand.y() + 1, stand.z()).isAir()) return false;
+        var floor = World.getBlock(stand.x(), stand.y() - 1, stand.z());
+        if (floor.isAir() || World.isFluid(floor)) return false;
+        return !entityOccupies(stand) && !entityOccupies(stand.above());
+    }
+
+    /** From a (centred) stand, at least one of the 4 horizontal neighbours is a valid place cell: air, solid
+     *  floor, no entity. A centred player can't overlap its own neighbours, so no hitbox test is needed here. */
+    private boolean hasPlaceableNeighbor(BlockPos stand) {
+        int[][] dirs = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
+        for (int[] d : dirs) {
+            BlockPos cand = stand.add(d[0], 0, d[1]);
+            if (!World.getBlock(cand.x(), cand.y(), cand.z()).isAir()) continue;
+            var floor = World.getBlock(cand.x(), cand.y() - 1, cand.z());
+            if (floor.isAir() || World.isFluid(floor)) continue;
+            if (entityOccupies(cand)) continue;
+            return true;
+        }
+        return false;
+    }
+
     /**
      * A place hasn't landed yet. Keep waiting within this attempt's window; once it's clearly failed (desync /
      * an entity wandered into the spot), re-pick a CLEAR spot (skipping the one that just failed) and try again,
@@ -1329,7 +1426,11 @@ public class AquariusMiner extends Module {
         int window = Math.min(80, CONFIG.client.extra.aquariusMiner.storeStepTimeoutTicks);   // per-attempt wait before re-picking
         if (echestStepTicks <= window) return;                                  // still waiting on this attempt
         String what = echest ? "ender chest" : "shulker";
-        if (++echPlaceRetries > MAX_PLACE_RETRIES) { abortEchest("place " + what + " failed after " + MAX_PLACE_RETRIES + " retries"); return; }
+        if (++echPlaceRetries > MAX_PLACE_RETRIES) {              // every nearby spot is blocked -> walk to open ground and try there
+            if (relocateForStorage(!echest)) return;
+            abortEchest("place " + what + " failed after " + MAX_PLACE_RETRIES + " retries");
+            return;
+        }
         echAvoidSpot = echest ? echPos : shulkPos;                              // don't re-pick the spot that just failed
         BlockPos spot = selectStorageSpot();
         echAvoidSpot = null;
@@ -1363,13 +1464,18 @@ public class AquariusMiner extends Module {
         echestExhausted = false;
         echestReopens = 0;
         echActionPending = false; echBreakIssued = false; echPlaceRetries = 0; echAvoidSpot = null;
+        echRelocateTries = 0; echRelocateForShulker = false; echRelocateGoal = null; restoreEchBreak();
         shulkPos = null; shulkItem = null;
         int echSlot = InventoryUtil.searchPlayerInventory(this::isEnderChestItem);
         echItem = echSlot == -1 ? null
             : ItemRegistry.REGISTRY.get(CACHE.getPlayerCache().getPlayerInventory().get(echSlot).getId());
-        echPos = selectStorageSpot();
-        if (echItem == null || echPos == null) { abortEchest("no ender chest or no spot to place it"); return; }
+        if (echItem == null) { abortEchest("no ender chest to place"); return; }
         info("Inventory full - storing into the ender chest buffer.");
+        echPos = selectStorageSpot();
+        if (echPos == null) {                                  // wedged / no clear cell here -> walk to open ground first
+            if (!relocateForStorage(false)) abortEchest("no spot to place the ender chest");
+            return;
+        }
         setEchestPhase(EchestPhase.PLACE_ECHEST);
     }
 
@@ -1488,6 +1594,24 @@ public class AquariusMiner extends Module {
         }
         int openId = CACHE.getPlayerCache().getInventoryCache().getOpenContainerId();
         switch (echestPhase) {
+            case RELOCATE -> {
+                BlockPos feet = BARITONE.getPlayerContext().playerFeet();
+                boolean reached = echRelocateGoal != null && echRelocateGoal.isInGoal(feet.x(), feet.y(), feet.z());
+                boolean gaveUp = echestStepTicks >= 10 && !BARITONE.isActive();       // grace for the path to start calculating
+                boolean arrived = echRelocateGoal == null || reached || gaveUp;
+                if (!arrived && echestStepTicks < RELOCATE_TIMEOUT_TICKS) return;     // still walking to open ground
+                if (BARITONE.isActive()) BARITONE.stop();
+                restoreEchBreak();                                                    // breaking back on for the real cycle
+                echAvoidSpot = null; echPlaceRetries = 0;
+                BlockPos spot = selectStorageSpot();
+                if (spot == null) {                                                   // new spot still no good -> try once more, else give up
+                    if (relocateForStorage(echRelocateForShulker)) return;
+                    abortEchest("no open ground to place the " + (echRelocateForShulker ? "shulker" : "ender chest"));
+                    return;
+                }
+                if (echRelocateForShulker) { shulkPos = spot; setEchestPhase(EchestPhase.PLACE_SHULKER); }
+                else { echPos = spot; setEchestPhase(EchestPhase.PLACE_ECHEST); }
+            }
             case PLACE_ECHEST -> { if (placed(echPos)) { echPlaceRetries = 0; setEchestPhase(EchestPhase.OPEN_ECHEST); } else retryPlaceOrAbort(true); }
             case OPEN_ECHEST -> {
                 if (openId != 0) {
@@ -1530,7 +1654,10 @@ public class AquariusMiner extends Module {
                     if (s == -1) { reopenEchestOrAbort("empty shulker lost after pull"); return; } // re-open + re-pull instead of failing
                     shulkItem = ItemRegistry.REGISTRY.get(CACHE.getPlayerCache().getPlayerInventory().get(s).getId());
                     shulkPos = selectStorageSpot();
-                    if (shulkPos == null) { abortEchest("no spot to place the shulker"); return; }
+                    if (shulkPos == null) {                       // no clear cell for the shulker here -> walk to open ground
+                        if (!relocateForStorage(true)) abortEchest("no spot to place the shulker");
+                        return;
+                    }
                     setEchestPhase(EchestPhase.PLACE_SHULKER);
                 } else echTimeout("close ender chest");
             }
@@ -1641,6 +1768,7 @@ public class AquariusMiner extends Module {
     private void abortEchest(String reason) {
         echestCycle = false;
         paused = true;
+        restoreEchBreak();                         // never leave pathfinder breaking disabled after a relocate
         if (CACHE.getPlayerCache().getInventoryCache().getOpenContainerId() != 0) closeContainer();
         if (BARITONE.isActive()) BARITONE.stop();
         warn("Storage cycle aborted: {}. Mining paused - toggle /aquariusminer off/on to retry.", reason);
