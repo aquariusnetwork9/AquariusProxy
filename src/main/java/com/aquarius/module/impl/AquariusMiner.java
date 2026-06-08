@@ -202,6 +202,10 @@ public class AquariusMiner extends Module {
     private static final int MAX_RELOCATES = 3;
     private static final int RELOCATE_RADIUS = 8;     // how far to look for open ground (blocks)
     private static final int RELOCATE_TIMEOUT_TICKS = 200; // ~10s walking before we re-evaluate where we are
+    // EVERY shulker (empty / loot / tool / food) lives in the ENDER CHEST - never carried into mining. When the
+    // bot is found holding a stray shulker (a cycle was interrupted, a shulker was recovered, ...) a stow-only
+    // cycle runs: place echest -> open -> shift ALL carried shulkers in -> recover echest. No pull/fill.
+    private boolean echStowOnly = false;
     private @Nullable BlockPos echPos = null;       // ender chest placed this cycle
     private @Nullable BlockPos shulkPos = null;     // shulker placed this cycle
     private @Nullable ItemData echItem = null;      // the ender chest item type
@@ -608,6 +612,14 @@ public class AquariusMiner extends Module {
             } else {
                 pauseInvFull(!cfg.storageEnabled ? "storage disabled" : "no ender chest or storage item");
             }
+            return;
+        }
+
+        // 2.4) invariant: every shulker lives in the ENDER CHEST, never carried into mining. If we're holding a
+        // stray shulker of ANY kind (a cycle was interrupted, a placed shulker was recovered, ...), stow it back
+        // into the echest before mining on - so tool/food/loot/empty shulkers always end up in the buffer.
+        if (cfg.storageEnabled && hasEnderChest() && countInInv(this::isShulkerBox) > 0) {
+            beginStowCycle();
             return;
         }
 
@@ -1457,10 +1469,15 @@ public class AquariusMiner extends Module {
     // shulkers live in the echest, never in the mining inventory. When the echest runs out of empties
     // (detected from STORE_FILLED with a clean inventory) a deposit trip fires.
 
-    private void beginEchestCycle() {
+    private void beginEchestCycle() { beginEchestCycle(false); }
+
+    /** stowOnly: don't pull/fill a fresh shulker - just place the echest, stow every carried shulker into it,
+     *  and recover the echest (used to return stray shulkers to the buffer; see the 2.4 trigger). */
+    private void beginEchestCycle(boolean stowOnly) {
         if (BARITONE.isActive()) BARITONE.stop();
         areaActive = false; sawActive = false;
         echestCycle = true;
+        echStowOnly = stowOnly;
         echestExhausted = false;
         echestReopens = 0;
         echActionPending = false; echBreakIssued = false; echPlaceRetries = 0; echAvoidSpot = null;
@@ -1470,7 +1487,8 @@ public class AquariusMiner extends Module {
         echItem = echSlot == -1 ? null
             : ItemRegistry.REGISTRY.get(CACHE.getPlayerCache().getPlayerInventory().get(echSlot).getId());
         if (echItem == null) { abortEchest("no ender chest to place"); return; }
-        info("Inventory full - storing into the ender chest buffer.");
+        info(stowOnly ? "Stowing carried shulker(s) back into the ender chest buffer."
+                      : "Inventory full - storing into the ender chest buffer.");
         echPos = selectStorageSpot();
         if (echPos == null) {                                  // wedged / no clear cell here -> walk to open ground first
             if (!relocateForStorage(false)) abortEchest("no spot to place the ender chest");
@@ -1478,6 +1496,9 @@ public class AquariusMiner extends Module {
         }
         setEchestPhase(EchestPhase.PLACE_ECHEST);
     }
+
+    /** Return every stray carried shulker (empty / loot / tool / food) to the ender chest buffer. */
+    private void beginStowCycle() { beginEchestCycle(true); }
 
     private void setEchestPhase(EchestPhase phase) {
         echestPhase = phase;
@@ -1621,6 +1642,7 @@ public class AquariusMiner extends Module {
                         setEchestPhase(EchestPhase.CLOSE_ECHEST2);
                         return;
                     }
+                    if (echStowOnly) { setEchestPhase(EchestPhase.STORE_FILLED); return; }  // stow mode: just deposit carried shulkers
                     setEchestPhase(EchestPhase.STOCK_EMPTIES);
                 } else echTimeout("open ender chest");
             }
@@ -1659,17 +1681,34 @@ public class AquariusMiner extends Module {
                         return;
                     }
                     setEchestPhase(EchestPhase.PLACE_SHULKER);
-                } else echTimeout("close ender chest");
+                } else { resendClose(); echTimeout("close ender chest"); }   // need it actually closed to read the pulled shulker
             }
             case PLACE_SHULKER -> { if (placed(shulkPos)) { echPlaceRetries = 0; setEchestPhase(EchestPhase.OPEN_SHULKER); } else retryPlaceOrAbort(false); }
             case OPEN_SHULKER -> { if (openId != 0) setEchestPhase(EchestPhase.FILL_SHULKER); else echTimeout("open shulker"); }
             case FILL_SHULKER -> echFillTick();
-            case CLOSE_SHULKER -> { if (openId == 0) setEchestPhase(EchestPhase.BREAK_SHULKER); else echTimeout("close shulker"); }
+            // Close can be dropped on a 2b2t lag spike (it raced a pending fill action) - the bug that stranded a
+            // filled shulker. Re-send when idle so it takes; if truly stuck, abort -> abortEchest closes + breaks
+            // the placed FILLED shulker (recovered, never stranded), and the 2.4 stow trigger returns it on resume.
+            case CLOSE_SHULKER -> {
+                if (openId == 0) { setEchestPhase(EchestPhase.BREAK_SHULKER); return; }
+                resendClose();
+                echTimeout("close shulker");
+            }
             case BREAK_SHULKER -> { if (isAir(shulkPos)) setEchestPhase(EchestPhase.PICKUP_SHULKER); else echTimeout("break shulker"); }
             case PICKUP_SHULKER -> { if (countInInv(this::isFilledShulker) > 0 || echestStepTicks > 60) setEchestPhase(EchestPhase.REOPEN_ECHEST); }
-            case REOPEN_ECHEST -> { if (openId != 0) setEchestPhase(EchestPhase.STORE_FILLED); else echTimeout("reopen ender chest"); }
+            case REOPEN_ECHEST -> {
+                if (openId != 0) { setEchestPhase(EchestPhase.STORE_FILLED); return; }
+                if (echestStepTicks > CONFIG.client.extra.aquariusMiner.storeStepTimeoutTicks) {  // open didn't take -> re-fire it (don't re-pull), bounded
+                    if (echPos != null && !isAir(echPos) && ++echestReopens <= MAX_ECHEST_REOPENS) { setEchestPhase(EchestPhase.REOPEN_ECHEST); return; }
+                    abortEchest("reopen ender chest to store the filled shulker timed out");
+                }
+            }
             case STORE_FILLED -> echStoreTick();
-            case CLOSE_ECHEST2 -> { if (openId == 0) setEchestPhase(EchestPhase.BREAK_ECHEST); else echTimeout("close ender chest"); }
+            case CLOSE_ECHEST2 -> {
+                if (openId == 0) { setEchestPhase(EchestPhase.BREAK_ECHEST); return; }
+                resendClose();
+                echTimeout("close ender chest");
+            }
             case BREAK_ECHEST -> breakEchestTick();
             case PICKUP_ECHEST -> { if (echestStepTicks > 60 || !BARITONE.isActive()) setEchestPhase(EchestPhase.DONE); }
             case DONE -> {
@@ -1707,11 +1746,15 @@ public class AquariusMiner extends Module {
         int openId = CACHE.getPlayerCache().getInventoryCache().getOpenContainerId();
         if (openId == 0) { setEchestPhase(EchestPhase.CLOSE_ECHEST2); return; }
         Container c = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
-        int src = c == null ? -1 : findPlayerWindowSlot(c, this::isFilledShulker);
+        // stow mode returns EVERY carried shulker (empty/loot/tool/food) to the buffer; the normal cycle only
+        // stores the FILLED (loot + tool/food) shulkers and leaves carried empties for the next pull.
+        int src = c == null ? -1 : (echStowOnly ? findPlayerWindowSlot(c, this::isShulkerBox)
+                                                : findPlayerWindowSlot(c, this::isFilledShulker));
         if (src == -1) {
             // done storing, inventory clean: if the echest now holds no empty shulker (and none carried),
             // it's exhausted -> a deposit trip fires from this clean state (so the trip's extract has room).
-            if (c != null && findContainerSlot(c, this::isEmptyShulker) == -1 && countInInv(this::isEmptyShulker) == 0) {
+            // (Skip in stow mode - we weren't managing empties, just returning strays.)
+            if (!echStowOnly && c != null && findContainerSlot(c, this::isEmptyShulker) == -1 && countInInv(this::isEmptyShulker) == 0) {
                 echestExhausted = true;
                 info("Used the last empty shulker - ender chest is full of filled shulkers.");
             }
@@ -1730,6 +1773,7 @@ public class AquariusMiner extends Module {
 
     private void resumeFromEchest() {
         echestCycle = false;
+        echStowOnly = false;
         if (finishAfterEchest) {         // bounded-area final pack just finished -> complete the run
             finishAfterEchest = false;
             completeRun();
@@ -1767,16 +1811,26 @@ public class AquariusMiner extends Module {
 
     private void abortEchest(String reason) {
         echestCycle = false;
+        echStowOnly = false;
         paused = true;
         restoreEchBreak();                         // never leave pathfinder breaking disabled after a relocate
         if (CACHE.getPlayerCache().getInventoryCache().getOpenContainerId() != 0) closeContainer();
         if (BARITONE.isActive()) BARITONE.stop();
+        // Never strand a shulker as a placed block: if we'd placed one this cycle, break it so it drops and is
+        // auto-collected. It's then a CARRIED shulker, which the 2.4 stow trigger returns to the echest on resume.
+        if (shulkPos != null && !isAir(shulkPos)) BARITONE.breakBlock(shulkPos.x(), shulkPos.y(), shulkPos.z(), true);
         warn("Storage cycle aborted: {}. Mining paused - toggle /aquariusminer off/on to retry.", reason);
         inGameAlertActivePlayer("<red>Aquarius Miner storage failed: " + reason);
     }
 
     private void echTimeout(String what) {
         if (echestStepTicks > CONFIG.client.extra.aquariusMiner.storeStepTimeoutTicks) abortEchest(what + " timed out");
+    }
+
+    /** Re-send a container close while waiting for it to take - the first close can be silently dropped if it
+     *  raced a still-pending inventory action on a 2b2t lag spike. Gated on the manager being idle; throttled. */
+    private void resendClose() {
+        if (!INVENTORY.hasActiveRequest() && echestStepTicks % 5 == 0) closeContainer();
     }
 
     /**
