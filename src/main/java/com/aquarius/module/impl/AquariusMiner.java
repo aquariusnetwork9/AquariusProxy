@@ -206,6 +206,11 @@ public class AquariusMiner extends Module {
     // bot is found holding a stray shulker (a cycle was interrupted, a shulker was recovered, ...) a stow-only
     // cycle runs: place echest -> open -> shift ALL carried shulkers in -> recover echest. No pull/fill.
     private boolean echStowOnly = false;
+    // after a (re)connect the world isn't loaded yet - driving the miner immediately starts a cycle that finds
+    // no blocks ("no spot" abort) or mines into ungenerated chunks. Wait until the bot's chunk is loaded, then a
+    // short settle, before acting. Set on ClientBotTick.Starting (only fires while the miner is enabled).
+    private int reconnectGrace = 0;
+    private static final int RECONNECT_GRACE_TICKS = 100;  // ~5s settle once the bot's chunk has loaded
     private @Nullable BlockPos echPos = null;       // ender chest placed this cycle
     private @Nullable BlockPos shulkPos = null;     // shulker placed this cycle
     private @Nullable ItemData echItem = null;      // the ender chest item type
@@ -333,6 +338,10 @@ public class AquariusMiner extends Module {
     private void onStarting(ClientBotTick.Starting event) {
         // bot (re)connected / world (re)loaded: re-anchor the spiral to the current position
         resetToStart();
+        // ...and don't act until the world is actually loaded around us (see the grace gate in onTick) - a sudden
+        // disconnect mid-run otherwise has the miner start a cycle on an unloaded world the instant it logs back on.
+        reconnectGrace = RECONNECT_GRACE_TICKS;
+        if (BARITONE.isActive()) BARITONE.stop();
     }
 
     private void resetToStart() {
@@ -510,6 +519,16 @@ public class AquariusMiner extends Module {
     private void onTick(ClientBotTick event) {
         var cfg = CONFIG.client.extra.aquariusMiner;
         if (!CACHE.getPlayerCache().isAlive()) return;
+        // reconnect grace: just (re)connected -> wait for the world to load before driving the miner, so we don't
+        // start a storage cycle that finds no blocks (-> "no spot" abort) or path into ungenerated chunks. The
+        // chunk-loaded wait is unbounded (handles a laggy 2b2t login); the settle countdown only ticks once loaded.
+        if (reconnectGrace > 0) {
+            int cx = MathHelper.floorI(CACHE.getPlayerCache().getX()) >> 4;
+            int cz = MathHelper.floorI(CACHE.getPlayerCache().getZ()) >> 4;
+            if (!World.isChunkLoadedChunkPos(cx, cz)) return;          // world not loaded around us yet - keep waiting
+            if (--reconnectGrace > 0) return;                          // loaded - count down the settle, then resume
+            info("World loaded after (re)connect - resuming mining.");
+        }
         // an area command asked us to re-anchor: re-resolve the area + re-seed here, now. Deferred while a
         // container cycle is mid-flight (so we never strand a placed shulker/echest); still fires while
         // paused/complete so the command can redirect a stuck or finished bot.
