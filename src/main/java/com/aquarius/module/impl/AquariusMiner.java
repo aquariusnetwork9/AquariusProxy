@@ -554,8 +554,14 @@ public class AquariusMiner extends Module {
         //    dumped there back into the main inventory; when there's nothing to sweep, use the free manager
         //    slot to DROP one junk stack. This dumps junk as aggressively as the manager allows without bursting.
         if (!INVENTORY.hasActiveRequest()) {
-            if (!sweepHotbarTargets()) {
-                if (cfg.dropJunk) dropOneJunk();
+            // Priority: keep the reserved hotbar (tools/echest/food) clean. (1) DROP junk that vanilla pickup
+            // dumped into a hotbar slot FIRST - otherwise constant keep-block pickups make sweepHotbarTargets
+            // win every tick and junk never gets dropped, so it piles up in the reserved slots. (2) shift keep
+            // blocks out of the hotbar to the main inventory. (3) drop any remaining junk (main + hotbar).
+            if (!(cfg.dropJunk && dropHotbarJunk())) {
+                if (!sweepHotbarTargets()) {
+                    if (cfg.dropJunk) dropOneJunk();
+                }
             }
         }
 
@@ -565,6 +571,11 @@ public class AquariusMiner extends Module {
             ? !canHoldMoreKeep()                                // every keep stack at max, no empty slot
             : emptyMainSlots() <= cfg.freeSlotsBeforeFull;      // looser empty-slot margin
         if (invFull && hasKeepItems()) {
+            // Don't start a storage cycle until the reserved hotbar is clear of junk. The cycle's fill only
+            // moves KEEP items into the shulker, so any junk sitting in the hotbar would ride through the
+            // whole cycle and re-pollute the reserved slots. The hotbar discipline above drops it one stack
+            // per manager tick (safe here: no container open, bot still mining), so just wait it out.
+            if (cfg.dropJunk && hotbarHasJunk()) return;
             // Mirror Foreman: the ENDER CHEST is the field buffer whenever the bot carries one - pull an
             // empty shulker out, fill it, and store the FILLED shulker back IN. Filled shulkers are never
             // left on the ground or carried in the mining inventory. Deposit chests just add base trips on
@@ -2554,6 +2565,34 @@ public class AquariusMiner extends Module {
             .actions(new DropItem(slot, DropItemAction.DROP_SELECTED_STACK))
             .priority(ACTION_PRIORITY)
             .build());
+    }
+
+    /** True if the reserved hotbar (slots 36-44) holds any junk stack. */
+    private boolean hotbarHasJunk() {
+        List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+        for (int i = 36; i <= 44; i++) if (isJunk(inv.get(i))) return true;
+        return false;
+    }
+
+    /**
+     * Drop ONE junk stack from the reserved hotbar (36-44) only, so the hotbar's tool / ender chest / food
+     * slots stay clean of mob drops and other non-keep clutter. Returns true if it issued a drop. Same drop
+     * mechanism as {@link #dropOneJunk()}; safe only with NO container open (it indexes the standalone player
+     * inventory), which is the case during mining where the caller runs it.
+     */
+    private boolean dropHotbarJunk() {
+        List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+        for (int i = 36; i <= 44; i++) {
+            if (isJunk(inv.get(i))) {
+                INVENTORY.submit(InventoryActionRequest.builder()
+                    .owner(this)
+                    .actions(new DropItem(i, DropItemAction.DROP_SELECTED_STACK))
+                    .priority(ACTION_PRIORITY)
+                    .build());
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
