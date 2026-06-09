@@ -481,14 +481,22 @@ public class ElytraPilot extends Module {
     private void tickLand() {
         var cfg = CONFIG.client.extra.elytraPilot;
         var pc = CACHE.getPlayerCache();
+        double x = pc.getX(), y = pc.getY(), z = pc.getZ();
         if (!BOT.isFallFlying()) {
-            double horiz = horizDist(pc.getX(), pc.getZ(), cfg.targetX + 0.5, cfg.targetZ + 0.5);
+            double horiz = horizDist(x, z, cfg.targetX + 0.5, cfg.targetZ + 0.5);
             if (cfg.baritoneLand && cfg.hasTarget && horiz > cfg.arriveRadius) { enterLandWalk(); return; }
             complete("landed");
             return;
         }
-        submitInput(false, false, pc.getYaw(), 25f); // glide down, no boost
-        if (++landTicks > LAND_TIMEOUT_TICKS) complete("landing timed out");
+        // Re-aim at the landing spot each tick and dive in, so we touch down ON it instead of gliding past it.
+        float yaw = haveLandSpot
+            ? (float) Math.toDegrees(Math.atan2(-(landX + 0.5 - x), landZ + 0.5 - z))
+            : pc.getYaw();
+        double horizSpot = haveLandSpot ? horizDist(x, z, landX + 0.5, landZ + 0.5) : 0;
+        if (horizSpot > cfg.arriveRadius * 3 + 8) { phase = Phase.DESCEND; return; } // glided off — re-approach
+        if (heightAboveGround(x, y, z) <= 3) BOT.stopFallFlying();                    // low over the spot — cut glide, drop in
+        submitInput(false, false, yaw, 35f);
+        if (++landTicks > LAND_TIMEOUT_TICKS) { BOT.stopFallFlying(); complete("landing timed out"); }
     }
 
     // --- terrain-aware approach, re-route, landing-spot search, and Baritone walk-in ---
