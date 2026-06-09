@@ -38,6 +38,7 @@ public class ModuleManager {
             new ChatHistory(),
             new Click(),
             new CoordObfuscation(),
+            new ElytraPilot(),
             new ExtraChat(),
             new KillAura(),
             new QueueWarning(),
