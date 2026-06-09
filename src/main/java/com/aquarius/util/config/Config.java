@@ -387,6 +387,21 @@ public final class Config {
                 /** Hard safety cap on a single flight, in ticks (20/s). Aborts when exceeded. */
                 public int maxFlightTicks = 6000;
 
+                /** Terrain-aware approach: probe the ground ahead/below and re-route around terrain to a safe landing. */
+                public boolean reroute = true;
+
+                /** Max heading deviation (degrees, ±) the re-route may take to get around terrain toward a safe landing. */
+                public double maxRerouteDeg = 70.0;
+
+                /** Vertical clearance (blocks) the glide path must keep above terrain; closer than this counts as blocked. */
+                public int pathClearance = 4;
+
+                /** Radius (blocks) to search outward from the target for a clear, flat air-landing spot. */
+                public int landingSearchRadius = 12;
+
+                /** When the air route can't reach the target (covered/indoors/underground), walk the last leg with Baritone. */
+                public boolean baritoneLand = true;
+
                 /**
                  * Take off from flat ground by pulsing jump to deploy the elytra. Off = assume the bot is
                  * already airborne (walked off a ledge / tower) and just deploy on the first airborne tick.

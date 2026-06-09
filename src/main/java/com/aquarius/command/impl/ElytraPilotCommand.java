@@ -55,7 +55,12 @@ public class ElytraPilotCommand extends Command {
                 "maxspeed <bps>        (speed cap in blocks/sec; 2b2t limit is 40 — keep ~38)",
                 "highway <dir>         (follow a 2b2t nether highway from 0,0: N/S/E/W/NE/SE/NW/SW; sets ebounce + y120)",
                 "pass <on/off>         (on obstacle: settle + Baritone past it along the axis, then resume bounce)",
-                "passahead <blocks>    (how far along the axis to aim the Baritone bypass)"
+                "passahead <blocks>    (how far along the axis to aim the Baritone bypass)",
+                "reroute <on/off>      (terrain-aware approach: re-route around terrain to a safe landing)",
+                "rerouteangle <deg>    (max heading deviation the re-route may use; up to ~70)",
+                "pathclearance <n>     (vertical clearance the glide path keeps above terrain)",
+                "landsearch <blocks>   (radius to search around the target for a clear landing spot)",
+                "baritoneland <on/off> (walk the last leg with Baritone if covered/indoors/underground)"
             )
             .build();
     }
@@ -195,6 +200,26 @@ public class ElytraPilotCommand extends Command {
             .then(literal("passahead").then(argument("blocks", integer()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.passAheadBlocks = getInteger(c, "blocks");
                 c.getSource().getEmbed().title("ElytraPilot pass-ahead = " + CONFIG.client.extra.elytraPilot.passAheadBlocks);
+            })))
+            .then(literal("reroute").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.reroute = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("ElytraPilot re-route " + toggleStrCaps(CONFIG.client.extra.elytraPilot.reroute));
+            })))
+            .then(literal("rerouteangle").then(argument("degrees", doubleArg()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.maxRerouteDeg = getDouble(c, "degrees");
+                c.getSource().getEmbed().title("ElytraPilot max re-route angle = " + CONFIG.client.extra.elytraPilot.maxRerouteDeg);
+            })))
+            .then(literal("pathclearance").then(argument("blocks", integer()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.pathClearance = getInteger(c, "blocks");
+                c.getSource().getEmbed().title("ElytraPilot path clearance = " + CONFIG.client.extra.elytraPilot.pathClearance);
+            })))
+            .then(literal("landsearch").then(argument("blocks", integer()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.landingSearchRadius = getInteger(c, "blocks");
+                c.getSource().getEmbed().title("ElytraPilot landing search radius = " + CONFIG.client.extra.elytraPilot.landingSearchRadius);
+            })))
+            .then(literal("baritoneland").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.baritoneLand = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("ElytraPilot Baritone walk-in " + toggleStrCaps(CONFIG.client.extra.elytraPilot.baritoneLand));
             })));
     }
 }
