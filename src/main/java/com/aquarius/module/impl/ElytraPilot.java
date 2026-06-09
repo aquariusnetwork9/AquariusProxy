@@ -53,13 +53,17 @@ import static com.aquarius.Globals.INVENTORY;
  */
 public class ElytraPilot extends Module {
 
-    private enum Phase { IDLE, TAKEOFF, CRUISE, BOUNCE, PASS, SWAP, DESCEND, LAND, EMERGENCY, DONE }
+    private enum Phase { IDLE, TAKEOFF, CRUISE, BOUNCE, PASS, SWAP, DESCEND, LAND, LANDWALK, EMERGENCY, DONE }
 
     private static final int CHESTPLATE_SLOT = 6;          // container 0: 5=helm,6=chest,7=legs,8=boots
     private static final int TAKEOFF_TIMEOUT_TICKS = 200;  // ~10s to get airborne + deployed
     private static final int LAND_TIMEOUT_TICKS = 200;
     private static final int SWAP_EQUIP_TIMEOUT_TICKS = 100;
     private static final int SWAP_REDEPLOY_TIMEOUT_TICKS = 100;
+    private static final int PROBE_INTERVAL = 10;           // recompute terrain scans every N ticks
+    private static final int OPEN_TARGET_TOLERANCE = 8;     // land at the target if its open surface is within this of approxGroundY
+    private static final int LANDWALK_TIMEOUT_TICKS = 1200; // ~60s for Baritone to reach the target on the ground
+    private static final int[][] NEIGHBORS = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
     private Phase phase = Phase.IDLE;
     private int flightTicks;
@@ -80,6 +84,14 @@ public class ElytraPilot extends Module {
     private boolean noSpareWarned;
     private double lastX, lastZ;
     private boolean haveLast;
+    // terrain-aware approach / re-route / landing-spot search
+    private int landX, landZ, landGroundY;
+    private boolean landIsTarget;
+    private boolean haveLandSpot;
+    private float rerouteYaw;
+    private boolean haveReroute;
+    private boolean baritoneStarted;
+    private int landWalkTicks;
 
     @Override
     public boolean enabledSetting() {
@@ -138,6 +150,11 @@ public class ElytraPilot extends Module {
         emergencyAlerted = false;
         noSpareWarned = false;
         haveLast = false;
+        haveLandSpot = false;
+        landIsTarget = false;
+        haveReroute = false;
+        baritoneStarted = false;
+        landWalkTicks = 0;
     }
 
     private void onTick(final ClientBotTick event) {
@@ -166,6 +183,7 @@ public class ElytraPilot extends Module {
                     case SWAP      -> tickSwap(x, y, z);
                     case DESCEND   -> tickDescend(x, y, z, speed);
                     case LAND      -> tickLand();
+                    case LANDWALK  -> tickLandWalk(x, y, z);
                     case EMERGENCY -> tickEmergency(x, y, z);
                     default        -> { }
                 }
@@ -207,7 +225,7 @@ public class ElytraPilot extends Module {
 
     private void tickCruise(double x, double y, double z, double speed) {
         var cfg = CONFIG.client.extra.elytraPilot;
-        float yaw = desiredYaw(x, z);
+        float yaw = steerYaw(x, y, z);
 
         // Elytra wear management.
         if (cfg.swapElytra && needsElytraSwap()) {
@@ -418,34 +436,214 @@ public class ElytraPilot extends Module {
             phase = Phase.EMERGENCY;
     }
 
+    /**
+     * Terrain-aware approach: steer toward a chosen landing spot (the target if it's open, otherwise the nearest
+     * open flat ground near it), re-routing around terrain at flight level, and refusing to dive onto anything
+     * between us and the spot (hold/climb over it instead — this is what stops it planting itself on a hill short
+     * of the target). Only commits to landing once actually over the spot; Baritone finishes the last leg.
+     */
     private void tickDescend(double x, double y, double z, double speed) {
         var cfg = CONFIG.client.extra.elytraPilot;
-        float yaw = desiredYaw(x, z);
-        double horiz = horizDist(x, z, cfg.targetX, cfg.targetZ);
+        if (!haveLandSpot || flightTicks % PROBE_INTERVAL == 0) computeLandSpot();
+        float yaw = steerYaw(x, y, z);
+        double horiz = horizDist(x, z, landX + 0.5, landZ + 0.5);
         int clearance = heightAboveGround(x, y, z);
-        // Aim the nose down toward the target (steeper when high and close), gliding in without fireworks.
-        double drop = Math.max(0, y - cfg.approxGroundY);
-        float aim = (float) Math.toDegrees(Math.atan2(drop, Math.max(horiz, 1.0)));
         boolean overCap = speed * 20.0 >= cfg.maxSpeed;
-        boolean blocked = terrainBlockedAhead(x, y, z, yaw, 8);
-        float pitch = blocked ? -25f : clampF(aim, cfg.glidePitch, 30f); // cap the dive angle to limit speed
-        if (overCap) pitch = Math.min(pitch, 0f);                         // level/raise the nose to bleed speed under the cap
-        boolean fire = blocked && !overCap && heldIsFirework(); // only boost to avoid a crash; otherwise bleed altitude
-        if (blocked && !fire) ensureFireworkHeld();
+
+        // Over the landing spot: drop straight in.
+        if (horiz <= cfg.arriveRadius) {
+            if (clearance <= 16) { phase = Phase.LAND; landTicks = 0; info("Over landing spot — landing"); return; }
+            submitInput(false, false, yaw, overCap ? 0f : 28f);   // glide down (steep but speed-capped)
+            return;
+        }
+
+        // Still approaching: don't dive onto terrain in the way — hold/climb over it; re-route handles walls.
+        int bump = glideCorridorBlock(x, y, z);
+        boolean wallAhead = clearDistAhead(x, y, z, yaw, Math.min(cfg.lookAheadBlocks, 32)) < 12;
+        float pitch;
+        boolean wantFire;
+        if (bump >= 0 || wallAhead) {
+            pitch = -Math.max(10f, cfg.climbPitch * 0.5f);        // gentle climb to clear it
+            wantFire = !overCap;
+        } else {
+            double drop = Math.max(0, y - landGroundY);
+            float aim = (float) Math.toDegrees(Math.atan2(drop, Math.max(horiz, 1.0)));
+            pitch = clampF(aim, cfg.glidePitch, 30f);             // controlled glide down toward the spot
+            if (overCap) pitch = Math.min(pitch, 0f);
+            wantFire = false;
+        }
+        boolean fire = wantFire && heldIsFirework();
+        if (wantFire && !fire) ensureFireworkHeld();
         if (fire) ticksSinceFire = 0;
         submitInput(false, fire, yaw, pitch);
-
-        if (clearance <= 3 || (horiz <= cfg.arriveRadius && clearance <= 16)) {
-            phase = Phase.LAND;
-            landTicks = 0;
-            info("Over target — landing");
-        }
     }
 
     private void tickLand() {
-        if (!BOT.isFallFlying()) { complete("landed"); return; }
-        submitInput(false, false, CACHE.getPlayerCache().getYaw(), 25f); // glide down, no boost
+        var cfg = CONFIG.client.extra.elytraPilot;
+        var pc = CACHE.getPlayerCache();
+        if (!BOT.isFallFlying()) {
+            double horiz = horizDist(pc.getX(), pc.getZ(), cfg.targetX + 0.5, cfg.targetZ + 0.5);
+            if (cfg.baritoneLand && cfg.hasTarget && horiz > cfg.arriveRadius) { enterLandWalk(); return; }
+            complete("landed");
+            return;
+        }
+        submitInput(false, false, pc.getYaw(), 25f); // glide down, no boost
         if (++landTicks > LAND_TIMEOUT_TICKS) complete("landing timed out");
+    }
+
+    // --- terrain-aware approach, re-route, landing-spot search, and Baritone walk-in ---
+
+    private void enterLandWalk() {
+        phase = Phase.LANDWALK;
+        baritoneStarted = false;
+        landWalkTicks = 0;
+        BARITONE.stop();
+        info("Landed near target — walking in with Baritone");
+    }
+
+    /** Ground-path the final leg to the exact target. Handles targets that are covered, indoors, or underground. */
+    private void tickLandWalk(double x, double y, double z) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        double horiz = horizDist(x, z, cfg.targetX + 0.5, cfg.targetZ + 0.5);
+        if (horiz <= cfg.arriveRadius) { BARITONE.stop(); complete("walked to target"); return; }
+        if (!baritoneStarted) {
+            int rsq = Math.max(1, cfg.arriveRadius * cfg.arriveRadius);
+            BARITONE.pathTo(new GoalNear(cfg.targetX, cfg.approxGroundY, cfg.targetZ, rsq));
+            baritoneStarted = true;
+            landWalkTicks = 0;
+            return;
+        }
+        if (!BARITONE.isActive() || ++landWalkTicks > LANDWALK_TIMEOUT_TICKS) {
+            BARITONE.stop();
+            complete(horiz <= cfg.arriveRadius + 6 ? "walked near target" : "landed near target; could not walk the last leg");
+        }
+    }
+
+    /**
+     * Steering yaw toward the target/heading, re-routed around terrain at flight level. When the direct line is
+     * blocked, fan candidate headings out to ±maxRerouteDeg and take the smallest deviation that's clear (or the
+     * clearest if none is fully open). Throttled to every PROBE_INTERVAL ticks for a smooth, cheap turn.
+     */
+    private float steerYaw(double x, double y, double z) {
+        float base = desiredYaw(x, z);
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (!cfg.reroute || cfg.highway) return base; // highway has its own centerline tracking
+        if (haveReroute && flightTicks % PROBE_INTERVAL != 0) return rerouteYaw;
+        int look = cfg.lookAheadBlocks;
+        int baseClear = clearDistAhead(x, y, z, base, look);
+        if (baseClear >= look) { rerouteYaw = base; haveReroute = true; return base; }
+        float bestYaw = base;
+        int bestClear = baseClear;
+        int maxDeg = (int) Math.max(0, cfg.maxRerouteDeg);
+        for (int deg = 10; deg <= maxDeg; deg += 10) {
+            for (int sign = -1; sign <= 1; sign += 2) {
+                float cand = base + sign * deg;
+                int c = clearDistAhead(x, y, z, cand, look);
+                if (c >= look) { rerouteYaw = cand; haveReroute = true; return cand; } // clear, smallest deviation
+                if (c > bestClear) { bestClear = c; bestYaw = cand; }
+            }
+        }
+        rerouteYaw = bestYaw;
+        haveReroute = true;
+        return bestYaw;
+    }
+
+    /** Distance to the first solid terrain occupying the bot's flight level along {@code yaw}; {@code look} if clear/unknown. */
+    private int clearDistAhead(double x, double y, double z, float yaw, int look) {
+        double r = Math.toRadians(yaw);
+        double lx = -Math.sin(r), lz = Math.cos(r);
+        int fy = MathHelper.floorI(y);
+        for (int d = 2; d <= look; d += 2) {
+            int bx = MathHelper.floorI(x + lx * d);
+            int bz = MathHelper.floorI(z + lz * d);
+            if (!World.isChunkLoadedChunkPos(bx >> 4, bz >> 4)) return look; // can't see — treat as clear
+            for (int dy = -1; dy <= 2; dy++) {
+                var b = World.getBlock(bx, fy + dy, bz);
+                if (!b.isAir() && !World.isFluid(b)) return d;
+            }
+        }
+        return look;
+    }
+
+    /**
+     * Distance to the first terrain that pokes up through the straight glide line from the bot down to the landing
+     * spot — the "scan ahead below the bot" needed so it doesn't plant itself on a hill short of the target. -1 = clear.
+     */
+    private int glideCorridorBlock(double x, double y, double z) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        double dx = landX + 0.5 - x, dz = landZ + 0.5 - z;
+        double horiz = Math.hypot(dx, dz);
+        if (horiz < 2) return -1;
+        double ux = dx / horiz, uz = dz / horiz;
+        double slope = (y - landGroundY) / horiz; // blocks of descent per block forward to reach the spot
+        int limit = (int) Math.min(horiz - 2, cfg.lookAheadBlocks);
+        for (int d = 4; d <= limit; d += 4) {
+            int bx = MathHelper.floorI(x + ux * d);
+            int bz = MathHelper.floorI(z + uz * d);
+            int top = columnTop(bx, bz);
+            if (top == Integer.MIN_VALUE) continue; // unloaded — skip
+            double glideY = y - slope * d;
+            if (top + cfg.pathClearance > glideY) return d;
+        }
+        return -1;
+    }
+
+    /** Pick where to set down: the target if it's open clear ground, else the nearest open, flat, safe spot near it. */
+    private void computeLandSpot() {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        haveLandSpot = true;
+        int tx = cfg.targetX, tz = cfg.targetZ;
+        int tTop = columnTop(tx, tz);
+        if (tTop != Integer.MIN_VALUE && tTop > -64 && isOpenLanding(tx, tz)
+                && Math.abs(tTop - cfg.approxGroundY) <= OPEN_TARGET_TOLERANCE) {
+            landX = tx; landZ = tz; landGroundY = tTop; landIsTarget = true; return;
+        }
+        for (int rad = 1; rad <= cfg.landingSearchRadius; rad++) {
+            int[] s = scanRing(tx, tz, rad);
+            if (s != null) { landX = s[0]; landZ = s[1]; landGroundY = s[2]; landIsTarget = false; return; }
+        }
+        landX = tx; landZ = tz; landGroundY = cfg.approxGroundY; landIsTarget = false; // best effort; Baritone finishes
+    }
+
+    /** First open, flat landing column on the square ring at radius {@code rad} around (cx,cz); null if none. */
+    private int[] scanRing(int cx, int cz, int rad) {
+        for (int dx = -rad; dx <= rad; dx++) {
+            for (int dz = -rad; dz <= rad; dz++) {
+                if (Math.max(Math.abs(dx), Math.abs(dz)) != rad) continue; // ring perimeter only
+                int bx = cx + dx, bz = cz + dz;
+                if (isOpenLanding(bx, bz) && isFlat(bx, bz)) return new int[]{ bx, bz, columnTop(bx, bz) };
+            }
+        }
+        return null;
+    }
+
+    private boolean isFlat(int bx, int bz) {
+        int t = columnTop(bx, bz);
+        if (t == Integer.MIN_VALUE || t <= -64) return false;
+        for (int[] d : NEIGHBORS) {
+            int n = columnTop(bx + d[0], bz + d[1]);
+            if (n != Integer.MIN_VALUE && Math.abs(n - t) > 1) return false;
+        }
+        return true;
+    }
+
+    /** A column the bot can glide down onto: solid non-fluid top with 2 blocks of air above it. */
+    private boolean isOpenLanding(int bx, int bz) {
+        int top = columnTop(bx, bz);
+        if (top == Integer.MIN_VALUE || top <= -64) return false;
+        if (World.isFluid(World.getBlock(bx, top, bz))) return false; // no lava/water touchdown
+        return World.getBlock(bx, top + 1, bz).isAir() && World.getBlock(bx, top + 2, bz).isAir();
+    }
+
+    /** Highest solid (non-air, non-fluid) block Y in a column. Integer.MIN_VALUE if the chunk isn't loaded. */
+    private int columnTop(int bx, int bz) {
+        if (!World.isChunkLoadedChunkPos(bx >> 4, bz >> 4)) return Integer.MIN_VALUE;
+        int startY = Math.min(319, CONFIG.client.extra.elytraPilot.approxGroundY + 100);
+        for (int yy = startY; yy >= -64; yy--) {
+            var b = World.getBlock(bx, yy, bz);
+            if (!b.isAir() && !World.isFluid(b)) return yy;
+        }
+        return -65;
     }
 
     private void tickEmergency(double x, double y, double z) {
