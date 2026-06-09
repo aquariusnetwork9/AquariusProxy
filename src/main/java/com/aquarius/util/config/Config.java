@@ -402,6 +402,28 @@ public final class Config {
                 /** When the air route can't reach the target (covered/indoors/underground), walk the last leg with Baritone. */
                 public boolean baritoneLand = true;
 
+                /** Stop firing fireworks this many blocks below the ceiling and coast into the glide (saves rockets). */
+                public int climbStopMargin = 30;
+
+                /** Over the landing spot, cut the glide and drop straight in once within this many blocks of the ground. */
+                public int landCutClearance = 6;
+
+                // --- Trip planner (multi-leg overworld / nether-highway routing; driven by the ElytraTrip module) ---
+
+                /** Whether the trip planner is actively running a multi-leg journey. */
+                public boolean tripActive = false;
+
+                /** Final destination of the trip (overworld coordinates). */
+                public int tripTargetX = 0;
+                public int tripTargetY = 64;
+                public int tripTargetZ = 0;
+
+                /** Targets within this radius of (0,0) fly overworld-direct; beyond it route via the nether (8:1 scale). */
+                public int spawnRegionRadius = 100000;
+
+                /** In the nether, stop bouncing and seek an exit portal within this many (nether) blocks of the target's nether coords. */
+                public int netherExitRadius = 500;
+
                 /**
                  * Take off from flat ground by pulsing jump to deploy the elytra. Off = assume the bot is
                  * already airborne (walked off a ledge / tower) and just deploy on the first airborne tick.
