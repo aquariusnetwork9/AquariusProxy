@@ -63,6 +63,7 @@ public class CommandManager {
         new DiscordManageCommand(),
         new DiscordNotificationsCommand(),
         new DisplayCoordsCommand(),
+        new ElytraPilotCommand(),
         new ExtraChatCommand(),
         new FriendCommand(),
         new HelpCommand(),

@@ -171,6 +171,7 @@ public final class Config {
             public int tpsBufferSize = 20;
             public final Tasks tasks = new Tasks();
             public final AquariusMiner aquariusMiner = new AquariusMiner();
+            public final ElytraPilot elytraPilot = new ElytraPilot();
             public final PearlPlus pearlPlus = new PearlPlus();
             public final VillagerTrader villagerTrader = new VillagerTrader();
 
@@ -293,6 +294,175 @@ public final class Config {
                         return ItemRegistry.REGISTRY.get(outputItem);
                     }
                 }
+            }
+
+            /**
+             * ElytraPilot — autopilot elytra flight. The executor already simulates elytra glide +
+             * firework propulsion ({@code Bot.travelFallFlying} / {@code tickEntities}); this module is just
+             * the guidance loop: deploy, steer via yaw/pitch, fire fireworks, and land. Read everywhere via
+             * {@code CONFIG.client.extra.elytraPilot.*}. Requires an elytra worn + fireworks in the hotbar.
+             */
+            public static class ElytraPilot {
+                /** Compass directions of the 2b2t nether highways radiating from (0,0). */
+                public enum HighwayDir { N, S, E, W, NE, SE, NW, SW }
+
+                /** Whether the module is enabled on startup. */
+                public boolean enabled = false;
+
+                /**
+                 * Fly to a fixed X/Z coordinate (then auto-land near it) when true; otherwise free-fly the
+                 * {@link #heading} bearing until stopped. Set by the command (to / heading).
+                 */
+                public boolean hasTarget = false;
+
+                /** Target X (block coord), used when {@link #hasTarget}. */
+                public int targetX = 0;
+                /** Target Z (block coord), used when {@link #hasTarget}. */
+                public int targetZ = 0;
+
+                /**
+                 * Long-haul flight profile (the efficient way to cover huge distances): firework-CLIMB to
+                 * {@link #glideCeilingY}, then GLIDE down to {@link #glideFloorY} with almost no fireworks, then
+                 * climb again. 2b2t allows ascent well above y10000, so a high ceiling means most of the trip is
+                 * free elytra glide and fireworks are only spent on the periodic climbs. Absolute Y values.
+                 */
+                public int glideCeilingY = 2000;
+
+                /** Glide down to this Y, then firework-climb back to {@link #glideCeilingY}. */
+                public int glideFloorY = 1000;
+
+                /**
+                 * Nose-down pitch (degrees) held while gliding. About +2 gives the best glide ratio — the most
+                 * horizontal distance per block of altitude lost. (Minecraft pitch: positive = nose down.)
+                 */
+                public float glidePitch = 2.0f;
+
+                /**
+                 * Nose-up pitch MAGNITUDE (degrees) held while firework-climbing; applied as negative. About 40-45
+                 * maximises height gained per firework (height over forward speed).
+                 */
+                public float climbPitch = 42.0f;
+
+                /**
+                 * Assumed glide ratio (blocks forward per block of altitude lost) used to decide how early to begin
+                 * the final descent toward a target. ~6 is a safe, slightly conservative elytra glide ratio.
+                 */
+                public double glideRatio = 6.0;
+
+                /** Approximate ground height at the target, used for descent timing/aim (no per-target terrain probe). */
+                public int approxGroundY = 64;
+
+                /** Free-fly compass bearing in degrees (Minecraft yaw) when {@link #hasTarget} is false. */
+                public float heading = 0.0f;
+
+                /**
+                 * Highway-follow mode: steer down a 2b2t nether highway (obsidian road from 0,0 at y≈120) using
+                 * pure-pursuit centerline tracking, so the bot stays on the road instead of just holding a bearing.
+                 * Set by '/fly highway &lt;dir&gt;' (which also turns on ebounce and sets roadY 120). Overrides
+                 * {@link #heading} and {@link #hasTarget}.
+                 */
+                public boolean highway = false;
+
+                /** Which nether highway to follow when {@link #highway} is on. */
+                public HighwayDir highwayDir = HighwayDir.N;
+
+                /** Highway-follow look-ahead (blocks) for the pure-pursuit aim point on the road centerline. */
+                public int highwayLookahead = 64;
+
+                /** Fire another firework when horizontal speed (blocks/tick) drops below this. */
+                public double minBoostSpeed = 0.55;
+
+                /** Always fire a firework at least this often (ticks) while cruising, even above min speed. */
+                public int maxBoostIntervalTicks = 30;
+
+                /** How many blocks ahead to scan for terrain; pull up when something solid is in the way. */
+                public int lookAheadBlocks = 16;
+
+                /** Horizontal distance (blocks) from the target at which to stop boosting and glide down. */
+                public int descendRadius = 24;
+
+                /** Horizontal distance (blocks) from the target counted as arrived (begin landing). */
+                public int arriveRadius = 6;
+
+                /** Hard safety cap on a single flight, in ticks (20/s). Aborts when exceeded. */
+                public int maxFlightTicks = 6000;
+
+                /**
+                 * Take off from flat ground by pulsing jump to deploy the elytra. Off = assume the bot is
+                 * already airborne (walked off a ledge / tower) and just deploy on the first airborne tick.
+                 */
+                public boolean doubleJumpTakeoff = true;
+
+                /**
+                 * Swap to a fresh elytra mid-flight when the worn one wears down — vital for long hauls:
+                 * an elytra lasts only on the order of tens of thousands of blocks even with Unbreaking III,
+                 * and Mending does nothing without XP. Spares are pulled from the hotbar (one fast action) or
+                 * the main inventory. Removing the worn elytra from the chestplate momentarily stops flight,
+                 * so the bot re-deploys + re-boosts immediately after; a sudden loss of flight from any cause
+                 * (elytra breaking, desync, knockback) is auto-recovered the same way.
+                 */
+                public boolean swapElytra = true;
+
+                /** Swap the worn elytra once its remaining durability drops to this (an elytra's max is 432). */
+                public int elytraMinDurability = 20;
+
+                /** Only treat an inventory elytra as a usable spare if its remaining durability exceeds this. */
+                public int freshElytraMinDurability = 50;
+
+                /**
+                 * Minimum blocks of clearance above the ground before a (flight-dropping) swap is attempted.
+                 * Below this the bot climbs first; if the elytra is already failing with no clearance it
+                 * emergency-lands instead of swapping into a fall it can't recover from.
+                 */
+                public int minSwapClearance = 50;
+
+                /**
+                 * "E-bounce" mode: instead of the firework climb/glide profile, skip along a FLAT straight road
+                 * with no fireworks (decoded from a Rusherhack capture). Holds forward+jump+sprint at +2° pitch
+                 * and re-sends START_FALL_FLYING each bounce; the held jump auto-jumps on every ground touch and
+                 * the elytra glide carries the hop. Use for long built roads; it breaks on obstacles/gaps.
+                 */
+                public boolean ebounce = false;
+
+                /** E-bounce: the flat road's surface Y. Bouncing aborts if the bot sinks well below this. */
+                public int roadY = 64;
+
+                /** E-bounce: how far below {@link #roadY} the bot may sink before aborting (gap / fell off the road). */
+                public int roadDropAbort = 6;
+
+                /** E-bounce: minimum ticks between START_FALL_FLYING re-sends (anti-spam; the ~10-tick bounce cadence is set by vanilla jump cooldown). */
+                public int bounceRedeployTicks = 3;
+
+                /**
+                 * Hard horizontal speed cap in blocks/second. 2b2t rejects sustained travel above ~40 b/s
+                 * (desync / rubberband / kick), so the governor never boosts or bounces past this. Keep a margin.
+                 */
+                public double maxSpeed = 38.0;
+
+                /**
+                 * Obstacle-passing for e-bounce / highway travel: when the bounce hits a block ahead (or stalls),
+                 * stop bouncing, settle on the road, then Baritone-path to a clear spot further along the travel
+                 * axis and resume bouncing. Lets the bot get past griefed sections / walls on a highway.
+                 */
+                public boolean passObstacles = true;
+
+                /** How far along the travel axis (blocks) to aim the Baritone bypass past an obstacle (×attempt). */
+                public int passAheadBlocks = 12;
+
+                /** Ticks to settle (stop moving) after detecting an obstacle before handing off to Baritone. */
+                public int passSettleTicks = 20;
+
+                /** Per-attempt Baritone bypass timeout (ticks) before retrying further along the axis. */
+                public int passTimeoutTicks = 200;
+
+                /** Max Baritone bypass attempts before aborting the flight. */
+                public int maxPassAttempts = 5;
+
+                /** Ticks of near-zero forward speed while bouncing that count as "stuck on an obstacle". */
+                public int bounceStallLimit = 40;
+
+                /** InputManager priority for flight control (high so it overrides other movement). */
+                public int inputPriority = 5000;
             }
 
             /**
