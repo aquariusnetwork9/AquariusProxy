@@ -1728,7 +1728,7 @@ public final class Bot extends ModuleUtils {
         updateFallFlying();
     }
 
-    void stopFallFlying() {
+    public void stopFallFlying() {
         var metadata0 = CACHE.getPlayerCache().getThePlayer().getMetadata().get(0);
         if (metadata0 instanceof ByteEntityMetadata bmd0) {
             var b = bmd0.getPrimitiveValue();
