@@ -1,6 +1,7 @@
 package com.aquarius.command.impl;
 
 import com.aquarius.module.impl.ElytraPilot;
+import com.aquarius.module.impl.ElytraTrip;
 import com.aquarius.util.config.Config.Client.Extra.ElytraPilot.HighwayDir;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.aquarius.command.api.Command;
@@ -60,7 +61,11 @@ public class ElytraPilotCommand extends Command {
                 "rerouteangle <deg>    (max heading deviation the re-route may use; up to ~70)",
                 "pathclearance <n>     (vertical clearance the glide path keeps above terrain)",
                 "landsearch <blocks>   (radius to search around the target for a clear landing spot)",
-                "baritoneland <on/off> (walk the last leg with Baritone if covered/indoors/underground)"
+                "baritoneland <on/off> (walk the last leg with Baritone if covered/indoors/underground)",
+                "climbmargin <n>       (stop boosting this many blocks below the ceiling; saves fireworks)",
+                "landcut <n>           (cut the glide + drop in within this many blocks of the ground)",
+                "trip <x> <z> [y]      (plan a journey: overworld if within ~100k of spawn, else via the nether highways)",
+                "trip off              (cancel an in-progress trip)"
             )
             .build();
     }
@@ -220,6 +225,43 @@ public class ElytraPilotCommand extends Command {
             .then(literal("baritoneland").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.baritoneLand = getToggle(c, "toggle");
                 c.getSource().getEmbed().title("ElytraPilot Baritone walk-in " + toggleStrCaps(CONFIG.client.extra.elytraPilot.baritoneLand));
-            })));
+            })))
+            .then(literal("climbmargin").then(argument("blocks", integer()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.climbStopMargin = getInteger(c, "blocks");
+                c.getSource().getEmbed().title("ElytraPilot climb-stop margin = " + CONFIG.client.extra.elytraPilot.climbStopMargin);
+            })))
+            .then(literal("landcut").then(argument("blocks", integer()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.landCutClearance = getInteger(c, "blocks");
+                c.getSource().getEmbed().title("ElytraPilot land-cut clearance = " + CONFIG.client.extra.elytraPilot.landCutClearance);
+            })))
+            .then(literal("trip")
+                .then(literal("off").executes(c -> {
+                    CONFIG.client.extra.elytraPilot.tripActive = false;
+                    MODULE.get(ElytraTrip.class).syncEnabledFromConfig();
+                    c.getSource().getEmbed().title("ElytraPilot trip cancelled");
+                }))
+                .then(argument("x", integer())
+                    .then(argument("z", integer())
+                        .executes(c -> { return startTrip(c.getSource(), getInteger(c, "x"), 64, getInteger(c, "z")); })
+                        .then(argument("y", integer()).executes(c -> {
+                            return startTrip(c.getSource(), getInteger(c, "x"), getInteger(c, "y"), getInteger(c, "z"));
+                        })))));
+    }
+
+    private int startTrip(CommandContext ctx, int x, int y, int z) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        cfg.tripTargetX = x;
+        cfg.tripTargetY = y;
+        cfg.tripTargetZ = z;
+        cfg.tripActive = true;
+        MODULE.get(ElytraTrip.class).syncEnabledFromConfig();
+        double dist = Math.hypot(x, z);
+        ctx.getEmbed()
+            .title("ElytraPilot trip started")
+            .description("Destination " + x + ", " + y + ", " + z
+                + (dist <= cfg.spawnRegionRadius
+                    ? " — overworld-direct (within the spawn region)."
+                    : " — via the nether highways (" + (long) dist + "b out)."));
+        return OK;
     }
 }

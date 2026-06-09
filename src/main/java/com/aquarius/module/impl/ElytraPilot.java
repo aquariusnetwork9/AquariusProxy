@@ -115,8 +115,8 @@ public class ElytraPilot extends Module {
         var cfg = CONFIG.client.extra.elytraPilot;
         if (!isElytra(chestplate()))
             inGameAlertActivePlayer("<yellow>ElytraPilot: no elytra in the chestplate slot — will still try to deploy");
-        if (findHotbarFirework() < 0)
-            inGameAlertActivePlayer("<yellow>ElytraPilot: no firework rockets in hotbar — flight will not sustain");
+        if (!hasAnyFirework())
+            inGameAlertActivePlayer("<yellow>ElytraPilot: no firework rockets (hotbar or inventory) — flight will not sustain");
         if (cfg.swapElytra && !hasSpareElytra())
             inGameAlertActivePlayer("<yellow>ElytraPilot: no spare elytra found — long flights will end when the worn one wears out");
         if (cfg.hasTarget)
@@ -130,6 +130,27 @@ public class ElytraPilot extends Module {
     @Override
     public void onDisable() {
         reset();
+    }
+
+    // --- public hooks for the trip planner to drive individual flight legs ---
+
+    /** True once the current flight leg has finished (landed/aborted). */
+    public boolean isFlightDone() {
+        return phase == Phase.DONE || phase == Phase.IDLE;
+    }
+
+    /** (Re)start a flight leg with whatever target/mode is currently configured — re-arms even if already enabled. */
+    public void beginFlight() {
+        CONFIG.client.extra.elytraPilot.enabled = true;
+        syncEnabledFromConfig();   // register the tick handler (runs onEnable if it was disabled)
+        reset();                   // re-arm cleanly even if a previous leg left us in DONE
+        phase = CONFIG.client.extra.elytraPilot.ebounce ? Phase.BOUNCE : Phase.TAKEOFF;
+    }
+
+    /** Stop the current flight leg (disable the module). */
+    public void endFlight() {
+        CONFIG.client.extra.elytraPilot.enabled = false;
+        syncEnabledFromConfig();
     }
 
     private void reset() {
@@ -262,8 +283,12 @@ public class ElytraPilot extends Module {
             pitch = cfg.glidePitch;   // shallow nose-down glide = max distance per altitude; no fireworks
             wantFire = false;
         } else {
-            pitch = -cfg.climbPitch;  // nose-up firework ascent = max height per firework
-            wantFire = !overCap && (speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
+            // Firework climb — but coast (no boost) the last stretch into the ceiling instead of powering past it
+            // and wasting rockets; ease the nose toward glide as we approach. Conserves fireworks on long hauls.
+            boolean nearCeiling = y >= cfg.glideCeilingY - cfg.climbStopMargin;
+            pitch = nearCeiling ? cfg.glidePitch : -cfg.climbPitch; // nose-up ascent = max height per firework
+            wantFire = !overCap && !nearCeiling
+                && (speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
         }
         if (terrainBlockedAhead(x, y, z, yaw, cfg.lookAheadBlocks)) { // pull up + boost over obstacles
             pitch = -cfg.climbPitch;
@@ -494,8 +519,8 @@ public class ElytraPilot extends Module {
             : pc.getYaw();
         double horizSpot = haveLandSpot ? horizDist(x, z, landX + 0.5, landZ + 0.5) : 0;
         if (horizSpot > cfg.arriveRadius * 3 + 8) { phase = Phase.DESCEND; return; } // glided off — re-approach
-        if (heightAboveGround(x, y, z) <= 3) BOT.stopFallFlying();                    // low over the spot — cut glide, drop in
-        submitInput(false, false, yaw, 35f);
+        if (heightAboveGround(x, y, z) <= cfg.landCutClearance) BOT.stopFallFlying(); // low over the spot — cut glide, drop straight in
+        submitInput(false, false, yaw, 45f);                                          // aggressive nose-down to touch down fast
         if (++landTicks > LAND_TIMEOUT_TICKS) { BOT.stopFallFlying(); complete("landing timed out"); }
     }
 
@@ -899,11 +924,38 @@ public class ElytraPilot extends Module {
 
     private void ensureFireworkHeld() {
         int slot = findHotbarFirework();
-        if (slot < 0) return;
+        if (slot < 0) { refillFireworkToHotbar(); return; } // none in the hotbar — pull a stack down from the inventory
         int hotbarIdx = slot - 36;
         if (hotbarIdx == CACHE.getPlayerCache().getHeldItemSlot()) return;
         if (INVENTORY.hasActiveRequest()) return;
         submitInvAction(new SetHeldItem(hotbarIdx));
+    }
+
+    /** Move a firework stack from the main inventory into a hotbar slot. Supports multiple stacks (grabs the next one). */
+    private void refillFireworkToHotbar() {
+        if (INVENTORY.hasActiveRequest()) return;
+        int m = findMainInvFirework();
+        if (m < 0) return; // genuinely out of fireworks everywhere
+        int button = findEmptyHotbarButton();
+        if (button < 0) button = CACHE.getPlayerCache().getHeldItemSlot(); // no empty hotbar slot — swap into the held one
+        submitInvAction(new MoveToHotbarSlot(m, MoveToHotbarAction.from(button)));
+    }
+
+    private int findMainInvFirework() {
+        List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+        for (int s = 9; s <= 35; s++) if (isFirework(inv.get(s))) return s;
+        return -1;
+    }
+
+    private int findEmptyHotbarButton() {
+        List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+        for (int s = 36; s <= 44; s++) if (isEmpty(inv.get(s))) return s - 36;
+        return -1;
+    }
+
+    /** Fireworks present anywhere the bot can use them (hotbar now, or inventory it can refill from). */
+    private boolean hasAnyFirework() {
+        return findHotbarFirework() >= 0 || findMainInvFirework() >= 0;
     }
 
     private boolean isFirework(ItemStack s) {

@@ -39,6 +39,7 @@ public class ModuleManager {
             new Click(),
             new CoordObfuscation(),
             new ElytraPilot(),
+            new ElytraTrip(),
             new ExtraChat(),
             new KillAura(),
             new QueueWarning(),
