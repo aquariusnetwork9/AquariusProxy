@@ -145,6 +145,7 @@ public class ElytraTrip extends Module {
 
     private void tickNetherHighway(com.aquarius.util.config.Config.Client.Extra.ElytraPilot cfg) {
         if (!inNether()) { // fell back to the overworld unexpectedly (stray portal) — re-evaluate from here
+            elytra().endFlight();
             phase = Phase.FINAL_APPROACH;
             legStarted = false;
             return;
@@ -160,18 +161,36 @@ public class ElytraTrip extends Module {
             return;
         }
         if (!legStarted) {
-            HighwayDir dir = nearestHighway(nx, nz);
-            cfg.highway = true;
-            cfg.highwayDir = dir;
-            cfg.ebounce = true;
-            cfg.roadY = 120;
-            cfg.hasTarget = false;
+            if (cfg.tripUseHighways) {
+                HighwayDir dir = nearestHighway(nx, nz);
+                cfg.highway = true;
+                cfg.highwayDir = dir;
+                cfg.ebounce = true;
+                cfg.roadY = 120;
+                cfg.hasTarget = false;
+                info("Nether highway: bouncing {} toward the target.", dir);
+            } else {
+                // open-nether: cruise straight to the target's nether coords (roof-level, obstacle + lava aware)
+                cfg.highway = false;
+                cfg.ebounce = false;
+                cfg.hasTarget = true;
+                cfg.targetX = (int) Math.round(nx);
+                cfg.targetZ = (int) Math.round(nz);
+                info("Open-nether cruise to {}, {} (roof-level, obstacle/lava-aware).", (long) nx, (long) nz);
+            }
             elytra().beginFlight();
             legStarted = true;
-            info("Nether highway: bouncing {} toward the target.", dir);
+        }
+        // open-nether cruise may land before we reach the exit radius — that's fine, seek a portal from there
+        if (!cfg.tripUseHighways && elytra().isFlightDone()) {
+            elytra().endFlight();
+            phase = Phase.NETHER_SEEK_EXIT;
+            legStarted = false;
+            guardTicks = 0;
+            return;
         }
         if ((guardTicks += THROTTLE_TICKS) > HIGHWAY_GUARD_TICKS)
-            abort("nether highway leg timed out before reaching the target");
+            abort("nether travel leg timed out before reaching the target");
     }
 
     private void tickNetherSeekExit() {

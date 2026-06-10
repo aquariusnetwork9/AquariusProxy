@@ -424,6 +424,18 @@ public final class Config {
                 /** In the nether, stop bouncing and seek an exit portal within this many (nether) blocks of the target's nether coords. */
                 public int netherExitRadius = 500;
 
+                /** Max cruise altitude in the nether — kept under the y127 bedrock roof so the bot doesn't ram it. */
+                public int netherCeilingY = 122;
+
+                /** Nose-up pitch while gliding over an on-road obstacle (HOP); higher = climbs steeper. */
+                public float hopPitch = 28.0f;
+
+                /** Give up a HOP and fall back to a Baritone walk-past after this many ticks of not clearing. */
+                public int hopTimeoutTicks = 40;
+
+                /** Trip nether leg: true = ride the nearest highway via e-bounce; false = fly open-nether straight to the target. */
+                public boolean tripUseHighways = false;
+
                 /**
                  * Take off from flat ground by pulsing jump to deploy the elytra. Off = assume the bot is
                  * already airborne (walked off a ledge / tower) and just deploy on the first airborne tick.
