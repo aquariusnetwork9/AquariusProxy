@@ -440,8 +440,17 @@ public final class Config {
                 /** A* node-expansion budget per open-nether re-plan (cost guard). */
                 public int netherPlanNodes = 4000;
 
-                /** Open-nether route search-box half-extent, in 4-block cells (48 ≈ 192 blocks each way). */
+                /** Open-nether route search-box half-extent, in 4-block cells (48 ≈ 192 blocks ≈ 2b2t's 12-chunk render). */
                 public int netherPlanRadiusCells = 48;
+
+                /** "Don't outrun the chunk loader." 2b2t serves only ~12 chunks and streams them slowly, so the bot can
+                 *  fly past the edge of LOADED terrain and into pop-in. When the loaded corridor straight ahead is shorter
+                 *  than this (blocks), stop boosting and coast so loading can catch up. */
+                public int netherFrontierSlow = 56;
+
+                /** When the loaded corridor ahead is shorter than this (blocks), actively brake (nose up to bleed speed)
+                 *  and loiter for chunks to stream in — we're right at the frontier and must not charge into the unseen. */
+                public int netherFrontierHold = 28;
 
                 /** Nose-up pitch while gliding over an on-road obstacle (HOP); higher = climbs steeper. */
                 public float hopPitch = 28.0f;
