@@ -67,7 +67,8 @@ public class ElytraPilotCommand extends Command {
                 "trip <x> <z> [y]      (plan a journey: overworld if within ~100k of spawn, else through the nether)",
                 "trip highways <on/off>(nether leg: e-bounce a highway vs fly open-nether straight to the target)",
                 "trip off              (cancel an in-progress trip)",
-                "netherceiling <y>     (max cruise altitude in the nether; stays under the bedrock roof)",
+                "netherceiling <y>     (hard altitude cap in the nether; never climb above it / into bedrock)",
+                "nethercruise <y>      (preferred open-nether flight altitude; holds ~this Y and dodges in 3D)",
                 "hoppitch <deg>        (climb angle when gliding over an on-road obstacle)"
             )
             .build();
@@ -240,6 +241,10 @@ public class ElytraPilotCommand extends Command {
             .then(literal("netherceiling").then(argument("y", integer()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.netherCeilingY = getInteger(c, "y");
                 c.getSource().getEmbed().title("ElytraPilot nether ceiling = " + CONFIG.client.extra.elytraPilot.netherCeilingY);
+            })))
+            .then(literal("nethercruise").then(argument("y", integer()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.netherCruiseY = getInteger(c, "y");
+                c.getSource().getEmbed().title("ElytraPilot nether cruise altitude = " + CONFIG.client.extra.elytraPilot.netherCruiseY);
             })))
             .then(literal("hoppitch").then(argument("degrees", doubleArg()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.hopPitch = (float) getDouble(c, "degrees");
