@@ -358,6 +358,15 @@ public class ElytraPilot extends Module {
         float pitch = clampF((float) Math.toDegrees(Math.atan2(-dy, horiz)), -cfg.climbPitch, 30f);
         if (y >= roofCap - 1 && pitch < 0f) pitch = 0f;         // never climb into the inaccessible roof
         boolean wantFire = !overCap && (dy > 2 || speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
+
+        // Don't outrun the chunk loader: 2b2t serves only ~12 chunks and streams them slowly. If loaded terrain ahead
+        // is short, stop boosting (coast) so loading catches up; if we're right at the frontier, nose up to bleed speed.
+        int corridor = loadedDistAhead(x, z, yaw, cfg.netherFrontierSlow);
+        if (corridor < cfg.netherFrontierSlow) {
+            wantFire = false;
+            if (corridor <= cfg.netherFrontierHold && y < roofCap - 1) pitch = clampF(pitch, -cfg.climbPitch, -4f);
+        }
+
         boolean fire = wantFire && heldIsFirework();
         if (wantFire && !fire) ensureFireworkHeld();
         if (fire) ticksSinceFire = 0;
@@ -402,6 +411,14 @@ public class ElytraPilot extends Module {
             pitch = -2f;                                        // holding altitude -> occasional boost to stay level
             wantFire = !overCap && (speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
         }
+
+        // Don't outrun the chunk loader (see tickNetherCruise): coast when loaded terrain ahead is short, brake at the frontier.
+        int corridor = loadedDistAhead(x, z, yaw, cfg.netherFrontierSlow);
+        if (corridor < cfg.netherFrontierSlow) {
+            wantFire = false;
+            if (corridor <= cfg.netherFrontierHold && y < roofCap - 1) pitch = clampF(pitch, -cfg.climbPitch, -4f);
+        }
+
         boolean fire = wantFire && heldIsFirework();
         if (wantFire && !fire) ensureFireworkHeld();
         if (fire) ticksSinceFire = 0;
@@ -731,6 +748,22 @@ public class ElytraPilot extends Module {
     }
 
     /** Distance to the first solid terrain occupying the bot's flight level along {@code yaw}; {@code look} if clear/unknown. */
+    /**
+     * Blocks forward (along {@code yaw}) before the first UNLOADED chunk — the bot's effective "headlight" range. On
+     * 2b2t only ~12 chunks load and they stream in slowly, so when flying fast this corridor is the real limit on how
+     * far the bot can safely commit. Returns {@code look} if everything out to that distance is loaded.
+     */
+    private int loadedDistAhead(double x, double z, float yaw, int look) {
+        double r = Math.toRadians(yaw);
+        double lx = -Math.sin(r), lz = Math.cos(r);
+        for (int d = 2; d <= look; d += 2) {
+            int bx = MathHelper.floorI(x + lx * d);
+            int bz = MathHelper.floorI(z + lz * d);
+            if (!World.isChunkLoadedChunkPos(bx >> 4, bz >> 4)) return d;
+        }
+        return look;
+    }
+
     private int clearDistAhead(double x, double y, double z, float yaw, int look) {
         double r = Math.toRadians(yaw);
         double lx = -Math.sin(r), lz = Math.cos(r);

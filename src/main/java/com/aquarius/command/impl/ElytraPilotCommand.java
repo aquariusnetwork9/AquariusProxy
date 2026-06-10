@@ -70,6 +70,7 @@ public class ElytraPilotCommand extends Command {
                 "netherceiling <y>     (hard altitude cap in the nether; never climb above it / into bedrock)",
                 "nethercruise <y>      (preferred open-nether flight altitude; holds ~this Y and dodges in 3D)",
                 "netherpath <on/off>   (3D look-ahead pathfinding in open nether vs pure reactive dodging)",
+                "netherfrontier <slow> <hold>  (blocks of loaded terrain ahead below which to coast / brake — don't outrun 2b2t's slow chunk loading)",
                 "hoppitch <deg>        (climb angle when gliding over an on-road obstacle)"
             )
             .build();
@@ -251,6 +252,12 @@ public class ElytraPilotCommand extends Command {
                 CONFIG.client.extra.elytraPilot.netherPathfind = getToggle(c, "toggle");
                 c.getSource().getEmbed().title("ElytraPilot nether look-ahead pathfinding " + toggleStrCaps(CONFIG.client.extra.elytraPilot.netherPathfind));
             })))
+            .then(literal("netherfrontier").then(argument("slow", integer()).then(argument("hold", integer()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.netherFrontierSlow = getInteger(c, "slow");
+                CONFIG.client.extra.elytraPilot.netherFrontierHold = getInteger(c, "hold");
+                c.getSource().getEmbed().title("ElytraPilot nether frontier: coast < " + CONFIG.client.extra.elytraPilot.netherFrontierSlow
+                    + ", brake < " + CONFIG.client.extra.elytraPilot.netherFrontierHold + " blocks of loaded terrain ahead");
+            }))))
             .then(literal("hoppitch").then(argument("degrees", doubleArg()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.hopPitch = (float) getDouble(c, "degrees");
                 c.getSource().getEmbed().title("ElytraPilot hop pitch = " + CONFIG.client.extra.elytraPilot.hopPitch);
