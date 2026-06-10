@@ -95,6 +95,9 @@ public class ElytraPilot extends Module {
     private boolean baritoneStarted;
     private int landWalkTicks;
     private int hopTicks;
+    private List<int[]> netherPath;   // current 3D look-ahead route (block-center waypoints) in open nether
+    private int pathIdx;
+    private int planCooldown;
 
     @Override
     public boolean enabledSetting() {
@@ -180,6 +183,9 @@ public class ElytraPilot extends Module {
         baritoneStarted = false;
         landWalkTicks = 0;
         hopTicks = 0;
+        netherPath = null;
+        pathIdx = 0;
+        planCooldown = 0;
     }
 
     private void onTick(final ClientBotTick event) {
@@ -320,12 +326,57 @@ public class ElytraPilot extends Module {
     }
 
     /**
+     * Open-nether flight with 3D look-ahead: plan a coarse route through the loaded nether ({@link ElytraPathfinder})
+     * and fly its waypoints (pure-pursuit), re-planning periodically so it routes AROUND pockets/walls/lava instead of
+     * nosing into a dead end. Falls back to reactive steering when there's no usable route (target unseen / boxed in /
+     * pathfinding disabled), and re-plans shortly after as more chunks stream in.
+     */
+    private void tickNetherCruise(double x, double y, double z, double speed) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (!cfg.netherPathfind || !cfg.hasTarget) { tickNetherReactive(x, y, z, speed); return; }
+
+        boolean overCap = speed * 20.0 >= cfg.maxSpeed;
+        int roofCap = Math.min(cfg.netherCeilingY, 125);
+
+        if (netherPath == null || --planCooldown <= 0) {        // refresh the look-ahead route
+            planCooldown = cfg.netherPlanInterval;
+            int ty = Math.min(Math.max(cfg.netherCruiseY, cfg.approxGroundY + 8), roofCap - 2);
+            netherPath = ElytraPathfinder.findPath(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z),
+                cfg.targetX, ty, cfg.targetZ, cfg.netherPlanNodes, cfg.netherPlanRadiusCells);
+            pathIdx = 0;
+        }
+        if (netherPath == null || netherPath.size() < 2) { tickNetherReactive(x, y, z, speed); return; }
+
+        while (pathIdx < netherPath.size() - 1) {               // drop waypoints we've reached
+            int[] wp = netherPath.get(pathIdx);
+            if (horizDist(x, z, wp[0], wp[2]) < 4 && Math.abs(y - wp[1]) < 4) pathIdx++; else break;
+        }
+        int[] w = netherPath.get(Math.min(pathIdx + 2, netherPath.size() - 1)); // aim a couple cells ahead
+        float yaw = (float) Math.toDegrees(Math.atan2(-(w[0] + 0.5 - x), w[2] + 0.5 - z));
+        double dy = (w[1] + 0.5) - y;
+        double horiz = Math.max(1.0, horizDist(x, z, w[0], w[2]));
+        float pitch = clampF((float) Math.toDegrees(Math.atan2(-dy, horiz)), -cfg.climbPitch, 30f);
+        if (y >= roofCap - 1 && pitch < 0f) pitch = 0f;         // never climb into the inaccessible roof
+        boolean wantFire = !overCap && (dy > 2 || speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
+        boolean fire = wantFire && heldIsFirework();
+        if (wantFire && !fire) ensureFireworkHeld();
+        if (fire) ticksSinceFire = 0;
+        submitInput(false, fire, yaw, pitch);
+
+        double lead = Math.max(cfg.descendRadius, (y - cfg.approxGroundY) * cfg.glideRatio);
+        if (horizDist(x, z, cfg.targetX, cfg.targetZ) <= lead) {
+            phase = Phase.DESCEND;
+            info("Approaching target — descending");
+        }
+    }
+
+    /**
      * Open-nether level flight. On 2b2t the bedrock roof is inaccessible and modern nether terrain fills the upper
      * layers, so the bot flies at a clear mid-altitude ({@code netherCruiseY}) rather than the ceiling and reacts to
      * obstacles in 3D: reroute horizontally (steerYaw), else climb over or dive under — whichever side has more room
      * (never into the bedrock roof or into lava). Sustains level flight with periodic fireworks (no free roof glide).
      */
-    private void tickNetherCruise(double x, double y, double z, double speed) {
+    private void tickNetherReactive(double x, double y, double z, double speed) {
         var cfg = CONFIG.client.extra.elytraPilot;
         float yaw = steerYaw(x, y, z);                          // horizontal reroute around walls (±maxRerouteDeg)
         boolean overCap = speed * 20.0 >= cfg.maxSpeed;
