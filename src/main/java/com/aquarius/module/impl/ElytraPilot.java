@@ -13,6 +13,7 @@ import com.aquarius.feature.player.Input;
 import com.aquarius.feature.player.InputRequest;
 import com.aquarius.feature.pathfinder.goals.GoalNear;
 import com.aquarius.feature.player.World;
+import com.aquarius.mc.dimension.DimensionRegistry;
 import com.aquarius.mc.item.ItemRegistry;
 import com.aquarius.module.api.Module;
 import com.aquarius.util.config.Config.Client.Extra.ElytraPilot.HighwayDir;
@@ -53,7 +54,7 @@ import static com.aquarius.Globals.INVENTORY;
  */
 public class ElytraPilot extends Module {
 
-    private enum Phase { IDLE, TAKEOFF, CRUISE, BOUNCE, PASS, SWAP, DESCEND, LAND, LANDWALK, EMERGENCY, DONE }
+    private enum Phase { IDLE, TAKEOFF, CRUISE, BOUNCE, HOP, PASS, SWAP, DESCEND, LAND, LANDWALK, EMERGENCY, DONE }
 
     private static final int CHESTPLATE_SLOT = 6;          // container 0: 5=helm,6=chest,7=legs,8=boots
     private static final int TAKEOFF_TIMEOUT_TICKS = 200;  // ~10s to get airborne + deployed
@@ -63,6 +64,7 @@ public class ElytraPilot extends Module {
     private static final int PROBE_INTERVAL = 10;           // recompute terrain scans every N ticks
     private static final int OPEN_TARGET_TOLERANCE = 8;     // land at the target if its open surface is within this of approxGroundY
     private static final int LANDWALK_TIMEOUT_TICKS = 1200; // ~60s for Baritone to reach the target on the ground
+    private static final int HOP_MIN_TICKS = 6;             // commit to a hop for at least this long so we clear the block
     private static final int[][] NEIGHBORS = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
     private Phase phase = Phase.IDLE;
@@ -92,6 +94,7 @@ public class ElytraPilot extends Module {
     private boolean haveReroute;
     private boolean baritoneStarted;
     private int landWalkTicks;
+    private int hopTicks;
 
     @Override
     public boolean enabledSetting() {
@@ -176,6 +179,7 @@ public class ElytraPilot extends Module {
         haveReroute = false;
         baritoneStarted = false;
         landWalkTicks = 0;
+        hopTicks = 0;
     }
 
     private void onTick(final ClientBotTick event) {
@@ -200,6 +204,7 @@ public class ElytraPilot extends Module {
                     case TAKEOFF   -> tickTakeoff();
                     case CRUISE    -> tickCruise(x, y, z, speed);
                     case BOUNCE    -> tickBounce(x, y, z, speed);
+                    case HOP       -> tickHop(x, y, z, speed);
                     case PASS      -> tickPass(x, y, z, speed);
                     case SWAP      -> tickSwap(x, y, z);
                     case DESCEND   -> tickDescend(x, y, z, speed);
@@ -270,11 +275,14 @@ public class ElytraPilot extends Module {
         }
 
         // Long-haul profile: firework-climb (nose up) to the ceiling, then glide (nose ≈ +2) to the floor.
-        if (cfg.glideFloorY < cfg.glideCeilingY) {
-            if (gliding && y <= cfg.glideFloorY) gliding = false;        // sank to the floor -> climb again
-            else if (!gliding && y >= cfg.glideCeilingY) gliding = true; // reached the ceiling -> glide
+        // In the nether, cap the ceiling under the bedrock roof so we don't ram it (roof-cruise just below ~y127).
+        int ceiling = inNether() ? Math.min(cfg.glideCeilingY, cfg.netherCeilingY) : cfg.glideCeilingY;
+        int floor = Math.min(cfg.glideFloorY, ceiling - 4);
+        if (floor < ceiling) {
+            if (gliding && y <= floor) gliding = false;        // sank to the floor -> climb again
+            else if (!gliding && y >= ceiling) gliding = true; // reached the ceiling -> glide
         } else {
-            gliding = y >= cfg.glideCeilingY;                           // degenerate band
+            gliding = y >= ceiling;                            // degenerate band
         }
         boolean overCap = speed * 20.0 >= cfg.maxSpeed; // 2b2t ~40 b/s limit — never boost past it
         float pitch;
@@ -285,7 +293,7 @@ public class ElytraPilot extends Module {
         } else {
             // Firework climb — but coast (no boost) the last stretch into the ceiling instead of powering past it
             // and wasting rockets; ease the nose toward glide as we approach. Conserves fireworks on long hauls.
-            boolean nearCeiling = y >= cfg.glideCeilingY - cfg.climbStopMargin;
+            boolean nearCeiling = y >= ceiling - cfg.climbStopMargin;
             pitch = nearCeiling ? cfg.glidePitch : -cfg.climbPitch; // nose-up ascent = max height per firework
             wantFire = !overCap && !nearCeiling
                 && (speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
@@ -334,14 +342,12 @@ public class ElytraPilot extends Module {
             }
         }
 
-        // Obstacle passing: a block ahead (or a forward-progress stall) hands off to Baritone to get past it.
+        // Obstacle handling: glide OVER a block/lava patch ahead (fast, stays in flight); only settle + walk (PASS)
+        // when we actually stall hard against something. terrainBlockedAhead now treats lava as a hazard too.
         if (cfg.passObstacles) {
             if (speed * 20.0 < 2.0) bounceStallTicks++; else bounceStallTicks = 0;
-            boolean blocked = terrainBlockedAhead(x, y, z, yaw, Math.min(cfg.lookAheadBlocks, 8));
-            if (blocked || bounceStallTicks > cfg.bounceStallLimit) {
-                enterPass();
-                return;
-            }
+            if (bounceStallTicks > cfg.bounceStallLimit) { enterPass(); return; }        // stuck against it -> walk past
+            if (terrainBlockedAhead(x, y, z, yaw, Math.min(cfg.lookAheadBlocks, 12))) { enterHop(); return; } // glide over
         }
 
         boolean overCap = speed * 20.0 >= cfg.maxSpeed; // 2b2t ~40 b/s limit — coast (no bounce) to bleed speed
@@ -357,6 +363,39 @@ public class ElytraPilot extends Module {
             landTicks = 0;
             info("Reached target — landing");
         }
+    }
+
+    private void enterHop() {
+        phase = Phase.HOP;
+        hopTicks = 0;
+        info("Obstacle on the road — gliding over it");
+    }
+
+    /** Glide up and over a block/lava patch on the road, then drop back into the bounce. Falls back to PASS if it can't clear. */
+    private void tickHop(double x, double y, double z, double speed) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (y < cfg.roadY - cfg.roadDropAbort) { abort("fell off the road during a hop"); return; }
+        float yaw = desiredYaw(x, z);                 // stay on the highway centerline; climb straight over
+        boolean overCap = speed * 20.0 >= cfg.maxSpeed;
+        if (!BOT.isFallFlying() && redeployCooldown <= 0) { sendStartFallFlying(); redeployCooldown = cfg.bounceRedeployTicks; }
+        boolean fire = !overCap && heldIsFirework();
+        if (!fire) ensureFireworkHeld();
+        if (fire) ticksSinceFire = 0;
+        submitMove(true, false, true, fire, yaw, -cfg.hopPitch); // forward+sprint, nose up, NO jump (don't bounce into it)
+        boolean clearAhead = !terrainBlockedAhead(x, y, z, yaw, Math.min(cfg.lookAheadBlocks, 12));
+        if (clearAhead && hopTicks >= HOP_MIN_TICKS) {
+            phase = Phase.BOUNCE;
+            bounceStallTicks = 0;
+            info("Cleared — resuming bounce");
+            return;
+        }
+        if (++hopTicks > cfg.hopTimeoutTicks) {
+            if (cfg.passObstacles) enterPass(); else abort("blocked on the road and can't climb over it");
+        }
+    }
+
+    private boolean inNether() {
+        return World.getCurrentDimension() == DimensionRegistry.THE_NETHER.get();
     }
 
     private void enterPass() {
@@ -592,7 +631,7 @@ public class ElytraPilot extends Module {
             if (!World.isChunkLoadedChunkPos(bx >> 4, bz >> 4)) return look; // can't see — treat as clear
             for (int dy = -1; dy <= 2; dy++) {
                 var b = World.getBlock(bx, fy + dy, bz);
-                if (!b.isAir() && !World.isFluid(b)) return d;
+                if (!b.isAir() && !World.isWater(b)) return d;
             }
         }
         return look;
@@ -674,7 +713,7 @@ public class ElytraPilot extends Module {
         int startY = Math.min(319, CONFIG.client.extra.elytraPilot.approxGroundY + 100);
         for (int yy = startY; yy >= -64; yy--) {
             var b = World.getBlock(bx, yy, bz);
-            if (!b.isAir() && !World.isFluid(b)) return yy;
+            if (!b.isAir() && !World.isWater(b)) return yy;
         }
         return -65;
     }
@@ -890,7 +929,7 @@ public class ElytraPilot extends Module {
             if (!World.isChunkLoadedChunkPos(bx >> 4, bz >> 4)) return false; // unknown ahead — fly straight
             for (int dy = 0; dy <= 2; dy++) {
                 var b = World.getBlock(bx, fy + dy, bz);
-                if (!b.isAir() && !World.isFluid(b)) return true;
+                if (!b.isAir() && !World.isWater(b)) return true;
             }
         }
         return false;
@@ -906,7 +945,7 @@ public class ElytraPilot extends Module {
             int yy = fy - dy;
             if (yy < -64) break;
             var b = World.getBlock(bx, yy, bz);
-            if (!b.isAir() && !World.isFluid(b)) return dy;
+            if (!b.isAir() && !World.isWater(b)) return dy;
         }
         return Integer.MAX_VALUE;
     }

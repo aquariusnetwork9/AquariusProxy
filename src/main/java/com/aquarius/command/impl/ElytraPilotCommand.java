@@ -64,8 +64,11 @@ public class ElytraPilotCommand extends Command {
                 "baritoneland <on/off> (walk the last leg with Baritone if covered/indoors/underground)",
                 "climbmargin <n>       (stop boosting this many blocks below the ceiling; saves fireworks)",
                 "landcut <n>           (cut the glide + drop in within this many blocks of the ground)",
-                "trip <x> <z> [y]      (plan a journey: overworld if within ~100k of spawn, else via the nether highways)",
-                "trip off              (cancel an in-progress trip)"
+                "trip <x> <z> [y]      (plan a journey: overworld if within ~100k of spawn, else through the nether)",
+                "trip highways <on/off>(nether leg: e-bounce a highway vs fly open-nether straight to the target)",
+                "trip off              (cancel an in-progress trip)",
+                "netherceiling <y>     (max cruise altitude in the nether; stays under the bedrock roof)",
+                "hoppitch <deg>        (climb angle when gliding over an on-road obstacle)"
             )
             .build();
     }
@@ -234,7 +237,19 @@ public class ElytraPilotCommand extends Command {
                 CONFIG.client.extra.elytraPilot.landCutClearance = getInteger(c, "blocks");
                 c.getSource().getEmbed().title("ElytraPilot land-cut clearance = " + CONFIG.client.extra.elytraPilot.landCutClearance);
             })))
+            .then(literal("netherceiling").then(argument("y", integer()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.netherCeilingY = getInteger(c, "y");
+                c.getSource().getEmbed().title("ElytraPilot nether ceiling = " + CONFIG.client.extra.elytraPilot.netherCeilingY);
+            })))
+            .then(literal("hoppitch").then(argument("degrees", doubleArg()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.hopPitch = (float) getDouble(c, "degrees");
+                c.getSource().getEmbed().title("ElytraPilot hop pitch = " + CONFIG.client.extra.elytraPilot.hopPitch);
+            })))
             .then(literal("trip")
+                .then(literal("highways").then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.tripUseHighways = getToggle(c, "toggle");
+                    c.getSource().getEmbed().title("ElytraPilot trip highways " + toggleStrCaps(CONFIG.client.extra.elytraPilot.tripUseHighways));
+                })))
                 .then(literal("off").executes(c -> {
                     CONFIG.client.extra.elytraPilot.tripActive = false;
                     MODULE.get(ElytraTrip.class).syncEnabledFromConfig();
