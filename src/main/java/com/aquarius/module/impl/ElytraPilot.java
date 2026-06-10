@@ -274,15 +274,17 @@ public class ElytraPilot extends Module {
             }
         }
 
-        // Long-haul profile: firework-climb (nose up) to the ceiling, then glide (nose ≈ +2) to the floor.
-        // In the nether, cap the ceiling under the bedrock roof so we don't ram it (roof-cruise just below ~y127).
-        int ceiling = inNether() ? Math.min(cfg.glideCeilingY, cfg.netherCeilingY) : cfg.glideCeilingY;
-        int floor = Math.min(cfg.glideFloorY, ceiling - 4);
-        if (floor < ceiling) {
-            if (gliding && y <= floor) gliding = false;        // sank to the floor -> climb again
-            else if (!gliding && y >= ceiling) gliding = true; // reached the ceiling -> glide
+        // Open nether (off-highway): on 2b2t the bedrock roof is INACCESSIBLE and modern nether terrain fills the
+        // upper layers, so the bot is almost never near the ceiling out here — don't climb to a ceiling. Fly level
+        // at a clear altitude and react to obstacles in 3D (over / under / around). Highways stay on the bounce path.
+        if (inNether() && !cfg.highway) { tickNetherCruise(x, y, z, speed); return; }
+
+        // Overworld long-haul profile: firework-climb (nose up) to the ceiling, then glide (nose ≈ +2) to the floor.
+        if (cfg.glideFloorY < cfg.glideCeilingY) {
+            if (gliding && y <= cfg.glideFloorY) gliding = false;        // sank to the floor -> climb again
+            else if (!gliding && y >= cfg.glideCeilingY) gliding = true; // reached the ceiling -> glide
         } else {
-            gliding = y >= ceiling;                            // degenerate band
+            gliding = y >= cfg.glideCeilingY;                           // degenerate band
         }
         boolean overCap = speed * 20.0 >= cfg.maxSpeed; // 2b2t ~40 b/s limit — never boost past it
         float pitch;
@@ -293,7 +295,7 @@ public class ElytraPilot extends Module {
         } else {
             // Firework climb — but coast (no boost) the last stretch into the ceiling instead of powering past it
             // and wasting rockets; ease the nose toward glide as we approach. Conserves fireworks on long hauls.
-            boolean nearCeiling = y >= ceiling - cfg.climbStopMargin;
+            boolean nearCeiling = y >= cfg.glideCeilingY - cfg.climbStopMargin;
             pitch = nearCeiling ? cfg.glidePitch : -cfg.climbPitch; // nose-up ascent = max height per firework
             wantFire = !overCap && !nearCeiling
                 && (speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
@@ -315,6 +317,63 @@ public class ElytraPilot extends Module {
                 info("Approaching target — descending");
             }
         }
+    }
+
+    /**
+     * Open-nether level flight. On 2b2t the bedrock roof is inaccessible and modern nether terrain fills the upper
+     * layers, so the bot flies at a clear mid-altitude ({@code netherCruiseY}) rather than the ceiling and reacts to
+     * obstacles in 3D: reroute horizontally (steerYaw), else climb over or dive under — whichever side has more room
+     * (never into the bedrock roof or into lava). Sustains level flight with periodic fireworks (no free roof glide).
+     */
+    private void tickNetherCruise(double x, double y, double z, double speed) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        float yaw = steerYaw(x, y, z);                          // horizontal reroute around walls (±maxRerouteDeg)
+        boolean overCap = speed * 20.0 >= cfg.maxSpeed;
+        int roofCap = Math.min(cfg.netherCeilingY, 125);        // never climb into the (inaccessible) bedrock roof
+        double cruiseAlt = Math.min(Math.max(cfg.netherCruiseY, cfg.approxGroundY + 8), roofCap - 2);
+
+        float pitch;
+        boolean wantFire;
+        if (terrainBlockedAhead(x, y, z, yaw, Math.min(cfg.lookAheadBlocks, 24))) {
+            // still walled after the horizontal reroute -> go vertical, toward whichever side has more clearance
+            int above = clearAboveCount(x, y, z);
+            int below = heightAboveGround(x, y, z);             // stops at lava (lava scans as solid) -> we won't dive into it
+            boolean canClimb = y < roofCap - 1 && above > 3;
+            boolean canDive = below > 4;
+            if (canClimb && (!canDive || above >= below)) { pitch = -cfg.climbPitch * 0.7f; wantFire = !overCap; }
+            else if (canDive)                              { pitch = 22f; wantFire = false; }              // dive under
+            else                                           { pitch = -cfg.climbPitch * 0.7f; wantFire = !overCap; } // boxed in -> try up
+        } else if (y < cruiseAlt - 2) {
+            pitch = -12f; wantFire = !overCap;                  // below the band -> climb back up
+        } else if (y > cruiseAlt + 2) {
+            pitch = 8f; wantFire = false;                       // above it -> ease down (free)
+        } else {
+            pitch = -2f;                                        // holding altitude -> occasional boost to stay level
+            wantFire = !overCap && (speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
+        }
+        boolean fire = wantFire && heldIsFirework();
+        if (wantFire && !fire) ensureFireworkHeld();
+        if (fire) ticksSinceFire = 0;
+        submitInput(false, fire, yaw, pitch);
+
+        if (cfg.hasTarget) {
+            double lead = Math.max(cfg.descendRadius, (y - cfg.approxGroundY) * cfg.glideRatio);
+            if (horizDist(x, z, cfg.targetX, cfg.targetZ) <= lead) {
+                phase = Phase.DESCEND;
+                info("Approaching target — descending");
+            }
+        }
+    }
+
+    /** Blocks of clear (air/water, non-lava) space directly above the bot before the first solid/lava (capped). */
+    private int clearAboveCount(double x, double y, double z) {
+        int bx = MathHelper.floorI(x), bz = MathHelper.floorI(z), fy = MathHelper.floorI(y);
+        if (!World.isChunkLoadedChunkPos(bx >> 4, bz >> 4)) return Integer.MAX_VALUE;
+        for (int dy = 1; dy <= 64; dy++) {
+            var b = World.getBlock(bx, fy + dy, bz);
+            if (!b.isAir() && !World.isWater(b)) return dy;
+        }
+        return 64;
     }
 
     /**

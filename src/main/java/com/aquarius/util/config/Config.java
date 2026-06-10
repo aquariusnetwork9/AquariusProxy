@@ -424,8 +424,12 @@ public final class Config {
                 /** In the nether, stop bouncing and seek an exit portal within this many (nether) blocks of the target's nether coords. */
                 public int netherExitRadius = 500;
 
-                /** Max cruise altitude in the nether — kept under the y127 bedrock roof so the bot doesn't ram it. */
+                /** Hard safety cap on nether altitude — never climb above this (2b2t's bedrock roof at y127 is inaccessible). */
                 public int netherCeilingY = 122;
+
+                /** Preferred open-nether cruise altitude. NOT the roof (inaccessible + the upper nether is full of terrain);
+                 *  the bot holds roughly this Y and dodges obstacles in 3D around it. */
+                public int netherCruiseY = 70;
 
                 /** Nose-up pitch while gliding over an on-road obstacle (HOP); higher = climbs steeper. */
                 public float hopPitch = 28.0f;
