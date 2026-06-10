@@ -69,6 +69,7 @@ public class ElytraPilotCommand extends Command {
                 "trip off              (cancel an in-progress trip)",
                 "netherceiling <y>     (hard altitude cap in the nether; never climb above it / into bedrock)",
                 "nethercruise <y>      (preferred open-nether flight altitude; holds ~this Y and dodges in 3D)",
+                "netherpath <on/off>   (3D look-ahead pathfinding in open nether vs pure reactive dodging)",
                 "hoppitch <deg>        (climb angle when gliding over an on-road obstacle)"
             )
             .build();
@@ -245,6 +246,10 @@ public class ElytraPilotCommand extends Command {
             .then(literal("nethercruise").then(argument("y", integer()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.netherCruiseY = getInteger(c, "y");
                 c.getSource().getEmbed().title("ElytraPilot nether cruise altitude = " + CONFIG.client.extra.elytraPilot.netherCruiseY);
+            })))
+            .then(literal("netherpath").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.netherPathfind = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("ElytraPilot nether look-ahead pathfinding " + toggleStrCaps(CONFIG.client.extra.elytraPilot.netherPathfind));
             })))
             .then(literal("hoppitch").then(argument("degrees", doubleArg()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.hopPitch = (float) getDouble(c, "degrees");

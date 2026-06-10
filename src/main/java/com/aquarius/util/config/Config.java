@@ -431,6 +431,18 @@ public final class Config {
                  *  the bot holds roughly this Y and dodges obstacles in 3D around it. */
                 public int netherCruiseY = 70;
 
+                /** Use the 3D look-ahead pathfinder in open nether (route around pockets) vs pure reactive dodging. */
+                public boolean netherPathfind = true;
+
+                /** Ticks between open-nether route re-plans (look-ahead refresh). */
+                public int netherPlanInterval = 40;
+
+                /** A* node-expansion budget per open-nether re-plan (cost guard). */
+                public int netherPlanNodes = 4000;
+
+                /** Open-nether route search-box half-extent, in 4-block cells (48 ≈ 192 blocks each way). */
+                public int netherPlanRadiusCells = 48;
+
                 /** Nose-up pitch while gliding over an on-road obstacle (HOP); higher = climbs steeper. */
                 public float hopPitch = 28.0f;
 
