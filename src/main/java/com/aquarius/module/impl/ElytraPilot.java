@@ -65,6 +65,7 @@ public class ElytraPilot extends Module {
     private static final int OPEN_TARGET_TOLERANCE = 8;     // land at the target if its open surface is within this of approxGroundY
     private static final int LANDWALK_TIMEOUT_TICKS = 1200; // ~60s for Baritone to reach the target on the ground
     private static final int HOP_MIN_TICKS = 6;             // commit to a hop for at least this long so we clear the block
+    private static final float HIGHWAY_FRONTIER_FACTOR = 0.7f; // highways sit in previously-loaded, oft-reloaded chunks -> loading ~30% less of a problem; gentler governor than open nether
     private static final int[][] NEIGHBORS = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
     private Phase phase = Phase.IDLE;
@@ -477,12 +478,22 @@ public class ElytraPilot extends Module {
             if (terrainBlockedAhead(x, y, z, yaw, Math.min(cfg.lookAheadBlocks, 12))) { enterHop(); return; } // glide over
         }
 
+        // Don't outrun chunk loading (see tickNetherCruise) — but highways sit in previously-loaded, often-reloaded
+        // chunks, so loading is ~30% less of a problem here: gentler thresholds. The bounce has no firework boost, so
+        // the brake is the jump hold — release it to stop bouncing and let the glide bleed speed; right at the frontier,
+        // also skip the redeploy so the bot settles toward a stop and waits for chunks to stream in.
+        int slowDist = Math.round(cfg.netherFrontierSlow * HIGHWAY_FRONTIER_FACTOR);
+        int holdDist = Math.round(cfg.netherFrontierHold * HIGHWAY_FRONTIER_FACTOR);
+        int corridor = loadedDistAhead(x, z, yaw, slowDist);
+        boolean frontierCoast = corridor < slowDist;
+        boolean frontierHold  = corridor <= holdDist;
+
         boolean overCap = speed * 20.0 >= cfg.maxSpeed; // 2b2t ~40 b/s limit — coast (no bounce) to bleed speed
-        if (!BOT.isFallFlying() && !overCap && redeployCooldown <= 0) {
+        if (!BOT.isFallFlying() && !overCap && !frontierHold && redeployCooldown <= 0) {
             sendStartFallFlying();                       // re-engage the elytra at the bottom of each bounce
             redeployCooldown = cfg.bounceRedeployTicks;
         }
-        boolean jump = !overCap;                         // held jump auto-jumps on each ground touch
+        boolean jump = !overCap && !frontierCoast;       // held jump auto-jumps on each ground touch
         submitMove(true, jump, true, false, yaw, cfg.glidePitch);
 
         if (cfg.hasTarget && horizDist(x, z, cfg.targetX, cfg.targetZ) <= cfg.arriveRadius) {
