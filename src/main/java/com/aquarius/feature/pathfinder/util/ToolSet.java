@@ -91,6 +91,42 @@ public class ToolSet {
         return best - 36;
     }
 
+    /** Best hotbar slot (0-8) for breaking {@code b} using only NON-silk tools (fortune/plain), by break speed.
+     *  -1 if the hotbar holds no non-silk tool. Mirrors the miner's silk reservation for fortune ore runs. */
+    public int getBestNonSilkSlot(Block b) {
+        return bestSlotMatchingSilk(b, false);
+    }
+
+    /** Best hotbar slot (0-8) for breaking {@code b} using only SILK-TOUCH tools, by break speed.
+     *  -1 if the hotbar holds no silk-touch tool. */
+    public int getBestSilkSlot(Block b) {
+        return bestSlotMatchingSilk(b, true);
+    }
+
+    private int bestSlotMatchingSilk(Block b, boolean wantSilk) {
+        int best = -1;
+        double highestSpeed = Double.NEGATIVE_INFINITY;
+        int lowestCost = Integer.MIN_VALUE;
+        List<ItemStack> playerInventory = CACHE.getPlayerCache().getPlayerInventory();
+        for (int i = 36; i <= 44; i++) {
+            ItemStack itemStack = playerInventory.get(i);
+            if (itemStack == Container.EMPTY_STACK) continue;
+            if (hasSilkTouch(itemStack) != wantSilk) continue;
+            if (CONFIG.client.extra.pathfinder.itemSaver && ItemUtil.getMaxDamage(itemStack) > 1
+                && ItemUtil.getDamageUntilBreak(itemStack) <= CONFIG.client.extra.pathfinder.itemSaverThreshold) {
+                continue;
+            }
+            double speed = BOT.getInteractions().blockBreakSpeed(b, itemStack);
+            int cost = getMaterialCost(itemStack);
+            if (speed > highestSpeed || (speed == highestSpeed && cost < lowestCost)) {
+                highestSpeed = speed;
+                lowestCost = cost;
+                best = i - 36;
+            }
+        }
+        return best;
+    }
+
     // wood = least expensive
     // netherite = most expensive
     public int getMaterialCost(final ItemStack itemStack) {

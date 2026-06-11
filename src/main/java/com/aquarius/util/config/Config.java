@@ -594,14 +594,77 @@ public final class Config {
              * Read everywhere via {@code CONFIG.client.extra.aquariusMiner.*}.
              */
             public static class AquariusMiner {
-                /** How a finite mining area is defined (or Unlimited = infinite outward spiral). */
-                public enum AreaMode { Unlimited, ChunksFromStart, Corners }
+                /**
+                 * How a finite mining area is defined (or Unlimited = infinite outward spiral). LoadedAtStart is a
+                 * one-shot capture: when a run begins it snapshots the server render-distance square around the bot
+                 * into an absolute Corners box (so it persists across a disconnect), then behaves as Corners.
+                 */
+                public enum AreaMode { Unlimited, ChunksFromStart, Corners, LoadedAtStart }
 
                 /** Where a ChunksFromStart box sits relative to the chunk the bot is in when enabled. */
                 public enum AreaAnchor { Center, Corner }
 
+                /** Mining engine: AreaClear = strip-mine the whole box (clearArea); OreSearch = tunnel/search for ore. */
+                public enum MineMode { AreaClear, OreSearch }
+
+                /** OreSearch tool/haul style: Fortune = break ore for its drops; SilkTouch = collect the ore block. */
+                public enum OreTool { Fortune, SilkTouch }
+
                 /** Whether the module is enabled on startup. */
                 public boolean enabled = false;
+
+                // --- mining engine (OreSearch) ---
+
+                /**
+                 * Which mining engine to run. AreaClear (default) = the original strip-miner: clear every block in
+                 * the box, chunk by chunk. OreSearch = drive AquariusProxy's MineProcess to search loaded chunk data
+                 * for {@link #oreTargets} and tunnel to them, leaving everything else - so you don't strip a shulker
+                 * of chunks for the ore scattered through them. Ore that would expose lava/water is skipped
+                 * automatically (stock Baritone's avoidBreaking). The area ({@link #areaMode}) and Y band
+                 * ({@link #minY}/{@link #maxY}) bound the search; storage/echest/restock all work unchanged.
+                 */
+                public MineMode mineMode = MineMode.AreaClear;
+
+                /**
+                 * OreSearch: how ore is broken and what's stored. Fortune = break the ore with a non-silk (fortune)
+                 * pickaxe and keep the DROP (e.g. raw_iron, diamond). SilkTouch = break with a silk pickaxe and keep
+                 * the ORE BLOCK itself (e.g. deepslate_diamond_ore). With {@link #oreAutoKeep} the keep/store list is
+                 * derived from this + {@link #oreTargets} automatically.
+                 */
+                public OreTool oreTool = OreTool.Fortune;
+
+                /**
+                 * OreSearch target blocks - the ores the bot searches for and tunnels to (by registry name). Default
+                 * is every vanilla ore (stone + deepslate variants) plus the nether ores and ancient debris. Editable
+                 * at runtime via the `ore` command.
+                 */
+                public List<String> oreTargets = new ArrayList<>(List.of(
+                    "coal_ore", "deepslate_coal_ore",
+                    "iron_ore", "deepslate_iron_ore",
+                    "copper_ore", "deepslate_copper_ore",
+                    "gold_ore", "deepslate_gold_ore",
+                    "redstone_ore", "deepslate_redstone_ore",
+                    "lapis_ore", "deepslate_lapis_ore",
+                    "diamond_ore", "deepslate_diamond_ore",
+                    "emerald_ore", "deepslate_emerald_ore",
+                    "nether_gold_ore", "nether_quartz_ore", "ancient_debris"
+                ));
+
+                /**
+                 * OreSearch: derive the keep/store list ({@link #keepItems}) from {@link #oreTargets} + {@link #oreTool}
+                 * automatically - Fortune keeps each ore's drop (raw_iron, diamond, ...), SilkTouch keeps the ore block.
+                 * Turn off to manage the keep list yourself. Only applies in OreSearch mode; AreaClear always uses the
+                 * explicit {@link #keepItems}.
+                 */
+                public boolean oreAutoKeep = true;
+
+                /**
+                 * Lowest Y preferred for placing the field ender chest / shulker during a storage cycle (keeps it off
+                 * the bedrock floor). Best-effort: the storage spot picker prefers cells at/above this Y, but if none
+                 * is reachable nearby (the bot is mining deep) it falls back to the best available spot rather than
+                 * stalling. Default = world bottom, i.e. no constraint; raise it (e.g. -55) for deep ore runs.
+                 */
+                public int minEchestY = -64;
 
                 /**
                  * Lowest Y level the quarry will mine (inclusive). Default sits just above bedrock

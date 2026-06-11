@@ -44,6 +44,8 @@ import static com.aquarius.Globals.CONFIG;
 import static com.aquarius.Globals.INVENTORY;
 import com.aquarius.util.config.Config.Client.Extra.AquariusMiner.AreaAnchor;
 import com.aquarius.util.config.Config.Client.Extra.AquariusMiner.AreaMode;
+import com.aquarius.util.config.Config.Client.Extra.AquariusMiner.MineMode;
+import com.aquarius.util.config.Config.Client.Extra.AquariusMiner.OreTool;
 
 /**
  * The mining brain. Drives stock AquariusProxy's {@code BARITONE.clearArea} to quarry one chunk at a
@@ -77,6 +79,12 @@ public class AquariusMiner extends Module {
     private int areaChunksTotal, areaChunksDone;            // progress (per horizontal layer) + completion detection
     private int curLayerTopY = 0;                          // bounded area: top Y of the layer being swept (descends top-down)
     private boolean finishAfterStore = false;              // area cleared -> store remainder -> complete
+
+    // ore-search engine (mineMode == OreSearch): drives MineProcess to tunnel to ore instead of strip-mining.
+    private final java.util.Set<String> oreKeepSet = new java.util.HashSet<>(); // derived haul names (oreAutoKeep)
+    private int oreEmptyStreak = 0;                         // consecutive settled-empty scans -> bounded run is done
+    private static final int ORE_DONE_STREAK = 3;          // gate completion so post-connect chunk streaming can't end it early
+    private boolean wasAlive = true;                        // alive-edge latch: end an ore run when the bot dies
 
     // cave-handling snapshot of CONFIG.client.extra.pathfinder.* (restored on disable)
     private boolean cavePushed = false;
@@ -265,6 +273,7 @@ public class AquariusMiner extends Module {
 
     @Override
     public void onEnable() {
+        syncOreConfig();
         pushCaveSettings();
         resetToStart();
     }
@@ -272,6 +281,9 @@ public class AquariusMiner extends Module {
     @Override
     public void onDisable() {
         if (BARITONE.isActive()) BARITONE.stop();
+        BARITONE.getMineProcess().cancel();   // deactivate the ore-search process (BARITONE.stop alone leaves it armed)
+        oreEmptyStreak = 0;
+        wasAlive = true;
         areaActive = false;
         sawActive = false;
         legitActive = false;
@@ -347,6 +359,8 @@ public class AquariusMiner extends Module {
     private void resetToStart() {
         int px = MathHelper.floorI(CACHE.getPlayerCache().getX());
         int pz = MathHelper.floorI(CACHE.getPlayerCache().getZ());
+        BARITONE.getMineProcess().cancel();   // clear any in-flight ore-search before re-seeding the area
+        oreEmptyStreak = 0;
         resolveArea(px >> 4, pz >> 4);
         seedSpiral();
         areaActive = false; sawActive = false; clearTicks = 0; subBoxRetries = 0;
@@ -372,6 +386,26 @@ public class AquariusMiner extends Module {
     /** Work out the chunk grid + spiral-centre chunk for this run from the configured area mode. */
     private void resolveArea(int startChunkCX, int startChunkCZ) {
         var cfg = CONFIG.client.extra.aquariusMiner;
+        // LoadedAtStart: one-shot capture of the render-distance square around the bot into an ABSOLUTE Corners
+        // box. Locking it in makes the area persist across a disconnect (a reconnect re-resolves the same box
+        // instead of re-capturing at the new position). Skip until connected so we don't snapshot a stale view.
+        if (cfg.areaMode == AreaMode.LoadedAtStart) {
+            int vd = Proxy.getInstance().isConnected() ? CACHE.getChunkCache().getServerViewDistance() : -1;
+            if (vd <= 0) {
+                // view distance not negotiated yet - can't size the box. Stay un-captured (run unlimited for now);
+                // the reconnect-grace gate re-anchors once the world is loaded, which retries this capture.
+                areaLimited = false; startCX = startChunkCX; startCZ = startChunkCZ;
+                return;
+            }
+            cfg.corner1X = (startChunkCX - vd) << 4;
+            cfg.corner1Z = (startChunkCZ - vd) << 4;
+            cfg.corner2X = ((startChunkCX + vd) << 4) + 15;
+            cfg.corner2Z = ((startChunkCZ + vd) << 4) + 15;
+            cfg.areaMode = AreaMode.Corners;     // lock in the absolute box -> persists across reconnect
+            com.aquarius.Globals.saveConfigAsync();
+            info("Captured loaded area: {} chunks (view distance {}) -> Corners X[{}..{}] Z[{}..{}].",
+                (2 * vd + 1) * (2 * vd + 1), vd, cfg.corner1X, cfg.corner2X, cfg.corner1Z, cfg.corner2Z);
+        }
         if (cfg.areaMode == AreaMode.ChunksFromStart) {
             areaLimited = true;
             int w = Math.max(1, cfg.areaWidthChunks);
@@ -518,7 +552,20 @@ public class AquariusMiner extends Module {
 
     private void onTick(ClientBotTick event) {
         var cfg = CONFIG.client.extra.aquariusMiner;
-        if (!CACHE.getPlayerCache().isAlive()) return;
+        if (!CACHE.getPlayerCache().isAlive()) {
+            // ore runs end on death (user-requested terminal condition for a bounded loaded-chunks run); the
+            // strip-miner keeps its old behaviour (just idles until respawn).
+            if (wasAlive && cfg.mineMode == MineMode.OreSearch && !complete && !paused) {
+                warn("Bot died - ending the ore run.");
+                if (BARITONE.isActive()) BARITONE.stop();
+                cancelOreMine();
+                complete = true;
+                endRun("bot died");
+            }
+            wasAlive = false;
+            return;
+        }
+        wasAlive = true;
         // reconnect grace: just (re)connected -> wait for the world to load before driving the miner, so we don't
         // start a storage cycle that finds no blocks (-> "no spot" abort) or path into ungenerated chunks. The
         // chunk-loaded wait is unbounded (handles a laggy 2b2t login); the settle countdown only ticks once loaded.
@@ -528,6 +575,9 @@ public class AquariusMiner extends Module {
             if (!World.isChunkLoadedChunkPos(cx, cz)) return;          // world not loaded around us yet - keep waiting
             if (--reconnectGrace > 0) return;                          // loaded - count down the settle, then resume
             info("World loaded after (re)connect - resuming mining.");
+            // LoadedAtStart that couldn't capture earlier (view distance unknown at enable) -> capture now that
+            // the world is loaded. After capture it becomes an absolute Corners box and this won't fire again.
+            if (cfg.areaMode == AreaMode.LoadedAtStart) requestReanchor();
         }
         // an area command asked us to re-anchor: re-resolve the area + re-seed here, now. Deferred while a
         // container cycle is mid-flight (so we never strand a placed shulker/echest); still fires while
@@ -572,6 +622,7 @@ public class AquariusMiner extends Module {
             if (!hazardPaused) {
                 hazardPaused = true;
                 if (BARITONE.isActive()) BARITONE.stop();
+                cancelOreMine();
                 areaActive = false; sawActive = false;
                 warn("Player within {} blocks - pausing mining.", (int) cfg.playerPauseRange);
                 inGameAlertActivePlayer("<yellow>Aquarius Miner paused: player nearby");
@@ -655,6 +706,12 @@ public class AquariusMiner extends Module {
         }
 
         // 3) mining drive
+        // ore-search engine: drive MineProcess to tunnel to ore (no strip-mining). Bounds/Y band/silk come
+        // from the area config; storage/echest/restock above are all reused unchanged.
+        if (cfg.mineMode == MineMode.OreSearch) {
+            oreMineTick();
+            return;
+        }
         // legit engine: the plugin breaks line-of-sight blocks itself (no clearArea ghost-hand)
         if (cfg.legitMine) {
             if (legitActive) { legitClearTick(); return; }
@@ -829,6 +886,94 @@ public class AquariusMiner extends Module {
         info("Quarry complete: cleared the {}-chunk area.", areaChunksTotal);
         inGameAlertActivePlayer("<green>Aquarius Miner complete");
         endRun("area cleared");
+    }
+
+    // ---------------------------------------------------------------- ore search (mineMode == OreSearch)
+    // Drive AquariusProxy's MineProcess to scan loaded chunk data for the configured ore and tunnel to it,
+    // bounded by the area box + Y band, with a silk/fortune tool preference. Everything ABOVE the mining drive
+    // in onTick (inventory-full -> echest buffer, restock, deposit, hotbar/junk discipline) is reused unchanged;
+    // the only difference from AreaClear is HOW blocks get broken. Ore that would expose lava/water is skipped
+    // automatically by MineProcess (stock Baritone's avoidBreaking), so there's no knob for it here.
+
+    private void oreMineTick() {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        var mine = BARITONE.getMineProcess();
+        if (mine.isActive()) return;                       // scanning / pathing / breaking in progress
+        if (cfg.oreTargets.isEmpty()) {                    // nothing to look for
+            pauseInvFull("no ore targets set (.aqm ore add <block>)");
+            return;
+        }
+        // bounded run + a settled-empty scan -> the box is mined out. Require a few consecutive empties so a
+        // still-loading box (right after connect) can't end the run early.
+        if (areaLimited && mine.isExhausted()) {
+            if (++oreEmptyStreak >= ORE_DONE_STREAK) {
+                info("Ore search: no targets left in the area - finishing.");
+                onAreaComplete();
+                return;
+            }
+        } else {
+            oreEmptyStreak = 0;                             // found work, or interrupted -> reset the completion gate
+        }
+        if (!mineTimer.tick(cfg.delayTicks)) return;       // pace re-issues (anti-spam)
+        issueOreMine();
+    }
+
+    private void issueOreMine() {
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        Boolean silk = cfg.oreTool == OreTool.SilkTouch ? Boolean.TRUE : Boolean.FALSE;
+        String[] targets = cfg.oreTargets.toArray(new String[0]);
+        BARITONE.getMineProcess().mineConstrained(
+            areaLimited, areaMinX, areaMaxX, areaMinZ, areaMaxZ,
+            true, cfg.minY, cfg.maxY,
+            silk, targets);
+        if (areaLimited) {
+            info("Ore search ({}): X[{}..{}] Z[{}..{}] Y[{}..{}], {} target type(s).",
+                cfg.oreTool, areaMinX, areaMaxX, areaMinZ, areaMaxZ, cfg.minY, cfg.maxY, targets.length);
+        } else {
+            info("Ore search ({}): unlimited, Y[{}..{}], {} target type(s).",
+                cfg.oreTool, cfg.minY, cfg.maxY, targets.length);
+        }
+    }
+
+    /** Cancel an active ore-search (MineProcess) before a storage/restock/deposit cycle takes over the bot.
+     *  No-op outside OreSearch mode (the strip-miner never drives MineProcess). */
+    private void cancelOreMine() {
+        if (CONFIG.client.extra.aquariusMiner.mineMode != MineMode.OreSearch) return;
+        BARITONE.getMineProcess().cancel();
+        oreEmptyStreak = 0;
+    }
+
+    /** Rebuild the derived ore-keep set from oreTargets + oreTool. Call when any of those (or the mode) change. */
+    public void syncOreConfig() {
+        oreKeepSet.clear();
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        boolean silk = cfg.oreTool == OreTool.SilkTouch;
+        for (String ore : cfg.oreTargets) {
+            oreKeepSet.add(silk ? ore : oreDrop(ore));
+        }
+    }
+
+    /** The names the haul comprises in OreSearch mode (the derived keep set), for status display. */
+    public java.util.Set<String> oreKeepNames() {
+        return new java.util.TreeSet<>(oreKeepSet);
+    }
+
+    /** Map an ore block name to the item it drops when broken WITHOUT silk touch (fortune). Unknown -> itself. */
+    private static String oreDrop(String ore) {
+        return switch (ore) {
+            case "coal_ore", "deepslate_coal_ore" -> "coal";
+            case "iron_ore", "deepslate_iron_ore" -> "raw_iron";
+            case "copper_ore", "deepslate_copper_ore" -> "raw_copper";
+            case "gold_ore", "deepslate_gold_ore" -> "raw_gold";
+            case "nether_gold_ore" -> "gold_nugget";
+            case "redstone_ore", "deepslate_redstone_ore" -> "redstone";
+            case "lapis_ore", "deepslate_lapis_ore" -> "lapis_lazuli";
+            case "diamond_ore", "deepslate_diamond_ore" -> "diamond";
+            case "emerald_ore", "deepslate_emerald_ore" -> "emerald";
+            case "nether_quartz_ore" -> "quartz";
+            case "ancient_debris" -> "ancient_debris";
+            default -> ore;
+        };
     }
 
     private boolean hasKeepItems() {
@@ -1123,6 +1268,7 @@ public class AquariusMiner extends Module {
 
     private void beginStore() {
         if (BARITONE.isActive()) BARITONE.stop();
+        cancelOreMine();
         areaActive = false;
         sawActive = false;
         storing = true;
@@ -1333,11 +1479,20 @@ public class AquariusMiner extends Module {
      * so a horizontal neighbour at feet level normally qualifies.
      */
     private @Nullable BlockPos selectStorageSpot() {
+        // prefer a spot at/above minEchestY (keeps the chest off the bedrock floor); fall back to any valid
+        // spot if none qualifies nearby (best-effort - the bot may be mining deep).
+        BlockPos gated = selectStorageSpot(true);
+        return gated != null ? gated : selectStorageSpot(false);
+    }
+
+    private @Nullable BlockPos selectStorageSpot(boolean gateY) {
+        int minEchestY = CONFIG.client.extra.aquariusMiner.minEchestY;
         BlockPos pf = BARITONE.getPlayerContext().playerFeet();
         int[][] dirs = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
         for (int dy = 0; dy <= 1; dy++) {
             for (int[] d : dirs) {
                 BlockPos cand = pf.add(d[0], dy, d[1]);
+                if (gateY && cand.y() < minEchestY) continue;
                 if (cand.equals(pf) || cand.equals(pf.above())) continue;
                 if (echAvoidSpot != null && cand.equals(echAvoidSpot)) continue;     // skip a spot a place just failed at
                 if (!World.getBlock(cand.x(), cand.y(), cand.z()).isAir()) continue;
@@ -1406,6 +1561,13 @@ public class AquariusMiner extends Module {
     /** Nearest standable, open spot (within {@code radius}) that has at least one clear cell beside it to place
      *  into - i.e. real open ground the storage block can go on. Null if none. */
     private @Nullable BlockPos findOpenStand(int radius) {
+        // prefer open ground at/above minEchestY; fall back to any reachable open ground (best-effort).
+        BlockPos gated = findOpenStand(radius, true);
+        return gated != null ? gated : findOpenStand(radius, false);
+    }
+
+    private @Nullable BlockPos findOpenStand(int radius, boolean gateY) {
+        int minEchestY = CONFIG.client.extra.aquariusMiner.minEchestY;
         BlockPos pf = BARITONE.getPlayerContext().playerFeet();
         BlockPos best = null;
         int bestDist = Integer.MAX_VALUE;
@@ -1414,6 +1576,7 @@ public class AquariusMiner extends Module {
                 if (dx == 0 && dz == 0) continue;
                 for (int dy = -2; dy <= 2; dy++) {
                     BlockPos stand = pf.add(dx, dy, dz);
+                    if (gateY && stand.y() < minEchestY) continue;
                     if (!isStandable(stand) || !hasPlaceableNeighbor(stand)) continue;
                     int dist = dx * dx + dy * dy + dz * dz;
                     if (dist < bestDist) { bestDist = dist; best = stand; }
@@ -1494,6 +1657,7 @@ public class AquariusMiner extends Module {
      *  and recover the echest (used to return stray shulkers to the buffer; see the 2.4 trigger). */
     private void beginEchestCycle(boolean stowOnly) {
         if (BARITONE.isActive()) BARITONE.stop();
+        cancelOreMine();
         areaActive = false; sawActive = false;
         echestCycle = true;
         echStowOnly = stowOnly;
@@ -1975,6 +2139,7 @@ public class AquariusMiner extends Module {
      *  shulkers stay in the global ender chest until the bot is there (a death en route can't strand them). */
     private void beginDepositTrip() {
         if (BARITONE.isActive()) BARITONE.stop();
+        cancelOreMine();
         areaActive = false; sawActive = false; storing = false; echestCycle = false;
         triedChests.clear();
         nextDepositLeg = false; nextSupplyLeg = false; pendingDepositPause = null;
@@ -2343,6 +2508,7 @@ public class AquariusMiner extends Module {
      */
     private void beginRestock() {
         if (BARITONE.isActive()) BARITONE.stop();
+        cancelOreMine();
         areaActive = false; sawActive = false;
         restockKeyword = currentToolKeyword();   // latch which tool this cycle restocks (primary or shovel)
         restockShulkerPos = null; restockShulkerItem = null;
@@ -2458,6 +2624,7 @@ public class AquariusMiner extends Module {
 
     private void beginFoodRestock() {
         if (BARITONE.isActive()) BARITONE.stop();
+        cancelOreMine();
         areaActive = false; sawActive = false;
         foodShulkerPos = null; foodShulkerItem = null;
         int echestSlot = InventoryUtil.searchPlayerInventory(this::isEnderChestItem);
@@ -2866,7 +3033,12 @@ public class AquariusMiner extends Module {
 
     private boolean isKeep(@Nullable ItemStack stack) {
         String name = itemName(stack);
-        return name != null && CONFIG.client.extra.aquariusMiner.keepItems.contains(name);
+        if (name == null) return false;
+        var cfg = CONFIG.client.extra.aquariusMiner;
+        // OreSearch + auto-keep: the haul is derived from the ore targets + tool (drops for fortune, the ore
+        // block itself for silk). Otherwise (AreaClear, or manual ore keep) use the explicit keep list.
+        if (cfg.mineMode == MineMode.OreSearch && cfg.oreAutoKeep) return oreKeepSet.contains(name);
+        return cfg.keepItems.contains(name);
     }
 
     private boolean isStorageItem(@Nullable ItemStack stack) {

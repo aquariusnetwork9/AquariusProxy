@@ -37,6 +37,14 @@ public final class MineProcess extends BaritoneProcessHelper implements IBariton
     private int tickCount;
     private boolean initialScanCompleted;
 
+    // optional constraints set by mineConstrained() (the AquariusMiner ore-search engine). The plain mine(...)
+    // entry points leave these cleared, so the `pathfinder mine` command is unaffected.
+    private boolean xzBounded;          // restrict targets/exploration to [bMinX..bMaxX] x [bMinZ..bMaxZ]
+    private boolean yBounded;           // restrict targets to the [bMinY..bMaxY] band
+    private int bMinX, bMaxX, bMinZ, bMaxZ, bMinY, bMaxY;
+    private Boolean silkPref;           // null = global preferSilkTouch; FALSE = non-silk (fortune); TRUE = silk
+    private boolean exhausted;          // bounded scan found no in-bounds target -> box done (module ends the run)
+
     public MineProcess(Baritone baritone) {
         super(baritone);
     }
@@ -103,7 +111,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IBariton
                 Optional<Rotation> rot = RotationUtils.reachable(ctx, pos);
                 if (rot.isPresent() && isSafeToCancel) {
                     baritone.getLookBehavior().updateRotation(rot.get());
-                    MovementHelper.switchToBestToolFor(World.getBlock(pos));
+                    MovementHelper.switchToBestToolFor(World.getBlock(pos), silkPref);
                     if (ctx.isLookingAt(pos) || ctx.playerRotations().isReallyCloseTo(rot.get())) {
                         baritone.getInputOverrideHandler().setClickTarget(pos);
                         baritone.getInputOverrideHandler().setInputForceState(PathInput.LEFT_CLICK_BLOCK, true);
@@ -169,7 +177,14 @@ public final class MineProcess extends BaritoneProcessHelper implements IBariton
         // we don't know any ore locations at the moment
         // only when we should explore for blocks or are in legit mode we do this
         if (!initialScanCompleted) return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
-        int y = -59;
+        if (xzBounded) {
+            // scan-only ore search: never wander outside the box. Scan is settled with no in-bounds target
+            // left -> the box is exhausted. Latch it and stop; the AquariusMiner drive ends/finishes the run.
+            exhausted = true;
+            cancel();
+            return null;
+        }
+        int y = yBounded ? bMinY : -59;
         if (branchPoint == null) {
             branchPoint = ctx.playerFeet();
         }
@@ -200,6 +215,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IBariton
         List<BlockPos> dropped = droppedItemsScan();
         List<BlockPos> locs = searchWorld(context, filter, 64, already, blacklist, dropped);
         locs.addAll(dropped);
+        if (xzBounded || yBounded) locs.removeIf(p -> !inConstraints(p)); // drop targets/drops outside the box+band
         knownOreLocations = locs;
         this.initialScanCompleted = true;
     }
@@ -284,6 +300,40 @@ public final class MineProcess extends BaritoneProcessHelper implements IBariton
      */
     public PathingRequestFuture mine(Block... blocks) {
         return mine(0, blocks);
+    }
+
+    /**
+     * AquariusMiner ore-search entry point. Like {@link #mineByName} but constrained to an optional XZ box
+     * ({@code xzBox}) and Y band ({@code yBand}), with an explicit silk/fortune tool preference
+     * ({@code silk}: null = global, FALSE = non-silk/fortune, TRUE = silk). With an XZ box this is a
+     * scan-only search - it mines every in-box target then {@link #isExhausted() reports the box exhausted}
+     * (no wandering out). The plain {@code mine(...)} callers are unaffected (constraints stay cleared).
+     */
+    public PathingRequestFuture mineConstrained(boolean xzBox, int minX, int maxX, int minZ, int maxZ,
+                                                boolean yBand, int minY, int maxY,
+                                                Boolean silk, String... blockNames) {
+        Set<Block> blockList = new HashSet<>();
+        for (String name : blockNames) {
+            Block b = BlockRegistry.REGISTRY.get(name);
+            if (b != null) blockList.add(b);
+        }
+        PathingRequestFuture f = mine(0, new BlockOptionalMetaLookup(blockList)); // resets the constraint fields below
+        this.xzBounded = xzBox; this.bMinX = minX; this.bMaxX = maxX; this.bMinZ = minZ; this.bMaxZ = maxZ;
+        this.yBounded = yBand;  this.bMinY = minY; this.bMaxY = maxY;
+        this.silkPref = silk;
+        this.exhausted = false; // a genuinely new search starts un-exhausted (mine() leaves the prior value intact)
+        return f;
+    }
+
+    /** True once a bounded scan found no in-bounds target left (the box is mined out). Reset by the next mine(). */
+    public boolean isExhausted() {
+        return exhausted;
+    }
+
+    private boolean inConstraints(BlockPos p) {
+        if (xzBounded && (p.x() < bMinX || p.x() > bMaxX || p.z() < bMinZ || p.z() > bMaxZ)) return false;
+        if (yBounded && (p.y() < bMinY || p.y() > bMaxY)) return false;
+        return true;
     }
 
     /**
@@ -442,6 +492,14 @@ public final class MineProcess extends BaritoneProcessHelper implements IBariton
 //            rescan(new ArrayList<>(), new CalculationContext());
 //        }
         this.initialScanCompleted = false;
+        // clear any prior ore-search constraints (mineConstrained re-applies them right after this returns),
+        // so plain mine(...) / cancel() always run unbounded with the global tool preference. NOTE: exhausted is
+        // deliberately NOT reset here - the bounded "box mined out" signal is raised by updateGoal() and then
+        // cancel()s (which routes back through this method), so it must survive the cancel for the miner to read
+        // it. mineConstrained() clears it when a genuinely new search starts.
+        this.xzBounded = false;
+        this.yBounded = false;
+        this.silkPref = null;
         return this.future;
     }
 

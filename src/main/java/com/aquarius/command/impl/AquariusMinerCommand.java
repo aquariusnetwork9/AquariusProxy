@@ -5,6 +5,8 @@ import com.aquarius.module.impl.AquariusSnifferCodec;
 import com.aquarius.module.impl.AquariusSniffer;
 import com.aquarius.util.config.Config.Client.Extra.AquariusMiner.AreaAnchor;
 import com.aquarius.util.config.Config.Client.Extra.AquariusMiner.AreaMode;
+import com.aquarius.util.config.Config.Client.Extra.AquariusMiner.MineMode;
+import com.aquarius.util.config.Config.Client.Extra.AquariusMiner.OreTool;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.aquarius.Proxy;
 import com.aquarius.command.api.Command;
@@ -45,6 +47,12 @@ public class AquariusMinerCommand extends Command {
                 "area chunks <width> <length>",
                 "area anchor <center/corner>",
                 "area corners <x1> <z1> <x2> <z2>",
+                "area loaded  (search the chunks loaded at start; stops when mined out)",
+                "mode area/ore  (strip-mine vs tunnel to ore)",
+                "tool fortune/silk  (ore: break for drops vs collect the block)",
+                "ore add <block> | remove <block> | list | clear | reset",
+                "autokeep on/off  (ore: derive the keep list from targets+tool)",
+                "echestminy <y>  (lowest Y to place the field ender chest)",
                 "keep add <item> | remove <item> | list | clear | reset",
                 "cave on/off",
                 "legit on/off  (break only blocks in line of sight)",
@@ -208,6 +216,17 @@ public class AquariusMinerCommand extends Command {
                         CONFIG.client.extra.aquariusMiner.areaAnchor = AreaAnchor.Corner;
                         c.getSource().getEmbed().title("Area anchor: Corner");
                     })))
+                .then(literal("loaded").executes(c -> {
+                    CONFIG.client.extra.aquariusMiner.areaMode = AreaMode.LoadedAtStart;
+                    boolean live = CONFIG.client.extra.aquariusMiner.enabled;
+                    if (live) MODULE.get(AquariusMiner.class).requestReanchor();
+                    c.getSource().getEmbed()
+                        .title("Area: loaded chunks at start")
+                        .description("When the run starts it captures the render-distance box around the bot and "
+                            + "locks it to an absolute box (survives a reconnect). The run finishes once those "
+                            + "chunks are mined out (also stops on no storage / death)."
+                            + (live ? "\nRe-anchored live." : "\nRun `.aqm on` to start."));
+                }))
                 .then(literal("corners")
                     .then(argument("x1", integer())
                         .then(argument("z1", integer())
@@ -223,6 +242,95 @@ public class AquariusMinerCommand extends Command {
                                         + m.corner1X + ", " + m.corner1Z + ") -> ("
                                         + m.corner2X + ", " + m.corner2Z + ")");
                                 })))))))
+            .then(literal("mode")
+                .then(literal("area").executes(c -> {
+                    CONFIG.client.extra.aquariusMiner.mineMode = MineMode.AreaClear;
+                    c.getSource().getEmbed().title("Mode: AreaClear")
+                        .description("Strip-mines every block in the area, chunk by chunk (the original behaviour).");
+                }))
+                .then(literal("ore").executes(c -> {
+                    CONFIG.client.extra.aquariusMiner.mineMode = MineMode.OreSearch;
+                    MODULE.get(AquariusMiner.class).syncOreConfig();
+                    c.getSource().getEmbed().title("Mode: OreSearch")
+                        .description("Searches the area for the configured ore and tunnels to it - no strip-mining. "
+                            + "Set targets with `.aqm ore`, tool with `.aqm tool`. Bound it with `.aqm area` (or it "
+                            + "searches unlimited).");
+                })))
+            .then(literal("tool")
+                .then(literal("fortune").executes(c -> {
+                    CONFIG.client.extra.aquariusMiner.oreTool = OreTool.Fortune;
+                    MODULE.get(AquariusMiner.class).syncOreConfig();
+                    c.getSource().getEmbed().title("Ore tool: Fortune")
+                        .description("Breaks ore with a non-silk pickaxe and keeps the DROP (raw_iron, diamond, ...). "
+                            + "Give the bot a fortune pickaxe for more drops.");
+                }))
+                .then(literal("silk").executes(c -> {
+                    CONFIG.client.extra.aquariusMiner.oreTool = OreTool.SilkTouch;
+                    MODULE.get(AquariusMiner.class).syncOreConfig();
+                    c.getSource().getEmbed().title("Ore tool: Silk Touch")
+                        .description("Breaks ore with a silk-touch pickaxe and keeps the ORE BLOCK itself "
+                            + "(deepslate_diamond_ore, ...). Keep a silk pickaxe on the bot.");
+                })))
+            .then(literal("autokeep").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.aquariusMiner.oreAutoKeep = getToggle(c, "toggle");
+                MODULE.get(AquariusMiner.class).syncOreConfig();
+                c.getSource().getEmbed()
+                    .title("Ore auto-keep " + toggleStrCaps(CONFIG.client.extra.aquariusMiner.oreAutoKeep))
+                    .description(CONFIG.client.extra.aquariusMiner.oreAutoKeep
+                        ? "OreSearch derives the haul list from the targets + tool automatically."
+                        : "OreSearch uses the explicit `.aqm keep` list - manage it yourself.");
+            })))
+            .then(literal("echestminy").then(argument("y", integer()).executes(c -> {
+                CONFIG.client.extra.aquariusMiner.minEchestY = getInteger(c, "y");
+                c.getSource().getEmbed()
+                    .title("Echest min-Y set to " + CONFIG.client.extra.aquariusMiner.minEchestY)
+                    .description("Storage prefers placing the field ender chest at/above this Y (keeps it off the "
+                        + "bedrock floor). Best-effort: falls back to the best spot when the bot is mining deeper.");
+            })))
+            .then(literal("ore")
+                .then(literal("add").then(argument("block", word()).executes(c -> {
+                    String b = getString(c, "block").toLowerCase();
+                    var t = CONFIG.client.extra.aquariusMiner.oreTargets;
+                    if (t.contains(b)) {
+                        c.getSource().getEmbed().title("Already a target: " + b);
+                    } else {
+                        t.add(b);
+                        MODULE.get(AquariusMiner.class).syncOreConfig();
+                        c.getSource().getEmbed().title("Ore target added: " + b)
+                            .description("Targets: " + String.join(", ", t));
+                    }
+                })))
+                .then(literal("remove").then(argument("block", word()).executes(c -> {
+                    String b = getString(c, "block").toLowerCase();
+                    boolean removed = CONFIG.client.extra.aquariusMiner.oreTargets.remove(b);
+                    MODULE.get(AquariusMiner.class).syncOreConfig();
+                    c.getSource().getEmbed().title(removed ? "Removed target: " + b : "Not a target: " + b)
+                        .description("Targets: " + String.join(", ", CONFIG.client.extra.aquariusMiner.oreTargets));
+                })))
+                .then(literal("list").executes(c -> {
+                    var t = CONFIG.client.extra.aquariusMiner.oreTargets;
+                    c.getSource().getEmbed().title("Ore targets (" + t.size() + ")")
+                        .description(t.isEmpty() ? "(none)" : String.join(", ", t));
+                }))
+                .then(literal("clear").executes(c -> {
+                    CONFIG.client.extra.aquariusMiner.oreTargets.clear();
+                    MODULE.get(AquariusMiner.class).syncOreConfig();
+                    c.getSource().getEmbed().title("Ore targets cleared")
+                        .description("Add ores with `.aqm ore add <block>` or `.aqm ore reset` for all ores.");
+                }))
+                .then(literal("reset").executes(c -> {
+                    var t = CONFIG.client.extra.aquariusMiner.oreTargets;
+                    t.clear();
+                    t.addAll(java.util.List.of(
+                        "coal_ore", "deepslate_coal_ore", "iron_ore", "deepslate_iron_ore",
+                        "copper_ore", "deepslate_copper_ore", "gold_ore", "deepslate_gold_ore",
+                        "redstone_ore", "deepslate_redstone_ore", "lapis_ore", "deepslate_lapis_ore",
+                        "diamond_ore", "deepslate_diamond_ore", "emerald_ore", "deepslate_emerald_ore",
+                        "nether_gold_ore", "nether_quartz_ore", "ancient_debris"));
+                    MODULE.get(AquariusMiner.class).syncOreConfig();
+                    c.getSource().getEmbed().title("Ore targets reset (all ores)")
+                        .description("Targets: " + String.join(", ", t));
+                })))
             .then(literal("cave").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.aquariusMiner.caveHandling = getToggle(c, "toggle");
                 c.getSource().getEmbed()
@@ -459,6 +567,7 @@ public class AquariusMinerCommand extends Command {
             case Unlimited -> "Unlimited";
             case ChunksFromStart -> m.areaWidthChunks + " x " + m.areaLengthChunks + " chunks (" + m.areaAnchor + ")";
             case Corners -> "(" + m.corner1X + ", " + m.corner1Z + ") -> (" + m.corner2X + ", " + m.corner2Z + ")";
+            case LoadedAtStart -> "loaded chunks at start (captured on run)";
         };
     }
 
@@ -471,7 +580,15 @@ public class AquariusMinerCommand extends Command {
             .addField("State", module.statusLine())
             .addField("Y Band", CONFIG.client.extra.aquariusMiner.minY + " .. " + CONFIG.client.extra.aquariusMiner.maxY)
             .addField("Area", areaDescription())
-            .addField("Keep", String.join(", ", CONFIG.client.extra.aquariusMiner.keepItems))
+            .addField("Mode", CONFIG.client.extra.aquariusMiner.mineMode == MineMode.OreSearch
+                ? "OreSearch (" + CONFIG.client.extra.aquariusMiner.oreTool + ", "
+                    + CONFIG.client.extra.aquariusMiner.oreTargets.size() + " ore types, "
+                    + (CONFIG.client.extra.aquariusMiner.oreAutoKeep ? "auto-keep" : "manual keep") + ")"
+                : "AreaClear (strip-mine)")
+            .addField("Keep", (CONFIG.client.extra.aquariusMiner.mineMode == MineMode.OreSearch
+                    && CONFIG.client.extra.aquariusMiner.oreAutoKeep)
+                ? String.join(", ", module.oreKeepNames())
+                : String.join(", ", CONFIG.client.extra.aquariusMiner.keepItems))
             .addField("Drop Junk", toggleStr(CONFIG.client.extra.aquariusMiner.dropJunk)
                 + (CONFIG.client.extra.aquariusMiner.dropBadFood ? " (+bad food)" : ""))
             .addField("Cave Handling", toggleStr(CONFIG.client.extra.aquariusMiner.caveHandling)
@@ -481,7 +598,8 @@ public class AquariusMinerCommand extends Command {
                 + ", sprint " + toggleStr(CONFIG.client.extra.aquariusMiner.sprint))
             .addField("Storage", toggleStr(CONFIG.client.extra.aquariusMiner.storageEnabled)
                 + (CONFIG.client.extra.aquariusMiner.requireFullStacks ? " (full stacks)" : " (margin " + CONFIG.client.extra.aquariusMiner.freeSlotsBeforeFull + ")")
-                + (CONFIG.client.extra.aquariusMiner.breakAndCollect ? ", break & collect" : ", leave"))
+                + (CONFIG.client.extra.aquariusMiner.breakAndCollect ? ", break & collect" : ", leave")
+                + ", echest min-Y " + CONFIG.client.extra.aquariusMiner.minEchestY)
             .addField("Restock", CONFIG.client.extra.aquariusMiner.restockTools
                 ? "on (" + CONFIG.client.extra.aquariusMiner.restockToolKeyword + " < " + CONFIG.client.extra.aquariusMiner.restockBelowDurability + ")"
                     + (CONFIG.client.extra.aquariusMiner.alsoRestockShovel ? " +shovel" : "")
