@@ -45,7 +45,9 @@ public class DatabaseCommand extends Command {
                 "playerCount on/off",
                 "tablist on/off",
                 "playtime on/off",
-                "time on/off"
+                "time on/off",
+                "stash on/off  (stash system tables)",
+                "stash setup  (localhost quickstart: defaults + enable + start)"
             )
             .aliases("db")
             .build();
@@ -217,7 +219,41 @@ public class DatabaseCommand extends Command {
                             c.getSource().getEmbed()
                                 .title("Time Database " + toggleStrCaps(CONFIG.database.timeEnabled));
                             return OK;
-                      })));
+                      })))
+            .then(literal("stash")
+                .then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.database.stashEnabled = getToggle(c, "toggle");
+                    if (CONFIG.database.enabled) {
+                        if (CONFIG.database.stashEnabled) DATABASE.startStashDatabase();
+                        else DATABASE.stopStashDatabase();
+                    }
+                    c.getSource().getEmbed()
+                        .title("Stash Database " + toggleStrCaps(CONFIG.database.stashEnabled));
+                    return OK;
+                }))
+                .then(literal("setup").executes(c -> {
+                    var db = CONFIG.database;
+                    if (db.host == null || db.host.isBlank()) db.host = "localhost";
+                    if (db.port <= 0) db.port = 5432;
+                    if (db.username == null || db.username.isBlank()) db.username = "postgres";
+                    if (db.lock.redisAddress == null || db.lock.redisAddress.isBlank()
+                        || db.lock.redisAddress.equals("redis://localhost:7181"))
+                        db.lock.redisAddress = "redis://localhost:6379";
+                    db.stashEnabled = true;
+                    // stash-only quickstart: silence the stats databases (their tables aren't provisioned here)
+                    db.queueWaitEnabled = false; db.queueLengthEnabled = false; db.chatsEnabled = false;
+                    db.connectionsEnabled = false; db.deathsEnabled = false; db.restartsEnabled = false;
+                    db.playerCountEnabled = false; db.tablistEnabled = false; db.playtimeEnabled = false; db.timeEnabled = false;
+                    db.enabled = true;
+                    DATABASE.stop();
+                    DATABASE.start();
+                    c.getSource().getEmbed()
+                        .title("Stash system ready")
+                        .description("Postgres `" + db.host + ":" + db.port + "` (user `" + db.username + "`), Redis `" + db.lock.redisAddress + "`."
+                            + "\nTables self-provision on connect. If your Postgres needs a password: `.db password <pw>`.")
+                        .primaryColor();
+                    return OK;
+                })));
     }
 
     @Override
@@ -233,6 +269,7 @@ public class DatabaseCommand extends Command {
             .addField("Tablist", toggleStr(CONFIG.database.tablistEnabled), false)
             .addField("Playtime", toggleStr(CONFIG.database.playtimeEnabled), false)
             .addField("Time", toggleStr(CONFIG.database.timeEnabled), false)
+            .addField("Stash system", toggleStr(CONFIG.database.stashEnabled), false)
             .primaryColor();
     }
 }
