@@ -23,6 +23,7 @@ public class ModuleManager {
             new AquariusMiner(),
             new Regear(),
             new KitMaker(),
+            new Enchanter(),
             new AquariusSniffer(),
             new AutoArmor(),
             new AutoDisconnect(),

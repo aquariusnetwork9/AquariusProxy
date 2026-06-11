@@ -177,6 +177,7 @@ public final class Config {
             public final PearlPlus pearlPlus = new PearlPlus();
             public final VillagerTrader villagerTrader = new VillagerTrader();
             public final PearlDrop pearlDrop = new PearlDrop();
+            public final Enchanter enchanter = new Enchanter();
 
             /**
              * PearlDrop — the DEPOSIT side of pearl stasis (the counterpart to {@link PearlPlus}, which pulls).
@@ -1106,6 +1107,57 @@ public final class Config {
 
                 /** Ticks to wait after a place before reading the WORLD to confirm the shulker really landed. */
                 public int placeVerifyTicks = 10;
+            }
+
+            /**
+             * Enchanter — auto-builds max-template gear in an anvil station. The bot auto-discovers the station
+             * (an anvil pillar + chests classified as the un-enchanted-gear input, enchanted-book source(s), and
+             * finished-gear output) within {@link #scanRadius} blocks, then for each base item resolves a built-in
+             * max template (sword/pickaxe/armor/bow/..., with operator-chosen {@link #variantChoices} like
+             * sword_damage=smite or tool_yield=silk_touch), computes the cheapest anvil combine order, gathers the
+             * needed books, runs the anvil ops (handling the gravity-fed anvil pillar when one shatters), and
+             * deposits the result. Read everywhere via {@code CONFIG.client.extra.enchanter.*}; see {@code .enc}.
+             */
+            public static class Enchanter {
+                /** Whether the module is enabled on startup. */
+                public boolean enabled = false;
+                /** Horizontal radius (blocks, capped at 32) within which the anvil + containers are discovered. */
+                public int scanRadius = 32;
+                /** Y range (+/- the bot's feet) scanned for the anvil + containers. */
+                public int bandDown = 3;
+                public int bandUp = 3;
+                /** Per-variant-group choices, e.g. {@code sword_damage -> smite}, {@code tool_yield -> silk_touch}.
+                 *  Unset groups use the template default. Edit via {@code .enc variant <group> <choice>}. */
+                public final java.util.Map<String, String> variantChoices = new java.util.LinkedHashMap<>();
+                /** Stop after this many items. 0 = run until the input chest is empty. */
+                public int maxItems = 0;
+                /** Throw XP bottles (pulled from an auto-discovered bottle chest) to fund the anvil costs. */
+                public boolean throwXp = true;
+                /** Top up to (this step's level cost + this) before each anvil step — staying low on the XP curve
+                 *  uses ~8x fewer bottles than banking the whole run up front. */
+                public int xpBufferLevels = 2;
+                /** Ticks between individual bottle throws (lets the orb settle + the level packet arrive). */
+                public int xpThrowSpacingTicks = 6;
+                /** Look-down pitch (degrees) when throwing a bottle, so it breaks at the bot's feet and the orbs
+                 *  are collected immediately. */
+                public float xpThrowPitch = 88.0f;
+                /** Bottles to keep carried; topped up from the XP chest before a run and when it runs dry mid-run. */
+                public int xpBottleReserve = 512;
+                /** Disconnect from the server when the run completes (clean AFK finish). */
+                public boolean autoDisconnect = false;
+                /** Soft-pause while a non-self player is within {@link #playerPauseRange} blocks. */
+                public boolean pauseOnPlayer = true;
+                public double playerPauseRange = 48.0;
+                /** Ticks between world actions (path/open/place). */
+                public int actionDelayTicks = 5;
+                /** Ticks to wait after opening a container before reading it. */
+                public int settleTicks = 10;
+                /** Ticks between in-window slot clicks (gather / place-into-anvil / take-result / deposit). */
+                public int fillDelayTicks = 4;
+                /** Ticks to wait for the server to compute the anvil output, and for a fallen anvil to settle. */
+                public int anvilSettleTicks = 10;
+                /** Give up (pause) if no replacement anvil falls into the pillar within this many ticks. */
+                public int pillarTimeoutTicks = 200;
             }
 
             public static final class Waypoints {

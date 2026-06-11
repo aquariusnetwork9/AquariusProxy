@@ -37,6 +37,7 @@ public class CommandManager {
         new AquariusMinerCommand(),
         new RegearCommand(),
         new KitMakerCommand(),
+        new EnchanterCommand(),
         new AuthCommand(),
         new AutoArmorCommand(),
         new AutoDisconnectCommand(),
