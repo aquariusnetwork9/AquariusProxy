@@ -624,6 +624,30 @@ public final class MovementHelper {
     }
 
     /**
+     * AutoTool honoring an explicit silk preference: {@code null} = default (global preferSilkTouch);
+     * {@code FALSE} = restrict to a NON-silk tool (fortune ore mining - keep the drops); {@code TRUE} =
+     * restrict to a SILK-touch tool (collect the ore block). Falls back to the normal best tool when the
+     * requested kind isn't carried, so a misconfigured loadout never stalls the break.
+     */
+    public static void switchToBestToolFor(Block b, Boolean requireSilk) {
+        if (requireSilk == null) {
+            switchToBestToolFor(b);
+            return;
+        }
+        if (!CONFIG.client.extra.pathfinder.autoTool || CONFIG.client.extra.pathfinder.assumeExternalAutoTool) {
+            return;
+        }
+        ToolSet ts = new ToolSet();
+        int hotbarSlotId = requireSilk ? ts.getBestSilkSlot(b) : ts.getBestNonSilkSlot(b);
+        if (hotbarSlotId < 0) hotbarSlotId = ts.getBestSlot(b, requireSilk); // requested kind absent -> best available
+        INVENTORY.submit(InventoryActionRequest.builder()
+            .owner(BARITONE)
+            .actions(new SetHeldItem(hotbarSlotId))
+            .priority(Baritone.getPriority())
+            .build());
+    }
+
+    /**
      * AutoTool for a specific block with precomputed ToolSet data
      */
     public static void switchToBestToolFor(Block b, ToolSet ts, boolean preferSilkTouch) {
