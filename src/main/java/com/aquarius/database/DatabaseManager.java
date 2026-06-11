@@ -30,6 +30,8 @@ public class DatabaseManager {
     private TimeDatabase timeDatabase;
     private QueryExecutor queryExecutor;
     private RedisClient redisClient;
+    private StashDatabase stashDatabase;
+    private StashQueue stashQueue;
     private ScheduledFuture<?> databaseTickFuture;
 
     public void start() {
@@ -65,6 +67,9 @@ public class DatabaseManager {
             if (CONFIG.database.timeEnabled) {
                 startTimeDatabase();
             }
+            if (CONFIG.database.stashEnabled) {
+                startStashDatabase();
+            }
             if (databaseTickFuture != null) {
                 databaseTickFuture.cancel(false);
             }
@@ -91,6 +96,7 @@ public class DatabaseManager {
             stopPlayerCountDatabase();
             stopTablistDatabase();
             stopPlaytimeDatabase();
+            stopStashDatabase();
             stopRedisClient();
             stopJdbi();
         } catch (final Exception e) {
@@ -247,6 +253,26 @@ public class DatabaseManager {
             this.timeDatabase.stop();
             this.timeDatabase = null;
         }
+    }
+
+    public void startStashDatabase() {
+        if (isNull(stashDatabase)) {
+            this.stashDatabase = new StashDatabase(queryExecutor);
+            this.stashDatabase.init();
+        }
+        if (isNull(stashQueue)) {
+            this.stashQueue = new StashQueue(getRedisClient());
+        }
+        com.aquarius.feature.stash.OrderService.get().start(stashDatabase, stashQueue);
+    }
+
+    public void stopStashDatabase() {
+        com.aquarius.feature.stash.OrderService.get().stop();
+        if (nonNull(this.stashQueue)) {
+            this.stashQueue.shutdown();
+            this.stashQueue = null;
+        }
+        this.stashDatabase = null;
     }
 
     private HikariConnectionFactory getConnectionFactory() {

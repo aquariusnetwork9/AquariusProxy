@@ -2,13 +2,13 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/MC-1.21.4-brightgreen.svg" alt="Minecraft"/>
-  <img src="https://img.shields.io/badge/version-2.4.0-blue.svg" alt="Version"/>
+  <img src="https://img.shields.io/badge/version-3.0.0-blue.svg" alt="Version"/>
   <img src="https://img.shields.io/badge/license-AGPL--3.0-orange.svg" alt="License"/>
 </p>
 
 **AquariusProxy** is a headless Minecraft proxy/bot for [2b2t.org](https://www.2b2t.org/) (works on any server), built as a fork of [ZenithProxy](https://github.com/rfresh2/ZenithProxy) by rfresh2.
 
-It keeps everything ZenithProxy does — an always-online account you can also log into and control in-game, driven remotely from Discord, a terminal, or in-game chat — and adds a fix to the inventory engine plus **nine native automation modules** baked directly into the proxy (no plugin jars to manage): an AFK quarry miner, a packet sniffer, a stasis-pearl loader and filler, a villager trader, a kit-shulker filler, a one-shot regear, an autopilot elytra flyer, and an anvil auto-enchanter.
+It keeps everything ZenithProxy does — an always-online account you can also log into and control in-game, driven remotely from Discord, a terminal, or in-game chat — and adds a fix to the inventory engine plus a set of **native automation modules** baked directly into the proxy (no plugin jars to manage): an AFK quarry miner, a packet sniffer, a stasis-pearl loader and filler, a villager trader, a kit-shulker filler, a one-shot regear, an autopilot elytra flyer, an anvil auto-enchanter, and — new in v3.0.0 — a **Postgres-backed stash scanner + payment-gated order picker**.
 
 > 📖 **Setup guides, configuration, and the full command reference live on the [AquariusProxy Wiki](https://github.com/aquariusnetwork9/AquariusProxy/wiki).** This README is just an overview of what's here.
 
@@ -42,6 +42,7 @@ AquariusProxy is ZenithProxy with the following changes:
 | **+ Module** | **Regear** — one-shot resupply: pulls a named kit shulker from an ender chest, empties it, and gears up. |
 | **+ Module** | **ElytraPilot** — autopilot elytra flight (climb/glide travel, 2b2t nether-highway bounce, overworld↔nether trip planner). |
 | **+ Module** | **Enchanter** — auto-builds max-template gear in an anvil station via the **cheapest anvil combine order**. |
+| **+ Stash system** | **StashScanner** + **OrderFiller** + native **Order System** — a Postgres/Redis-backed stash census, payment-gated order picker, and Discord order intake/manifest. Reuses the proxy's existing database + Discord layers. See the [Order System wiki](https://github.com/aquariusnetwork9/AquariusProxy/wiki/OrderSystem). |
 
 These modules are **native built-ins**: no plugin jars, no separate config files. They all default to **off** and add no overhead until enabled. Every setting lives in the main `config.json` under `client.extra.<module>` and is configured entirely through commands ([full reference on the wiki](https://github.com/aquariusnetwork9/AquariusProxy/wiki/Command-Reference)).
 
@@ -163,6 +164,18 @@ Auto-builds fully-enchanted "max template" gear in an anvil station: pulls un-en
 - **Optional curses** — Curse of Vanishing (any item) and Curse of Binding (worn gear) are independent per-family opt-ins, **never on by default**.
 
 📖 [Enchanter wiki →](https://github.com/aquariusnetwork9/AquariusProxy/wiki/Enchanter)
+
+### Stash system — scanner + order picker *(new in v3.0.0)*
+
+A stash-organisation bot + payment-gated order picker, built on the proxy's existing Postgres/Redis + Discord layers (no separate Node bot).
+
+- **StashScanner** (`.ss`) — walks a stash of kit shulkers read-only, reads each shulker's contents from its CONTAINER component (never placing one), classifies it as a kit by content signature, and snapshots stock to Postgres. Unreachable chests are skipped + logged; `allowBreak`/`allowPlace` stay off the whole walk.
+- **OrderFiller** (`.of`) — pops one **paid** order at a time, withdraws the reserved shulkers (ShiftClick fix), deposits them into the order's outgoing chest, and writes a manifest. Stock drift / unreachable chests surface as shortfalls.
+- **Order System** (`.order`) — native order intake (`catalog` / `stock` / `order` / `status` / `cancel`), atomic soft-hold with a TTL reaper, an `orders:paid` Redis adapter for an external shop / TicketTool bot, and a Discord manifest. Stash coordinates never leave the database — customers see only the outgoing chest.
+
+Enable with `database stash on` + `database on`. Tables self-provision on start.
+
+📖 [Order System wiki →](https://github.com/aquariusnetwork9/AquariusProxy/wiki/OrderSystem)
 
 ---
 

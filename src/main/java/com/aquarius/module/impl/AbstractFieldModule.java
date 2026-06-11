@@ -64,6 +64,21 @@ public abstract class AbstractFieldModule extends Module {
         if (breakOverridden) { CONFIG.client.extra.pathfinder.allowBreak = breakSaved; breakOverridden = false; }
     }
 
+    // placing gate (the stash modules forbid placing entirely) -------------------------------------------
+    private boolean placeOverridden = false;
+    private boolean placeSaved;
+
+    /** Force pathfinder.allowPlace on/off, remembering the original so {@link #restorePlacing()} can undo it. */
+    protected void setPlacingAllowed(boolean allowed) {
+        if (!placeOverridden) { placeSaved = CONFIG.client.extra.pathfinder.allowPlace; placeOverridden = true; }
+        CONFIG.client.extra.pathfinder.allowPlace = allowed;
+    }
+
+    /** Restore pathfinder.allowPlace to whatever it was before the first {@link #setPlacingAllowed}. */
+    protected void restorePlacing() {
+        if (placeOverridden) { CONFIG.client.extra.pathfinder.allowPlace = placeSaved; placeOverridden = false; }
+    }
+
     // ---------------------------------------------------------------- tick gating helpers
 
     /** True when the bot can't act yet this tick: dead, or its own chunk isn't loaded (just (re)connected). */

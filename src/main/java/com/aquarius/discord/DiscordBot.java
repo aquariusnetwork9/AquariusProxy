@@ -402,6 +402,15 @@ public class DiscordBot {
         CommandOutputHelper.logEmbedOutputToTerminal(embed);
     }
 
+    /** Post an embed to a specific channel id; falls back to the main channel if it can't be resolved. */
+    public void sendEmbedMessageToChannelId(@Nullable String channelId, Embed embed) {
+        if (channelId != null && !channelId.isBlank() && jda != null) {
+            var channel = jda.getTextChannelById(channelId);
+            if (channel != null) { sendEmbedMessageTo(channel, null, embed); return; }
+        }
+        sendEmbedMessage(embed);
+    }
+
     public void sendRelayEmbedMessage(Embed embed) {
         sendRelayEmbedMessage(null, embed);
     }

@@ -178,6 +178,8 @@ public final class Config {
             public final VillagerTrader villagerTrader = new VillagerTrader();
             public final PearlDrop pearlDrop = new PearlDrop();
             public final Enchanter enchanter = new Enchanter();
+            public final StashScanner stashScanner = new StashScanner();
+            public final OrderFiller orderFiller = new OrderFiller();
 
             /**
              * PearlDrop — the DEPOSIT side of pearl stasis (the counterpart to {@link PearlPlus}, which pulls).
@@ -1173,6 +1175,82 @@ public final class Config {
             }
 
             /**
+             * StashScanner — read-only stash census. Walks a region (or a DB-listed set) of storage containers,
+             * opens each, reads every shulker box's contents from its CONTAINER component (never placing a
+             * shulker), classifies it as a kit and writes a snapshot to Postgres. Movement runs with
+             * allowBreak=false / allowPlace=false; unreachable chests are skipped and logged, never forced.
+             * Requires {@code database.enabled} + {@code database.stashEnabled}. Read via
+             * {@code CONFIG.client.extra.stashScanner.*}; see {@code .ss}.
+             */
+            public static class StashScanner {
+                public enum ScanMode { Region, List }
+                /** Whether the module is enabled on startup. */
+                public boolean enabled = false;
+                /** Region scan (a box around an origin) vs List scan (chests with role='storage' from the DB). */
+                public ScanMode mode = ScanMode.Region;
+                /** Dimension recorded for discovered chests. */
+                public String dimension = "minecraft:overworld";
+                /** Region-mode origin + horizontal radius (blocks). 0,0,0 origin = use the bot's feet at scan start. */
+                public int originX = 0;
+                public int originY = 0;
+                public int originZ = 0;
+                public int radius = 32;
+                /** Y band scanned around the origin/feet: [y - bandDown, y + bandUp]. */
+                public int bandDown = 3;
+                public int bandUp = 3;
+                /** Dry run: classify + record but emphasise the signature dump for catalog seeding (no withdraws ever). */
+                public boolean dryRun = true;
+                /** Default match strictness for kits whose own match_strictness is unset. */
+                public String classifyStrictnessDefault = "item_and_count";
+                /** Soft-pause while a non-self player is within {@link #playerPauseRange} blocks. */
+                public boolean pauseOnPlayer = true;
+                public double playerPauseRange = 48.0;
+                /** Ticks to wait after a rotation-driven action (open) before reading the result. */
+                public int settleTicks = 8;
+                /** Ticks between world actions (path/open). */
+                public int actionDelayTicks = 5;
+                /** Ticks between in-window reads. */
+                public int readDelayTicks = 2;
+                /** Give up pathing to a chest after this many ticks and mark it unreachable. */
+                public int reachTimeoutTicks = 200;
+            }
+
+            /**
+             * OrderFiller — payment-gated order picker. Pops a paid job from Redis, routes to the reserved
+             * shulkers' chests, withdraws them (ShiftClick fix), deposits the order into its assigned outgoing
+             * chest, writes a manifest and decrements stock. Movement runs with allowBreak=false /
+             * allowPlace=false; never carries filled shulkers it can't deposit. Requires {@code database.enabled}
+             * + {@code database.stashEnabled}. Read via {@code CONFIG.client.extra.orderFiller.*}; see {@code .of}.
+             */
+            public static class OrderFiller {
+                /** Whether the module is enabled on startup. */
+                public boolean enabled = false;
+                /** Dimension the stash + outgoing chests live in. */
+                public String dimension = "minecraft:overworld";
+                /** Max shulkers to carry per trip before depositing (≈ free inventory slots, with margin). */
+                public int maxShulkersPerTrip = 18;
+                /** Re-scan the stash before filling (slower, fresher stock). The scanner module must be configured. */
+                public boolean rescanBeforeFill = false;
+                /** Allow partial fills (deliver what's on hand, manifest shows the shortfall) vs all-or-nothing. */
+                public boolean allowPartial = true;
+                /** Soft-pause withdraws while a non-self player is within {@link #playerPauseRange} blocks (anti-theft). */
+                public boolean pauseOnPlayer = true;
+                public double playerPauseRange = 48.0;
+                /** Soft-hold TTL (minutes) applied to a new order while it awaits payment. */
+                public int softHoldMinutes = 15;
+                /** Discord channel id the order/manifest embeds post to ("" = the proxy's main channel). */
+                public String manifestChannelId = "";
+                /** Ticks to wait after a rotation-driven action (open) before reading the result. */
+                public int settleTicks = 8;
+                /** Ticks between world actions (path/open). */
+                public int actionDelayTicks = 5;
+                /** Ticks between in-window slot clicks (withdraw / deposit). */
+                public int fillDelayTicks = 2;
+                /** Give up pathing to a chest after this many ticks and mark it unreachable. */
+                public int reachTimeoutTicks = 200;
+            }
+
+            /**
              * Enchanter — auto-builds max-template gear in an anvil station. The bot auto-discovers the station
              * (an anvil pillar + chests classified as the un-enchanted-gear input, enchanted-book source(s), and
              * finished-gear output) within {@link #scanRadius} blocks, then for each base item resolves a built-in
@@ -2017,6 +2095,8 @@ public final class Config {
         public boolean tablistEnabled = true;
         public boolean playtimeEnabled = true;
         public boolean timeEnabled = true;
+        /** Provision + run the stash system tables (StashScanner / OrderFiller). Requires {@link #enabled}. */
+        public boolean stashEnabled = false;
         public final Lock lock = new Lock();
 
         public static final class Lock {

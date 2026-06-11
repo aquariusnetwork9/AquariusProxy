@@ -64,6 +64,7 @@ public class Globals {
     public static final ComponentLogger TERMINAL_LOG = ComponentLogger.logger("Terminal");
     public static final ComponentLogger PLUGIN_LOG = ComponentLogger.logger("Plugin");
     public static final ComponentLogger PATH_LOG = ComponentLogger.logger("Pathfinder");
+    public static final ComponentLogger STASH_LOG = ComponentLogger.logger("Stash");
     public static final File CONFIG_FILE = new File(System.getProperty("zenith.config.file", "config.json"));
     public static final File LAUNCH_CONFIG_FILE = new File(System.getProperty("zenith.launch.config.file", "launch_config.json"));
     public static final Config CONFIG;
