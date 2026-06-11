@@ -44,6 +44,7 @@ public class EnchanterCommand extends Command {
                 "radius <n>  (container/anvil discovery radius, max 32)",
                 "band <down> <up>  (Y range +/- feet to scan, default 3/3)",
                 "variant <group> <choice>  (e.g. sword_damage smite, tool_yield silk_touch)",
+                "curse <family> <vanishing|binding> on/off  (per-family curse opt-in; never on by default)",
                 "templates  (print the resolved max templates)",
                 "max <n>  (stop after n items, 0 = until input empty)",
                 "xp on/off  (throw XP bottles from the bottle chest to fund the anvil)",
@@ -100,10 +101,35 @@ public class EnchanterCommand extends Command {
                     c.getSource().getEmbed().title("Variant " + group + " = " + choice);
                 })))
             )
+            .then(literal("curse")
+                .then(argument("family", word()).then(argument("curse", word()).then(argument("toggle", toggle()).executes(c -> {
+                    String family = getString(c, "family");
+                    String curse = getString(c, "curse").toLowerCase();
+                    boolean on = getToggle(c, "toggle");
+                    if (EnchantTemplates.template(family) == null) {
+                        c.getSource().getEmbed().title("Unknown family: " + family)
+                            .description("Families: " + String.join(", ", EnchantTemplates.families())).errorColor();
+                        return;
+                    }
+                    if (!curse.equals("vanishing") && !curse.equals("binding")) {
+                        c.getSource().getEmbed().title("Unknown curse: " + curse)
+                            .description("Use `vanishing` or `binding`.").errorColor();
+                        return;
+                    }
+                    if (!EnchantTemplates.supportsCurse(family, curse)) {
+                        c.getSource().getEmbed().title(family + " can't hold Curse of " + cap(curse))
+                            .description("Curse of Binding only applies to worn gear (armor + elytra).").errorColor();
+                        return;
+                    }
+                    CONFIG.client.extra.enchanter.curseChoices.put(EnchantTemplates.curseKey(family, curse), on);
+                    c.getSource().getEmbed().title("Curse of " + cap(curse) + " on " + family + " " + toggleStrCaps(on))
+                        .description("Stock a " + curse + "-curse book in the station for this to apply.");
+                })))))
             .then(literal("templates").executes(c -> {
                 StringBuilder sb = new StringBuilder();
                 for (String fam : EnchantTemplates.families()) {
-                    sb.append(EnchantTemplates.describe(fam, CONFIG.client.extra.enchanter.variantChoices))
+                    sb.append(EnchantTemplates.describe(fam, CONFIG.client.extra.enchanter.variantChoices,
+                            CONFIG.client.extra.enchanter.curseChoices))
                         .append("  -> ").append(costEstimate(fam)).append('\n');
                 }
                 c.getSource().getEmbed().title("Enchanter templates").description(sb.toString());
@@ -166,6 +192,7 @@ public class EnchanterCommand extends Command {
             .addField("Layout", module.setupLine())
             .addField("Scan", "radius " + cfg.scanRadius + ", band -" + cfg.bandDown + "/+" + cfg.bandUp)
             .addField("Variants", variants.toString())
+            .addField("Curses", cursesSummary(cfg.curseChoices))
             .addField("Max items", cfg.maxItems == 0 ? "unlimited" : String.valueOf(cfg.maxItems))
             .addField("XP", cfg.throwXp ? "bottles on (buffer +" + cfg.xpBufferLevels + ", reserve " + cfg.xpBottleReserve + ")" : "off")
             .addField("Pace", "action " + cfg.actionDelayTicks + ", settle " + cfg.settleTicks
@@ -174,10 +201,26 @@ public class EnchanterCommand extends Command {
             .addField("Auto-dc", toggleStr(cfg.autoDisconnect));
     }
 
+    private static String cap(String s) {
+        return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
+    /** One-line summary of which per-family curses are toggled on (curses are never on by default). */
+    private static String cursesSummary(Map<String, Boolean> curseChoices) {
+        List<String> on = new ArrayList<>();
+        curseChoices.forEach((key, val) -> {
+            if (Boolean.TRUE.equals(val)) {
+                String[] fc = key.split("\\|", 2);
+                on.add(fc.length == 2 ? fc[0] + "=" + fc[1] : key);
+            }
+        });
+        return on.isEmpty() ? "(none — off by default)" : String.join(" ", on);
+    }
+
     /** Estimated total anvil levels + XP bottles to build a family's template (the "saved" per-template cost). */
     private String costEstimate(String family) {
         var cfg = CONFIG.client.extra.enchanter;
-        Map<String, Integer> target = EnchantTemplates.resolveFamily(family, cfg.variantChoices);
+        Map<String, Integer> target = EnchantTemplates.resolveFamily(family, cfg.variantChoices, cfg.curseChoices);
         if (target == null) return "?";
         List<EnchItem> books = new ArrayList<>();
         for (var e : target.entrySet()) books.add(EnchItem.book(e.getKey(), e.getValue()));

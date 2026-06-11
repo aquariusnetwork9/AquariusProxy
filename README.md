@@ -159,7 +159,8 @@ Auto-builds fully-enchanted "max template" gear in an anvil station: pulls un-en
 - **Cheapest anvil order** — an exact search over all binary combine-trees finds the minimum-XP order that keeps every step under the survival "Too Expensive!" cap (a god sword is ~72 levels optimally vs ~171 naively).
 - **XP-bottle charging** — tops up just before each anvil step instead of banking the run up front, using ~2–7× fewer bottles, throwing bottles at its feet and collecting the orbs.
 - **Gravity-fed anvil pillar** handling: waits for the next anvil to fall + settle when one shatters.
-- Built-in **max templates** for swords, tools, all armor, bow/crossbow/trident/mace/fishing rod/elytra/shield, each with variant picks (damage type, fortune vs silk, protection type, …). Auto-discovers the station layout within 32 blocks.
+- Built-in **max templates** for swords, tools, all armor, bow/crossbow/trident/mace/fishing rod/elytra/shield, each with variant picks (damage type, fortune vs silk, protection type, …) — plus shears, flint & steel, brush, and carrot/warped-fungus-on-a-stick, covering **every vanilla enchantable item**. Auto-discovers the station layout within 32 blocks.
+- **Optional curses** — Curse of Vanishing (any item) and Curse of Binding (worn gear) are independent per-family opt-ins, **never on by default**.
 
 📖 [Enchanter wiki →](https://github.com/aquariusnetwork9/AquariusProxy/wiki/Enchanter)
 

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Built-in "max" enchant loadouts per gear family for the {@link com.aquarius.module.impl.Enchanter}.
@@ -53,6 +54,20 @@ public final class EnchantTemplates {
 
     /** All known variant-group names -> their template family (for the command + validation). */
     private static final Map<String, String> GROUP_FAMILY = new LinkedHashMap<>();
+
+    /**
+     * Curse short-name -> registry enchant name. Curses are independent, per-family <b>opt-in</b> toggles —
+     * never applied by default and never bundled into the fixed/variant sets. Enable per family with
+     * {@code .enc curse <family> <vanishing|binding> on}.
+     */
+    private static final Map<String, String> CURSE_ENCH = new LinkedHashMap<>();
+    static {
+        CURSE_ENCH.put("vanishing", "vanishing_curse"); // every enchantable item can hold Curse of Vanishing
+        CURSE_ENCH.put("binding", "binding_curse");     // only worn gear (armor slots + elytra)
+    }
+
+    /** Families that can carry Curse of Binding (worn in an armor slot). Vanishing applies to every family. */
+    private static final Set<String> BINDABLE = Set.of("helmet", "chestplate", "leggings", "boots", "elytra");
 
     private static Map<String, Integer> ench(Object... pairs) {
         Map<String, Integer> m = new LinkedHashMap<>();
@@ -157,6 +172,13 @@ public final class EnchantTemplates {
                 opt("breach", ench("breach", 4))));
         reg("elytra", ench("unbreaking", 3, "mending", 1));
         reg("shield", ench("unbreaking", 3, "mending", 1));
+
+        // remaining vanilla enchantable items (durability only, except shears which also takes efficiency)
+        reg("shears", ench("efficiency", 5, "unbreaking", 3, "mending", 1));
+        reg("flint_and_steel", ench("unbreaking", 3, "mending", 1));
+        reg("carrot_on_a_stick", ench("unbreaking", 3, "mending", 1));
+        reg("warped_fungus_on_a_stick", ench("unbreaking", 3, "mending", 1));
+        reg("brush", ench("unbreaking", 3, "mending", 1));
     }
 
     /** The gear family for a registry item name (e.g. "diamond_sword" -> "sword"), or null if none. */
@@ -164,7 +186,8 @@ public final class EnchantTemplates {
         if (itemName == null) return null;
         // exact single-item families first (so "crossbow" isn't caught by a "bow" suffix, etc.)
         switch (itemName) {
-            case "bow", "crossbow", "trident", "fishing_rod", "mace", "elytra", "shield" -> { return itemName; }
+            case "bow", "crossbow", "trident", "fishing_rod", "mace", "elytra", "shield",
+                 "shears", "flint_and_steel", "carrot_on_a_stick", "warped_fungus_on_a_stick", "brush" -> { return itemName; }
             default -> { }
         }
         if (itemName.endsWith("_pickaxe")) return "pickaxe";
@@ -188,12 +211,44 @@ public final class EnchantTemplates {
 
     public static boolean isVariantGroup(String groupName) { return GROUP_FAMILY.containsKey(groupName); }
 
+    /** The selectable curse short-names ("vanishing", "binding"). */
+    public static List<String> curses() { return new ArrayList<>(CURSE_ENCH.keySet()); }
+
+    /** Config key for a per-family curse toggle, e.g. {@code curseKey("boots", "binding")} = {@code "boots|binding"}. */
+    public static String curseKey(String family, String curse) { return family + "|" + curse; }
+
+    /** True if {@code family} can hold the curse {@code curse} ("vanishing" applies to all families, "binding" to worn gear). */
+    public static boolean supportsCurse(String family, String curse) {
+        if (family == null || !TEMPLATES.containsKey(family) || !CURSE_ENCH.containsKey(curse)) return false;
+        return curse.equals("binding") ? BINDABLE.contains(family) : true;
+    }
+
+    /** The curses {@code family} can carry, in order (e.g. boots -> [vanishing, binding], sword -> [vanishing]). */
+    public static List<String> supportedCurses(String family) {
+        List<String> out = new ArrayList<>();
+        for (String c : CURSE_ENCH.keySet()) if (supportsCurse(family, c)) out.add(c);
+        return out;
+    }
+
     /**
      * The resolved target enchant map for an item, applying the operator's per-group variant choices
-     * (defaults where unset). Returns null if {@code itemName} has no template.
+     * (defaults where unset) plus any per-family curses toggled on. Returns null if {@code itemName} has
+     * no template.
      */
-    public static Map<String, Integer> forItem(String itemName, Map<String, String> variantChoices) {
-        String family = familyOf(itemName);
+    public static Map<String, Integer> forItem(String itemName, Map<String, String> variantChoices,
+                                               Map<String, Boolean> curseChoices) {
+        return resolve(familyOf(itemName), variantChoices, curseChoices);
+    }
+
+    /** The resolved enchant map for a family directly (no item name needed), applying variant + curse choices. */
+    public static Map<String, Integer> resolveFamily(String family, Map<String, String> variantChoices,
+                                                     Map<String, Boolean> curseChoices) {
+        return resolve(family, variantChoices, curseChoices);
+    }
+
+    /** Shared resolver: fixed enchants + the chosen/default variant of each group + any opted-in curses. */
+    private static Map<String, Integer> resolve(String family, Map<String, String> variantChoices,
+                                                Map<String, Boolean> curseChoices) {
         if (family == null) return null;
         Template t = TEMPLATES.get(family);
         if (t == null) return null;
@@ -204,34 +259,26 @@ public final class EnchantTemplates {
             if (opt == null) opt = g.options.get(g.defaultChoice);
             if (opt != null) out.putAll(opt);
         }
+        applyCurses(family, out, curseChoices);
         return out;
     }
 
-    /** The resolved enchant map for a family directly (no item name needed), applying variant choices. */
-    public static Map<String, Integer> resolveFamily(String family, Map<String, String> variantChoices) {
-        Template t = TEMPLATES.get(family);
-        if (t == null) return null;
-        Map<String, Integer> out = new LinkedHashMap<>(t.fixed);
-        for (VariantGroup g : t.variants) {
-            String choice = variantChoices == null ? null : variantChoices.get(g.name);
-            Map<String, Integer> opt = g.options.get(choice);
-            if (opt == null) opt = g.options.get(g.defaultChoice);
-            if (opt != null) out.putAll(opt);
+    /** Add any per-family curse the operator has explicitly toggled on (never on by default). */
+    private static void applyCurses(String family, Map<String, Integer> out, Map<String, Boolean> curseChoices) {
+        if (curseChoices == null || curseChoices.isEmpty()) return;
+        for (Map.Entry<String, String> e : CURSE_ENCH.entrySet()) {
+            if (!supportsCurse(family, e.getKey())) continue;
+            if (Boolean.TRUE.equals(curseChoices.get(curseKey(family, e.getKey())))) out.put(e.getValue(), 1);
         }
-        return out;
     }
 
     /** Pretty one-line description of a family's resolved template under the given choices. */
-    public static String describe(String family, Map<String, String> variantChoices) {
+    public static String describe(String family, Map<String, String> variantChoices,
+                                  Map<String, Boolean> curseChoices) {
         Template t = TEMPLATES.get(family);
         if (t == null) return family + ": (no template)";
+        Map<String, Integer> resolved = resolve(family, variantChoices, curseChoices);
         StringBuilder sb = new StringBuilder(family).append(": ");
-        Map<String, Integer> resolved = new LinkedHashMap<>(t.fixed);
-        for (VariantGroup g : t.variants) {
-            String choice = variantChoices == null ? null : variantChoices.get(g.name);
-            if (choice == null || !g.options.containsKey(choice)) choice = g.defaultChoice;
-            resolved.putAll(g.options.get(choice));
-        }
         boolean first = true;
         for (var e : resolved.entrySet()) {
             if (!first) sb.append(", ");

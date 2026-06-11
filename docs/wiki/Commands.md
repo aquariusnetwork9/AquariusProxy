@@ -1496,6 +1496,49 @@ example kit, auto-classifies nearby ground containers, then fills + deposits kit
   ```kitmaker status  (print the discovered layout)```
 
 
+### enchanter
+
+Auto-build max-template gear in an anvil station. Auto-discovers the anvil pillar + chests
+
+(gear input, enchanted-book sources, finished output) within a radius, then applies a built-in
+
+max template to each item using the cheapest anvil combine order. Alias: .enc
+
+**Aliases:** `enc`
+
+**Usage**
+
+  ```enchanter on/off```
+
+  ```enchanter scan  (re-discover the station layout)```
+
+  ```enchanter radius <n>  (container/anvil discovery radius, max 32)```
+
+  ```enchanter band <down> <up>  (Y range +/- feet to scan, default 3/3)```
+
+  ```enchanter variant <group> <choice>  (e.g. sword_damage smite, tool_yield silk_touch)```
+
+  ```enchanter curse <family> <vanishing|binding> on/off  (per-family curse opt-in; never on by default)```
+
+  ```enchanter templates  (print the resolved max templates)```
+
+  ```enchanter max <n>  (stop after n items, 0 = until input empty)```
+
+  ```enchanter xp on/off  (throw XP bottles from the bottle chest to fund the anvil)```
+
+  ```enchanter xpbuffer <levels>  (top up to step-cost + this before each anvil step)```
+
+  ```enchanter xpreserve <n>  (bottles to keep carried)```
+
+  ```enchanter pace <action> <settle> <fill> <anvil>  (tick delays)```
+
+  ```enchanter pauseplayer on/off```
+
+  ```enchanter autodc on/off  (disconnect when done)```
+
+  ```enchanter status  (print the discovered layout + progress)```
+
+
 ### autoArmor
 
 Automatically equips the best armor in your inventory
@@ -2218,6 +2261,51 @@ They should be unobstructed and reachable.
   ```pearlLoader list```
 
   ```pearlLoader returnToStartPos on/off```
+
+
+### pearldrop
+
+Deposit ender pearls into pearl stasis chambers (a water/bubble column with soul sand at the
+
+bottom and a trapdoor on top). The bot walks to the rim, sneak-overhangs the column, aims at the
+
+soul-sand centre, throws a pearl in, and backs off. Needs ender pearls in its inventory.
+
+**Aliases:** `pd`
+
+**Usage**
+
+  ```pearldrop on/off```
+
+  ```pearldrop scan [radius]          (find chambers in loaded chunks; lists them with indices)```
+
+  ```pearldrop list                   (reprint the last scan)```
+
+  ```pearldrop drop <x> <y> <z> [n]   (deposit into the chamber near these coords; auto-picks an empty one)```
+
+  ```pearldrop pick <indices>         (deposit into scanned chambers by index, e.g. 'pick 1 3 4')```
+
+  ```pearldrop all                    (deposit into every empty chamber from the last scan)```
+
+  ```pearldrop count <n>              (pearls to deposit per chamber)```
+
+  ```pearldrop stop                   (cancel the current run)```
+
+  ```pearldrop depth <n>              (min water depth to count as a chamber)```
+
+  ```pearldrop radius <n>             (scan horizontal radius)```
+
+  ```pearldrop yrange <n>             (scan vertical half-range around the bot)```
+
+  ```pearldrop tolerance <n>          (search radius for 'drop <coords>')```
+
+  ```pearldrop spacing <ticks>        (ticks between throws into one chamber)```
+
+  ```pearldrop eyeheight <d>          (eye height used to aim; ~1.27 sneaking)```
+
+  ```pearldrop priority <n>           (input priority for the sneak/aim/throw control)```
+
+  ```pearldrop closetrapdoor <on/off> (shut an open trapdoor before depositing)```
 
 
 ### pearlplus
