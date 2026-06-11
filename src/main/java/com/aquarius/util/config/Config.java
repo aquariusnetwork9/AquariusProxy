@@ -1129,6 +1129,11 @@ public final class Config {
                 /** Per-variant-group choices, e.g. {@code sword_damage -> smite}, {@code tool_yield -> silk_touch}.
                  *  Unset groups use the template default. Edit via {@code .enc variant <group> <choice>}. */
                 public final java.util.Map<String, String> variantChoices = new java.util.LinkedHashMap<>();
+                /** Per-family curse opt-ins, keyed {@code "family|curse"} (e.g. {@code "boots|binding" -> true}).
+                 *  Curse of Vanishing + Curse of Binding are independent toggles and are <b>NEVER on by default</b> —
+                 *  each must be explicitly enabled per family via {@code .enc curse <family> <vanishing|binding> on}.
+                 *  Vanishing is available on every family; Binding only on worn gear (armor + elytra). */
+                public final java.util.Map<String, Boolean> curseChoices = new java.util.LinkedHashMap<>();
                 /** Stop after this many items. 0 = run until the input chest is empty. */
                 public int maxItems = 0;
                 /** Throw XP bottles (pulled from an auto-discovered bottle chest) to fund the anvil costs. */

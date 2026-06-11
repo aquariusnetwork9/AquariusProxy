@@ -330,7 +330,8 @@ public class Enchanter extends AbstractFieldModule {
         Map<String, Integer> existing = enchMapOf(gear);
         int repairCost = repairCostOf(gear);
 
-        Map<String, Integer> target = EnchantTemplates.forItem(currentItemName, CONFIG.client.extra.enchanter.variantChoices);
+        Map<String, Integer> target = EnchantTemplates.forItem(currentItemName,
+            CONFIG.client.extra.enchanter.variantChoices, CONFIG.client.extra.enchanter.curseChoices);
         if (target == null) { abort("no template for " + currentItemName); return; }
 
         neededBooks.clear();
