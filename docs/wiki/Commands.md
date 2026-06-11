@@ -1,4 +1,4 @@
-# ZenithProxy Commands Documentation
+# AquariusProxy Commands Documentation
 
 ## Command Prefixes
 
@@ -18,7 +18,7 @@ N/A (e.g. `help`)
 
 ### connect
 
-Connects ZenithProxy to the destination MC server
+Connects AquariusProxy to the destination MC server
 
 **Aliases:** `c`
 
@@ -29,7 +29,7 @@ Connects ZenithProxy to the destination MC server
 
 ### disconnect
 
-Disconnects ZenithProxy from the destination MC server
+Disconnects AquariusProxy from the destination MC server
 
 **Aliases:** `dc`
 
@@ -40,7 +40,7 @@ Disconnects ZenithProxy from the destination MC server
 
 ### help
 
-ZenithProxy command list
+AquariusProxy command list
 
 **Aliases:** `h`
 
@@ -69,7 +69,7 @@ Spectator entities control what entity is used to represent spectators in-game.
 
 
 
-Full commands allow spectators access to all standard ZenithProxy commands like `connect`, `disconnect`, etc.
+Full commands allow spectators access to all standard AquariusProxy commands like `connect`, `disconnect`, etc.
 
 If this is disabled, spectators only have access to a limited set of core commands.
 
@@ -102,7 +102,7 @@ If this is disabled, spectators only have access to a limited set of core comman
 
 ### status
 
-Prints the current status of ZenithProxy, the in-game player, and modules.
+Prints the current status of AquariusProxy, the in-game player, and modules.
 
 **Aliases:** `s`
 
@@ -115,7 +115,7 @@ Prints the current status of ZenithProxy, the in-game player, and modules.
 
 ### update
 
-Restarts and updates ZenithProxy if `autoUpdate` is enabled
+Restarts and updates AquariusProxy if `autoUpdate` is enabled
 
 **Aliases:** `restart` / `reboot`
 
@@ -134,7 +134,7 @@ Whitelisted players are allowed to both control the account in-game and spectate
 
 
 
-`autoAddZenithAccount` will add the MC account you have logged in Zenith with to the whitelist.
+`autoAddAquariusAccount` will add the MC account you have logged in Aquarius with to the whitelist.
 
 
 
@@ -152,7 +152,7 @@ Blacklist is only used and shown if the whitelist or spectator whitelist is disa
 
   ```whitelist clear```
 
-  ```whitelist autoAddZenithAccount on/off```
+  ```whitelist autoAddAquariusAccount on/off```
 
   ```whitelist blacklist add/del <player>```
 
@@ -184,7 +184,7 @@ Microsoft to rate limit your account. Auth tokens will always refresh in the bac
 
 `deviceCode` is the default and recommended authentication type.
 
-If authentication fails, try logging into the account on the vanilla MC launcher and joining a server. Then try again in Zenith.
+If authentication fails, try logging into the account on the vanilla MC launcher and joining a server. Then try again in Aquarius.
 
 If this still fails, try one of the alternate auth types.
 
@@ -293,7 +293,7 @@ Ignore regex will filter out messages, see here for help writing regex: https://
 
 ### chatSchema
 
-Configure how ZenithProxy parses public chats and whispers.
+Configure how AquariusProxy parses public chats and whispers.
 
 
 
@@ -342,7 +342,7 @@ Server address is without port, e.g. `connect.2b2t.org` or `192.168.0.5`
 
 ### clientConnection
 
-Manages the connection configuration from ZenithProxy to the destination MC server.
+Manages the connection configuration from AquariusProxy to the destination MC server.
 
 **Usage**
 
@@ -377,7 +377,7 @@ Manages the connection configuration from ZenithProxy to the destination MC serv
 
 ### commandConfig
 
-Configures ZenithProxy command prefixes and settings.
+Configures AquariusProxy command prefixes and settings.
 
 **Usage**
 
@@ -402,7 +402,7 @@ Configures the database module used for https://api.2b2t.vc
 
 
 
-This is disabled by default. No ZenithProxy users contribute or collect data, this is purely for use with my own accounts.
+This is disabled by default. No AquariusProxy users contribute or collect data, this is purely for use with my own accounts.
 
 **Aliases:** `db`
 
@@ -551,7 +551,7 @@ Friends change behavior for various modules like VisualRange, KillAura, and Auto
 
 ### jvmArgs
 
-Configures ZenithProxy's JVM arguments used by the launcher.
+Configures AquariusProxy's JVM arguments used by the launcher.
 
 
 
@@ -575,7 +575,7 @@ You should only need to increase this if the server view distance is > 15.
 
 
 
-Be warned, changing this setting can cause ZenithProxy to be unable to restart. You will need to manually
+Be warned, changing this setting can cause AquariusProxy to be unable to restart. You will need to manually
 
 edit the `launch_config.json` to fix this if that happens.
 
@@ -607,7 +607,7 @@ Kicks all players or a specific player. Only usable by account owners.
 
 
 
-Configures the ZenithProxy plugin manager.
+Configures the AquariusProxy plugin manager.
 
 
 
@@ -662,7 +662,7 @@ The release channel is a combination of a platform (java or linux) and a Minecra
 
 ### server
 
-Change the MC server ZenithProxy connects to.
+Change the MC server AquariusProxy connects to.
 
 **Usage**
 
@@ -673,7 +673,7 @@ Change the MC server ZenithProxy connects to.
 
 ### serverConnection
 
-Configures the MC server hosted by Zenith and players' connections to it
+Configures the MC server hosted by Aquarius and players' connections to it
 
 
 
@@ -681,7 +681,7 @@ The `proxyIP` is the IP players should connect to. This is purely informational.
 
 
 
-The `port` argument changes the port the ZenithProxy MC server listens on
+The `port` argument changes the port the AquariusProxy MC server listens on
 
 
 
@@ -689,7 +689,7 @@ The `port` argument changes the port the ZenithProxy MC server listens on
 
 
 
-The `ping` arguments configure the server list ping response ZenithProxy sends to players.
+The `ping` arguments configure the server list ping response AquariusProxy sends to players.
 
 `onlinePlayers` = MC profiles of players
 
@@ -742,7 +742,7 @@ The `timeout` arguments configures how long until players are kicked due no pack
 
 ### shutdown
 
-Shuts down ZenithProxy, without letting the launcher restart it.
+Shuts down AquariusProxy, without letting the launcher restart it.
 
 **Aliases:** `exit`
 
@@ -786,7 +786,7 @@ Toggles spectators between player and entity cameras. Only usable by spectators
 
 ### terminal
 
-Configures the ZenithProxy interactive terminal.
+Configures the AquariusProxy interactive terminal.
 
 
 
@@ -1174,7 +1174,7 @@ Limits player actions and movements.
 
 
 
-Players who login with the same account as the one used by ZenithProxy will be immune to these restrictions.
+Players who login with the same account as the one used by AquariusProxy will be immune to these restrictions.
 
 
 
@@ -1229,7 +1229,7 @@ Other limits do not disconnect players and instead cancel the actions.
 
 ### activeHours
 
-Set times for ZenithProxy to automatically connect at.
+Set times for AquariusProxy to automatically connect at.
 
 
 
@@ -1355,6 +1355,145 @@ Example: If your coordinates are [500, 800], rangeFactor=10 will cancel if the c
   ```antiLeak rangeCheck on/off```
 
   ```antiLeak rangeFactor <number>```
+
+
+### aquariusminer
+
+AFK quarry miner. Clears one chunk at a time within a Y band, spiralling
+
+outward from where the bot is when enabled. Short alias: .aqm
+
+**Aliases:** `aqm`
+
+**Usage**
+
+  ```aquariusminer on/off```
+
+  ```aquariusminer minY <y>```
+
+  ```aquariusminer maxY <y>```
+
+  ```aquariusminer here <length> <width>  (length forward, width right, from bot pos+facing)```
+
+  ```aquariusminer area unlimited```
+
+  ```aquariusminer area chunks <width> <length>```
+
+  ```aquariusminer area anchor <center/corner>```
+
+  ```aquariusminer area corners <x1> <z1> <x2> <z2>```
+
+  ```aquariusminer keep add <item> | remove <item> | list | clear | reset```
+
+  ```aquariusminer cave on/off```
+
+  ```aquariusminer legit on/off  (break only blocks in line of sight)```
+
+  ```aquariusminer reach <blocks>  (legit reach; lower = closer, better pickup; ~4.5 vanilla)```
+
+  ```aquariusminer sprint on/off  (faster repositioning; off/on to apply)```
+
+  ```aquariusminer fullstacks on/off```
+
+  ```aquariusminer freeslots <n>  (store margin when full-stacks is off)```
+
+  ```aquariusminer dryrun on/off  (log echest shulkers + abort, no pull/store)```
+
+  ```aquariusminer badfood on/off```
+
+  ```aquariusminer autodc on/off```
+
+  ```aquariusminer pauseplayer on/off```
+
+  ```aquariusminer restock on/off```
+
+  ```aquariusminer shovel on/off```
+
+  ```aquariusminer food on/off | food count <n> | food min <n>```
+
+  ```aquariusminer clearbox <size>```
+
+  ```aquariusminer layer <blocks>```
+
+  ```aquariusminer verify on/off | verify retries <n>```
+
+  ```aquariusminer collect on/off | collect seconds <n>```
+
+  ```aquariusminer scan```
+
+  ```aquariusminer sniff on/off | dump | clear | 1s | 3s | 5s | 10s```
+
+  ```aquariusminer sniff live on/off | body on/off | dir in/out/both```
+
+  ```aquariusminer sniff filter <text>/off | template <name>/list/off```
+
+  ```aquariusminer deposit on/off```
+
+  ```aquariusminer deposit chest add <x> <y> <z> | clear```
+
+  ```aquariusminer deposit supply add <x> <y> <z> | clear```
+
+  ```aquariusminer deposit refill on/off | empties <n> | maxdist <blocks>```
+
+
+### regear
+
+Resupply from a kit shulker in an ender chest: place/open the echest, pull the named
+
+kit shulker, empty it, return it, then gear up. One-shot. Short alias: .rg
+
+**Aliases:** `rg`
+
+**Usage**
+
+  ```regear on/off```
+
+  ```regear name <text>  (custom name of the kit shulker)```
+
+  ```regear color <name>/off  (match the kit shulker by colour instead)```
+
+  ```regear scanradius <n>  (fallback: find a placed echest within n blocks)```
+
+  ```regear armor on/off  (equip the kit's armor on finish)```
+
+  ```regear totem on/off  (put a totem in the offhand on finish)```
+
+  ```regear return on/off  (return the emptied shulker to the echest)```
+
+  ```regear pauseplayer on/off```
+
+  ```regear once on/off  (toggle the module off after a successful regear)```
+
+
+### kitmaker
+
+Mass-produce kit shulkers from a template chest + a floor-level chest layout. Reads the
+
+example kit, auto-classifies nearby ground containers, then fills + deposits kits. Alias: .km
+
+**Aliases:** `km`
+
+**Usage**
+
+  ```kitmaker on/off```
+
+  ```kitmaker template <x> <y> <z>  (chest holding the example kit shulker)```
+
+  ```kitmaker scanradius <n>  (container discovery radius, default 20)```
+
+  ```kitmaker floorband <down> <up>  (accept containers feetY-down .. feetY+up; under-floor excluded)```
+
+  ```kitmaker match loose/smart/exact```
+
+  ```kitmaker enchantlevels on/off  (smart match: ignore enchant levels)```
+
+  ```kitmaker maxkits <n>  (0 = until shulkers/materials run out)```
+
+  ```kitmaker pauseplayer on/off```
+
+  ```kitmaker autodc on/off  (disconnect when done)```
+
+  ```kitmaker status  (print the discovered layout)```
 
 
 ### autoArmor
@@ -1747,6 +1886,97 @@ and impact of the offset being discovered.
   ```coordObf validateSetup on/off```
 
 
+### elytrapilot
+
+Autopilot elytra flight. Deploys, steers, fires fireworks, and lands.
+
+Needs an elytra worn + firework rockets in the hotbar. Short alias: .fly
+
+**Aliases:** `fly`
+
+**Usage**
+
+  ```elytrapilot on/off```
+
+  ```elytrapilot to <x> <z>            (fly to coords using the climb/glide profile, then land)```
+
+  ```elytrapilot heading <degrees>     (free-fly a compass bearing until stopped)```
+
+  ```elytrapilot ceiling <y>           (top of the climb — ascend to here on fireworks)```
+
+  ```elytrapilot floor <y>             (bottom of the glide — climb again when you sink to here)```
+
+  ```elytrapilot glidepitch <deg>      (nose-down pitch while gliding; ~+2 = max distance)```
+
+  ```elytrapilot climbpitch <deg>      (nose-up pitch while firework-climbing; ~42 = max height)```
+
+  ```elytrapilot glideratio <r>        (blocks forward per block down when gliding; sets descent lead)```
+
+  ```elytrapilot groundy <y>           (approx ground height at the target, for descent timing)```
+
+  ```elytrapilot boostspeed <v>        (fire a firework when speed drops below v blocks/tick)```
+
+  ```elytrapilot interval <ticks>      (max ticks between fireworks)```
+
+  ```elytrapilot lookahead <blocks>    (terrain avoidance scan distance)```
+
+  ```elytrapilot arrive <blocks>       (how close to the target counts as arrived)```
+
+  ```elytrapilot descend <blocks>      (distance from target to start descending)```
+
+  ```elytrapilot takeoff <on/off>      (on = pulse-jump to deploy; off = assume airborne/ledge)```
+
+  ```elytrapilot swap <on/off>         (auto-swap in a fresh elytra mid-flight when the worn one wears out)```
+
+  ```elytrapilot swapdur <n>           (swap the worn elytra at this remaining durability; max is 432)```
+
+  ```elytrapilot sparedur <n>          (min remaining durability for an inventory elytra to count as a spare)```
+
+  ```elytrapilot clearance <blocks>    (min height above ground before a flight-dropping swap is attempted)```
+
+  ```elytrapilot ebounce <on/off>      (bounce-highway mode: skip along a flat road, no fireworks)```
+
+  ```elytrapilot road <y>              (the flat road's surface Y, for ebounce)```
+
+  ```elytrapilot maxspeed <bps>        (speed cap in blocks/sec; 2b2t limit is 40 — keep ~38)```
+
+  ```elytrapilot highway <dir>         (follow a 2b2t nether highway from 0,0: N/S/E/W/NE/SE/NW/SW; sets ebounce + y120)```
+
+  ```elytrapilot pass <on/off>         (on obstacle: settle + Baritone past it along the axis, then resume bounce)```
+
+  ```elytrapilot passahead <blocks>    (how far along the axis to aim the Baritone bypass)```
+
+  ```elytrapilot reroute <on/off>      (terrain-aware approach: re-route around terrain to a safe landing)```
+
+  ```elytrapilot rerouteangle <deg>    (max heading deviation the re-route may use; up to ~70)```
+
+  ```elytrapilot pathclearance <n>     (vertical clearance the glide path keeps above terrain)```
+
+  ```elytrapilot landsearch <blocks>   (radius to search around the target for a clear landing spot)```
+
+  ```elytrapilot baritoneland <on/off> (walk the last leg with Baritone if covered/indoors/underground)```
+
+  ```elytrapilot climbmargin <n>       (stop boosting this many blocks below the ceiling; saves fireworks)```
+
+  ```elytrapilot landcut <n>           (cut the glide + drop in within this many blocks of the ground)```
+
+  ```elytrapilot trip <x> <z> [y]      (plan a journey: overworld if within ~100k of spawn, else through the nether)```
+
+  ```elytrapilot trip highways <on/off>(nether leg: e-bounce a highway vs fly open-nether straight to the target)```
+
+  ```elytrapilot trip off              (cancel an in-progress trip)```
+
+  ```elytrapilot netherceiling <y>     (hard altitude cap in the nether; never climb above it / into bedrock)```
+
+  ```elytrapilot nethercruise <y>      (preferred open-nether flight altitude; holds ~this Y and dodges in 3D)```
+
+  ```elytrapilot netherpath <on/off>   (3D look-ahead pathfinding in open nether vs pure reactive dodging)```
+
+  ```elytrapilot netherfrontier <slow> <hold>  (blocks of loaded terrain ahead below which to coast / brake — don't outrun 2b2t's slow chunk loading)```
+
+  ```elytrapilot hoppitch <deg>        (climb angle when gliding over an on-road obstacle)```
+
+
 ### extraChat
 
 Extra chat features and modifications.
@@ -1846,7 +2076,7 @@ Aggressive mobs are mobs that are actively targeting and attacking the player.
 
 ### modulePriority
 
-Configures the priority of ZenithProxy modules.
+Configures the priority of AquariusProxy modules.
 
 
 
@@ -1990,6 +2220,45 @@ They should be unobstructed and reachable.
   ```pearlLoader returnToStartPos on/off```
 
 
+### pearlplus
+
+Allow players to load pearls without whitelist through whispers.
+
+**Aliases:** `pp`
+
+**Usage**
+
+  ```pearlplus <on/off>```
+
+  ```pearlplus list```
+
+  ```pearlplus list clear```
+
+  ```pearlplus add <playerName> <pearlId> <x> <y> <z>```
+
+  ```pearlplus del <playerName> <pearlId>```
+
+  ```pearlplus defaultpearlid <word|none>```
+
+  ```pearlplus load <playerName> <pearlId>```
+
+  ```pearlplus returnpos <on/off>```
+
+  ```pearlplus strict <on/off>```
+
+  ```pearlplus autodetect <on/off>```
+
+  ```pearlplus autodetect temp <on/off>```
+
+  ```pearlplus distancecheck <on/off>```
+
+  ```pearlplus autodefault <on/off>```
+
+  ```pearlplus whitelist <on/off / add / clear / list / remove>```
+
+  ```pearlplus droppearlafterload <on/off>```
+
+
 ### rateLimiter
 
 Limits how often players are allowed to attempt logins and send packets.
@@ -2124,7 +2393,7 @@ Switch the connected player to an alternate MC server.
 
 
 
-Can be used to switch between multiple ZenithProxy instances quickly.
+Can be used to switch between multiple AquariusProxy instances quickly.
 
 
 
@@ -2368,9 +2637,9 @@ Configure the integrated ViaVersion module.
 
 
 
-`zenithToServer` -> ZenithProxy connecting to the MC server
+`zenithToServer` -> AquariusProxy connecting to the MC server
 
-`playerToZenith` -> players connecting to ZenithProxy
+`playerToAquarius` -> players connecting to AquariusProxy
 
 **Usage**
 
@@ -2382,7 +2651,44 @@ Configure the integrated ViaVersion module.
 
   ```via zenithToServer version <MC version>```
 
-  ```via playerToZenith on/off```
+  ```via playerToAquarius on/off```
+
+
+### trader
+
+Automatically restocks, trades with villagers, and stores the bought items.
+
+
+
+Multiple trades can be configured, each for different villager professions and items.
+
+
+
+See `set help` for additional commands that modify trade settings, like enchantments, post trade storage modes, and restock amounts.
+
+
+
+`waitForInteractTimeout` -> timeout for server interactions like opening villager trade window
+
+**Usage**
+
+  ```trader on/off```
+
+  ```trader add <id> <profession> <inputItem1> <outputItem> <inputItem1ChestPos> <outputChestPos>```
+
+  ```trader add <id> <profession> <inputItem1> <inputItem2> <outputItem> <inputItem1ChestPos> <inputItem2ChestPos> <outputChestPos>```
+
+  ```trader del <id>```
+
+  ```trader clear```
+
+  ```trader list```
+
+  ```trader set help```
+
+  ```trader waitForInteractTimeout <ticks>```
+
+  ```trader logTradeStatusToDiscord on/off```
 
 
 ### visualRange
