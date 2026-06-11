@@ -2,13 +2,13 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/MC-1.21.4-brightgreen.svg" alt="Minecraft"/>
-  <img src="https://img.shields.io/badge/version-2.1.4-blue.svg" alt="Version"/>
+  <img src="https://img.shields.io/badge/version-2.4.0-blue.svg" alt="Version"/>
   <img src="https://img.shields.io/badge/license-AGPL--3.0-orange.svg" alt="License"/>
 </p>
 
 **AquariusProxy** is a headless Minecraft proxy/bot for [2b2t.org](https://www.2b2t.org/) (works on any server), built as a fork of [ZenithProxy](https://github.com/rfresh2/ZenithProxy) by rfresh2.
 
-It keeps everything ZenithProxy does — an always-online account you can also log into and control in-game, driven remotely from Discord, a terminal, or in-game chat — and adds a fix to the inventory engine plus **four built-in automation modules** baked directly into the proxy (no plugin jars to manage): an AFK quarry miner, a packet sniffer, a stasis-pearl loader, and a villager trader.
+It keeps everything ZenithProxy does — an always-online account you can also log into and control in-game, driven remotely from Discord, a terminal, or in-game chat — and adds a fix to the inventory engine plus **built-in automation modules** baked directly into the proxy (no plugin jars to manage) — including an AFK quarry miner, a packet sniffer, a stasis-pearl loader, a villager trader, and an **anvil auto-enchanter**.
 
 > AquariusProxy implements only the Minecraft network protocol (no rendering/lighting/world-gen). It reads, modifies, cancels, and injects packets in either direction. See the original [ZenithProxy](https://github.com/rfresh2/ZenithProxy) project for the proxy fundamentals and the [2b2t.vc wiki](https://wiki.2b2t.vc) for the full stock command reference.
 
@@ -24,6 +24,11 @@ It keeps everything ZenithProxy does — an always-online account you can also l
   - [AquariusSniffer — packet sniffer](#aquariussniffer--packet-sniffer)
   - [PearlPlus — stasis pearl loader](#pearlplus--stasis-pearl-loader)
   - [VillagerTrader — automatic trading](#villagertrader--automatic-trading)
+  - [PearlDrop — stasis pearl filler](#pearldrop--stasis-pearl-filler)
+  - [KitMaker — kit shulker filler](#kitmaker--kit-shulker-filler)
+  - [Regear — resupply from a kit shulker](#regear--resupply-from-a-kit-shulker)
+  - [ElytraPilot — autopilot elytra flight](#elytrapilot--autopilot-elytra-flight)
+  - [Enchanter — anvil auto-enchanting](#enchanter--anvil-auto-enchanting)
 - [Command reference](#command-reference)
 - [Credits & license](#credits--license)
 
@@ -41,8 +46,13 @@ AquariusProxy is ZenithProxy with the following changes:
 | **+ Module** | **AquariusSniffer** — live/buffered packet capture with scenario templates + substring filters. |
 | **+ Module** | **PearlPlus** — stasis-pearl loader (whisper-to-load), baked in from the PearlPlus 2.0.9 plugin. |
 | **+ Module** | **VillagerTrader** — fully automatic villager buy/sell/restock/store, baked in from the ZenithProxyVillagerTrader 2.0.3 plugin. |
+| **+ Module** | **PearlDrop** — throws ender pearls **into** stasis chambers to stock them (the deposit counterpart to PearlPlus). |
+| **+ Module** | **KitMaker** — mass-produces filled kit shulkers from a template shulker + a floor of supply chests. |
+| **+ Module** | **Regear** — one-shot resupply: pulls a named kit shulker from an ender chest, empties it, and gears up. |
+| **+ Module** | **ElytraPilot** — autopilot elytra flight (climb/glide travel, 2b2t nether-highway bounce, overworld↔nether trip planner). |
+| **+ Module** | **Enchanter** — auto-builds max-template gear in an anvil station: pulls gear, applies a built-in max template via the **cheapest anvil combine order**, funds the XP from a bottle chest, deposits the result. |
 
-All four modules are **native built-ins**: no plugin jars, no separate config files. Every setting lives in the main `config.json` under `client.extra.<module>` and is configured entirely through commands.
+These modules are **native built-ins**: no plugin jars, no separate config files. Every setting lives in the main `config.json` under `client.extra.<module>` and is configured entirely through commands.
 
 Everything from upstream ZenithProxy (AntiAFK, AutoEat, KillAura, AutoTotem, AutoArmor, VisualRange, Spammer, AutoFish, the Discord/terminal/in-game control surfaces, ViaVersion multi-version support, etc.) is still present and unchanged.
 
@@ -241,6 +251,132 @@ See the [command reference](#villagertrader-trader).
 
 ---
 
+### PearlDrop — stasis pearl filler
+
+The **deposit** counterpart to [PearlPlus](#pearlplus--stasis-pearl-loader): instead of pulling a trapped pearl to teleport a player home, PearlDrop **throws pearls into** stasis chambers to stock them. A chamber is a 1×1 water/bubble column with soul sand at the bottom and a trapdoor on top. The bot walks to the rim, sneak-overhangs the opening, aims at the centre of the soul sand, throws a pearl in, and steps back off the ledge.
+
+**What it does**
+- **Scans** loaded chunks for chambers (`.pd scan [radius]`) and lists them with indices + a ready/occupied verdict.
+- **Deposits** by coordinate (`.pd drop <x> <y> <z> [n]` — auto-picks an unoccupied chamber near the coords), by scan index (`.pd pick 1 3 4`), or into every empty chamber from the last scan (`.pd all`).
+- Configurable pearls-per-chamber, throw spacing, aim eye-height, and minimum water depth. Exposes a service API so other automation (e.g. a stash-mover) can drive deposits.
+
+**Setup guide**
+1. Build your stasis chambers (water column at least the minimum depth, soul sand bottom, trapdoor top) and give the bot a supply of ender pearls.
+2. Stand near them and `.pd scan` to list them.
+3. `.pd all` to fill every empty one, or `.pd pick <indices>` / `.pd drop <x> <y> <z>` for specific chambers.
+
+See the [command reference](#pearldrop-pd).
+
+---
+
+### KitMaker — kit shulker filler
+
+Mass-produces filled "kit" shulkers from a template. Point it at one example kit shulker and it reproduces that exact kit — same items, counts, and slots — over and over, pulling empties and depositing finished kits until it runs out of shulkers or materials.
+
+**What it does**
+- Reads a **template** kit shulker from a designated chest (exact item + count per slot, so partial/aesthetic stacks are preserved).
+- Auto-discovers the floor-level containers around it within a radius and classifies them: a chest of empty shulkers (the source), an empty chest (the finished-kit deposit), and the rest as item sources.
+- Loops: pull an empty shulker → gather the kit's items → place + fill the shulker to match the template → break + collect it → deposit it.
+- Match strictness is configurable (Loose = item type only, Smart = ignore cosmetic name/lore/durability, Exact = identical components). Block-breaking is forbidden except during the shulker-harvest step, so it never digs the floor while pathing between chests.
+
+**Setup guide**
+1. Build a floor of chests within the scan radius: one holding the example **template** shulker, one of **empty shulkers**, an **empty** chest for finished kits, and chests holding the kit's **materials**.
+2. Set the template chest: `.km template <x> <y> <z>`.
+3. Stand on the floor, set the radius (`.km scanradius <n>`), then `.km on`. Review with `.km status`.
+
+See the [command reference](#kitmaker-km).
+
+---
+
+### Regear — resupply from a kit shulker
+
+A one-shot resupply: place an ender chest, pull a named **kit shulker** out of it, empty the kit into your inventory, return the empty shulker, optionally equip the armor and offhand a totem — then turn itself off. For topping a combat/travel bot back up to a full loadout from an ender-chest-stored kit.
+
+**What it does**
+- Places + opens an ender chest (or finds a placed one within a fallback radius), pulls the kit shulker matched **by custom name** or **by colour**, empties it, returns the empty shulker, and gears up.
+- Optional: equip the kit's armor, offhand a totem, return the emptied shulker, pause when a player is near, and disable-when-done (default on — it's a one-shot).
+
+**Setup guide**
+1. Stock an ender chest with a kit shulker (a unique custom name or colour) containing your loadout, plus ender chests to place.
+2. Tell Regear how to find it: `.rg name <text>` or `.rg color <colour>`.
+3. `.rg armor on` / `.rg totem on` if it should equip + offhand, then `.rg on` to run it once.
+
+See the [command reference](#regear-rg).
+
+---
+
+### ElytraPilot — autopilot elytra flight
+
+Autonomous elytra flight: deploys, steers, fires fireworks, avoids terrain, and lands — including 2b2t **nether-highway** travel and a **trip planner** that routes overworld↔nether for long hauls. Needs an elytra worn and firework rockets in the hotbar.
+
+**What it does**
+- **Point-to-point** (`.fly to <x> <z>`): flies an efficient **climb/glide** profile — firework-climb to a ceiling, then glide with no fireworks down to a floor, repeat — so most of the trip is free glide. Terrain-aware descent + landing (re-routes around flight-level walls, hands the last covered/indoor leg to Baritone).
+- **Bounce-highway** (`.fly ebounce on`, or `.fly highway <dir>`): the no-firework "bounce" technique along a flat road or a 2b2t nether highway from 0,0 (N/S/E/W + diagonals).
+- **Trip planner** (`.fly trip <x> <z>`): overworld-direct within ~100k of spawn, otherwise enters the nether, flies the nether leg (open-nether 3D look-ahead pathfinding or a highway e-bounce), and exits near the target.
+- **Elytra swap** mid-flight when the worn elytra wears out, a **chunk-loading governor** so it won't outrun 2b2t's slow chunk streaming, and a **2b2t speed cap** (~40 b/s).
+
+> ElytraPilot is the newest and most experimental module. Flight basics (takeoff/cruise/descent/landing) and bounce-highways are validated; the nether trip planner is a first cut. Test over open ground before relying on it for a long haul.
+
+**Setup guide**
+1. Wear an elytra and put a stack (or several) of firework rockets in the hotbar; optionally a spare elytra in the inventory with `.fly swap on`.
+2. Short hop: `.fly to <x> <z>` over open ground.
+3. Long haul: `.fly trip <x> <z> [y]` (handles the nether routing), or `.fly highway <dir>` then `.fly on` to ride a nether highway.
+
+See the [command reference](#elytrapilot-fly).
+
+---
+
+### Enchanter — anvil auto-enchanting
+
+Auto-builds fully-enchanted "max template" gear in a dedicated anvil station. Stock chests with un-enchanted gear and pre-made enchanted books, and the bot turns them into god gear one piece at a time — in the **cheapest possible anvil order**, funding the XP cost itself from a chest of bottles.
+
+**What it does**
+- **Pull → enchant → deposit:** pulls a base item from the input chest, applies the built-in **max template** for its type, deposits the finished piece into the output chest, and loops until the input runs out.
+- **Cheapest anvil order:** Minecraft's anvil cost is order-dependent — every item carries a "prior work penalty" that doubles each use, and any single combine costing **40+ levels is blocked** ("Too Expensive!"). The Enchanter runs an exact search over all binary combine-trees to find the minimum-XP order that keeps every step under the cap, merging books into intermediates first so the gear's penalty stays low. (A god sword is ~72 levels done optimally vs ~171 naively — which would hit "Too Expensive!".)
+- **XP-bottle charging:** the anvil charges *levels*, and high levels cost disproportionately more XP, so the bot tops up a small buffer right before each step instead of banking the whole run up front — using **~2–7× fewer bottles**. It throws bottles from a chest at its own feet and collects the orbs, reading its live XP level to know when it has enough.
+- **Gravity-fed anvil pillar:** anvils shatter with use. Stack a **pillar of anvils** over the work spot; when the bottom one breaks the next falls into place — the bot detects the gap, waits for the replacement to settle, and continues.
+- **Auto-discovered layout:** finds the anvil + all chests within 32 blocks and classifies them by content — no coordinates to type.
+
+**Built-in templates** (one max loadout per gear family, with mutually-exclusive *variant* picks you choose):
+
+| Family | Always applied | Variant groups (default first) |
+| --- | --- | --- |
+| sword | unbreaking 3, mending, looting 3, fire_aspect 2, knockback 2, sweeping_edge 3 | `sword_damage`: sharpness \| smite \| bane_of_arthropods |
+| pickaxe / shovel / hoe | efficiency 5, unbreaking 3, mending | `tool_yield`: fortune \| silk_touch |
+| axe | efficiency 5, unbreaking 3, mending | `axe_yield`: fortune \| silk_touch · `axe_damage`: sharpness \| smite \| bane_of_arthropods |
+| helmet | unbreaking 3, mending, respiration 3, aqua_affinity, thorns 3 | `armor_protection`: protection \| blast \| fire \| projectile |
+| chestplate | unbreaking 3, mending, thorns 3 | `armor_protection` |
+| leggings | unbreaking 3, mending, thorns 3, swift_sneak 3 | `armor_protection` |
+| boots | unbreaking 3, mending, thorns 3, feather_falling 4, soul_speed 3 | `armor_protection` · `boots_walk`: depth_strider \| frost_walker |
+| bow | power 5, unbreaking 3, flame, punch 2 | `bow_special`: infinity \| mending |
+| crossbow | quick_charge 3, unbreaking 3, mending | `crossbow_special`: multishot \| piercing |
+| trident | unbreaking 3, mending, impaling 5 | `trident_style`: throw (loyalty 3 + channeling) \| riptide 3 |
+| mace | unbreaking 3, mending, wind_burst 3 | `mace_impact`: density \| breach |
+| fishing_rod | unbreaking 3, mending, lure 3, luck_of_the_sea 3 | — |
+| elytra / shield | unbreaking 3, mending | — |
+
+Run `.enc templates` to print the resolved sets under your current variant picks, plus the estimated **levels and bottles** each one costs.
+
+**Setup guide**
+1. Build a **station** within a 32-block radius of where the bot stands:
+   - a **pillar of anvils** over the work spot (so a fresh anvil drops when one shatters);
+   - a chest of **un-enchanted gear** (the input);
+   - one or more chests/barrels of **pre-made single-enchant books** (the book source — double chests are fine);
+   - a chest of **XP bottles** (a near-unlimited / hopper-fed supply is ideal);
+   - an **empty** chest for the finished gear (the output).
+2. (Optional) choose variants: `.enc variant sword_damage smite`, `.enc variant tool_yield silk_touch`, … (`.enc templates` lists every group + option).
+3. Stand the bot in the station and `.enc scan` — it reports which roles it found (anvil / input / books / xp-chest / output). Fix anything that reads `false`.
+4. `.enc on`. Stop with `.enc off`; watch progress with `.enc status`.
+
+**Notes & limits**
+- Books must be **single-enchant** books (one enchantment each — the usual villager/loot book). Pair it with **VillagerTrader** to mass-produce them.
+- The input gear must be a known type from the table above; anything else is left in the input chest.
+- If XP charging is off (`.enc xp off`), keep the bot's level topped up another way — it pauses if a combine costs more levels than it has.
+
+See the [command reference](#enchanter-enc).
+
+---
+
 ## Command reference
 
 > Prefix: none in the terminal, `.` in Discord/in-game (configurable). Aliases shown in parentheses.
@@ -322,6 +458,90 @@ See the [command reference](#villagertrader-trader).
 .pp whitelist on/off | add | remove | clear | list
 .pp droppearlafterload on/off
 ```
+
+### PearlDrop (`pd`)
+
+```
+.pearldrop on/off
+.pd scan [radius]                 # find chambers in loaded chunks; lists them with indices
+.pd list                          # reprint the last scan
+.pd drop <x> <y> <z> [n]          # deposit into the chamber near these coords (auto-picks an empty one)
+.pd pick <indices>                # deposit into scanned chambers by index (e.g. pick 1 3 4)
+.pd all                           # deposit into every empty chamber from the last scan
+.pd count <n>                     # pearls to deposit per chamber
+.pd stop                          # cancel the current run
+.pd depth <n> | radius <n> | yrange <n> | tolerance <n>    # chamber detection / scan range
+.pd spacing <ticks> | eyeheight <d> | priority <n>         # throw timing / aim
+.pd closetrapdoor on/off          # shut an open trapdoor before depositing
+```
+
+### KitMaker (`km`)
+
+```
+.kitmaker on/off
+.km template <x> <y> <z>          # chest holding the example kit shulker
+.km scanradius <n>                # container discovery radius (default 20)
+.km floorband <down> <up>         # accept containers feetY-down .. feetY+up
+.km match loose/smart/exact
+.km enchantlevels on/off          # smart match: ignore enchant levels
+.km maxkits <n>                   # 0 = until shulkers/materials run out
+.km pauseplayer on/off
+.km autodc on/off                 # disconnect when done
+.km status                        # print the discovered layout
+```
+
+### Regear (`rg`)
+
+```
+.regear on/off
+.rg name <text>                   # match the kit shulker by custom name
+.rg color <name>/off              # ...or by colour instead
+.rg scanradius <n>                # fallback: find a placed echest within n blocks
+.rg armor on/off                  # equip the kit's armor on finish
+.rg totem on/off                  # offhand a totem on finish
+.rg return on/off                 # return the emptied shulker to the echest
+.rg pauseplayer on/off
+.rg once on/off                   # toggle off after a successful regear
+```
+
+### ElytraPilot (`fly`)
+
+```
+.elytrapilot on/off
+.fly to <x> <z>                   # fly to coords (climb/glide), then land
+.fly heading <degrees>            # free-fly a compass bearing until stopped
+.fly trip <x> <z> [y]             # plan a journey (overworld, or routed through the nether)
+.fly trip highways on/off         # nether leg: e-bounce a highway vs fly open-nether straight
+.fly trip off                     # cancel an in-progress trip
+.fly highway <N/S/E/W/NE/SE/NW/SW>  # follow a 2b2t nether highway from 0,0
+.fly ebounce on/off | road <y> | maxspeed <bps>           # no-firework bounce-highway
+.fly ceiling <y> | floor <y> | glidepitch <deg> | climbpitch <deg>   # climb/glide profile
+.fly swap on/off | swapdur <n> | sparedur <n>             # mid-flight elytra swap
+.fly nethercruise <y> | netherceiling <y> | netherpath on/off | netherfrontier <slow> <hold>
+# plus fine-tuning knobs (run `.fly` for the full list): boostspeed, interval, lookahead,
+#   arrive, descend, glideratio, groundy, takeoff, reroute, landsearch, baritoneland, ...
+```
+
+### Enchanter (`enc`)
+
+```
+.enchanter on/off
+.enc scan                         # auto-discover the station (anvil + chests) within range
+.enc radius <n>                   # discovery radius in blocks (max 32)
+.enc band <down> <up>             # Y range to scan, relative to the bot's feet (default 3/3)
+.enc variant <group> <choice>     # pick a template variant, e.g. sword_damage smite
+.enc templates                    # print resolved templates + estimated levels/bottles
+.enc max <n>                      # stop after n items (0 = until the input chest is empty)
+.enc xp on/off                    # throw XP bottles from the bottle chest to fund the anvil
+.enc xpbuffer <levels>            # top up to (step cost + this) before each step
+.enc xpreserve <n>                # bottles to keep carried
+.enc pace <action> <settle> <fill> <anvil>   # tick delays (raise on a laggy server)
+.enc pauseplayer on/off           # pause when a player is near
+.enc autodc on/off                # auto-disconnect when the input is empty
+.enc status                       # print the discovered layout + progress
+```
+
+Variant groups: `sword_damage` (sharpness/smite/bane_of_arthropods), `tool_yield` & `axe_yield` (fortune/silk_touch), `axe_damage` (sharpness/smite/bane_of_arthropods), `armor_protection` (protection/blast_protection/fire_protection/projectile_protection), `boots_walk` (depth_strider/frost_walker), `bow_special` (infinity/mending), `crossbow_special` (multishot/piercing), `trident_style` (throw/riptide), `mace_impact` (density/breach).
 
 ### Stock ZenithProxy commands
 
