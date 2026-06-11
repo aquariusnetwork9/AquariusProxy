@@ -171,9 +171,57 @@ public final class Config {
             public int tpsBufferSize = 20;
             public final Tasks tasks = new Tasks();
             public final AquariusMiner aquariusMiner = new AquariusMiner();
+            public final Regear regear = new Regear();
+            public final KitMaker kitMaker = new KitMaker();
             public final ElytraPilot elytraPilot = new ElytraPilot();
             public final PearlPlus pearlPlus = new PearlPlus();
             public final VillagerTrader villagerTrader = new VillagerTrader();
+            public final PearlDrop pearlDrop = new PearlDrop();
+
+            /**
+             * PearlDrop — the DEPOSIT side of pearl stasis (the counterpart to {@link PearlPlus}, which pulls).
+             * The bot walks to a pearl stasis chamber (a 1x1 water/bubble column >= {@link PearlDrop#minWaterDepth}
+             * deep with soul sand at the bottom and a trapdoor on top), sneak-overhangs the rim, aims at the centre
+             * of the soul-sand block and throws a pearl into the column, then backs away. Can scan loaded chunks
+             * for chambers and is driven by other modules (e.g. a stash-mover) via {@code MODULE.get(PearlDrop.class)}.
+             * Read everywhere via {@code CONFIG.client.extra.pearlDrop.*}.
+             */
+            public static class PearlDrop {
+                /** Whether the module is enabled on startup. */
+                public boolean enabled = false;
+                /** Minimum water/bubble-column depth (inclusive of a waterlogged-trapdoor top cell) to count as a chamber. */
+                public int minWaterDepth = 5;
+                /** Horizontal radius (blocks) of a {@code scan}. Bounds cost — only loaded chunks are read. */
+                public int scanRadius = 48;
+                /** Vertical half-range (blocks, +/- the bot's Y) scanned for soul-sand anchors. Bounds cost. */
+                public int scanYRange = 24;
+                /** Default number of pearls to deposit per chamber. */
+                public int pearlsPerChamber = 1;
+                /** Search radius (blocks) around the coords given to a targeted deposit when locating a chamber. */
+                public int coordTolerance = 2;
+                /** If the chamber's trapdoor is open on arrival, right-click it shut first so the pearl is held. */
+                public boolean closeOpenTrapdoor = true;
+                /** Eye height (blocks above feet) used to compute the look angle; ~1.27 while sneaking. */
+                public double eyeHeight = 1.27;
+                /** Input priority for the manual sneak/aim/throw inputs (must beat Baritone's). */
+                public int inputPriority = 5000;
+                /** Ticks of near-zero movement at the ledge before the bot is considered centred + ready to throw. */
+                public int centerStallTicks = 6;
+                /** Ticks between consecutive pearl throws into the same chamber (clears the ~1s ender-pearl cooldown). */
+                public int throwSpacingTicks = 25;
+                /** Ticks to wait for a thrown pearl to leave the inventory before retrying the click. */
+                public int throwTimeoutTicks = 40;
+                /** Max click retries per pearl before giving up on a chamber. */
+                public int maxThrowRetries = 3;
+                /** Horizontal distance (blocks) from the column centre that counts as safely backed onto the rim. */
+                public double retreatDistance = 1.0;
+                /** Timeout (ticks) for pathing to the rim. */
+                public int pathTimeoutTicks = 200;
+                /** Timeout (ticks) for the sneak-overhang approach. */
+                public int approachTimeoutTicks = 120;
+                /** Timeout (ticks) for the retreat. */
+                public int retreatTimeoutTicks = 80;
+            }
 
             /**
              * PearlPlus — stasis-pearl loader baked in from the PearlPlus 2.0.9 plugin (by duccss / steve2b2t).
@@ -951,6 +999,113 @@ public final class Config {
 
                 /** Take food from the shulker until the carried (safe) food reaches this count (or the shulker empties). */
                 public int foodRestockCount = 64;
+            }
+
+            /**
+             * Regear — resupply the bot from a pre-stocked "kit" shulker held in an ender chest. Places the
+             * bot's own carried ender chest (ender chests share one global inventory), or falls back to walking
+             * to a nearby placed ender chest if none is carried, pulls the named kit shulker, places + opens it,
+             * empties it into the inventory, recovers the shulker back into the ender chest, then gears up
+             * (armor + offhand totem). Read everywhere via {@code CONFIG.client.extra.regear.*}. See {@code .regear}.
+             */
+            public static class Regear {
+                /** Whether the module is enabled on startup. Regear is a one-shot: it runs a single cycle when enabled. */
+                public boolean enabled = false;
+
+                /** Custom (anvil) name identifying the kit shulker inside the ender chest. Case-insensitive contains-match. */
+                public String kitShulkerName = "regear";
+
+                /** Match the kit shulker by colour (e.g. "red", "lime") instead of by {@link #kitShulkerName}. */
+                public boolean matchByColor = false;
+
+                /** Shulker colour to match when {@link #matchByColor} is on (the dye-colour prefix of the shulker name). */
+                public String kitShulkerColor = "";
+
+                /** Fallback only: when no ender chest is carried to place, scan this radius (blocks) for a placed one. */
+                public int echestScanRadius = 48;
+
+                /** After emptying the kit, equip the best matching armour piece into each empty armour slot. */
+                public boolean equipArmor = true;
+
+                /** After emptying the kit, move a totem of undying into the offhand (if one was in the kit). */
+                public boolean offhandTotem = true;
+
+                /** Put the emptied shulker back into the ender chest buffer (vs. leaving it carried). */
+                public boolean returnShulker = true;
+
+                /** Soft-pause the cycle while a non-self player is within {@link #playerPauseRange} blocks. */
+                public boolean pauseOnPlayer = true;
+                public double playerPauseRange = 48.0;
+
+                /** One-shot: toggle the module off after a successful regear (vs. staying enabled / idle). */
+                public boolean disableWhenDone = true;
+
+                /** Ticks to wait after a rotation-driven action (place/open/break) before reading the result (2b settle). */
+                public int settleTicks = 8;
+
+                /** Ticks between paced inventory clicks while emptying the kit / returning the shulker. */
+                public int actionDelayTicks = 3;
+
+                /** Per-step timeout (ticks) before a stuck phase is retried / the cycle aborts. */
+                public int stepTimeoutTicks = 200;
+            }
+
+            /**
+             * Kit Maker — mass-produce filled kit shulkers from a template + a floor-level chest layout. Reads an
+             * example kit shulker from a designated template chest, auto-discovers the surrounding ground-level
+             * containers (within {@link #scanRadius}) and classifies them by content (empty-shulker source, kit-item
+             * sources, finished-kit deposit), then loops: pull an empty shulker, gather the template's exact items
+             * (stack-count aware), fill a placed shulker to match, break + collect it, deposit it. Block-breaking is
+             * forbidden except during the harvest (break) phase. Via {@code CONFIG.client.extra.kitMaker.*}; see {@code .km}.
+             */
+            public static class KitMaker {
+                /** How strictly a source/cursor item must match a template slot. */
+                public enum MatchMode { Loose, Smart, Exact }
+
+                /** Whether the module is enabled on startup. */
+                public boolean enabled = false;
+
+                /** Designated template chest holding the example kit shulker (block coords). */
+                public int templateChestX = 0;
+                public int templateChestY = 0;
+                public int templateChestZ = 0;
+
+                /** Horizontal radius (blocks) within which floor-level containers are discovered + classified. */
+                public int scanRadius = 20;
+
+                /** Accept containers with Y in [feetY - floorBandDown, feetY + floorBandUp]; reject anything lower
+                 *  (under-floor / hopper-fed source chests are NOT counted). */
+                public int floorBandDown = 1;
+                public int floorBandUp = 1;
+
+                /** Item-match strictness. Smart ignores cosmetic name/lore/durability; Exact requires identical
+                 *  components; Loose requires only the same item type. */
+                public MatchMode matchMode = MatchMode.Smart;
+
+                /** Under Smart matching, treat enchantments of different levels as equal (only the enchant TYPE matters). */
+                public boolean ignoreEnchantLevels = true;
+
+                /** Stop after this many kits. 0 = run until empty shulkers or materials run out. */
+                public int maxKits = 0;
+
+                /** Disconnect from the server when the run completes (clean AFK finish). */
+                public boolean autoDisconnect = false;
+
+                /** Soft-pause while a non-self player is within {@link #playerPauseRange} blocks. */
+                public boolean pauseOnPlayer = true;
+                public double playerPauseRange = 48.0;
+
+                /** Ticks to wait after a rotation-driven action (place/open/break) before reading the result. */
+                public int settleTicks = 8;
+
+                /** Ticks between world actions (open container, place). */
+                public int actionDelayTicks = 5;
+
+                /** Ticks between in-window slot clicks (gathering / filling / depositing) — lower-risk than world actions. */
+                public int fillDelayTicks = 2;
+
+                /** Ticks to wait after a place before reading the WORLD to confirm the shulker really landed. */
+                public int placeVerifyTicks = 10;
             }
 
             public static final class Waypoints {
