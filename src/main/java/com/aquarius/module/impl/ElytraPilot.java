@@ -404,12 +404,17 @@ public class ElytraPilot extends Module {
         }
     }
 
-    /** (Re)start the net-progress stall watchdog from the current position — call on each entry into cruise. */
+    /**
+     * (Re)start the net-progress stall watchdog from the current position — call on each entry into cruise.
+     * Starts with a grace period: a fresh takeoff spends its first seconds deploying + climbing with little
+     * horizontal travel, and checking the first window immediately put the bot in a walkout->takeoff->walkout
+     * loop (live: "stuck (10b net in 3s)" fired at y112 — it was CLIMBING, not stalled).
+     */
     private void anchorStallWatch() {
         var pc = CACHE.getPlayerCache();
         stallAnchorX = pc.getX();
         stallAnchorZ = pc.getZ();
-        stallWindowTicks = 0;
+        stallWindowTicks = -2 * STALL_WINDOW_TICKS;   // ~6s grace before the first 3s window is judged
     }
 
     private void tickCruise(double x, double y, double z, double speed) {
@@ -709,8 +714,10 @@ public class ElytraPilot extends Module {
                     netherPathIsNative = true;
                     nativeRouteFinished = r.finished();
                     nativeFailLogged = false;
-                    info("Native route: {} waypoints{} ({} observed chunks fed)", r.points().size(),
-                        r.finished() ? "" : " (partial — will extend)", NetherRouter.INSTANCE.fedChunkCount());
+                    info("Native route: {} waypoints{} ({} observed chunks fed{})", r.points().size(),
+                        r.finished() ? "" : " (partial — will extend)", NetherRouter.INSTANCE.fedChunkCount(),
+                        NetherRouter.INSTANCE.feedErrorCount() > 0
+                            ? ", " + NetherRouter.INSTANCE.feedErrorCount() + " feed errors" : "");
                 } else if (!nativeFailLogged) {
                     nativeFailLogged = true;
                     warn("Native routing returned no route — using the local planner");

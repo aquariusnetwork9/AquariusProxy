@@ -47,6 +47,7 @@ public final class NetherRouter {
     private long context;
     private long contextSeed;
     private final LongSet fedChunks = new LongOpenHashSet();
+    private int feedErrors;
 
     private NetherRouter() {}
 
@@ -90,7 +91,11 @@ public final class NetherRouter {
             try {
                 ensureContext(seed);
                 if (World.getChunk(chunkX, chunkZ) == null) return;
-                final boolean[] data = new boolean[MAX_HEIGHT * 256]; // index = y<<8 | z<<4 | x (lib convention)
+                // The native lib REQUIRES a full 16*16*256 column regardless of the context's maxHeight —
+                // a 128-high array throws IllegalArgumentException. That exception was silently swallowed
+                // here for six releases: every insert failed and the router flew on pure seed generation
+                // ("0 observed chunks fed"), blind to all player-modified terrain. y 128..255 stays air.
+                final boolean[] data = new boolean[16 * 16 * 256];   // index = y<<8 | z<<4 | x (lib convention)
                 final int bx0 = chunkX << 4, bz0 = chunkZ << 4;
                 for (int y = 0; y < MAX_HEIGHT; y++) {
                     for (int z = 0; z < 16; z++) {
@@ -103,10 +108,18 @@ public final class NetherRouter {
                 }
                 NetherPathfinder.insertChunkData(context, chunkX, chunkZ, data);
                 fedChunks.add(((long) chunkX << 32) | (chunkZ & 0xFFFFFFFFL));
-            } catch (final Throwable ignored) {
-                // a single bad chunk must never take the router down; the generated terrain covers the gap
+            } catch (final Throwable t) {
+                // a single bad chunk must never take the router down — but never fail SILENTLY again either
+                if (feedErrors++ == 0) {
+                    com.aquarius.Globals.MODULE_LOG.warn("[NetherRouter] chunk feed failed (logging first only): {}", t.toString());
+                }
             }
         });
+    }
+
+    /** Feed failures since startup (first one is logged; the rest just count). */
+    public int feedErrorCount() {
+        return feedErrors;
     }
 
     /** Chunks fed since the context was created (router-thread counter; approximate is fine for diagnostics). */
