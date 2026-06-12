@@ -55,7 +55,7 @@ import static com.aquarius.Globals.INVENTORY;
  */
 public class ElytraPilot extends Module {
 
-    private enum Phase { IDLE, TAKEOFF, CRUISE, BOUNCE, HOP, PASS, SWAP, DESCEND, LAND, LANDWALK, EMERGENCY, DONE }
+    private enum Phase { IDLE, TAKEOFF, CRUISE, BOUNCE, HOP, PASS, SWAP, DESCEND, LAND, LANDWALK, WALKOUT, EMERGENCY, DONE }
 
     private static final int CHESTPLATE_SLOT = 6;          // container 0: 5=helm,6=chest,7=legs,8=boots
     private static final int TAKEOFF_TIMEOUT_TICKS = 200;  // ~10s to get airborne + deployed
@@ -68,7 +68,11 @@ public class ElytraPilot extends Module {
     private static final int HOP_MIN_TICKS = 6;             // commit to a hop for at least this long so we clear the block
     private static final int EPISODE_DECAY_TICKS = 300;     // ~15s of healthy flight resets the lost-flight episode count
     private static final int PIN_WARN_TICKS = 100;           // ~5s of no cruise progress -> warn (likely pinned on terrain)
-    private static final int PIN_ABORT_TICKS = 300;          // ~15s of no cruise progress -> abort (alert the operator)
+    private static final int PIN_ABORT_TICKS = 300;          // ~15s of no cruise progress -> walk out / abort
+    private static final int WALKOUT_LEG_BLOCKS = 48;        // Baritone walk distance per walk-out leg, toward the target
+    private static final int WALKOUT_OPEN_SKY = 20;          // blocks of clear air overhead = enough room to fly again
+    private static final int WALKOUT_TIMEOUT_TICKS = 1200;   // ~60s per walk-out leg
+    private static final int MAX_WALKOUT_ATTEMPTS = 4;
     private static final float HIGHWAY_FRONTIER_FACTOR = 0.7f; // highways sit in previously-loaded, oft-reloaded chunks -> loading ~30% less of a problem; gentler governor than open nether
     private static final int[][] NEIGHBORS = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
@@ -112,6 +116,8 @@ public class ElytraPilot extends Module {
     private float spiralYaw;
     private float landSpinYaw;         // helicopter-landing yaw spin
     private int pinTicks;              // consecutive cruise ticks at near-zero speed (wall-pin watchdog)
+    private int walkoutTicks;          // ticks in the current walk-out leg
+    private int walkoutAttempts;
 
     @Override
     public boolean enabledSetting() {
@@ -215,6 +221,8 @@ public class ElytraPilot extends Module {
         lostLogged = false;
         spiraling = false;
         pinTicks = 0;
+        walkoutTicks = 0;
+        walkoutAttempts = 0;
     }
 
     /** Apply the firework-spacing cap: a rocket thrusts ~20 ticks, so re-firing sooner is pure waste. */
@@ -259,6 +267,7 @@ public class ElytraPilot extends Module {
                     case DESCEND   -> tickDescend(x, y, z, speed);
                     case LAND      -> tickLand(x, y, z, speed);
                     case LANDWALK  -> tickLandWalk(x, y, z);
+                    case WALKOUT   -> tickWalkout(x, y, z);
                     case EMERGENCY -> tickEmergency(x, y, z);
                     default        -> { }
                 }
@@ -294,8 +303,16 @@ public class ElytraPilot extends Module {
             jump = true;                // assume already airborne (ledge/tower) — just deploy
         }
         submitInput(jump, false, CACHE.getPlayerCache().getYaw(), 0f);
-        if (++takeoffTicks > TAKEOFF_TIMEOUT_TICKS)
-            abort("could not take off (need open sky above + a worn elytra)");
+        if (++takeoffTicks > TAKEOFF_TIMEOUT_TICKS) {
+            // No headroom here (pocket/overhang)? Walk toward open ground and retry before giving up —
+            // but only if an elytra is actually worn (walking can't fix a missing elytra).
+            if (cfg.hasTarget && isElytra(chestplate()) && walkoutAttempts < MAX_WALKOUT_ATTEMPTS) {
+                takeoffTicks = 0;
+                enterWalkout("could not take off here");
+            } else {
+                abort("could not take off (need open sky above + a worn elytra)");
+            }
+        }
     }
 
     private void tickCruise(double x, double y, double z, double speed) {
@@ -334,7 +351,11 @@ public class ElytraPilot extends Module {
                 if (pinTicks == PIN_WARN_TICKS)
                     warn("No cruise progress at {}, {}, {} — likely pinned on terrain", (int) x, (int) y, (int) z);
                 if (pinTicks > PIN_ABORT_TICKS) {
-                    abort("pinned against terrain at " + (int) x + ", " + (int) y + ", " + (int) z);
+                    pinTicks = 0;
+                    if (walkoutAttempts < MAX_WALKOUT_ATTEMPTS)
+                        enterWalkout("pinned against terrain at " + (int) x + ", " + (int) y + ", " + (int) z);
+                    else
+                        abort("pinned against terrain at " + (int) x + ", " + (int) y + ", " + (int) z);
                     return;
                 }
             } else {
@@ -861,6 +882,63 @@ public class ElytraPilot extends Module {
     }
 
     /**
+     * Walk-out recovery: flying is not working HERE (terrain pocket, overhang, pin), so do what a human does —
+     * settle, let Baritone ground-path toward the target, and take off again once there's open sky overhead.
+     * Bounded legs and attempts; aborts when walking out repeatedly fails too.
+     */
+    private void enterWalkout(String why) {
+        phase = Phase.WALKOUT;
+        baritoneStarted = false;
+        walkoutTicks = 0;
+        spiraling = false;
+        BARITONE.stop();
+        inGameAlertActivePlayer("<yellow>ElytraPilot: " + why + " — walking toward open ground to retry");
+        warn("{} — walking out (attempt {}/{})", why, walkoutAttempts + 1, MAX_WALKOUT_ATTEMPTS);
+    }
+
+    private void tickWalkout(double x, double y, double z) {
+        if (!baritoneStarted) {
+            double[] u = unitToTarget(x, z);
+            int wx = MathHelper.floorI(x + u[0] * WALKOUT_LEG_BLOCKS);
+            int wz = MathHelper.floorI(z + u[1] * WALKOUT_LEG_BLOCKS);
+            BARITONE.pathTo(new GoalNear(wx, MathHelper.floorI(y), wz, 12));
+            baritoneStarted = true;
+            walkoutTicks = 0;
+            return;
+        }
+        walkoutTicks++;
+        // Baritone is driving — no flight inputs. Once the sky opens up, hand back to a fresh takeoff.
+        if (walkoutTicks > 20 && !BOT.isFallFlying() && clearAboveCount(x, y, z) >= WALKOUT_OPEN_SKY) {
+            BARITONE.stop();
+            info("Walked clear (open sky above at {}, {}, {}) — taking off again", (int) x, (int) y, (int) z);
+            lostEpisodes = 0;
+            lostFlightTicks = 0;
+            lostLogged = false;
+            healthyTicks = 0;
+            pinTicks = 0;
+            takeoffTicks = 0;
+            jumpToggle = false;
+            baritoneStarted = false;
+            phase = Phase.TAKEOFF;
+            return;
+        }
+        if (!BARITONE.isActive() || walkoutTicks > WALKOUT_TIMEOUT_TICKS) {
+            baritoneStarted = false;  // leg ended without open sky — walk another leg further along
+            if (++walkoutAttempts >= MAX_WALKOUT_ATTEMPTS)
+                abort("could not walk clear of the terrain (after " + walkoutAttempts + " walk-out legs)");
+        }
+    }
+
+    /** Unit XZ direction from here toward the configured target. */
+    private double[] unitToTarget(double x, double z) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        double dx = cfg.targetX - x, dz = cfg.targetZ - z;
+        double len = Math.hypot(dx, dz);
+        if (len < 1) return new double[]{ 0, 1 };
+        return new double[]{ dx / len, dz / len };
+    }
+
+    /**
      * Steering yaw toward the target/heading, re-routed around terrain at flight level. When the direct line is
      * blocked, fan candidate headings out to ±maxRerouteDeg and take the smallest deviation that's clear (or the
      * clearest if none is fully open). Throttled to every PROBE_INTERVAL ticks for a smooth, cheap turn.
@@ -1032,8 +1110,14 @@ public class ElytraPilot extends Module {
         if (!lostLogged) {
             lostLogged = true;
             if (++lostEpisodes > cfg.maxGroundRecoveries) {
-                abort("kept losing flight (" + lostEpisodes + " episodes in quick succession) — aborting at "
-                    + (int) x + ", " + (int) y + ", " + (int) z);
+                // Rapid-fire flight loss = this spot is unflyable (pocket/overhang) — redeploying here can never
+                // work. Walk toward open ground and retry (bounded), instead of giving up in place.
+                if (cfg.hasTarget && walkoutAttempts < MAX_WALKOUT_ATTEMPTS) {
+                    enterWalkout("kept losing flight at " + (int) x + ", " + (int) y + ", " + (int) z);
+                } else {
+                    abort("kept losing flight (" + lostEpisodes + " episodes in quick succession) at "
+                        + (int) x + ", " + (int) y + ", " + (int) z);
+                }
                 return;
             }
             warn("Lost flight at {}, {}, {} (episode {}/{}) — redeploying",
