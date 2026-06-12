@@ -324,9 +324,12 @@ public class ElytraTrip extends Module {
         phase = Phase.DONE;
         elytra().endFlight();
         BARITONE.stop();
-        CONFIG.client.extra.elytraPilot.tripActive = false; // leg inert; module goes idle (re-sync disables it)
+        CONFIG.client.extra.elytraPilot.tripActive = false;
         inGameAlertActivePlayer("<green>Trip complete: " + why);
         info("Trip complete: {}", why);
+        // Actually disable the module so the NEXT `fly trip` produces a fresh enable edge — without this the
+        // module stays enabled in DONE/FAILED and re-arming via the command is a silent no-op (onEnable never runs).
+        syncEnabledFromConfig();
     }
 
     private void abort(String why) {
@@ -336,5 +339,6 @@ public class ElytraTrip extends Module {
         CONFIG.client.extra.elytraPilot.tripActive = false;
         inGameAlertActivePlayer("<red>Trip aborted: " + why);
         warn("Trip aborted: {}", why);
+        syncEnabledFromConfig(); // same as finish(): leave the module truly disabled so a re-fire re-enables it
     }
 }
