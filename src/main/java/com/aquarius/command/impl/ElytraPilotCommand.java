@@ -76,7 +76,12 @@ public class ElytraPilotCommand extends Command {
                 "native <on/off>       (native nether-pathfinder: full-route planning through UNLOADED chunks via seed terrain-gen)",
                 "seed <long>           (world seed for native nether routing; default = 2b2t's nether seed)",
                 "netherfrontier <slow> <hold>  (highway e-bounce: blocks of loaded terrain ahead below which to coast / brake)",
-                "hoppitch <deg>        (climb angle when gliding over an on-road obstacle)"
+                "hoppitch <deg>        (climb angle when gliding over an on-road obstacle)",
+                "solver <on/off>       (simulation flight solver: fly only pitches whose simulated future is collision-free)",
+                "simticks <n>          (ticks of elytra physics simulated per candidate pitch; Baritone uses 20)",
+                "pitchrange <deg>      (pitch sweep around the direct line, ± degrees; Baritone uses 25)",
+                "boostbelow <bps>      (solver path: fire a rocket when speed drops below this and not already boosted)",
+                "setbackhold <ticks>   (after a server position setback, hold all rockets this long; never fight a rubberband)"
             )
             .build();
     }
@@ -277,6 +282,31 @@ public class ElytraPilotCommand extends Command {
             .then(literal("hoppitch").then(argument("degrees", doubleArg()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.hopPitch = (float) getDouble(c, "degrees");
                 c.getSource().getEmbed().title("ElytraPilot hop pitch = " + CONFIG.client.extra.elytraPilot.hopPitch);
+            })))
+            .then(literal("solver").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.solver = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("ElytraPilot simulation solver "
+                    + toggleStrCaps(CONFIG.client.extra.elytraPilot.solver));
+            })))
+            .then(literal("simticks").then(argument("ticks", integer(5, 40)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.solverSimTicks = getInteger(c, "ticks");
+                c.getSource().getEmbed().title("ElytraPilot solver simulation = "
+                    + CONFIG.client.extra.elytraPilot.solverSimTicks + " ticks per candidate pitch");
+            })))
+            .then(literal("pitchrange").then(argument("degrees", integer(5, 88)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.solverPitchRange = getInteger(c, "degrees");
+                c.getSource().getEmbed().title("ElytraPilot solver pitch sweep = ±"
+                    + CONFIG.client.extra.elytraPilot.solverPitchRange + "°");
+            })))
+            .then(literal("boostbelow").then(argument("bps", doubleArg(1.0)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.boostBelowSpeed = getDouble(c, "bps");
+                c.getSource().getEmbed().title("ElytraPilot solver boost threshold = "
+                    + CONFIG.client.extra.elytraPilot.boostBelowSpeed + " b/s (rocket when slower + not boosted)");
+            })))
+            .then(literal("setbackhold").then(argument("ticks", integer(0, 200)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.setbackHoldTicks = getInteger(c, "ticks");
+                c.getSource().getEmbed().title("ElytraPilot setback rocket hold = "
+                    + CONFIG.client.extra.elytraPilot.setbackHoldTicks + " ticks");
             })))
             .then(literal("trip")
                 .then(literal("highways").then(argument("toggle", toggle()).executes(c -> {
