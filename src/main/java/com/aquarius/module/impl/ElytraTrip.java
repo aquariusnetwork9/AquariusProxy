@@ -2,6 +2,7 @@ package com.aquarius.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.aquarius.event.client.ClientBotTick;
+import com.aquarius.event.client.ClientDeathEvent;
 import com.aquarius.feature.player.World;
 import com.aquarius.mc.block.BlockRegistry;
 import com.aquarius.mc.dimension.DimensionRegistry;
@@ -47,6 +48,7 @@ public class ElytraTrip extends Module {
         OW_DIRECT,         // destination within the spawn region: fly the overworld straight there
         ENTER_NETHER,      // walk into the nearest portal, wait for the nether
         NETHER_HIGHWAY,    // e-bounce along the nearest highway toward the target's nether coords
+        NETHER_DEST,       // the destination IS in the nether: fly to the exact coords and land there
         NETHER_SEEK_EXIT,  // near the target's nether coords: walk into an exit portal, wait for the overworld
         FINAL_APPROACH,    // fly the overworld to the exact target
         DONE,
@@ -62,6 +64,7 @@ public class ElytraTrip extends Module {
     private Phase phase = Phase.IDLE;
     private int tickCtr;
     private int guardTicks;
+    private int graceTicks;   // post-portal wait before starting a nether flight leg (chunks stream in first)
     private boolean legStarted;
 
     @Override
@@ -73,7 +76,12 @@ public class ElytraTrip extends Module {
     public List<EventConsumer<?>> registerEvents() {
         return List.of(
             of(ClientBotTick.class, this::onTick),
-            of(ClientBotTick.Stopped.class, e -> { phase = Phase.IDLE; legStarted = false; })
+            of(ClientBotTick.Stopped.class, e -> { phase = Phase.IDLE; legStarted = false; }),
+            of(ClientDeathEvent.class, e -> {
+                // A death invalidates everything (gear dropped, respawned at bed/spawn) — never march on.
+                if (phase != Phase.IDLE && phase != Phase.DONE && phase != Phase.FAILED)
+                    abort("bot died — trip cancelled (it respawned at its bed/spawn; gear is at the death point)");
+            })
         );
     }
 
@@ -81,7 +89,15 @@ public class ElytraTrip extends Module {
     public void onEnable() {
         var cfg = CONFIG.client.extra.elytraPilot;
         guardTicks = 0;
+        graceTicks = 0;
         legStarted = false;
+        if (cfg.tripTargetIsNether) {
+            // tripTargetX/Z are NETHER coords and the trip ENDS in the nether — no exit portal, no exit radius.
+            phase = inNether() ? Phase.NETHER_DEST : Phase.ENTER_NETHER;
+            info("Trip: nether destination {}, {} — {}.", cfg.tripTargetX, cfg.tripTargetZ,
+                inNether() ? "flying there" : "entering the nearest portal first");
+            return;
+        }
         double dist = Math.hypot(cfg.tripTargetX, cfg.tripTargetZ);
         if (dist <= cfg.spawnRegionRadius) {
             phase = Phase.OW_DIRECT;
@@ -112,6 +128,7 @@ public class ElytraTrip extends Module {
                 case OW_DIRECT        -> tickOwDirect(cfg.tripTargetX, cfg.tripTargetZ);
                 case ENTER_NETHER     -> tickEnterNether();
                 case NETHER_HIGHWAY   -> tickNetherHighway(cfg);
+                case NETHER_DEST      -> tickNetherDest(cfg);
                 case NETHER_SEEK_EXIT -> tickNetherSeekExit();
                 case FINAL_APPROACH   -> tickFinalApproach(cfg.tripTargetX, cfg.tripTargetZ);
                 default               -> { }
@@ -126,15 +143,21 @@ public class ElytraTrip extends Module {
 
     private void tickOwDirect(int tx, int tz) {
         if (!legStarted) { startFlightTo(tx, tz); return; }
-        if (elytra().isFlightDone()) finish("arrived (overworld-direct)");
+        if (elytra().isFlightDone()) {
+            if (elytra().wasFlightSuccessful()) finish("arrived (overworld-direct)");
+            else abort("the flight leg failed before reaching the destination");
+        }
     }
 
     private void tickEnterNether() {
         if (inNether()) {
-            info("In the nether — heading for a highway.");
-            phase = Phase.NETHER_HIGHWAY;
+            boolean netherDest = CONFIG.client.extra.elytraPilot.tripTargetIsNether;
+            info(netherDest ? "In the nether — preparing the flight to the destination."
+                            : "In the nether — heading for a highway.");
+            phase = netherDest ? Phase.NETHER_DEST : Phase.NETHER_HIGHWAY;
             legStarted = false;
             guardTicks = 0;
+            graceTicks = 0;
             return;
         }
         elytra().endFlight();                                           // don't let flight fight Baritone
@@ -161,6 +184,9 @@ public class ElytraTrip extends Module {
             return;
         }
         if (!legStarted) {
+            // Post-portal grace: the loaded bubble right after a dimension switch is tiny — give the first chunks
+            // a moment to stream in before taking off (the spiral-hold covers the rest once airborne).
+            if ((graceTicks += THROTTLE_TICKS) < cfg.tripNetherEntryGraceTicks) return;
             if (cfg.tripUseHighways) {
                 HighwayDir dir = nearestHighway(nx, nz);
                 cfg.highway = true;
@@ -181,8 +207,9 @@ public class ElytraTrip extends Module {
             elytra().beginFlight();
             legStarted = true;
         }
-        // open-nether cruise may land before we reach the exit radius — that's fine, seek a portal from there
         if (!cfg.tripUseHighways && elytra().isFlightDone()) {
+            if (!elytra().wasFlightSuccessful()) { abort("the nether flight leg failed"); return; }
+            // landed early, before the exit radius — that's fine, seek a portal from there
             elytra().endFlight();
             phase = Phase.NETHER_SEEK_EXIT;
             legStarted = false;
@@ -191,6 +218,30 @@ public class ElytraTrip extends Module {
         }
         if ((guardTicks += THROTTLE_TICKS) > HIGHWAY_GUARD_TICKS)
             abort("nether travel leg timed out before reaching the target");
+    }
+
+    /** The destination IS in the nether: fly to the exact coords (full descend + land there), then we're done. */
+    private void tickNetherDest(com.aquarius.util.config.Config.Client.Extra.ElytraPilot cfg) {
+        if (!inNether()) { abort("left the nether unexpectedly"); return; }
+        if (!legStarted) {
+            if ((graceTicks += THROTTLE_TICKS) < cfg.tripNetherEntryGraceTicks) return;
+            cfg.highway = false;
+            cfg.ebounce = false;
+            cfg.hasTarget = true;
+            cfg.targetX = cfg.tripTargetX;   // nether coords, as entered — no 8:1 scaling
+            cfg.targetZ = cfg.tripTargetZ;
+            info("Flying to the nether destination {}, {}.", cfg.tripTargetX, cfg.tripTargetZ);
+            elytra().beginFlight();
+            legStarted = true;
+            return;
+        }
+        if (elytra().isFlightDone()) {
+            if (elytra().wasFlightSuccessful()) finish("arrived at the nether destination");
+            else abort("the nether flight leg failed");
+            return;
+        }
+        if ((guardTicks += THROTTLE_TICKS) > HIGHWAY_GUARD_TICKS)
+            abort("nether travel leg timed out before reaching the destination");
     }
 
     private void tickNetherSeekExit() {
@@ -209,7 +260,10 @@ public class ElytraTrip extends Module {
 
     private void tickFinalApproach(int tx, int tz) {
         if (!legStarted) { startFlightTo(tx, tz); return; }
-        if (elytra().isFlightDone()) finish("arrived at the destination");
+        if (elytra().isFlightDone()) {
+            if (elytra().wasFlightSuccessful()) finish("arrived at the destination");
+            else abort("the final flight leg failed");   // e.g. takeoff failed — never report a failed leg as arrival
+        }
     }
 
     // --- helpers ---

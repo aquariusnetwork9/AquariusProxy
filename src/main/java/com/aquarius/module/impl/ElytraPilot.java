@@ -3,6 +3,7 @@ package com.aquarius.module.impl;
 import com.github.rfresh2.EventConsumer;
 import com.aquarius.cache.data.inventory.Container;
 import com.aquarius.event.client.ClientBotTick;
+import com.aquarius.event.client.ClientDeathEvent;
 import com.aquarius.feature.inventory.InventoryActionRequest;
 import com.aquarius.feature.inventory.actions.ClickItem;
 import com.aquarius.feature.inventory.actions.InventoryAction;
@@ -58,7 +59,7 @@ public class ElytraPilot extends Module {
 
     private static final int CHESTPLATE_SLOT = 6;          // container 0: 5=helm,6=chest,7=legs,8=boots
     private static final int TAKEOFF_TIMEOUT_TICKS = 200;  // ~10s to get airborne + deployed
-    private static final int LAND_TIMEOUT_TICKS = 200;
+    private static final int LAND_TIMEOUT_TICKS = 300;  // brake zoom-climb + ~3 b/s flutter descent needs longer than the old dive
     private static final int SWAP_EQUIP_TIMEOUT_TICKS = 100;
     private static final int SWAP_REDEPLOY_TIMEOUT_TICKS = 100;
     private static final int PROBE_INTERVAL = 10;           // recompute terrain scans every N ticks
@@ -99,6 +100,13 @@ public class ElytraPilot extends Module {
     private List<int[]> netherPath;   // current 3D look-ahead route (block-center waypoints) in open nether
     private int pathIdx;
     private int planCooldown;
+    private boolean lastFlightSuccess; // DONE via arrival/landing (true) vs abort/emergency (false)
+    private int lostFlightTicks;       // continuous ticks of unexpected non-flight (watchdog)
+    private int lostEpisodes;
+    private boolean lostLogged;
+    private boolean spiraling;         // circling in place at the chunk frontier while terrain streams in
+    private float spiralYaw;
+    private float landSpinYaw;         // helicopter-landing yaw spin
 
     @Override
     public boolean enabledSetting() {
@@ -110,7 +118,10 @@ public class ElytraPilot extends Module {
         return List.of(
             of(ClientBotTick.class, this::onTick),
             of(ClientBotTick.Starting.class, e -> reset()),
-            of(ClientBotTick.Stopped.class, e -> reset())
+            of(ClientBotTick.Stopped.class, e -> reset()),
+            of(ClientDeathEvent.class, e -> {
+                if (phase != Phase.IDLE && phase != Phase.DONE) abort("bot died");
+            })
         );
     }
 
@@ -144,6 +155,11 @@ public class ElytraPilot extends Module {
     /** True once the current flight leg has finished (landed/aborted). */
     public boolean isFlightDone() {
         return phase == Phase.DONE || phase == Phase.IDLE;
+    }
+
+    /** True if the finished leg actually arrived/landed; false for aborts, deaths, and emergency landings. */
+    public boolean wasFlightSuccessful() {
+        return lastFlightSuccess;
     }
 
     /** (Re)start a flight leg with whatever target/mode is currently configured — re-arms even if already enabled. */
@@ -187,6 +203,11 @@ public class ElytraPilot extends Module {
         netherPath = null;
         pathIdx = 0;
         planCooldown = 0;
+        lastFlightSuccess = false;
+        lostFlightTicks = 0;
+        lostEpisodes = 0;
+        lostLogged = false;
+        spiraling = false;
     }
 
     private void onTick(final ClientBotTick event) {
@@ -202,6 +223,7 @@ public class ElytraPilot extends Module {
 
             double x = pc.getX(), y = pc.getY(), z = pc.getZ();
             double speed = haveLast ? Math.hypot(x - lastX, z - lastZ) : 0.0;
+            if (BOT.isFallFlying()) { lostFlightTicks = 0; lostLogged = false; }
 
             // Self-heal: if we should be gliding but aren't (elytra broke, desync, knockback), recover.
             if ((phase == Phase.CRUISE || phase == Phase.DESCEND) && !BOT.isFallFlying()) {
@@ -215,7 +237,7 @@ public class ElytraPilot extends Module {
                     case PASS      -> tickPass(x, y, z, speed);
                     case SWAP      -> tickSwap(x, y, z);
                     case DESCEND   -> tickDescend(x, y, z, speed);
-                    case LAND      -> tickLand();
+                    case LAND      -> tickLand(x, y, z, speed);
                     case LANDWALK  -> tickLandWalk(x, y, z);
                     case EMERGENCY -> tickEmergency(x, y, z);
                     default        -> { }
@@ -361,11 +383,20 @@ public class ElytraPilot extends Module {
         boolean wantFire = !overCap && (dy > 2 || speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
 
         // Don't outrun the chunk loader: 2b2t serves only ~12 chunks and streams them slowly. If loaded terrain ahead
-        // is short, stop boosting (coast) so loading catches up; if we're right at the frontier, nose up to bleed speed.
+        // is short, stop boosting (coast) so loading catches up; right AT the frontier, spiral-hold in loaded space
+        // instead of loitering straight ahead — the old nose-up loiter starved speed until the bot sank to the ground
+        // (this is what killed the first live nether trip, right after the portal where almost nothing was loaded).
         int corridor = loadedDistAhead(x, z, yaw, cfg.netherFrontierSlow);
-        if (corridor < cfg.netherFrontierSlow) {
-            wantFire = false;
-            if (corridor <= cfg.netherFrontierHold && y < roofCap - 1) pitch = clampF(pitch, -cfg.climbPitch, -4f);
+        if (spiraling && corridor > cfg.netherFrontierHold + 8) {
+            spiraling = false;
+            info("Frontier opened — resuming course");
+        }
+        if (spiraling || corridor <= cfg.netherFrontierHold) { tickSpiralHold(x, y, z, speed, roofCap); return; }
+        boolean lowAlt = heightAboveGround(x, y, z) < 12;
+        if (corridor < cfg.netherFrontierSlow && !lowAlt) wantFire = false;
+        if (lowAlt) {                       // the governor must never starve altitude — climb back to the band
+            pitch = Math.min(pitch, -12f);
+            wantFire = !overCap;
         }
 
         boolean fire = wantFire && heldIsFirework();
@@ -378,6 +409,43 @@ public class ElytraPilot extends Module {
             phase = Phase.DESCEND;
             info("Approaching target — descending");
         }
+    }
+
+    /**
+     * Circle in place at the chunk frontier: hold a continuous yaw spin at cruise altitude (climbing the spiral
+     * if low — the Baritone elytra climb-out pattern: full turns while boosting, gaining height without leaving
+     * loaded space) until terrain ahead streams in. Keeps the bot AIRBORNE and ABOVE terrain while it waits;
+     * never trades altitude for patience.
+     */
+    private void tickSpiralHold(double x, double y, double z, double speed, int roofCap) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (!spiraling) {
+            spiraling = true;
+            spiralYaw = CACHE.getPlayerCache().getYaw();
+            info("Chunk frontier — spiral-holding at y {} while terrain loads", (int) y);
+        }
+        spiralYaw += cfg.spiralYawStep;
+        if (spiralYaw > 180f) spiralYaw -= 360f;
+        double cruiseAlt = Math.min(Math.max(cfg.netherCruiseY, cfg.approxGroundY + 8), roofCap - 2);
+        int ground = heightAboveGround(x, y, z);
+        boolean overCap = speed * 20.0 >= cfg.maxSpeed * 0.6; // keep the circle slow and tight
+        float pitch;
+        boolean wantFire;
+        if ((ground != Integer.MAX_VALUE && ground < 12) || y < cruiseAlt - 4) {
+            pitch = -Math.max(20f, cfg.climbPitch * 0.7f);    // climb the spiral
+            wantFire = !overCap && (speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
+        } else if (y > cruiseAlt + 6) {
+            pitch = 6f;
+            wantFire = false;
+        } else {
+            pitch = -2f;                                      // hold the circle level
+            wantFire = !overCap && speed < cfg.minBoostSpeed;
+        }
+        if (y >= roofCap - 1 && pitch < 0f) pitch = 0f;
+        boolean fire = wantFire && heldIsFirework();
+        if (wantFire && !fire) ensureFireworkHeld();
+        if (fire) ticksSinceFire = 0;
+        submitInput(false, fire, spiralYaw, pitch);
     }
 
     /**
@@ -413,11 +481,19 @@ public class ElytraPilot extends Module {
             wantFire = !overCap && (speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
         }
 
-        // Don't outrun the chunk loader (see tickNetherCruise): coast when loaded terrain ahead is short, brake at the frontier.
+        // Don't outrun the chunk loader (see tickNetherCruise): coast when terrain ahead is short, spiral-hold at the
+        // frontier, and never let the brake starve altitude.
         int corridor = loadedDistAhead(x, z, yaw, cfg.netherFrontierSlow);
-        if (corridor < cfg.netherFrontierSlow) {
-            wantFire = false;
-            if (corridor <= cfg.netherFrontierHold && y < roofCap - 1) pitch = clampF(pitch, -cfg.climbPitch, -4f);
+        if (spiraling && corridor > cfg.netherFrontierHold + 8) {
+            spiraling = false;
+            info("Frontier opened — resuming course");
+        }
+        if (spiraling || corridor <= cfg.netherFrontierHold) { tickSpiralHold(x, y, z, speed, roofCap); return; }
+        boolean lowAlt = heightAboveGround(x, y, z) < 12;
+        if (corridor < cfg.netherFrontierSlow && !lowAlt) wantFire = false;
+        if (lowAlt) {
+            pitch = Math.min(pitch, -12f);
+            wantFire = !overCap;
         }
 
         boolean fire = wantFire && heldIsFirework();
@@ -680,24 +756,30 @@ public class ElytraPilot extends Module {
         submitInput(false, fire, yaw, pitch);
     }
 
-    private void tickLand() {
+    /**
+     * Helicopter landing, decoded from a Baritone elytra packet capture: brake horizontal speed to near zero
+     * (nose up), then flutter near-level with a continuous yaw spin — the deployed elytra sinks ~3 b/s almost
+     * vertically onto the spot, and the spin cancels any residual drift. Replaces the old 45° dive-in, which
+     * built speed and overshot. The elytra stays deployed the whole way down (the capture sent zero re-deploys).
+     */
+    private void tickLand(double x, double y, double z, double speed) {
         var cfg = CONFIG.client.extra.elytraPilot;
-        var pc = CACHE.getPlayerCache();
-        double x = pc.getX(), y = pc.getY(), z = pc.getZ();
         if (!BOT.isFallFlying()) {
             double horiz = horizDist(x, z, cfg.targetX + 0.5, cfg.targetZ + 0.5);
             if (cfg.baritoneLand && cfg.hasTarget && horiz > cfg.arriveRadius) { enterLandWalk(); return; }
             complete("landed");
             return;
         }
-        // Re-aim at the landing spot each tick and dive in, so we touch down ON it instead of gliding past it.
-        float yaw = haveLandSpot
-            ? (float) Math.toDegrees(Math.atan2(-(landX + 0.5 - x), landZ + 0.5 - z))
-            : pc.getYaw();
+        if (landTicks == 0) landSpinYaw = CACHE.getPlayerCache().getYaw();
         double horizSpot = haveLandSpot ? horizDist(x, z, landX + 0.5, landZ + 0.5) : 0;
-        if (horizSpot > cfg.arriveRadius * 3 + 8) { phase = Phase.DESCEND; return; } // glided off — re-approach
-        if (heightAboveGround(x, y, z) <= cfg.landCutClearance) BOT.stopFallFlying(); // low over the spot — cut glide, drop straight in
-        submitInput(false, false, yaw, 45f);                                          // aggressive nose-down to touch down fast
+        if (horizSpot > cfg.arriveRadius * 3 + 8) { phase = Phase.DESCEND; return; }  // drifted off — re-approach
+        if (heightAboveGround(x, y, z) <= cfg.landCutClearance) BOT.stopFallFlying(); // low over the spot — drop in
+        landSpinYaw += cfg.landSpinStep;
+        if (landSpinYaw > 180f) landSpinYaw -= 360f;
+        float pitch = speed * 20.0 > cfg.landBrakeSpeed
+            ? -55f   // still moving — nose up to bleed speed (trades the last momentum for a little height)
+            : -3f;   // near-stationary — flutter slightly nose-up; the elytra sinks straight down
+        submitInput(false, false, landSpinYaw, pitch);
         if (++landTicks > LAND_TIMEOUT_TICKS) { BOT.stopFallFlying(); complete("landing timed out"); }
     }
 
@@ -887,12 +969,37 @@ public class ElytraPilot extends Module {
         } else {
             submitInput(false, false, yaw, 0f);                   // nothing left — falling
         }
-        if (!BOT.isFallFlying() && heightAboveGround(x, y, z) <= 2) complete("emergency landing complete");
+        if (!BOT.isFallFlying() && heightAboveGround(x, y, z) <= 2) complete("emergency landing complete", false);
     }
 
-    /** Called from CRUISE/DESCEND when the bot is unexpectedly not fall-flying. */
+    /**
+     * Called from CRUISE/DESCEND when the bot is unexpectedly not fall-flying. Bounded: after
+     * {@code stallRecoverTicks} of failed re-deploys it escalates to a fresh ground TAKEOFF (whose own timeout
+     * aborts the flight), and after {@code maxGroundRecoveries} episodes it aborts outright — the first live
+     * nether trip died in a silent 2.5-minute redeploy-vs-server fight on the ground; never again.
+     */
     private void handleLostFlight(double x, double y, double z) {
         var cfg = CONFIG.client.extra.elytraPilot;
+        if (!lostLogged) {
+            lostLogged = true;
+            lostEpisodes++;
+            warn("Lost flight at {}, {}, {} (episode {}/{}) — redeploying",
+                (int) x, (int) y, (int) z, lostEpisodes, cfg.maxGroundRecoveries);
+        }
+        if (lostEpisodes > cfg.maxGroundRecoveries) {
+            abort("kept losing flight (" + lostEpisodes + " episodes) — aborting at "
+                + (int) x + ", " + (int) y + ", " + (int) z);
+            return;
+        }
+        if (++lostFlightTicks > cfg.stallRecoverTicks) {
+            warn("Could not re-deploy in {} ticks — attempting a fresh ground takeoff", cfg.stallRecoverTicks);
+            inGameAlertActivePlayer("<yellow>ElytraPilot: grounded mid-flight — attempting a fresh takeoff");
+            lostFlightTicks = 0;
+            takeoffTicks = 0;
+            jumpToggle = false;
+            phase = Phase.TAKEOFF;   // its own timeout aborts ("could not take off") if this fails too
+            return;
+        }
         if (wornElytraDurability() > 2) {            // still wearing a working elytra — just re-deploy
             jumpToggle = !jumpToggle;
             boolean fire = BOT.isFallFlying() && heldIsFirework();
@@ -1169,7 +1276,12 @@ public class ElytraPilot extends Module {
     }
 
     private void complete(String why) {
+        complete(why, true);
+    }
+
+    private void complete(String why, boolean success) {
         phase = Phase.DONE;
+        lastFlightSuccess = success;
         BARITONE.stop();
         inGameAlertActivePlayer("<green>ElytraPilot: " + why);
         info("Flight complete: " + why);
@@ -1177,6 +1289,7 @@ public class ElytraPilot extends Module {
 
     private void abort(String why) {
         phase = Phase.DONE;
+        lastFlightSuccess = false;
         BARITONE.stop();
         inGameAlertActivePlayer("<red>ElytraPilot aborted: " + why);
         warn("Aborted: " + why);

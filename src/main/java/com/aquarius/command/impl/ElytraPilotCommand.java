@@ -64,8 +64,9 @@ public class ElytraPilotCommand extends Command {
                 "baritoneland <on/off> (walk the last leg with Baritone if covered/indoors/underground)",
                 "climbmargin <n>       (stop boosting this many blocks below the ceiling; saves fireworks)",
                 "landcut <n>           (cut the glide + drop in within this many blocks of the ground)",
-                "trip <x> <z> [y]      (plan a journey: overworld if within ~100k of spawn, else through the nether)",
-                "trip highways <on/off>(nether leg: e-bounce a highway vs fly open-nether straight to the target)",
+                "trip <x> <z> [y]      (plan a journey to OVERWORLD coords: direct if within ~100k of spawn, else via the nether)",
+                "trip nether <x> <z>   (destination IS in the nether: enter a portal, fly to the exact coords, land there)",
+                "trip highways <on/off>(nether transit leg: e-bounce a highway vs fly open-nether straight to the target)",
                 "trip off              (cancel an in-progress trip)",
                 "netherceiling <y>     (hard altitude cap in the nether; never climb above it / into bedrock)",
                 "nethercruise <y>      (preferred open-nether flight altitude; holds ~this Y and dodges in 3D)",
@@ -272,6 +273,11 @@ public class ElytraPilotCommand extends Command {
                     MODULE.get(ElytraTrip.class).syncEnabledFromConfig();
                     c.getSource().getEmbed().title("ElytraPilot trip cancelled");
                 }))
+                .then(literal("nether")
+                    .then(argument("x", integer())
+                        .then(argument("z", integer()).executes(c -> {
+                            return startNetherTrip(c.getSource(), getInteger(c, "x"), getInteger(c, "z"));
+                        }))))
                 .then(argument("x", integer())
                     .then(argument("z", integer())
                         .executes(c -> { return startTrip(c.getSource(), getInteger(c, "x"), 64, getInteger(c, "z")); })
@@ -285,6 +291,7 @@ public class ElytraPilotCommand extends Command {
         cfg.tripTargetX = x;
         cfg.tripTargetY = y;
         cfg.tripTargetZ = z;
+        cfg.tripTargetIsNether = false;
         cfg.tripActive = true;
         MODULE.get(ElytraTrip.class).syncEnabledFromConfig();
         double dist = Math.hypot(x, z);
@@ -294,6 +301,21 @@ public class ElytraPilotCommand extends Command {
                 + (dist <= cfg.spawnRegionRadius
                     ? " — overworld-direct (within the spawn region)."
                     : " — via the nether highways (" + (long) dist + "b out)."));
+        return OK;
+    }
+
+    private int startNetherTrip(CommandContext ctx, int x, int z) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        cfg.tripTargetX = x;
+        cfg.tripTargetY = 64;
+        cfg.tripTargetZ = z;
+        cfg.tripTargetIsNether = true;
+        cfg.tripActive = true;
+        MODULE.get(ElytraTrip.class).syncEnabledFromConfig();
+        ctx.getEmbed()
+            .title("ElytraPilot trip started")
+            .description("Nether destination " + x + ", " + z
+                + " — entering a portal if needed, then flying to the exact coords and landing there.");
         return OK;
     }
 }
