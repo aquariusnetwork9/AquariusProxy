@@ -75,6 +75,8 @@ public class ElytraPilot extends Module {
     private static final int PIN_ABORT_TICKS = 300;          // ~15s of no cruise progress -> walk out / abort
     private static final int STALL_WINDOW_TICKS = 60;        // ~3s window for the NET-progress stall check (porpoise-proof)
     private static final int STALL_MIN_PROGRESS = 12;        // < this many blocks of NET horizontal travel per window -> stuck
+    private static final int NATIVE_LOOKAHEAD = 40;          // pure-pursuit aim distance (blocks) along the native route
+    private static final int NATIVE_SCAN_WINDOW = 80;        // route points scanned forward per tick for the nearest-point tracker
     private static final int EMERGENCY_FLOOR_Y = 55;         // below this, nether cruise climbs at full boost no matter what
     private static final int WALKOUT_LEG_BLOCKS = 48;        // Baritone walk distance per walk-out leg, toward the target
     private static final int WALKOUT_OPEN_SKY = 16;          // blocks of clear air overhead = enough room to fly again
@@ -549,15 +551,28 @@ public class ElytraPilot extends Module {
             return;
         }
 
-        while (pathIdx < netherPath.size() - 1) {               // drop waypoints we've reached
-            int[] wp = netherPath.get(pathIdx);
-            if (horizDist(x, z, wp[0], wp[2]) < 5 && Math.abs(y - wp[1]) < 6) pathIdx++; else break;
+        // PURE PURSUIT (the Baritone way). Track progress by the horizontally-nearest route point in a forward
+        // window — NO vertical gate. The old per-waypoint advance required |y - wp.y| < 6, but the route's y is
+        // advisory (it hugs y~45 over lava seas while the descent guard holds the bot higher), so the index froze
+        // and the bot orbited a waypoint it could never "touch" (live capture: endless 2-block circle at y60).
+        int scanEnd = Math.min(pathIdx + NATIVE_SCAN_WINDOW, netherPath.size());
+        double nearestD = Double.MAX_VALUE;
+        for (int i = pathIdx; i < scanEnd; i++) {
+            int[] p = netherPath.get(i);
+            double d = horizDist(x, z, p[0], p[2]);
+            if (d < nearestD) { nearestD = d; pathIdx = i; }
         }
-        int[] w = netherPath.get(Math.min(pathIdx + 2, netherPath.size() - 1));
+        // Aim a REAL lookahead distance along the route — chasing the next waypoint ~10 blocks out at flight speed
+        // is what made the pursuit orbit. A far aim point gives gentle curvature that elytra physics can track.
+        int aimIdx = pathIdx;
+        while (aimIdx < netherPath.size() - 1
+                && horizDist(x, z, netherPath.get(aimIdx)[0], netherPath.get(aimIdx)[2]) < NATIVE_LOOKAHEAD)
+            aimIdx++;
+        int[] w = netherPath.get(aimIdx);
         float yaw = (float) Math.toDegrees(Math.atan2(-(w[0] + 0.5 - x), w[2] + 0.5 - z));
         double dy = (w[1] + 0.5) - y;
         double horiz = Math.max(1.0, horizDist(x, z, w[0], w[2]));
-        float pitch = clampF((float) Math.toDegrees(Math.atan2(-dy, horiz)), -cfg.climbPitch, 30f);
+        float pitch = clampF((float) Math.toDegrees(Math.atan2(-dy, horiz)), -cfg.climbPitch, 20f);
         boolean wantFire = !overCap && (dy > 2 || speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
 
         // OBSERVED terrain disagrees with the generated route (regenerated chunks, builds): climb over it now
@@ -570,12 +585,10 @@ public class ElytraPilot extends Module {
         }
 
         // Corner discipline: coast into sharp route bends instead of boosting through them.
-        if (wantFire && netherPath.size() > pathIdx + 2) {
-            int[] w1 = netherPath.get(Math.min(pathIdx + 1, netherPath.size() - 1));
-            int[] w2 = netherPath.get(Math.min(pathIdx + 3, netherPath.size() - 1));
-            double b1 = Math.toDegrees(Math.atan2(-(w1[0] + 0.5 - x), w1[2] + 0.5 - z));
-            double b2 = Math.toDegrees(Math.atan2(-(w2[0] - w1[0]), w2[2] - w1[2]));
-            if (Math.abs(wrapDeg(b2 - b1)) > 35) wantFire = false;
+        if (wantFire && aimIdx < netherPath.size() - 1) {
+            int[] w2 = netherPath.get(Math.min(aimIdx + 8, netherPath.size() - 1));
+            double b2 = Math.toDegrees(Math.atan2(-(w2[0] - w[0]), w2[2] - w[2]));
+            if (Math.abs(wrapDeg(b2 - yaw)) > 35) wantFire = false;
         }
 
         // The native route is generated from seed terrain, so it is valid through UNLOADED chunks — boost into them
