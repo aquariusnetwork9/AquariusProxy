@@ -512,6 +512,29 @@ public final class Config {
                 /** Trip nether leg: true = ride the nearest highway via e-bounce; false = fly open-nether straight to the target. */
                 public boolean tripUseHighways = false;
 
+                /** The trip destination is IN the nether (tripTargetX/Z are nether coords): enter a portal if needed,
+                 *  fly to the exact coords, land there, done — no exit portal, no netherExitRadius bubble. */
+                public boolean tripTargetIsNether = false;
+
+                /** Ticks to wait after entering the nether before starting the flight leg (lets the first chunks stream in). */
+                public int tripNetherEntryGraceTicks = 100;
+
+                /** Yaw degrees per tick while spiral-holding at the chunk frontier (circling in loaded space while
+                 *  terrain streams in — decoded from a Baritone elytra climb-out capture). */
+                public float spiralYawStep = 8.0f;
+
+                /** Continuous ticks of lost flight (grounded mid-cruise) before escalating to a fresh ground takeoff. */
+                public int stallRecoverTicks = 100;
+
+                /** Lost-flight episodes in one flight before aborting (each one alerts; bounded, never a silent fight). */
+                public int maxGroundRecoveries = 3;
+
+                /** Yaw degrees per tick of the landing spin (helicopter descent — cancels residual drift). */
+                public float landSpinStep = 18.0f;
+
+                /** Brake until horizontal speed (blocks/sec) is below this before the flutter descent starts. */
+                public double landBrakeSpeed = 6.0;
+
                 /**
                  * Take off from flat ground by pulsing jump to deploy the elytra. Off = assume the bot is
                  * already airborne (walked off a ledge / tower) and just deploy on the first airborne tick.
