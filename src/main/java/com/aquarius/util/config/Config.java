@@ -540,6 +540,28 @@ public final class Config {
                 /** Brake until horizontal speed (blocks/sec) is below this before the flutter descent starts. */
                 public double landBrakeSpeed = 6.0;
 
+                /** Abort the flight after more than {@code totemPopLimit} totem pops (each pop = a lethal hit). */
+                public boolean totemPopAbort = true;
+
+                /** Totem pops tolerated per flight before aborting. */
+                public int totemPopLimit = 1;
+
+                /** On a totem-pop abort, also DISCONNECT from the server — preserves the bot and its kit in place
+                 *  (frozen, safe) instead of letting whatever is killing it finish the job. */
+                public boolean totemPopLogout = true;
+
+                /** Use the native nether-pathfinder (terrain generated from the seed in C++): plans the WHOLE leg
+                 *  through unloaded chunks instead of the 12 loaded ones. Falls back to the local planner when
+                 *  unsupported or when a route can't be found. */
+                public boolean nativeRouting = true;
+
+                /** World seed used to generate nether terrain for native routing. Default = 2b2t's nether seed
+                 *  (Baritone's shipped elytraNetherSeed default). */
+                public long netherSeed = 146008555100680L;
+
+                /** Native route search timeout per request (ms). */
+                public int nativeRouteTimeoutMs = 10000;
+
                 /**
                  * Take off from flat ground by pulsing jump to deploy the elytra. Off = assume the bot is
                  * already airborne (walked off a ledge / tower) and just deploy on the first airborne tick.
