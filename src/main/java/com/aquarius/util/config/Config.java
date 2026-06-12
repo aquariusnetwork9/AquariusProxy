@@ -435,8 +435,8 @@ public final class Config {
                 /** Horizontal distance (blocks) from the target counted as arrived (begin landing). */
                 public int arriveRadius = 6;
 
-                /** Hard safety cap on a single flight, in ticks (20/s). Aborts when exceeded. */
-                public int maxFlightTicks = 6000;
+                /** Hard safety cap on a single flight, in ticks (20/s). Aborts when exceeded. 36000 = 30 min — long-haul nether legs (10k+) need this headroom; the 6000 (5 min) default was sized for 700b hops. */
+                public int maxFlightTicks = 36000;
 
                 /** Terrain-aware approach: probe the ground ahead/below and re-route around terrain to a safe landing. */
                 public boolean reroute = true;

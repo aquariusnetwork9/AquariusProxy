@@ -47,6 +47,7 @@ public class ElytraPilotCommand extends Command {
                 "interval <ticks>      (max ticks between fireworks)",
                 "lookahead <blocks>    (terrain avoidance scan distance)",
                 "arrive <blocks>       (how close to the target counts as arrived)",
+                "maxflight <ticks>     (hard per-flight time cap before aborting; 20 ticks/s, 36000 = 30 min)",
                 "descend <blocks>      (distance from target to start descending)",
                 "takeoff <on/off>      (on = pulse-jump to deploy; off = assume airborne/ledge)",
                 "swap <on/off>         (auto-swap in a fresh elytra mid-flight when the worn one wears out)",
@@ -150,6 +151,11 @@ public class ElytraPilotCommand extends Command {
             .then(literal("arrive").then(argument("blocks", integer()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.arriveRadius = getInteger(c, "blocks");
                 c.getSource().getEmbed().title("ElytraPilot arrive radius = " + CONFIG.client.extra.elytraPilot.arriveRadius);
+            })))
+            .then(literal("maxflight").then(argument("ticks", integer(20)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.maxFlightTicks = getInteger(c, "ticks");
+                c.getSource().getEmbed().title("ElytraPilot max flight time = " + CONFIG.client.extra.elytraPilot.maxFlightTicks
+                    + " ticks (" + String.format("%.1f", CONFIG.client.extra.elytraPilot.maxFlightTicks / 20.0 / 60.0) + " min)");
             })))
             .then(literal("descend").then(argument("blocks", integer()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.descendRadius = getInteger(c, "blocks");
