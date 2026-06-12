@@ -36,6 +36,9 @@ public final class ElytraPathfinder {
     private static final int CELL = 4;                 // grid cell size in blocks
     private static final byte OPEN = 0, BLOCKED = 1, UNLOADED = 2;
     private static final int BLIND_MIN_Y = 80, BLIND_MAX_Y = 108; // top kept well clear of the roof-adjacent terrain (a 118 top pinned the bot against bedrock at y120)
+    private static final int SEA_BLOCK_Y = 34;          // never route below this — the lava sea (~y31) claims everything down there
+    private static final int PREF_MIN_Y = 72, PREF_MAX_Y = 108; // preferred altitude band (cost-only, not a constraint)
+    private static final int LOW_PENALTY_Y = 48;        // below this the low-route penalty doubles
     private static final double BLIND_COST = 2.5;      // step-cost multiplier through unseen (high-band) cells
     private static final double CONFINE_COST = 0.35;   // extra step cost per blocked face neighbour
     private static final int[][] SAMPLE_COLS = {{1, 1}, {0, 0}, {3, 3}}; // columns sampled per cell (centre + diagonal corners)
@@ -95,14 +98,20 @@ public final class ElytraPathfinder {
                 final byte st = cellState(nx, ny, nz, cache);
                 if (st == BLOCKED) continue;
                 double step = Math.sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+                final int by = ny * CELL;
+                if (by < SEA_BLOCK_Y) continue;          // never route at lava-sea level
                 int conf = 0;
                 if (st == UNLOADED) {
-                    final int by = ny * CELL;
                     if (by < BLIND_MIN_Y || by > BLIND_MAX_Y) continue; // blind routing only in the high band
                     step *= BLIND_COST;
                 } else {
                     conf = blockedFaces(nx, ny, nz, cache);
                     step *= 1.0 + CONFINE_COST * conf;  // hug nothing: prefer the middle of open volumes
+                    // Altitude PREFERENCE (cost, not a setpoint): low routes through locally-open corridors keep
+                    // ending at the lava sea; high routes near the roof pin. Dips stay allowed when terrain
+                    // demands — they just have to beat a clean mid-band line on cost.
+                    if (by < PREF_MIN_Y)      step *= by < LOW_PENALTY_Y ? 2.0 : 1.5;
+                    else if (by > PREF_MAX_Y) step *= 1.3;
                 }
                 final double ng = cg + step;
                 if (ng < g.getOrDefault(nk, Double.MAX_VALUE)) {
