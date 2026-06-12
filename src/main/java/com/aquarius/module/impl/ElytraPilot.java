@@ -123,6 +123,7 @@ public class ElytraPilot extends Module {
     private int dmgWindowTicks;        // rolling window for counting in-flight damage events
     private int dmgCount;
     private int hazardClimbTicks;      // >0: climb + jink (repeated hits in flight — get out of the line of fire)
+    private int hazardCooldown;        // re-arm delay: continuous damage (burning) must not hold the jink forever
 
     @Override
     public boolean enabledSetting() {
@@ -233,6 +234,7 @@ public class ElytraPilot extends Module {
         dmgWindowTicks = 0;
         dmgCount = 0;
         hazardClimbTicks = 0;
+        hazardCooldown = 0;
     }
 
     /** Apply the firework-spacing cap: a rocket thrusts ~20 ticks, so re-firing sooner is pure waste. */
@@ -261,14 +263,19 @@ public class ElytraPilot extends Module {
             if (hpDropped && BOT.isFallFlying() && (phase == Phase.CRUISE || phase == Phase.DESCEND)) {
                 if (dmgWindowTicks <= 0) dmgCount = 0;
                 dmgWindowTicks = 300;                     // 15s rolling window
-                if (++dmgCount >= 3 && hazardClimbTicks <= 0) {
+                // One evasive burst, then a long cooldown: continuous damage (burning, lava splash) travels WITH
+                // the bot — endlessly re-arming the jink just flew it in arcs through terrain. After the burst,
+                // straight-and-fast is the best response to damage evasion can't shake.
+                if (++dmgCount >= 3 && hazardClimbTicks <= 0 && hazardCooldown <= 0) {
                     hazardClimbTicks = 80;
+                    hazardCooldown = 500;                 // ~25s before another evasive burst
                     warn("Repeated damage in flight ({} hits) at {}, {}, {} — hazard climb + jink",
                         dmgCount, (int) x, (int) y, (int) z);
                 }
             }
             if (dmgWindowTicks > 0) dmgWindowTicks--;
             if (hazardClimbTicks > 0) hazardClimbTicks--;
+            if (hazardCooldown > 0) hazardCooldown--;
 
             if (BOT.isFallFlying()) {
                 lostFlightTicks = 0;
@@ -483,6 +490,17 @@ public class ElytraPilot extends Module {
         float pitch = clampF((float) Math.toDegrees(Math.atan2(-dy, horiz)), -cfg.climbPitch, 30f);
         if (y >= roofCap - 1 && pitch < 0f) pitch = 0f;         // never climb into the inaccessible roof
         boolean wantFire = !overCap && (dy > 2 || speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
+
+        // Corner discipline: if the route bends sharply just ahead, coast — boosting into a turn the bot can't
+        // track is how it clipped walls and ended up in the terrain it was routed around.
+        if (wantFire && netherPath.size() > pathIdx + 2) {
+            int[] w1 = netherPath.get(Math.min(pathIdx + 1, netherPath.size() - 1));
+            int[] w2 = netherPath.get(Math.min(pathIdx + 3, netherPath.size() - 1));
+            double b1 = Math.toDegrees(Math.atan2(-(w1[0] + 0.5 - x), w1[2] + 0.5 - z));
+            double b2 = Math.toDegrees(Math.atan2(-(w2[0] - w1[0]), w2[2] - w1[2]));
+            double bend = Math.abs(wrapDeg(b2 - b1));
+            if (bend > 35) wantFire = false;
+        }
 
         // Don't outrun the chunk loader: 2b2t serves only ~12 chunks and streams them slowly. If loaded terrain ahead
         // is short, stop boosting (coast) so loading catches up; right AT the frontier, spiral-hold in loaded space
@@ -949,6 +967,18 @@ public class ElytraPilot extends Module {
     private void tickWalkout(double x, double y, double z) {
         if (!baritoneStarted) {
             double[] u = unitToTarget(x, z);
+            // Rotate the flee direction each failed leg — re-walking the same blocked line burned all 4
+            // attempts in seconds when lava surrounded the first heading.
+            double ang = switch (walkoutAttempts % 4) {
+                case 1  -> Math.toRadians(50);
+                case 2  -> Math.toRadians(-50);
+                case 3  -> Math.toRadians(110);
+                default -> 0;
+            };
+            if (ang != 0) {
+                double cos = Math.cos(ang), sin = Math.sin(ang);
+                u = new double[]{ u[0] * cos - u[1] * sin, u[0] * sin + u[1] * cos };
+            }
             int wx = MathHelper.floorI(x + u[0] * WALKOUT_LEG_BLOCKS);
             int wz = MathHelper.floorI(z + u[1] * WALKOUT_LEG_BLOCKS);
             BARITONE.pathTo(new GoalNear(wx, MathHelper.floorI(y), wz, 12));
@@ -972,8 +1002,10 @@ public class ElytraPilot extends Module {
             phase = Phase.TAKEOFF;
             return;
         }
-        if (!BARITONE.isActive() || walkoutTicks > WALKOUT_TIMEOUT_TICKS) {
-            baritoneStarted = false;  // leg ended without open sky — walk another leg further along
+        // Give Baritone time to compute + start before judging the leg failed (instant `!isActive` on a
+        // blocked heading used to burn every attempt within seconds).
+        if ((walkoutTicks > 60 && !BARITONE.isActive()) || walkoutTicks > WALKOUT_TIMEOUT_TICKS) {
+            baritoneStarted = false;  // leg ended without open sky — try a different direction
             if (++walkoutAttempts >= MAX_WALKOUT_ATTEMPTS)
                 abort("could not walk clear of the terrain (after " + walkoutAttempts + " walk-out legs)");
         }
@@ -1461,6 +1493,12 @@ public class ElytraPilot extends Module {
 
     private static float clampF(float v, float lo, float hi) {
         return v < lo ? lo : (v > hi ? hi : v);
+    }
+
+    private static double wrapDeg(double d) {
+        while (d > 180) d -= 360;
+        while (d < -180) d += 360;
+        return d;
     }
 
     private void complete(String why) {

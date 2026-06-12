@@ -10,22 +10,36 @@ import java.util.List;
 import java.util.PriorityQueue;
 
 /**
- * Tiny coarse-grid 3D A* over the loaded chunk cache — the look-ahead that lets {@link ElytraPilot} route THROUGH
+ * Coarse-grid 3D A* over the loaded chunk cache — the look-ahead that lets {@link ElytraPilot} route THROUGH
  * open nether (and around pockets / walls / lava) instead of reacting block-by-block and wandering into a dead end.
  *
- * <p>It searches a {@value #CELL}-block grid (cheap), treats an <b>unloaded</b> cell as closed (so it only routes
- * through space it can actually see) and lava as solid. When it can't reach the target within the node budget /
- * loaded area, it returns the best partial route TOWARD it (the explored cell nearest the goal), so the bot always
- * makes progress and re-plans as more chunks stream in. Pure Java, no native deps.
+ * <p>Route QUALITY rules (each one earned by a live incident where the bot was led into a pocket and died):
+ * <ul>
+ *   <li><b>Whole-cell sampling</b> — a cell is open only if several columns across the 4×4×4 box are flyable,
+ *       not just the single centre column (which let routes thread cells that were mostly terrain/fire/lava).</li>
+ *   <li><b>Confinement cost</b> — cells hugging terrain cost extra, so paths prefer the middle of open volumes
+ *       and only thread tight gaps when there is no alternative.</li>
+ *   <li><b>Pocket-aware partial endpoint</b> — when the goal is out of reach, the leg's destination is the best
+ *       cell toward it that is also OPEN; "geometrically nearest the goal" used to regularly be inside a pit.</li>
+ *   <li><b>Blind high-band routing</b> — unloaded cells are passable at a cost, but only at y {@value #BLIND_MIN_Y}..
+ *       {@value #BLIND_MAX_Y} (above most terrain, below the bedrock roof): beyond the frontier the route aims
+ *       high through unseen space instead of dead-ending in the last loaded pit. The chunk-frontier governor
+ *       keeps the bot from outrunning what it can see; this just gives the leg a sane DIRECTION.</li>
+ * </ul>
  *
- * <p>Limit: loaded chunks only — it plans the next ~hundred blocks and is re-run continuously, rather than solving a
- * whole cross-nether route up front. Full-route planning through UNGENERATED terrain is the heavier native
- * babbaj/nether-pathfinder upgrade (Baritone-parity), deliberately not taken here.
+ * <p>Pure Java, no native deps. Full-route planning through ungenerated terrain is still the heavier native
+ * babbaj/nether-pathfinder upgrade, deliberately not taken here.
  */
 public final class ElytraPathfinder {
     private ElytraPathfinder() {}
 
     private static final int CELL = 4;                 // grid cell size in blocks
+    private static final byte OPEN = 0, BLOCKED = 1, UNLOADED = 2;
+    private static final int BLIND_MIN_Y = 80, BLIND_MAX_Y = 118;
+    private static final double BLIND_COST = 2.5;      // step-cost multiplier through unseen (high-band) cells
+    private static final double CONFINE_COST = 0.35;   // extra step cost per blocked face neighbour
+    private static final int[][] SAMPLE_COLS = {{1, 1}, {0, 0}, {3, 3}}; // columns sampled per cell (centre + diagonal corners)
+    private static final int[][] FACES = {{1,0,0},{-1,0,0},{0,1,0},{0,-1,0},{0,0,1},{0,0,-1}};
     private static final int[][] NEIGHBOURS;           // 26-connected
     static {
         List<int[]> n = new ArrayList<>(26);
@@ -39,7 +53,7 @@ public final class ElytraPathfinder {
     /**
      * A* on the {@value #CELL}-block grid from the start block toward (tx,ty,tz). Returns block-center waypoints
      * (forward order, start first) toward the goal — the full path if reached, else the best partial toward it.
-     * Returns {@code null} only if the start cell itself is blocked/unseen.
+     * Returns {@code null} only if the start cell itself is blocked.
      *
      * @param maxNodes      node-expansion budget (cost guard)
      * @param maxCellRadius search-box half-extent in cells around the start
@@ -50,8 +64,8 @@ public final class ElytraPathfinder {
         final long start = key(scx, scy, scz);
         final long goal = key(gcx, gcy, gcz);
 
-        final HashMap<Long, Boolean> openCache = new HashMap<>();
-        if (!cellOpen(scx, scy, scz, openCache)) return null; // we're inside a wall/unseen — nothing to follow
+        final HashMap<Long, Byte> cache = new HashMap<>();
+        if (cellState(scx, scy, scz, cache) == BLOCKED) return null; // inside a wall — nothing to follow
 
         final HashMap<Long, Long> cameFrom = new HashMap<>();
         final HashMap<Long, Double> g = new HashMap<>();
@@ -62,7 +76,7 @@ public final class ElytraPathfinder {
         g.put(start, 0.0);
         open.add(new long[]{start, Double.doubleToLongBits(heur(scx, scy, scz, gcx, gcy, gcz))});
         long best = start;
-        double bestH = heur(scx, scy, scz, gcx, gcy, gcz);
+        double bestScore = heur(scx, scy, scz, gcx, gcy, gcz);
         int expanded = 0;
 
         while (!open.isEmpty() && expanded < maxNodes) {
@@ -77,14 +91,29 @@ public final class ElytraPathfinder {
                 if (Math.abs(nx - scx) > maxCellRadius || Math.abs(ny - scy) > maxCellRadius
                         || Math.abs(nz - scz) > maxCellRadius) continue;
                 final long nk = key(nx, ny, nz);
-                if (closed.contains(nk) || !cellOpen(nx, ny, nz, openCache)) continue;
-                final double ng = cg + Math.sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+                if (closed.contains(nk)) continue;
+                final byte st = cellState(nx, ny, nz, cache);
+                if (st == BLOCKED) continue;
+                double step = Math.sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+                int conf = 0;
+                if (st == UNLOADED) {
+                    final int by = ny * CELL;
+                    if (by < BLIND_MIN_Y || by > BLIND_MAX_Y) continue; // blind routing only in the high band
+                    step *= BLIND_COST;
+                } else {
+                    conf = blockedFaces(nx, ny, nz, cache);
+                    step *= 1.0 + CONFINE_COST * conf;  // hug nothing: prefer the middle of open volumes
+                }
+                final double ng = cg + step;
                 if (ng < g.getOrDefault(nk, Double.MAX_VALUE)) {
                     g.put(nk, ng);
                     cameFrom.put(nk, cur);
                     final double nh = heur(nx, ny, nz, gcx, gcy, gcz);
                     open.add(new long[]{nk, Double.doubleToLongBits(ng + nh)});
-                    if (nh < bestH) { bestH = nh; best = nk; }
+                    // Partial-endpoint preference: toward the goal AND somewhere open. A confined cell (pocket,
+                    // dead end) must never become the leg's destination just for being nearest the goal.
+                    final double endScore = nh + (st == UNLOADED ? 1.0 : 1.5 * conf);
+                    if (endScore < bestScore) { bestScore = endScore; best = nk; }
                 }
             }
         }
@@ -102,23 +131,39 @@ public final class ElytraPathfinder {
         return path;
     }
 
-    /** A cell is open if its full center column ({@value #CELL} blocks) is air/water (not solid, not lava) and loaded. */
-    private static boolean cellOpen(int cx, int cy, int cz, HashMap<Long, Boolean> cache) {
+    /** Blocked face-neighbours of a cell (6-connected) — its "confinement". Unloaded neighbours count as open. */
+    private static int blockedFaces(int cx, int cy, int cz, HashMap<Long, Byte> cache) {
+        int n = 0;
+        for (int[] f : FACES)
+            if (cellState(cx + f[0], cy + f[1], cz + f[2], cache) == BLOCKED) n++;
+        return n;
+    }
+
+    /**
+     * Cell state, cached. OPEN requires every sampled column ({@link #SAMPLE_COLS}) of the 4×4×4 box to be
+     * air/water — solid, lava, and fire all block (lava/fire are not air). The old single-centre-column sample
+     * let routes thread cells that were mostly terrain or burning.
+     */
+    private static byte cellState(int cx, int cy, int cz, HashMap<Long, Byte> cache) {
         final long k = key(cx, cy, cz);
-        final Boolean cached = cache.get(k);
+        final Byte cached = cache.get(k);
         if (cached != null) return cached;
-        boolean open = true;
-        final int bx = cx * CELL + CELL / 2, by = cy * CELL, bz = cz * CELL + CELL / 2;
-        if (!World.isChunkLoadedBlockPos(bx, bz)) {
-            open = false;                              // unseen -> don't route into it
+        byte st = OPEN;
+        final int x0 = cx * CELL, y0 = cy * CELL, z0 = cz * CELL;
+        if (!World.isChunkLoadedBlockPos(x0 + CELL / 2, z0 + CELL / 2)) {
+            st = UNLOADED;
         } else {
-            for (int dy = 0; dy < CELL; dy++) {
-                var b = World.getBlock(bx, by + dy, bz);
-                if (!b.isAir() && !World.isWater(b)) { open = false; break; } // solid or lava blocks the cell
+            outer:
+            for (int[] c : SAMPLE_COLS) {
+                final int bx = x0 + c[0], bz = z0 + c[1];
+                for (int dy = 0; dy < CELL; dy++) {
+                    var b = World.getBlock(bx, y0 + dy, bz);
+                    if (!b.isAir() && !World.isWater(b)) { st = BLOCKED; break outer; }
+                }
             }
         }
-        cache.put(k, open);
-        return open;
+        cache.put(k, st);
+        return st;
     }
 
     private static int[] center(long k) {
