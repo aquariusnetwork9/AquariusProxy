@@ -280,9 +280,14 @@ public class ElytraPilot extends Module {
             if (BOT.isFallFlying()) {
                 lostFlightTicks = 0;
                 lostLogged = false;
-                // Sustained healthy flight forgives past flight-loss episodes: the cap should catch rapid-fire
-                // losses (genuinely stuck), not occasional terrain clips spread across a long nether route.
-                if (lostEpisodes > 0 && ++healthyTicks >= EPISODE_DECAY_TICKS) { lostEpisodes = 0; healthyTicks = 0; }
+                // Sustained healthy flight forgives past flight-loss episodes AND walk-out attempts: the caps
+                // should catch being stuck NOW, not tax every rough patch crossed over a long route (a successful
+                // walkout early in a leg used to leave no budget for trouble an hour of terrain later).
+                if ((lostEpisodes > 0 || walkoutAttempts > 0) && ++healthyTicks >= EPISODE_DECAY_TICKS) {
+                    lostEpisodes = 0;
+                    walkoutAttempts = 0;
+                    healthyTicks = 0;
+                }
             } else {
                 healthyTicks = 0;
             }
@@ -520,7 +525,7 @@ public class ElytraPilot extends Module {
         }
 
         if (hazardClimbTicks > 0) {         // repeated hits — climb + jink out of the line of fire
-            pitch = y < roofCap - 1 ? -cfg.climbPitch * 0.7f : 0f;
+            pitch = y < roofCap - 8 ? -cfg.climbPitch * 0.7f : 8f; // near the roof, ease DOWN — climbing pins it on bedrock
             wantFire = !overCap;
             yaw += 30f;
         }
@@ -596,9 +601,11 @@ public class ElytraPilot extends Module {
         if (terrainBlockedAhead(x, y, z, yaw, Math.min(cfg.lookAheadBlocks, 24))) {
             // walled after the horizontal reroute -> go vertical. PREFER CLIMBING: "under" routes in the nether
             // are pockets and lava more often than passages (a dive into one killed the bot); dive only when the
-            // roof truly blocks climbing and there is generous room below.
-            boolean canClimb = y < roofCap - 1 && above > 3;
-            boolean canDive = below > 10;
+            // roof truly blocks climbing and there is generous room below. EXCEPT near the bedrock roof, where
+            // climbing just pins the bot against the ceiling (live incident at y120) — there, down is the way out.
+            boolean nearRoof = y >= roofCap - 8;
+            boolean canClimb = !nearRoof && y < roofCap - 1 && above > 3;
+            boolean canDive = below > (nearRoof ? 6 : 10);
             if (canClimb)     { pitch = -cfg.climbPitch * 0.7f; wantFire = !overCap; }
             else if (canDive) { pitch = 22f; wantFire = false; }                        // dive under
             else              { pitch = -cfg.climbPitch * 0.7f; wantFire = !overCap; }  // boxed in -> try up
@@ -628,7 +635,7 @@ public class ElytraPilot extends Module {
         }
 
         if (hazardClimbTicks > 0) {         // repeated hits — climb + jink out of the line of fire
-            pitch = y < roofCap - 1 ? -cfg.climbPitch * 0.7f : 0f;
+            pitch = y < roofCap - 8 ? -cfg.climbPitch * 0.7f : 8f; // near the roof, ease DOWN — climbing pins it on bedrock
             wantFire = !overCap;
             yaw += 30f;
         }
