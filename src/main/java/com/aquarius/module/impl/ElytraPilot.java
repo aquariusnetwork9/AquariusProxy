@@ -129,6 +129,9 @@ public class ElytraPilot extends Module {
     private int pinTicks;              // consecutive cruise ticks at near-zero speed (wall-pin watchdog)
     private int walkoutTicks;          // ticks in the current walk-out leg
     private int walkoutAttempts;
+    private double loopX, loopZ;       // centre of a repeated takeoff-fail loop (chimney trap)
+    private int loopCount;
+    private boolean walkoutFar;        // suppress retakeoff until well away from the loop centre
     private int totemPops;             // totem pops during this flight (lethal-hit counter)
     private float lastHealth;          // -1 until first read; health drops drive the hazard responses
     private boolean hpDropped;         // health fell since the previous tick
@@ -254,6 +257,8 @@ public class ElytraPilot extends Module {
         pinTicks = 0;
         walkoutTicks = 0;
         walkoutAttempts = 0;
+        loopCount = 0;
+        walkoutFar = false;
         totemPops = 0;
         lastHealth = -1f;
         hpDropped = false;
@@ -1154,6 +1159,18 @@ public class ElytraPilot extends Module {
      * Bounded legs and attempts; aborts when walking out repeatedly fails too.
      */
     private void enterWalkout(String why) {
+        var pc = CACHE.getPlayerCache();
+        // Chimney-trap breaker: repeated walkouts from ~the same spot mean the "cleared" spot isn't actually
+        // flyable (vertical clearance, walls all around). Force the next leg to get DISTANCE before retakeoff.
+        if (horizDist(pc.getX(), pc.getZ(), loopX, loopZ) < 12) {
+            loopCount++;
+        } else {
+            loopCount = 1;
+            loopX = pc.getX();
+            loopZ = pc.getZ();
+        }
+        walkoutFar = loopCount >= 3;
+        if (walkoutFar) warn("Takeoff keeps failing around {}, {} — walking far before retrying", (int) loopX, (int) loopZ);
         phase = Phase.WALKOUT;
         baritoneStarted = false;
         walkoutTicks = 0;
@@ -1189,8 +1206,13 @@ public class ElytraPilot extends Module {
             return;
         }
         walkoutTicks++;
-        // Baritone is driving — no flight inputs. Once the sky opens up, hand back to a fresh takeoff.
-        if (walkoutTicks > 20 && !BOT.isFallFlying() && clearAboveCount(x, y, z) >= WALKOUT_OPEN_SKY) {
+        // Baritone is driving — no flight inputs. Once the spot is genuinely flyable, hand back to a fresh
+        // takeoff: open sky ABOVE plus lateral room toward the target (a chimney passes a column-only check),
+        // and — after repeated same-spot failures — real distance from the trap.
+        if (walkoutTicks > 20 && !BOT.isFallFlying()
+                && clearAboveCount(x, y, z) >= WALKOUT_OPEN_SKY
+                && clearDistAhead(x, y + 2, z, desiredYaw(x, z), 8) >= 8
+                && (!walkoutFar || horizDist(x, z, loopX, loopZ) > 24)) {
             BARITONE.stop();
             info("Walked clear (open sky above at {}, {}, {}) — taking off again", (int) x, (int) y, (int) z);
             lostEpisodes = 0;
