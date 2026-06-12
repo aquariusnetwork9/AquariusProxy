@@ -13,6 +13,8 @@ import static com.mojang.brigadier.arguments.DoubleArgumentType.doubleArg;
 import static com.mojang.brigadier.arguments.DoubleArgumentType.getDouble;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
+import static com.mojang.brigadier.arguments.LongArgumentType.getLong;
+import static com.mojang.brigadier.arguments.LongArgumentType.longArg;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.word;
 import static com.aquarius.Globals.CONFIG;
@@ -71,7 +73,9 @@ public class ElytraPilotCommand extends Command {
                 "netherceiling <y>     (hard altitude cap in the nether; never climb above it / into bedrock)",
                 "nethercruise <y>      (preferred open-nether flight altitude; holds ~this Y and dodges in 3D)",
                 "netherpath <on/off>   (3D look-ahead pathfinding in open nether vs pure reactive dodging)",
-                "netherplan <nodes> <cells> <interval>  (planner budget / scan radius in 4-block cells / re-plan ticks)",
+                "netherplan <nodes> <cells> <interval>  (LOCAL planner budget / scan radius in 4-block cells / re-plan ticks)",
+                "native <on/off>       (native nether-pathfinder: full-route planning through UNLOADED chunks via seed terrain-gen)",
+                "seed <long>           (world seed for native nether routing; default = 2b2t's nether seed)",
                 "netherfrontier <slow> <hold>  (blocks of loaded terrain ahead below which to coast / brake — don't outrun 2b2t's slow chunk loading)",
                 "hoppitch <deg>        (climb angle when gliding over an on-road obstacle)"
             )
@@ -249,6 +253,16 @@ public class ElytraPilotCommand extends Command {
             .then(literal("nethercruise").then(argument("y", integer()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.netherCruiseY = getInteger(c, "y");
                 c.getSource().getEmbed().title("ElytraPilot nether cruise altitude = " + CONFIG.client.extra.elytraPilot.netherCruiseY);
+            })))
+            .then(literal("native").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.nativeRouting = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("ElytraPilot native nether routing "
+                    + toggleStrCaps(CONFIG.client.extra.elytraPilot.nativeRouting));
+            })))
+            .then(literal("seed").then(argument("seed", longArg()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.netherSeed = getLong(c, "seed");
+                c.getSource().getEmbed().title("ElytraPilot nether seed = " + CONFIG.client.extra.elytraPilot.netherSeed)
+                    .description("The native router's context regenerates on the next route request.");
             })))
             .then(literal("netherplan")
                 .then(argument("nodes", integer(100))

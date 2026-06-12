@@ -1,9 +1,12 @@
 package com.aquarius.module.impl;
 
 import com.github.rfresh2.EventConsumer;
+import com.aquarius.Proxy;
 import com.aquarius.cache.data.inventory.Container;
+import com.aquarius.event.client.ChunkDataEvent;
 import com.aquarius.event.client.ClientBotTick;
 import com.aquarius.event.client.ClientDeathEvent;
+import com.aquarius.event.module.TotemPopEvent;
 import com.aquarius.feature.inventory.InventoryActionRequest;
 import com.aquarius.feature.inventory.actions.ClickItem;
 import com.aquarius.feature.inventory.actions.InventoryAction;
@@ -36,6 +39,7 @@ import static com.aquarius.Globals.CACHE;
 import static com.aquarius.Globals.CONFIG;
 import static com.aquarius.Globals.INPUTS;
 import static com.aquarius.Globals.INVENTORY;
+import static com.aquarius.Globals.MODULE;
 
 /**
  * ElytraPilot — autopilot elytra flight.
@@ -69,6 +73,7 @@ public class ElytraPilot extends Module {
     private static final int EPISODE_DECAY_TICKS = 300;     // ~15s of healthy flight resets the lost-flight episode count
     private static final int PIN_WARN_TICKS = 100;           // ~5s of no cruise progress -> warn (likely pinned on terrain)
     private static final int PIN_ABORT_TICKS = 300;          // ~15s of no cruise progress -> walk out / abort
+    private static final int EMERGENCY_FLOOR_Y = 55;         // below this, nether cruise climbs at full boost no matter what
     private static final int WALKOUT_LEG_BLOCKS = 48;        // Baritone walk distance per walk-out leg, toward the target
     private static final int WALKOUT_OPEN_SKY = 16;          // blocks of clear air overhead = enough room to fly again
     private static final int WALKOUT_TIMEOUT_TICKS = 1200;   // ~60s per walk-out leg
@@ -107,6 +112,12 @@ public class ElytraPilot extends Module {
     private List<int[]> netherPath;   // current 3D look-ahead route (block-center waypoints) in open nether
     private int pathIdx;
     private int planCooldown;
+    private boolean netherPathIsNative;                              // netherPath came from the native router
+    private java.util.concurrent.CompletableFuture<NetherRouter.Route> nativeFuture;
+    private boolean nativeRouteFinished;
+    private int nativeReqCooldown;
+    private boolean nativeFailLogged;
+    private boolean nativeUnsupportedLogged;
     private boolean lastFlightSuccess; // DONE via arrival/landing (true) vs abort/emergency (false)
     private int lostFlightTicks;       // continuous ticks of unexpected non-flight (watchdog)
     private int lostEpisodes;
@@ -118,6 +129,7 @@ public class ElytraPilot extends Module {
     private int pinTicks;              // consecutive cruise ticks at near-zero speed (wall-pin watchdog)
     private int walkoutTicks;          // ticks in the current walk-out leg
     private int walkoutAttempts;
+    private int totemPops;             // totem pops during this flight (lethal-hit counter)
     private float lastHealth;          // -1 until first read; health drops drive the hazard responses
     private boolean hpDropped;         // health fell since the previous tick
     private int dmgWindowTicks;        // rolling window for counting in-flight damage events
@@ -138,6 +150,14 @@ public class ElytraPilot extends Module {
             of(ClientBotTick.Stopped.class, e -> reset()),
             of(ClientDeathEvent.class, e -> {
                 if (phase != Phase.IDLE && phase != Phase.DONE) abort("bot died");
+            }),
+            of(TotemPopEvent.class, this::onTotemPop),
+            of(ChunkDataEvent.class, e -> {     // feed observed chunks to the native router while flying the nether
+                var cfg = CONFIG.client.extra.elytraPilot;
+                if (cfg.nativeRouting && phase != Phase.IDLE && phase != Phase.DONE && inNether()
+                        && NetherRouter.INSTANCE.isSupported()) {
+                    NetherRouter.INSTANCE.submitChunk(e.x(), e.z(), cfg.netherSeed);
+                }
             })
         );
     }
@@ -220,6 +240,11 @@ public class ElytraPilot extends Module {
         netherPath = null;
         pathIdx = 0;
         planCooldown = 0;
+        netherPathIsNative = false;
+        nativeFuture = null;          // abandoned futures complete harmlessly on the router thread
+        nativeRouteFinished = false;
+        nativeReqCooldown = 0;
+        nativeFailLogged = false;
         lastFlightSuccess = false;
         lostFlightTicks = 0;
         lostEpisodes = 0;
@@ -229,6 +254,7 @@ public class ElytraPilot extends Module {
         pinTicks = 0;
         walkoutTicks = 0;
         walkoutAttempts = 0;
+        totemPops = 0;
         lastHealth = -1f;
         hpDropped = false;
         dmgWindowTicks = 0;
@@ -472,7 +498,18 @@ public class ElytraPilot extends Module {
         boolean overCap = speed * 20.0 >= cfg.maxSpeed;
         int roofCap = Math.min(cfg.netherCeilingY, 125);
 
-        if (netherPath == null || --planCooldown <= 0) {        // refresh the look-ahead route
+        // Prefer the NATIVE full-route planner (terrain generated from the seed in C++ — sees the whole leg,
+        // not just the 12 loaded chunks). The local A* below remains the fallback while a native route is
+        // pending/unavailable, and the reactive layer still overrides per-tick where OBSERVED terrain disagrees.
+        if (cfg.nativeRouting) {
+            if (NetherRouter.INSTANCE.isSupported()) {
+                maintainNativeRoute(x, y, z, cfg);
+            } else if (!nativeUnsupportedLogged) {
+                nativeUnsupportedLogged = true;
+                warn("Native nether routing unsupported on this system — using the local planner");
+            }
+        }
+        if (!netherPathIsNative && (netherPath == null || --planCooldown <= 0)) { // refresh the LOCAL look-ahead route
             planCooldown = cfg.netherPlanInterval;
             // No fixed cruise altitude: plan from the CURRENT altitude (nudged up when low over the local floor,
             // clamped under the roof) and let the 3D A* find whatever open space actually exists.
@@ -487,7 +524,7 @@ public class ElytraPilot extends Module {
 
         while (pathIdx < netherPath.size() - 1) {               // drop waypoints we've reached
             int[] wp = netherPath.get(pathIdx);
-            if (horizDist(x, z, wp[0], wp[2]) < 4 && Math.abs(y - wp[1]) < 4) pathIdx++; else break;
+            if (horizDist(x, z, wp[0], wp[2]) < 5 && Math.abs(y - wp[1]) < 6) pathIdx++; else break;
         }
         int[] w = netherPath.get(Math.min(pathIdx + 2, netherPath.size() - 1)); // aim a couple cells ahead
         float yaw = (float) Math.toDegrees(Math.atan2(-(w[0] + 0.5 - x), w[2] + 0.5 - z));
@@ -537,6 +574,10 @@ public class ElytraPilot extends Module {
             pitch = y < roofCap - 8 ? -cfg.climbPitch * 0.7f : 8f; // near the roof, ease DOWN — climbing pins it on bedrock
             wantFire = !overCap;
             yaw += 30f;
+        }
+        if (y < EMERGENCY_FLOOR_Y) {        // lava country — below this line, climbing outranks everything else
+            pitch = -cfg.climbPitch;
+            wantFire = !overCap;
         }
         wantFire = fireSpaced(wantFire);
         boolean fire = wantFire && heldIsFirework();
@@ -648,6 +689,10 @@ public class ElytraPilot extends Module {
             wantFire = !overCap;
             yaw += 30f;
         }
+        if (y < EMERGENCY_FLOOR_Y) {        // lava country — below this line, climbing outranks everything else
+            pitch = -cfg.climbPitch;
+            wantFire = !overCap;
+        }
         wantFire = fireSpaced(wantFire);
         boolean fire = wantFire && heldIsFirework();
         if (wantFire && !fire) ensureFireworkHeld();
@@ -661,6 +706,79 @@ public class ElytraPilot extends Module {
                 info("Approaching target — descending");
             }
         }
+    }
+
+    /**
+     * Keep a native full-route plan alive: consume finished requests, replan on deviation, extend partial
+     * segments before they run out. While a request is in flight the bot keeps flying whatever it has
+     * (old native route, local A*, or reactive) — it never waits in place.
+     */
+    private void maintainNativeRoute(double x, double y, double z, com.aquarius.util.config.Config.Client.Extra.ElytraPilot cfg) {
+        if (nativeReqCooldown > 0) nativeReqCooldown--;
+
+        if (nativeFuture != null && nativeFuture.isDone()) {
+            try {
+                final NetherRouter.Route r = nativeFuture.join();
+                if (r != null && r.points().size() >= 2) {
+                    netherPath = r.points();
+                    pathIdx = nearestRouteIndex(r.points(), x, z);
+                    netherPathIsNative = true;
+                    nativeRouteFinished = r.finished();
+                    nativeFailLogged = false;
+                    info("Native route: {} waypoints{} ({} observed chunks fed)", r.points().size(),
+                        r.finished() ? "" : " (partial — will extend)", NetherRouter.INSTANCE.fedChunkCount());
+                } else if (!nativeFailLogged) {
+                    nativeFailLogged = true;
+                    warn("Native routing returned no route — using the local planner");
+                }
+            } catch (final Exception e) {
+                if (!nativeFailLogged) {
+                    nativeFailLogged = true;
+                    warn("Native routing failed ({}) — using the local planner", e.toString());
+                }
+            }
+            nativeFuture = null;
+        }
+
+        boolean need;
+        if (netherPathIsNative && netherPath != null) {
+            final int[] cur = netherPath.get(Math.min(pathIdx, netherPath.size() - 1));
+            final boolean deviated = horizDist(x, z, cur[0], cur[2]) > 48;
+            final boolean nearEnd = !nativeRouteFinished && pathIdx >= netherPath.size() - 8;
+            if (deviated) netherPathIsNative = false;            // stale — let the local planner cover the gap
+            need = deviated || nearEnd;
+        } else {
+            need = true;
+        }
+        if (need && nativeFuture == null && nativeReqCooldown <= 0) {
+            nativeReqCooldown = 100;                             // at most one request per ~5s
+            // Feed the loaded neighbourhood first so observation overrides generation where we actually are.
+            final int pcx = MathHelper.floorI(x) >> 4, pcz = MathHelper.floorI(z) >> 4;
+            for (int dx = -10; dx <= 10; dx++) {
+                for (int dz = -10; dz <= 10; dz++) {
+                    if (World.isChunkLoadedChunkPos(pcx + dx, pcz + dz)) {
+                        NetherRouter.INSTANCE.submitChunk(pcx + dx, pcz + dz, cfg.netherSeed);
+                    }
+                }
+            }
+            final int destY = Math.min(Math.max(MathHelper.floorI(y), 48), 100);
+            nativeFuture = NetherRouter.INSTANCE.requestRoute(
+                MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z),
+                cfg.targetX, destY, cfg.targetZ, cfg.netherSeed, cfg.nativeRouteTimeoutMs);
+        }
+    }
+
+    /** Index of the route point nearest to (x,z) — where to resume following after a (re)plan. */
+    private int nearestRouteIndex(List<int[]> route, double x, double z) {
+        int best = 0;
+        double bestD = Double.MAX_VALUE;
+        final int limit = Math.min(route.size(), 400);
+        for (int i = 0; i < limit; i++) {
+            final int[] p = route.get(i);
+            final double d = horizDist(x, z, p[0], p[2]);
+            if (d < bestD) { bestD = d; best = i; }
+        }
+        return best;
     }
 
     /** Blocks of clear (air/water, non-lava) space directly above the bot before the first solid/lava (capped). */
@@ -1198,6 +1316,33 @@ public class ElytraPilot extends Module {
             submitInput(false, false, yaw, 0f);                   // nothing left — falling
         }
         if (!BOT.isFallFlying() && heightAboveGround(x, y, z) <= 2) complete("emergency landing complete", false);
+    }
+
+    /**
+     * Every totem pop is a LETHAL hit the bot just barely survived. More than the configured limit during one
+     * flight means the situation is beyond what the pilot can fly out of (a lava pin killed the bot through 6
+     * totems in 6 seconds) — abort, and optionally LOG OUT to preserve the bot and its kit where it stands.
+     */
+    private void onTotemPop(TotemPopEvent e) {
+        if (e.entityId() != CACHE.getPlayerCache().getEntityId()) return;
+        if (phase == Phase.IDLE || phase == Phase.DONE) return;
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (!cfg.totemPopAbort) return;
+        totemPops++;
+        if (totemPops <= cfg.totemPopLimit) {
+            warn("Totem popped in flight ({}/{} before abort)", totemPops, cfg.totemPopLimit);
+            return;
+        }
+        warn("Popped {} totems — aborting the flight{}", totemPops,
+            cfg.totemPopLogout ? " and DISCONNECTING to preserve the bot" : "");
+        abort("popped " + totemPops + " totems");
+        if (cfg.tripActive) {                       // kill the trip too, so nothing re-arms on reconnect
+            cfg.tripActive = false;
+            MODULE.get(ElytraTrip.class).syncEnabledFromConfig();
+        }
+        if (cfg.totemPopLogout) {
+            Proxy.getInstance().disconnect("ElytraPilot: popped " + totemPops + " totems — emergency logout");
+        }
     }
 
     /**

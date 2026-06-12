@@ -23,6 +23,9 @@ repositories {
         content { includeGroupByRegex("com.github.rfresh2.*") }
     }
     maven("https://maven.2b2t.vc/remote")
+    maven("https://babbaj.github.io/maven/") {
+        content { includeGroup("dev.babbaj") }
+    }
     mavenLocal()
 }
 
@@ -54,6 +57,8 @@ dependencies {
     api("io.netty:netty-resolver-dns-native-macos") { artifact { classifier = "osx-aarch_64" } }
     api("org.cloudburstmc.math:api:2.0")
     api("org.cloudburstmc.math:immutable:2.0")
+    // Native nether terrain-gen + A* (Baritone elytra's pathfinder); natives bundled in the jar (linux/win/mac)
+    implementation("dev.babbaj:nether-pathfinder:1.6")
     api("org.redisson:redisson:4.3.1") {
         exclude(group = "io.netty")
     }
