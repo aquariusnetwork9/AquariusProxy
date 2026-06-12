@@ -109,9 +109,8 @@ public class ElytraPilot extends Module {
     private boolean baritoneStarted;
     private int landWalkTicks;
     private int hopTicks;
-    private List<int[]> netherPath;   // current 3D look-ahead route (block-center waypoints) in open nether
+    private List<int[]> netherPath;   // current native full-route waypoints (block centers) in open nether
     private int pathIdx;
-    private int planCooldown;
     private boolean netherPathIsNative;                              // netherPath came from the native router
     private java.util.concurrent.CompletableFuture<NetherRouter.Route> nativeFuture;
     private boolean nativeRouteFinished;
@@ -123,8 +122,6 @@ public class ElytraPilot extends Module {
     private int lostEpisodes;
     private int healthyTicks;          // continuous fall-flying ticks; sustained flight forgives past episodes
     private boolean lostLogged;
-    private boolean spiraling;         // circling in place at the chunk frontier while terrain streams in
-    private float spiralYaw;
     private float landSpinYaw;         // helicopter-landing yaw spin
     private int pinTicks;              // consecutive cruise ticks at near-zero speed (wall-pin watchdog)
     private int walkoutTicks;          // ticks in the current walk-out leg
@@ -242,7 +239,6 @@ public class ElytraPilot extends Module {
         hopTicks = 0;
         netherPath = null;
         pathIdx = 0;
-        planCooldown = 0;
         netherPathIsNative = false;
         nativeFuture = null;          // abandoned futures complete harmlessly on the router thread
         nativeRouteFinished = false;
@@ -253,7 +249,6 @@ public class ElytraPilot extends Module {
         lostEpisodes = 0;
         healthyTicks = 0;
         lostLogged = false;
-        spiraling = false;
         pinTicks = 0;
         walkoutTicks = 0;
         walkoutAttempts = 0;
@@ -430,7 +425,7 @@ public class ElytraPilot extends Module {
         if (inNether() && !cfg.highway) {
             // Wall-pin watchdog: a live capture showed the bot pressed against terrain, boosting into it every tick,
             // position frozen, while still "fall-flying" (so the lost-flight watchdog never fired). Bound it.
-            if (!spiraling && speed * 20.0 < 2.0) {
+            if (speed * 20.0 < 2.0) {
                 pinTicks++;
                 if (pinTicks == PIN_WARN_TICKS)
                     warn("No cruise progress at {}, {}, {} — likely pinned on terrain", (int) x, (int) y, (int) z);
@@ -491,10 +486,10 @@ public class ElytraPilot extends Module {
     }
 
     /**
-     * Open-nether flight. NATIVE mode (default): the babbaj/nether-pathfinder route IS the flight plan — full-leg
-     * waypoints through unloaded chunks generated from the seed in C++; the bot simply flies them, holding a safe
-     * spiral while a route is computed. The legacy local planner + reactive stack remains only as the manual
-     * fallback ({@code fly native off}) and for unsupported systems.
+     * Open-nether flight. The babbaj/nether-pathfinder route IS the flight plan — full-leg waypoints through unloaded
+     * chunks generated from the seed in C++; the bot simply flies them. While a route is still computing (~0.3-3s),
+     * or on the rare system without native support, it falls back to {@link #tickNetherReactive} — reactive
+     * steering that always makes forward progress toward the target (never circles in place).
      */
     private void tickNetherCruise(double x, double y, double z, double speed) {
         var cfg = CONFIG.client.extra.elytraPilot;
@@ -502,11 +497,11 @@ public class ElytraPilot extends Module {
             tickNetherNative(x, y, z, speed);
             return;
         }
-        if (cfg.nativeRouting && !nativeUnsupportedLogged) {
+        if (cfg.nativeRouting && !NetherRouter.INSTANCE.isSupported() && !nativeUnsupportedLogged) {
             nativeUnsupportedLogged = true;
-            warn("Native nether routing unsupported on this system — using the local planner");
+            warn("Native nether routing unsupported on this system — flying reactive toward the target");
         }
-        tickNetherLocal(x, y, z, speed);
+        tickNetherReactive(x, y, z, speed);                     // `native off`, no target, or unsupported
     }
 
     /** Fly the native full-leg route. The route leads; only damage/lava/roof emergencies override it. */
@@ -517,10 +512,9 @@ public class ElytraPilot extends Module {
 
         maintainNativeRoute(x, y, z, cfg);
         if (!netherPathIsNative || netherPath == null || netherPath.size() < 2) {
-            tickSpiralHold(x, y, z, speed, roofCap);            // hold safely while the route computes (~0.3-3s)
+            tickNetherReactive(x, y, z, speed);                 // fly toward the target while the route computes (~0.3-3s)
             return;
         }
-        spiraling = false;
 
         while (pathIdx < netherPath.size() - 1) {               // drop waypoints we've reached
             int[] wp = netherPath.get(pathIdx);
@@ -551,9 +545,9 @@ public class ElytraPilot extends Module {
             if (Math.abs(wrapDeg(b2 - b1)) > 35) wantFire = false;
         }
 
-        // Don't BOOST into unloaded space (the route is trusted for direction, not for speed): coast at the
-        // frontier and let chunks stream in. No spiral here — the route already knows where it's going.
-        if (loadedDistAhead(x, z, yaw, cfg.netherFrontierSlow) < cfg.netherFrontierSlow) wantFire = false;
+        // The native route is generated from seed terrain, so it is valid through UNLOADED chunks — boost into them
+        // at full speed (this is how Baritone's elytra flies). No frontier governor: throttling at the loaded edge is
+        // exactly what stalled a cold-started bot (nothing loaded ahead -> thrust suppressed every tick -> spin in place).
 
         if (hazardClimbTicks > 0) {         // repeated hits — climb + jink out of the line of fire
             pitch = y < roofCap - 8 ? -cfg.climbPitch * 0.7f : 8f;
@@ -579,129 +573,9 @@ public class ElytraPilot extends Module {
     }
 
     /**
-     * LEGACY local-planner flight (`fly native off` / unsupported systems): coarse loaded-chunk A* with the
-     * reactive layer, frontier spiral governor, and altitude rules — the pre-3.2.0 behavior.
-     */
-    private void tickNetherLocal(double x, double y, double z, double speed) {
-        var cfg = CONFIG.client.extra.elytraPilot;
-        if (!cfg.netherPathfind || !cfg.hasTarget) { tickNetherReactive(x, y, z, speed); return; }
-
-        boolean overCap = speed * 20.0 >= cfg.maxSpeed;
-        int roofCap = Math.min(cfg.netherCeilingY, 125);
-
-        if (netherPath == null || --planCooldown <= 0) {        // refresh the look-ahead route
-            planCooldown = cfg.netherPlanInterval;
-            int below0 = heightAboveGround(x, y, z);
-            int bias = below0 != Integer.MAX_VALUE && below0 < 10 ? 8 : 0;
-            int ty = Math.min(Math.max(MathHelper.floorI(y) + bias, 16), roofCap - 2);
-            netherPath = ElytraPathfinder.findPath(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z),
-                cfg.targetX, ty, cfg.targetZ, cfg.netherPlanNodes, cfg.netherPlanRadiusCells);
-            pathIdx = 0;
-            netherPathIsNative = false;
-        }
-        if (netherPath == null || netherPath.size() < 2) { tickNetherReactive(x, y, z, speed); return; }
-
-        while (pathIdx < netherPath.size() - 1) {               // drop waypoints we've reached
-            int[] wp = netherPath.get(pathIdx);
-            if (horizDist(x, z, wp[0], wp[2]) < 5 && Math.abs(y - wp[1]) < 6) pathIdx++; else break;
-        }
-        int[] w = netherPath.get(Math.min(pathIdx + 2, netherPath.size() - 1)); // aim a couple cells ahead
-        float yaw = (float) Math.toDegrees(Math.atan2(-(w[0] + 0.5 - x), w[2] + 0.5 - z));
-        if (terrainBlockedAhead(x, y, z, yaw, 8)) {             // stale plan aims through a wall — full 3D dodge
-            planCooldown = 0;
-            tickNetherReactive(x, y, z, speed);
-            return;
-        }
-        double dy = (w[1] + 0.5) - y;
-        double horiz = Math.max(1.0, horizDist(x, z, w[0], w[2]));
-        float pitch = clampF((float) Math.toDegrees(Math.atan2(-dy, horiz)), -cfg.climbPitch, 30f);
-        if (y >= roofCap - 1 && pitch < 0f) pitch = 0f;         // never climb into the inaccessible roof
-        boolean wantFire = !overCap && (dy > 2 || speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
-
-        if (wantFire && netherPath.size() > pathIdx + 2) {      // corner discipline
-            int[] w1 = netherPath.get(Math.min(pathIdx + 1, netherPath.size() - 1));
-            int[] w2 = netherPath.get(Math.min(pathIdx + 3, netherPath.size() - 1));
-            double b1 = Math.toDegrees(Math.atan2(-(w1[0] + 0.5 - x), w1[2] + 0.5 - z));
-            double b2 = Math.toDegrees(Math.atan2(-(w2[0] - w1[0]), w2[2] - w1[2]));
-            if (Math.abs(wrapDeg(b2 - b1)) > 35) wantFire = false;
-        }
-
-        // Frontier governor: coast when loaded terrain ahead is short; spiral-hold right at the frontier.
-        int corridor = loadedDistAhead(x, z, yaw, cfg.netherFrontierSlow);
-        if (spiraling && corridor > cfg.netherFrontierHold + 8) {
-            spiraling = false;
-            info("Frontier opened — resuming course");
-        }
-        if (spiraling || corridor <= cfg.netherFrontierHold) { tickSpiralHold(x, y, z, speed, roofCap); return; }
-        boolean lowAlt = heightAboveGround(x, y, z) < 12;
-        if (corridor < cfg.netherFrontierSlow && !lowAlt) wantFire = false;
-        if (lowAlt) {                       // the governor must never starve altitude — climb back to the band
-            pitch = Math.min(pitch, -12f);
-            wantFire = !overCap;
-        }
-
-        if (hazardClimbTicks > 0) {         // repeated hits — climb + jink out of the line of fire
-            pitch = y < roofCap - 8 ? -cfg.climbPitch * 0.7f : 8f; // near the roof, ease DOWN — climbing pins it on bedrock
-            wantFire = !overCap;
-            yaw += 30f;
-        }
-        if (y < EMERGENCY_FLOOR_Y) {        // lava country — below this line, climbing outranks everything else
-            pitch = -cfg.climbPitch;
-            wantFire = !overCap;
-        }
-        wantFire = fireSpaced(wantFire);
-        boolean fire = wantFire && heldIsFirework();
-        if (wantFire && !fire) ensureFireworkHeld();
-        if (fire) ticksSinceFire = 0;
-        submitInput(false, fire, yaw, pitch);
-
-        double lead = Math.max(cfg.descendRadius, (y - cfg.approxGroundY) * cfg.glideRatio);
-        if (horizDist(x, z, cfg.targetX, cfg.targetZ) <= lead) {
-            phase = Phase.DESCEND;
-            info("Approaching target — descending");
-        }
-    }
-
-    /**
-     * Circle in place at the chunk frontier: hold a continuous yaw spin at cruise altitude (climbing the spiral
-     * if low — the Baritone elytra climb-out pattern: full turns while boosting, gaining height without leaving
-     * loaded space) until terrain ahead streams in. Keeps the bot AIRBORNE and ABOVE terrain while it waits;
-     * never trades altitude for patience.
-     */
-    private void tickSpiralHold(double x, double y, double z, double speed, int roofCap) {
-        var cfg = CONFIG.client.extra.elytraPilot;
-        if (!spiraling) {
-            spiraling = true;
-            spiralYaw = CACHE.getPlayerCache().getYaw();
-            info("Chunk frontier — spiral-holding at y {} while terrain loads", (int) y);
-        }
-        spiralYaw += cfg.spiralYawStep;
-        if (spiralYaw > 180f) spiralYaw -= 360f;
-        int ground = heightAboveGround(x, y, z);
-        int above = clearAboveCount(x, y, z);
-        boolean overCap = speed * 20.0 >= cfg.maxSpeed * 0.6; // keep the circle slow and tight
-        float pitch;
-        boolean wantFire;
-        if (ground != Integer.MAX_VALUE && ground < 12 && above > 3) {
-            pitch = -Math.max(20f, cfg.climbPitch * 0.7f);    // low over the local floor -> climb the spiral
-            wantFire = !overCap && (speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
-        } else if (above < 4) {
-            pitch = 6f;                                       // scraping a ceiling -> ease down
-            wantFire = false;
-        } else {
-            pitch = -2f;                                      // hold the circle level in the local gap
-            wantFire = !overCap && speed < cfg.minBoostSpeed;
-        }
-        if (y >= roofCap - 1 && pitch < 0f) pitch = 0f;
-        wantFire = fireSpaced(wantFire);
-        boolean fire = wantFire && heldIsFirework();
-        if (wantFire && !fire) ensureFireworkHeld();
-        if (fire) ticksSinceFire = 0;
-        submitInput(false, fire, spiralYaw, pitch);
-    }
-
-    /**
-     * Open-nether level flight. On 2b2t the bedrock roof is inaccessible and modern nether terrain fills the upper
+     * Reactive open-nether flight — the bridge used while the native route computes (~0.3-3s) and the fallback on
+     * the rare system without native support. Always makes forward progress toward the target (never circles in
+     * place): on 2b2t the bedrock roof is inaccessible and modern nether terrain fills the upper
      * layers, so the bot flies at a clear mid-altitude ({@code netherCruiseY}) rather than the ceiling and reacts to
      * obstacles in 3D: reroute horizontally (steerYaw), else climb over or dive under — whichever side has more room
      * (never into the bedrock roof or into lava). Sustains level flight with periodic fireworks (no free roof glide).
@@ -739,21 +613,6 @@ public class ElytraPilot extends Module {
         }
         if (y >= roofCap - 1 && pitch < 0f) pitch = 0f;
 
-        // Don't outrun the chunk loader (see tickNetherCruise): coast when terrain ahead is short, spiral-hold at the
-        // frontier, and never let the brake starve altitude.
-        int corridor = loadedDistAhead(x, z, yaw, cfg.netherFrontierSlow);
-        if (spiraling && corridor > cfg.netherFrontierHold + 8) {
-            spiraling = false;
-            info("Frontier opened — resuming course");
-        }
-        if (spiraling || corridor <= cfg.netherFrontierHold) { tickSpiralHold(x, y, z, speed, roofCap); return; }
-        boolean lowAlt = heightAboveGround(x, y, z) < 12;
-        if (corridor < cfg.netherFrontierSlow && !lowAlt) wantFire = false;
-        if (lowAlt) {
-            pitch = Math.min(pitch, -12f);
-            wantFire = !overCap;
-        }
-
         if (hazardClimbTicks > 0) {         // repeated hits — climb + jink out of the line of fire
             pitch = y < roofCap - 8 ? -cfg.climbPitch * 0.7f : 8f; // near the roof, ease DOWN — climbing pins it on bedrock
             wantFire = !overCap;
@@ -781,7 +640,7 @@ public class ElytraPilot extends Module {
     /**
      * Keep a native full-route plan alive: consume finished requests, replan on deviation, extend partial
      * segments before they run out. While a request is in flight the bot keeps flying whatever it has
-     * (old native route, local A*, or reactive) — it never waits in place.
+     * (old native route, or reactive toward the target) — it never waits in place.
      */
     private void maintainNativeRoute(double x, double y, double z, com.aquarius.util.config.Config.Client.Extra.ElytraPilot cfg) {
         if (nativeReqCooldown > 0) nativeReqCooldown--;
@@ -1174,7 +1033,6 @@ public class ElytraPilot extends Module {
         phase = Phase.WALKOUT;
         baritoneStarted = false;
         walkoutTicks = 0;
-        spiraling = false;
         BARITONE.stop();
         inGameAlertActivePlayer("<yellow>ElytraPilot: " + why + " — walking toward open ground to retry");
         warn("{} — walking out (attempt {}/{})", why, walkoutAttempts + 1, MAX_WALKOUT_ATTEMPTS);
