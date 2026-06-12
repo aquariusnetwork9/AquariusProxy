@@ -78,6 +78,7 @@ public class ElytraPilot extends Module {
     private static final int NATIVE_LOS_RANGE = 96;          // how far along the route to raytrace for the farthest VISIBLE aim point
     private static final int NATIVE_SCAN_WINDOW = 80;        // route points scanned forward per tick for the nearest-point tracker
     private static final int NATIVE_REPLAN_TICKS = 40;       // continuous replanning: a route older than this (~2s) is stale
+    private static final int CLIMBOUT_TICKS = 60;            // first ~3s airborne: climb for altitude before pursuing the route
     private static final int EMERGENCY_FLOOR_Y = 55;         // below this, nether cruise climbs at full boost no matter what
     private static final int WALKOUT_LEG_BLOCKS = 48;        // Baritone walk distance per walk-out leg, toward the target
     private static final int WALKOUT_OPEN_SKY = 16;          // blocks of clear air overhead = enough room to fly again
@@ -133,6 +134,7 @@ public class ElytraPilot extends Module {
     private int pinTicks;              // consecutive cruise ticks at near-zero speed (wall-pin watchdog)
     private double stallAnchorX, stallAnchorZ; // window-start position for the net-progress stall watchdog
     private int stallWindowTicks;      // ticks since the last net-progress sample
+    private int airborneTicks;         // ticks since this cruise began (climb-out window after takeoff)
     private int walkoutTicks;          // ticks in the current walk-out leg
     private int walkoutAttempts;
     private double loopX, loopZ;       // centre of a repeated takeoff-fail loop (chimney trap)
@@ -261,6 +263,7 @@ public class ElytraPilot extends Module {
         healthyTicks = 0;
         lostLogged = false;
         pinTicks = 0;
+        airborneTicks = 0;
         stallWindowTicks = 0;
         stallAnchorX = 0;
         stallAnchorZ = 0;
@@ -420,6 +423,7 @@ public class ElytraPilot extends Module {
         stallAnchorX = pc.getX();
         stallAnchorZ = pc.getZ();
         stallWindowTicks = -2 * STALL_WINDOW_TICKS;   // ~6s grace before the first 3s window is judged
+        airborneTicks = 0;                            // restart the post-takeoff climb-out window
     }
 
     private void tickCruise(double x, double y, double z, double speed) {
@@ -485,6 +489,7 @@ public class ElytraPilot extends Module {
             } else {
                 pinTicks = 0;
             }
+            airborneTicks++;
             tickNetherCruise(x, y, z, speed);
             return;
         }
@@ -635,18 +640,31 @@ public class ElytraPilot extends Module {
         // A live capture showed the bot faithfully tracking the route's profile down 93->23 into a slope. So the
         // route is LATERAL guidance only when low: hold a real clearance band over the local floor (more over
         // lava), probe the floor AHEAD so rising slopes trigger the climb early, and never dive steeply when low.
+        // Probe the floor up to 32 blocks AHEAD, not just below: at ~40 b/s an 8-block probe gives 4 ticks of
+        // warning — a rising ridge stayed invisible until the bot was committed into the pocket behind it (it
+        // then curved along the route's lateral line into the bowl and burned all 4 walkout legs there). Seeing
+        // the ridge 32 blocks out converts "trapped in the pocket" into "climb over the ridge".
         double yawRadG = Math.toRadians(yaw);
-        int clearBelow = Math.min(
-            heightAboveGround(x, y, z),
-            heightAboveGround(x - Math.sin(yawRadG) * 8, y, z + Math.cos(yawRadG) * 8));
+        double gx = -Math.sin(yawRadG), gz = Math.cos(yawRadG);
+        int clearBelow = heightAboveGround(x, y, z);
+        for (int ahead = 8; ahead <= 32; ahead += 8) {
+            clearBelow = Math.min(clearBelow, heightAboveGround(x + gx * ahead, y, z + gz * ahead));
+        }
         if (clearBelow != Integer.MAX_VALUE) {
             int minClear = lavaBelow(x, y, z) ? 30 : 16;
-            if (clearBelow < minClear) {                              // below the band — climb out of it
-                pitch = Math.min(pitch, -12f);
+            if (clearBelow < minClear) {                              // floor rising into the path — climb early
+                pitch = Math.min(pitch, -20f);
                 wantFire = !overCap;
             } else if (clearBelow < 40 && pitch > 12f) {              // near the band — no steep dives
                 pitch = 12f;
             }
+        }
+        // Climb-out: for the first ~3s after going airborne, get UP before pursuing. Post-walkout takeoffs
+        // kept clipping straight back into the trap because the bot chased route points laterally through
+        // clutter at low speed and altitude — a trap burned all 4 walkout legs that way and aborted the leg.
+        if (airborneTicks < CLIMBOUT_TICKS && y < roofCap - 10 && clearAboveCount(x, y, z) > 4) {
+            pitch = Math.min(pitch, -Math.max(25f, cfg.climbPitch * 0.7f));
+            wantFire = !overCap;
         }
         if (y < EMERGENCY_FLOOR_Y) {        // lava country — below this line, climbing outranks everything else
             pitch = -cfg.climbPitch;
