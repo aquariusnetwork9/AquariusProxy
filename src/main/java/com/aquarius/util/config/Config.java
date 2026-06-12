@@ -529,6 +529,10 @@ public final class Config {
                 /** Lost-flight episodes in one flight before aborting (each one alerts; bounded, never a silent fight). */
                 public int maxGroundRecoveries = 3;
 
+                /** Minimum ticks between firework boosts. A rocket thrusts for ~20 ticks; firing faster than this is
+                 *  pure waste (a live capture showed one rocket PER TICK — 20x burn, and max thrust into walls). */
+                public int boostMinSpacingTicks = 14;
+
                 /** Yaw degrees per tick of the landing spin (helicopter descent — cancels residual drift). */
                 public float landSpinStep = 18.0f;
 

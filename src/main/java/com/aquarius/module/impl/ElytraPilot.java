@@ -66,6 +66,9 @@ public class ElytraPilot extends Module {
     private static final int OPEN_TARGET_TOLERANCE = 8;     // land at the target if its open surface is within this of approxGroundY
     private static final int LANDWALK_TIMEOUT_TICKS = 1200; // ~60s for Baritone to reach the target on the ground
     private static final int HOP_MIN_TICKS = 6;             // commit to a hop for at least this long so we clear the block
+    private static final int EPISODE_DECAY_TICKS = 300;     // ~15s of healthy flight resets the lost-flight episode count
+    private static final int PIN_WARN_TICKS = 100;           // ~5s of no cruise progress -> warn (likely pinned on terrain)
+    private static final int PIN_ABORT_TICKS = 300;          // ~15s of no cruise progress -> abort (alert the operator)
     private static final float HIGHWAY_FRONTIER_FACTOR = 0.7f; // highways sit in previously-loaded, oft-reloaded chunks -> loading ~30% less of a problem; gentler governor than open nether
     private static final int[][] NEIGHBORS = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
@@ -103,10 +106,12 @@ public class ElytraPilot extends Module {
     private boolean lastFlightSuccess; // DONE via arrival/landing (true) vs abort/emergency (false)
     private int lostFlightTicks;       // continuous ticks of unexpected non-flight (watchdog)
     private int lostEpisodes;
+    private int healthyTicks;          // continuous fall-flying ticks; sustained flight forgives past episodes
     private boolean lostLogged;
     private boolean spiraling;         // circling in place at the chunk frontier while terrain streams in
     private float spiralYaw;
     private float landSpinYaw;         // helicopter-landing yaw spin
+    private int pinTicks;              // consecutive cruise ticks at near-zero speed (wall-pin watchdog)
 
     @Override
     public boolean enabledSetting() {
@@ -206,8 +211,15 @@ public class ElytraPilot extends Module {
         lastFlightSuccess = false;
         lostFlightTicks = 0;
         lostEpisodes = 0;
+        healthyTicks = 0;
         lostLogged = false;
         spiraling = false;
+        pinTicks = 0;
+    }
+
+    /** Apply the firework-spacing cap: a rocket thrusts ~20 ticks, so re-firing sooner is pure waste. */
+    private boolean fireSpaced(boolean want) {
+        return want && ticksSinceFire >= CONFIG.client.extra.elytraPilot.boostMinSpacingTicks;
     }
 
     private void onTick(final ClientBotTick event) {
@@ -223,7 +235,15 @@ public class ElytraPilot extends Module {
 
             double x = pc.getX(), y = pc.getY(), z = pc.getZ();
             double speed = haveLast ? Math.hypot(x - lastX, z - lastZ) : 0.0;
-            if (BOT.isFallFlying()) { lostFlightTicks = 0; lostLogged = false; }
+            if (BOT.isFallFlying()) {
+                lostFlightTicks = 0;
+                lostLogged = false;
+                // Sustained healthy flight forgives past flight-loss episodes: the cap should catch rapid-fire
+                // losses (genuinely stuck), not occasional terrain clips spread across a long nether route.
+                if (lostEpisodes > 0 && ++healthyTicks >= EPISODE_DECAY_TICKS) { lostEpisodes = 0; healthyTicks = 0; }
+            } else {
+                healthyTicks = 0;
+            }
 
             // Self-heal: if we should be gliding but aren't (elytra broke, desync, knockback), recover.
             if ((phase == Phase.CRUISE || phase == Phase.DESCEND) && !BOT.isFallFlying()) {
@@ -306,7 +326,23 @@ public class ElytraPilot extends Module {
         // Open nether (off-highway): on 2b2t the bedrock roof is INACCESSIBLE and modern nether terrain fills the
         // upper layers, so the bot is almost never near the ceiling out here — don't climb to a ceiling. Fly level
         // at a clear altitude and react to obstacles in 3D (over / under / around). Highways stay on the bounce path.
-        if (inNether() && !cfg.highway) { tickNetherCruise(x, y, z, speed); return; }
+        if (inNether() && !cfg.highway) {
+            // Wall-pin watchdog: a live capture showed the bot pressed against terrain, boosting into it every tick,
+            // position frozen, while still "fall-flying" (so the lost-flight watchdog never fired). Bound it.
+            if (!spiraling && speed * 20.0 < 2.0) {
+                pinTicks++;
+                if (pinTicks == PIN_WARN_TICKS)
+                    warn("No cruise progress at {}, {}, {} — likely pinned on terrain", (int) x, (int) y, (int) z);
+                if (pinTicks > PIN_ABORT_TICKS) {
+                    abort("pinned against terrain at " + (int) x + ", " + (int) y + ", " + (int) z);
+                    return;
+                }
+            } else {
+                pinTicks = 0;
+            }
+            tickNetherCruise(x, y, z, speed);
+            return;
+        }
 
         // Overworld long-haul profile: firework-climb (nose up) to the ceiling, then glide (nose ≈ +2) to the floor.
         if (cfg.glideFloorY < cfg.glideCeilingY) {
@@ -333,6 +369,7 @@ public class ElytraPilot extends Module {
             pitch = -cfg.climbPitch;
             wantFire = !overCap;
         }
+        wantFire = fireSpaced(wantFire);
         boolean fire = wantFire && heldIsFirework();
         if (wantFire && !fire) ensureFireworkHeld();
         if (fire) ticksSinceFire = 0;
@@ -376,6 +413,14 @@ public class ElytraPilot extends Module {
         }
         int[] w = netherPath.get(Math.min(pathIdx + 2, netherPath.size() - 1)); // aim a couple cells ahead
         float yaw = (float) Math.toDegrees(Math.atan2(-(w[0] + 0.5 - x), w[2] + 0.5 - z));
+        // Wall RIGHT ahead: the coarse plan (4-block cells, up to netherPlanInterval ticks stale) can aim through
+        // terrain it never saw — a capture showed the bot pinned on a wall boosting into it. Hand the tick to the
+        // reactive dodge (climb/dive/reroute) instead of pure-pursuing into the obstruction, and force a re-plan.
+        if (terrainBlockedAhead(x, y, z, yaw, 8)) {
+            planCooldown = 0;
+            tickNetherReactive(x, y, z, speed);
+            return;
+        }
         double dy = (w[1] + 0.5) - y;
         double horiz = Math.max(1.0, horizDist(x, z, w[0], w[2]));
         float pitch = clampF((float) Math.toDegrees(Math.atan2(-dy, horiz)), -cfg.climbPitch, 30f);
@@ -399,6 +444,7 @@ public class ElytraPilot extends Module {
             wantFire = !overCap;
         }
 
+        wantFire = fireSpaced(wantFire);
         boolean fire = wantFire && heldIsFirework();
         if (wantFire && !fire) ensureFireworkHeld();
         if (fire) ticksSinceFire = 0;
@@ -442,6 +488,7 @@ public class ElytraPilot extends Module {
             wantFire = !overCap && speed < cfg.minBoostSpeed;
         }
         if (y >= roofCap - 1 && pitch < 0f) pitch = 0f;
+        wantFire = fireSpaced(wantFire);
         boolean fire = wantFire && heldIsFirework();
         if (wantFire && !fire) ensureFireworkHeld();
         if (fire) ticksSinceFire = 0;
@@ -496,6 +543,7 @@ public class ElytraPilot extends Module {
             wantFire = !overCap;
         }
 
+        wantFire = fireSpaced(wantFire);
         boolean fire = wantFire && heldIsFirework();
         if (wantFire && !fire) ensureFireworkHeld();
         if (fire) ticksSinceFire = 0;
@@ -592,7 +640,7 @@ public class ElytraPilot extends Module {
         float yaw = desiredYaw(x, z);                 // stay on the highway centerline; climb straight over
         boolean overCap = speed * 20.0 >= cfg.maxSpeed;
         if (!BOT.isFallFlying() && redeployCooldown <= 0) { sendStartFallFlying(); redeployCooldown = cfg.bounceRedeployTicks; }
-        boolean fire = !overCap && heldIsFirework();
+        boolean fire = fireSpaced(!overCap) && heldIsFirework();
         if (!fire) ensureFireworkHeld();
         if (fire) ticksSinceFire = 0;
         submitMove(true, false, true, fire, yaw, -cfg.hopPitch); // forward+sprint, nose up, NO jump (don't bounce into it)
@@ -750,6 +798,7 @@ public class ElytraPilot extends Module {
             if (overCap) pitch = Math.min(pitch, 0f);
             wantFire = false;
         }
+        wantFire = fireSpaced(wantFire);
         boolean fire = wantFire && heldIsFirework();
         if (wantFire && !fire) ensureFireworkHeld();
         if (fire) ticksSinceFire = 0;
@@ -982,14 +1031,13 @@ public class ElytraPilot extends Module {
         var cfg = CONFIG.client.extra.elytraPilot;
         if (!lostLogged) {
             lostLogged = true;
-            lostEpisodes++;
+            if (++lostEpisodes > cfg.maxGroundRecoveries) {
+                abort("kept losing flight (" + lostEpisodes + " episodes in quick succession) — aborting at "
+                    + (int) x + ", " + (int) y + ", " + (int) z);
+                return;
+            }
             warn("Lost flight at {}, {}, {} (episode {}/{}) — redeploying",
                 (int) x, (int) y, (int) z, lostEpisodes, cfg.maxGroundRecoveries);
-        }
-        if (lostEpisodes > cfg.maxGroundRecoveries) {
-            abort("kept losing flight (" + lostEpisodes + " episodes) — aborting at "
-                + (int) x + ", " + (int) y + ", " + (int) z);
-            return;
         }
         if (++lostFlightTicks > cfg.stallRecoverTicks) {
             warn("Could not re-deploy in {} ticks — attempting a fresh ground takeoff", cfg.stallRecoverTicks);
