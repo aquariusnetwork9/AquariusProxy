@@ -71,6 +71,7 @@ public class ElytraPilotCommand extends Command {
                 "netherceiling <y>     (hard altitude cap in the nether; never climb above it / into bedrock)",
                 "nethercruise <y>      (preferred open-nether flight altitude; holds ~this Y and dodges in 3D)",
                 "netherpath <on/off>   (3D look-ahead pathfinding in open nether vs pure reactive dodging)",
+                "netherplan <nodes> <cells> <interval>  (planner budget / scan radius in 4-block cells / re-plan ticks)",
                 "netherfrontier <slow> <hold>  (blocks of loaded terrain ahead below which to coast / brake — don't outrun 2b2t's slow chunk loading)",
                 "hoppitch <deg>        (climb angle when gliding over an on-road obstacle)"
             )
@@ -249,6 +250,18 @@ public class ElytraPilotCommand extends Command {
                 CONFIG.client.extra.elytraPilot.netherCruiseY = getInteger(c, "y");
                 c.getSource().getEmbed().title("ElytraPilot nether cruise altitude = " + CONFIG.client.extra.elytraPilot.netherCruiseY);
             })))
+            .then(literal("netherplan")
+                .then(argument("nodes", integer(100))
+                    .then(argument("cells", integer(8))
+                        .then(argument("interval", integer(5)).executes(c -> {
+                            CONFIG.client.extra.elytraPilot.netherPlanNodes = getInteger(c, "nodes");
+                            CONFIG.client.extra.elytraPilot.netherPlanRadiusCells = getInteger(c, "cells");
+                            CONFIG.client.extra.elytraPilot.netherPlanInterval = getInteger(c, "interval");
+                            c.getSource().getEmbed().title("ElytraPilot nether planner: "
+                                + CONFIG.client.extra.elytraPilot.netherPlanNodes + " nodes, "
+                                + CONFIG.client.extra.elytraPilot.netherPlanRadiusCells + " cells, every "
+                                + CONFIG.client.extra.elytraPilot.netherPlanInterval + " ticks");
+                        })))))
             .then(literal("netherpath").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.netherPathfind = getToggle(c, "toggle");
                 c.getSource().getEmbed().title("ElytraPilot nether look-ahead pathfinding " + toggleStrCaps(CONFIG.client.extra.elytraPilot.netherPathfind));

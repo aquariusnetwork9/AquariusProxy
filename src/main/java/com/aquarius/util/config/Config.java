@@ -486,13 +486,14 @@ public final class Config {
                 public boolean netherPathfind = true;
 
                 /** Ticks between open-nether route re-plans (look-ahead refresh). */
-                public int netherPlanInterval = 40;
+                public int netherPlanInterval = 30;
 
                 /** A* node-expansion budget per open-nether re-plan (cost guard). */
-                public int netherPlanNodes = 4000;
+                public int netherPlanNodes = 9000;
 
-                /** Open-nether route search-box half-extent, in 4-block cells (48 ≈ 192 blocks ≈ 2b2t's 12-chunk render). */
-                public int netherPlanRadiusCells = 48;
+                /** Open-nether route search-box half-extent, in 4-block cells (64 ≈ 256 blocks — past the loaded
+                 *  frontier; unloaded high-band cells are blind-routable so the leg still gets a sane direction). */
+                public int netherPlanRadiusCells = 64;
 
                 /** "Don't outrun the chunk loader." 2b2t serves only ~12 chunks and streams them slowly, so the bot can
                  *  fly past the edge of LOADED terrain and into pop-in. When the loaded corridor straight ahead is shorter
