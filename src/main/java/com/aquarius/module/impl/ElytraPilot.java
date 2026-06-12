@@ -118,6 +118,11 @@ public class ElytraPilot extends Module {
     private int pinTicks;              // consecutive cruise ticks at near-zero speed (wall-pin watchdog)
     private int walkoutTicks;          // ticks in the current walk-out leg
     private int walkoutAttempts;
+    private float lastHealth;          // -1 until first read; health drops drive the hazard responses
+    private boolean hpDropped;         // health fell since the previous tick
+    private int dmgWindowTicks;        // rolling window for counting in-flight damage events
+    private int dmgCount;
+    private int hazardClimbTicks;      // >0: climb + jink (repeated hits in flight — get out of the line of fire)
 
     @Override
     public boolean enabledSetting() {
@@ -223,6 +228,11 @@ public class ElytraPilot extends Module {
         pinTicks = 0;
         walkoutTicks = 0;
         walkoutAttempts = 0;
+        lastHealth = -1f;
+        hpDropped = false;
+        dmgWindowTicks = 0;
+        dmgCount = 0;
+        hazardClimbTicks = 0;
     }
 
     /** Apply the firework-spacing cap: a rocket thrusts ~20 ticks, so re-firing sooner is pure waste. */
@@ -243,6 +253,23 @@ public class ElytraPilot extends Module {
 
             double x = pc.getX(), y = pc.getY(), z = pc.getZ();
             double speed = haveLast ? Math.hypot(x - lastX, z - lastZ) : 0.0;
+
+            // Health bookkeeping: drops drive the grounded-damage flee and the in-flight hazard climb.
+            float hp = pc.getThePlayer().getHealth();
+            hpDropped = lastHealth >= 0f && hp < lastHealth - 0.01f;
+            lastHealth = hp;
+            if (hpDropped && BOT.isFallFlying() && (phase == Phase.CRUISE || phase == Phase.DESCEND)) {
+                if (dmgWindowTicks <= 0) dmgCount = 0;
+                dmgWindowTicks = 300;                     // 15s rolling window
+                if (++dmgCount >= 3 && hazardClimbTicks <= 0) {
+                    hazardClimbTicks = 80;
+                    warn("Repeated damage in flight ({} hits) at {}, {}, {} — hazard climb + jink",
+                        dmgCount, (int) x, (int) y, (int) z);
+                }
+            }
+            if (dmgWindowTicks > 0) dmgWindowTicks--;
+            if (hazardClimbTicks > 0) hazardClimbTicks--;
+
             if (BOT.isFallFlying()) {
                 lostFlightTicks = 0;
                 lostLogged = false;
@@ -294,6 +321,11 @@ public class ElytraPilot extends Module {
             return;
         }
         var cfg = CONFIG.client.extra.elytraPilot;
+        if (hpDropped && cfg.hasTarget && walkoutAttempts < MAX_WALKOUT_ATTEMPTS) {
+            takeoffTicks = 0;
+            enterWalkout("taking damage during takeoff");
+            return;
+        }
         ensureFireworkHeld();
         boolean jump;
         if (cfg.doubleJumpTakeoff) {
@@ -421,7 +453,11 @@ public class ElytraPilot extends Module {
 
         if (netherPath == null || --planCooldown <= 0) {        // refresh the look-ahead route
             planCooldown = cfg.netherPlanInterval;
-            int ty = Math.min(Math.max(cfg.netherCruiseY, cfg.approxGroundY + 8), roofCap - 2);
+            // No fixed cruise altitude: plan from the CURRENT altitude (nudged up when low over the local floor,
+            // clamped under the roof) and let the 3D A* find whatever open space actually exists.
+            int below0 = heightAboveGround(x, y, z);
+            int bias = below0 != Integer.MAX_VALUE && below0 < 10 ? 8 : 0;
+            int ty = Math.min(Math.max(MathHelper.floorI(y) + bias, 16), roofCap - 2);
             netherPath = ElytraPathfinder.findPath(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z),
                 cfg.targetX, ty, cfg.targetZ, cfg.netherPlanNodes, cfg.netherPlanRadiusCells);
             pathIdx = 0;
@@ -465,6 +501,11 @@ public class ElytraPilot extends Module {
             wantFire = !overCap;
         }
 
+        if (hazardClimbTicks > 0) {         // repeated hits — climb + jink out of the line of fire
+            pitch = y < roofCap - 1 ? -cfg.climbPitch * 0.7f : 0f;
+            wantFire = !overCap;
+            yaw += 30f;
+        }
         wantFire = fireSpaced(wantFire);
         boolean fire = wantFire && heldIsFirework();
         if (wantFire && !fire) ensureFireworkHeld();
@@ -493,19 +534,19 @@ public class ElytraPilot extends Module {
         }
         spiralYaw += cfg.spiralYawStep;
         if (spiralYaw > 180f) spiralYaw -= 360f;
-        double cruiseAlt = Math.min(Math.max(cfg.netherCruiseY, cfg.approxGroundY + 8), roofCap - 2);
         int ground = heightAboveGround(x, y, z);
+        int above = clearAboveCount(x, y, z);
         boolean overCap = speed * 20.0 >= cfg.maxSpeed * 0.6; // keep the circle slow and tight
         float pitch;
         boolean wantFire;
-        if ((ground != Integer.MAX_VALUE && ground < 12) || y < cruiseAlt - 4) {
-            pitch = -Math.max(20f, cfg.climbPitch * 0.7f);    // climb the spiral
+        if (ground != Integer.MAX_VALUE && ground < 12 && above > 3) {
+            pitch = -Math.max(20f, cfg.climbPitch * 0.7f);    // low over the local floor -> climb the spiral
             wantFire = !overCap && (speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
-        } else if (y > cruiseAlt + 6) {
-            pitch = 6f;
+        } else if (above < 4) {
+            pitch = 6f;                                       // scraping a ceiling -> ease down
             wantFire = false;
         } else {
-            pitch = -2f;                                      // hold the circle level
+            pitch = -2f;                                      // hold the circle level in the local gap
             wantFire = !overCap && speed < cfg.minBoostSpeed;
         }
         if (y >= roofCap - 1 && pitch < 0f) pitch = 0f;
@@ -527,27 +568,31 @@ public class ElytraPilot extends Module {
         float yaw = steerYaw(x, y, z);                          // horizontal reroute around walls (±maxRerouteDeg)
         boolean overCap = speed * 20.0 >= cfg.maxSpeed;
         int roofCap = Math.min(cfg.netherCeilingY, 125);        // never climb into the (inaccessible) bedrock roof
-        double cruiseAlt = Math.min(Math.max(cfg.netherCruiseY, cfg.approxGroundY + 8), roofCap - 2);
 
+        // No fixed cruise altitude: the nether has no open layer, so fly the LOCAL air gap — keep clearance off
+        // the floor, don't scrape ceilings, level otherwise. Vertical position is wherever the terrain allows.
         float pitch;
         boolean wantFire;
+        int above = clearAboveCount(x, y, z);
+        int below = heightAboveGround(x, y, z);                 // stops at lava (lava scans as solid)
         if (terrainBlockedAhead(x, y, z, yaw, Math.min(cfg.lookAheadBlocks, 24))) {
-            // still walled after the horizontal reroute -> go vertical, toward whichever side has more clearance
-            int above = clearAboveCount(x, y, z);
-            int below = heightAboveGround(x, y, z);             // stops at lava (lava scans as solid) -> we won't dive into it
+            // walled after the horizontal reroute -> go vertical. PREFER CLIMBING: "under" routes in the nether
+            // are pockets and lava more often than passages (a dive into one killed the bot); dive only when the
+            // roof truly blocks climbing and there is generous room below.
             boolean canClimb = y < roofCap - 1 && above > 3;
-            boolean canDive = below > 4;
-            if (canClimb && (!canDive || above >= below)) { pitch = -cfg.climbPitch * 0.7f; wantFire = !overCap; }
-            else if (canDive)                              { pitch = 22f; wantFire = false; }              // dive under
-            else                                           { pitch = -cfg.climbPitch * 0.7f; wantFire = !overCap; } // boxed in -> try up
-        } else if (y < cruiseAlt - 2) {
-            pitch = -12f; wantFire = !overCap;                  // below the band -> climb back up
-        } else if (y > cruiseAlt + 2) {
-            pitch = 8f; wantFire = false;                       // above it -> ease down (free)
+            boolean canDive = below > 10;
+            if (canClimb)     { pitch = -cfg.climbPitch * 0.7f; wantFire = !overCap; }
+            else if (canDive) { pitch = 22f; wantFire = false; }                        // dive under
+            else              { pitch = -cfg.climbPitch * 0.7f; wantFire = !overCap; }  // boxed in -> try up
+        } else if (below < 10) {
+            pitch = -12f; wantFire = !overCap;                  // hugging the floor -> get clearance
+        } else if (above < 4) {
+            pitch = 8f; wantFire = false;                       // scraping a ceiling -> ease down (free)
         } else {
-            pitch = -2f;                                        // holding altitude -> occasional boost to stay level
+            pitch = -2f;                                        // level in the local gap; boost only to keep speed
             wantFire = !overCap && (speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
         }
+        if (y >= roofCap - 1 && pitch < 0f) pitch = 0f;
 
         // Don't outrun the chunk loader (see tickNetherCruise): coast when terrain ahead is short, spiral-hold at the
         // frontier, and never let the brake starve altitude.
@@ -564,6 +609,11 @@ public class ElytraPilot extends Module {
             wantFire = !overCap;
         }
 
+        if (hazardClimbTicks > 0) {         // repeated hits — climb + jink out of the line of fire
+            pitch = y < roofCap - 1 ? -cfg.climbPitch * 0.7f : 0f;
+            wantFire = !overCap;
+            yaw += 30f;
+        }
         wantFire = fireSpaced(wantFire);
         boolean fire = wantFire && heldIsFirework();
         if (wantFire && !fire) ensureFireworkHeld();
@@ -1107,6 +1157,12 @@ public class ElytraPilot extends Module {
      */
     private void handleLostFlight(double x, double y, double z) {
         var cfg = CONFIG.client.extra.elytraPilot;
+        // Taking damage while grounded (lava/fire/mobs) — do NOT stand here methodically redeploying; that
+        // burned 11 totems in 11 seconds and killed the bot. Flee NOW (Baritone paths around lava).
+        if (hpDropped && cfg.hasTarget && walkoutAttempts < MAX_WALKOUT_ATTEMPTS) {
+            enterWalkout("taking damage while grounded at " + (int) x + ", " + (int) y + ", " + (int) z);
+            return;
+        }
         if (!lostLogged) {
             lostLogged = true;
             if (++lostEpisodes > cfg.maxGroundRecoveries) {
