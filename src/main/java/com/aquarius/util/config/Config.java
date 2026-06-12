@@ -426,6 +426,35 @@ public final class Config {
                 /** Always fire a firework at least this often (ticks) while cruising, even above min speed. */
                 public int maxBoostIntervalTicks = 30;
 
+                /**
+                 * Simulation-based flight solver for native nether routes (the Baritone ElytraBehavior model):
+                 * every tick, candidate pitches are flown forward through exact vanilla elytra physics and
+                 * raytraced against the native terrain cache; only a collision-free future is flown. Replaces
+                 * the heuristic clearance-band steering whenever a solution is available (heuristics remain
+                 * the fallback while the solver is busy or finds nothing).
+                 */
+                public boolean solver = true;
+
+                /** How many ticks of elytra physics each candidate pitch is simulated for (Baritone: 20). */
+                public int solverSimTicks = 20;
+
+                /** Candidate pitch sweep, ± degrees around the direct line to the aim point (Baritone: 25). */
+                public int solverPitchRange = 25;
+
+                /**
+                 * Solver-path firework policy: fire when actual speed (blocks/s) falls below this and no rocket
+                 * is currently boosting. Replaces the fixed re-fire timer — gliding above this speed is free.
+                 * (Baritone's elytraFireworkSpeed 1.2 b/t = 24 b/s; keep below maxSpeed or rockets never fire.)
+                 */
+                public double boostBelowSpeed = 24.0;
+
+                /**
+                 * After ANY server position setback (teleport/rubberband), hold all rockets this many ticks.
+                 * Thrust-fighting a rubberband at full boost is how the first nether test died (Baritone's
+                 * elytraFireworkSetbackUseDelay).
+                 */
+                public int setbackHoldTicks = 15;
+
                 /** How many blocks ahead to scan for terrain; pull up when something solid is in the way. */
                 public int lookAheadBlocks = 16;
 

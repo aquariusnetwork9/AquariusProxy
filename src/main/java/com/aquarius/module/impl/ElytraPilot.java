@@ -6,6 +6,7 @@ import com.aquarius.cache.data.inventory.Container;
 import com.aquarius.event.client.ChunkDataEvent;
 import com.aquarius.event.client.ClientBotTick;
 import com.aquarius.event.client.ClientDeathEvent;
+import com.aquarius.event.client.PlayerSetbackEvent;
 import com.aquarius.event.module.TotemPopEvent;
 import com.aquarius.feature.inventory.InventoryActionRequest;
 import com.aquarius.feature.inventory.actions.ClickItem;
@@ -26,11 +27,17 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerState;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ClickItemAction;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.MoveToHotbarAction;
+import org.cloudburstmc.math.vector.Vector3d;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
+import org.geysermc.mcprotocollib.protocol.data.game.item.component.Fireworks;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundPlayerCommandPacket;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.aquarius.Globals.BARITONE;
@@ -147,6 +154,17 @@ public class ElytraPilot extends Module {
     private int dmgCount;
     private int hazardClimbTicks;      // >0: climb + jink (repeated hits in flight — get out of the line of fire)
     private int hazardCooldown;        // re-arm delay: continuous damage (burning) must not hold the jink forever
+    // --- simulation flight solver (the Baritone ElytraBehavior model) ---
+    private final ExecutorService solverExec = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "ElytraSolver");
+        t.setDaemon(true);
+        return t;
+    });
+    private Future<?> solverTask;                  // in-flight async solve (result lands in pendingSolution)
+    private volatile FlightSolution pendingSolution;
+    private volatile int setbackHoldTicks;         // no rockets while >0 (server just reset our position)
+    private int boostGuaranteeTicks;               // ticks the live rocket is GUARANTEED to keep boosting
+    private int boostMaxTicks;                     // ticks it might keep boosting (lifetime has random spread)
 
     @Override
     public boolean enabledSetting() {
@@ -163,6 +181,15 @@ public class ElytraPilot extends Module {
                 if (phase != Phase.IDLE && phase != Phase.DONE) abort("bot died");
             }),
             of(TotemPopEvent.class, this::onTotemPop),
+            of(PlayerSetbackEvent.class, e -> {
+                // Server reset our position (teleport/rubberband): never thrust against the correction —
+                // hold all rockets briefly (Baritone's elytraFireworkSetbackUseDelay), and drop any queued
+                // solution (it was computed from a position we are no longer at).
+                if (phase != Phase.IDLE && phase != Phase.DONE) {
+                    setbackHoldTicks = CONFIG.client.extra.elytraPilot.setbackHoldTicks;
+                    pendingSolution = null;
+                }
+            }),
             of(ChunkDataEvent.class, e -> {     // feed observed chunks to the native router while flying the nether
                 var cfg = CONFIG.client.extra.elytraPilot;
                 if (cfg.nativeRouting && phase != Phase.IDLE && phase != Phase.DONE && inNether()
@@ -278,11 +305,40 @@ public class ElytraPilot extends Module {
         dmgCount = 0;
         hazardClimbTicks = 0;
         hazardCooldown = 0;
+        if (solverTask != null) solverTask.cancel(true);
+        solverTask = null;
+        pendingSolution = null;
+        setbackHoldTicks = 0;
+        boostGuaranteeTicks = 0;
+        boostMaxTicks = 0;
     }
 
-    /** Apply the firework-spacing cap: a rocket thrusts ~20 ticks, so re-firing sooner is pure waste. */
+    /**
+     * Gate every rocket decision: the spacing cap (a rocket thrusts ~20 ticks, re-firing sooner is pure
+     * waste) AND the post-setback hold (the server just reset our position — boosting against the
+     * correction is an unwinnable fight; wait it out, then resume).
+     */
     private boolean fireSpaced(boolean want) {
-        return want && ticksSinceFire >= CONFIG.client.extra.elytraPilot.boostMinSpacingTicks;
+        return want
+            && ticksSinceFire >= CONFIG.client.extra.elytraPilot.boostMinSpacingTicks
+            && setbackHoldTicks <= 0;
+    }
+
+    /**
+     * Record that a rocket was just fired so future decisions (and the solver's physics sims) know how long
+     * the boost lasts: vanilla lifetime is {@code 10*(flight+1)} ticks guaranteed, plus up to 11 random more.
+     */
+    private void noteRocketFired() {
+        ticksSinceFire = 0;
+        int flight = 1;
+        var pc = CACHE.getPlayerCache();
+        ItemStack held = pc.getPlayerInventory().get(36 + pc.getHeldItemSlot());
+        if (!isEmpty(held)) {
+            Fireworks fw = held.getDataComponentsOrEmpty().get(DataComponentTypes.FIREWORKS);
+            if (fw != null) flight = Math.max(1, fw.getFlightDuration());
+        }
+        boostGuaranteeTicks = 10 * (1 + flight);
+        boostMaxTicks = boostGuaranteeTicks + 11;
     }
 
     private void onTick(final ClientBotTick event) {
@@ -360,6 +416,9 @@ public class ElytraPilot extends Module {
             haveLast = true;
             ticksSinceFire++;
             if (redeployCooldown > 0) redeployCooldown--;
+            if (setbackHoldTicks > 0) setbackHoldTicks--;
+            if (boostGuaranteeTicks > 0) boostGuaranteeTicks--;
+            if (boostMaxTicks > 0) boostMaxTicks--;
         } catch (final Exception e) {
             error("Error in flight tick", e);
             abort("internal error");
@@ -439,7 +498,7 @@ public class ElytraPilot extends Module {
                 }
                 // too low to safely drop flight for a swap: climb first
                 boolean fire = heldIsFirework();
-                if (!fire) ensureFireworkHeld(); else ticksSinceFire = 0;
+                if (!fire) ensureFireworkHeld(); else noteRocketFired();
                 submitInput(false, fire, yaw, -35f);
                 return;
             } else {
@@ -522,7 +581,7 @@ public class ElytraPilot extends Module {
         wantFire = fireSpaced(wantFire);
         boolean fire = wantFire && heldIsFirework();
         if (wantFire && !fire) ensureFireworkHeld();
-        if (fire) ticksSinceFire = 0;
+        if (fire) noteRocketFired();
         submitInput(false, fire, yaw, pitch);
 
         // Begin the final descent early enough to glide down to the target (lead scales with altitude).
@@ -577,16 +636,29 @@ public class ElytraPilot extends Module {
             double d = horizDist(x, z, p[0], p[2]);
             if (d < nearestD) { nearestD = d; pathIdx = i; }
         }
-        // Aim at the FARTHEST route point the bot can actually SEE (the Baritone way: visibility-based pursuit,
-        // raytraced through the LOADED chunks — unloaded chunks cannot collide, so they count as clear). A fixed
-        // lookahead aimed sight-unseen and cut corners straight through the local terrain the route bent around,
-        // which was the #1 cause of lost-flight near builds.
+
+        // SIMULATION SOLVER (the Baritone ElytraBehavior model): if the async solver produced a solution for
+        // this tick — an aim point + pitch whose simulated future was verified collision-free against the
+        // native terrain cache — fly it and skip the heuristics entirely. The heuristics below remain the
+        // bridge while the solver is busy, boxed in (no collision-free future), or turned off.
+        FlightSolution sol = cfg.solver ? takeSolution(x, y, z) : null;
+        if (sol != null) {
+            flySolution(x, y, z, sol, overCap, roofCap);
+            maybeBeginDescent(x, y, z, cfg);
+            return;
+        }
+
+        // Aim at the FARTHEST route point the bot can actually SEE (the Baritone way: visibility-based pursuit).
+        // Sight is raytraced through the NATIVE terrain cache when it's free — that sees the seed-generated
+        // world beyond what the server has sent, and counts unknown space as solid (never trust it). While the
+        // cache is mid-write it falls back to the loaded-chunk scan (unloaded = clear). A fixed lookahead used
+        // to aim sight-unseen and cut corners through local terrain — the #1 cause of lost-flight near builds.
         int aimIdx = -1;
         final int lastIdx = netherPath.size() - 1;
         for (int i = pathIdx; i <= lastIdx; i++) {
             int[] p = netherPath.get(i);
             if (horizDist(x, z, p[0], p[2]) > NATIVE_LOS_RANGE) break;
-            if (losClear(x, y + 1, z, p[0] + 0.5, p[1] + 0.5, p[2] + 0.5)) aimIdx = i;
+            if (flightLineClear(x, y + 1, z, p[0] + 0.5, p[1] + 0.5, p[2] + 0.5)) aimIdx = i;
         }
         boolean blind = aimIdx < 0;                             // can't see ANY of the route from here
         if (blind) aimIdx = Math.min(pathIdx + 2, lastIdx);
@@ -674,9 +746,14 @@ public class ElytraPilot extends Module {
         wantFire = fireSpaced(wantFire);
         boolean fire = wantFire && heldIsFirework();
         if (wantFire && !fire) ensureFireworkHeld();
-        if (fire) ticksSinceFire = 0;
-        submitInput(false, fire, yaw, pitch);
+        if (fire) noteRocketFired();
+        submitFlightAndSolve(x, y, z, fire, yaw, pitch, roofCap);
 
+        maybeBeginDescent(x, y, z, cfg);
+    }
+
+    /** Begin the final descent once close enough to glide down to the target (lead scales with altitude). */
+    private void maybeBeginDescent(double x, double y, double z, com.aquarius.util.config.Config.Client.Extra.ElytraPilot cfg) {
         double lead = Math.max(cfg.descendRadius, (y - cfg.approxGroundY) * cfg.glideRatio);
         if (horizDist(x, z, cfg.targetX, cfg.targetZ) <= lead) {
             phase = Phase.DESCEND;
@@ -737,7 +814,7 @@ public class ElytraPilot extends Module {
         wantFire = fireSpaced(wantFire);
         boolean fire = wantFire && heldIsFirework();
         if (wantFire && !fire) ensureFireworkHeld();
-        if (fire) ticksSinceFire = 0;
+        if (fire) noteRocketFired();
         submitInput(false, fire, yaw, pitch);
 
         if (cfg.hasTarget) {
@@ -835,6 +912,351 @@ public class ElytraPilot extends Module {
         return best;
     }
 
+    // ============================== simulation flight solver ==============================
+    // The Baritone ElytraBehavior model, ported for the proxy. Each tick the flight input is chosen by
+    // SIMULATION, not geometry: walk route points from far to near, build candidate aim positions (boosted
+    // candidates also try extra altitude so a burning rocket buys height, with progressively relaxed safety
+    // margins when boxed in), screen each candidate with an 8-corner hitbox raytrace through the native
+    // terrain cache, then for every pitch around the direct line fly the REAL vanilla elytra physics
+    // (incl. rocket thrust) forward tick by tick — any future that clips terrain is rejected outright, and
+    // the survivor whose net displacement points best along the goal direction wins. The solve runs on its
+    // own thread against a predicted next-tick state and is consumed the following tick, which is how
+    // Baritone affords thousands of simulations per tick without stalling the game loop.
+
+    /** An aim point + pitch whose simulated flight was verified collision-free. */
+    private record FlightSolution(double startX, double startY, double startZ,
+                                  double destX, double destY, double destZ,
+                                  float pitch, boolean forceBoost) { }
+
+    /** Immutable state snapshot the solver works from (built on the tick thread, read on the solver thread). */
+    private record SolveSnapshot(double x, double y, double z,
+                                 double vx, double vy, double vz,
+                                 List<int[]> route, int pathIdx, int boostTicks,
+                                 int simTicks, int pitchRange, int roofCap) { }
+
+    /** Per-solve budget of pitch sweeps, so a fully boxed-in solve cannot run away (each sweep = ~50 sims). */
+    private static final int SOLVE_PITCH_BUDGET = 40;
+
+    /** Hand over the queued async solution if it still applies to where the bot actually is. */
+    private FlightSolution takeSolution(double x, double y, double z) {
+        FlightSolution s = pendingSolution;
+        pendingSolution = null;                    // single use
+        if (s == null) return null;
+        // Solved from the PREDICTED post-physics state of last tick; a real divergence (server setback,
+        // collision, lag) means the future it verified is fiction — discard and let the heuristics carry.
+        if (Math.abs(x - s.startX()) > 1.0 || Math.abs(y - s.startY()) > 1.0 || Math.abs(z - s.startZ()) > 1.0) return null;
+        return s;
+    }
+
+    /**
+     * Fly the solver's answer. Yaw is recomputed toward its aim point from where the bot is NOW (cheap and
+     * exact); the simulated pitch is the hard-won part. Firework policy is Baritone's: a rocket only when not
+     * already boosted, meaningfully short of the aim point, and actually slow — no fixed re-fire timer; plus
+     * any desperate boost the simulation itself proved necessary. The few overrides the simulation cannot see
+     * stay on top: mob fire (jink), the 2b2t speed cap, and the bedrock roof.
+     */
+    private void flySolution(double x, double y, double z, FlightSolution sol, boolean overCap, int roofCap) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        float yaw = (float) Math.toDegrees(Math.atan2(-(sol.destX() - x), sol.destZ() - z));
+        float pitch = sol.pitch();
+        if (hazardClimbTicks > 0) yaw += 30f;                   // line-of-fire jink — the sim can't see ghasts
+        if (y >= roofCap - 1 && pitch < 0f) pitch = 0f;         // never climb into the inaccessible roof
+
+        var vel = BOT.getVelocity();
+        double vy = y < sol.destY() ? Math.max(0, vel.getY()) : vel.getY();  // climbing toward the aim: sink is fine
+        double speed3d = Math.sqrt(vel.getX() * vel.getX() + vy * vy + vel.getZ() * vel.getZ());
+        boolean shortOfAim = y < sol.destY() - 5 || horizDist(x, z, sol.destX(), sol.destZ()) > 5;
+        boolean wantFire = sol.forceBoost()
+            || (boostMaxTicks <= 0 && shortOfAim && speed3d * 20.0 < cfg.boostBelowSpeed);
+        if (overCap && !sol.forceBoost()) wantFire = false;     // never thrust past the 2b2t speed cap
+        wantFire = fireSpaced(wantFire);                        // spacing + post-setback rocket hold
+        boolean fire = wantFire && heldIsFirework();
+        if (wantFire && !fire) ensureFireworkHeld();
+        if (fire) noteRocketFired();
+        submitFlightAndSolve(x, y, z, fire, yaw, pitch, roofCap);
+    }
+
+    /**
+     * Submit this tick's flight input, then queue the NEXT tick's solve from the predicted post-physics
+     * state: one vanilla physics step with exactly the input just chosen. (Baritone solves from the real
+     * post-tick state in an end-of-tick hook; the proxy's tick order means we predict it instead, and
+     * {@link #takeSolution} discards the result if reality diverged.)
+     */
+    private void submitFlightAndSolve(double x, double y, double z, boolean fire, float yaw, float pitch, int roofCap) {
+        submitInput(false, fire, yaw, pitch);
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (!cfg.solver || !netherPathIsNative || netherPath == null) return;
+        if (solverTask != null && !solverTask.isDone()) return; // still busy — heuristics carry the next tick
+        var vel = BOT.getVelocity();
+        double[] m = { vel.getX(), vel.getY(), vel.getZ() };
+        Vector3d look = MathHelper.calculateViewVector(yaw, pitch);
+        stepMotion(m, look.getX(), look.getY(), look.getZ(), pitch);
+        if (boostGuaranteeTicks > 0) applyBoost(m, look.getX(), look.getY(), look.getZ());
+        final SolveSnapshot snap = new SolveSnapshot(
+            x + m[0], y + m[1], z + m[2], m[0], m[1], m[2],
+            netherPath, pathIdx, boostGuaranteeTicks,
+            Math.max(5, cfg.solverSimTicks), Math.max(5, cfg.solverPitchRange), roofCap);
+        solverTask = solverExec.submit(() -> {
+            try {
+                pendingSolution = solveAngles(snap);
+            } catch (final Throwable t) {
+                pendingSolution = null;             // the solver must never take the flight down
+            }
+        });
+    }
+
+    /** The solver core: pick the farthest reachable aim point that has a collision-free simulated future. */
+    private FlightSolution solveAngles(SolveSnapshot s) {
+        final List<int[]> route = s.route();
+        final int last = route.size() - 1;
+        final int near = Math.min(s.pathIdx(), last);
+        final int[] budget = { SOLVE_PITCH_BUDGET };
+
+        for (int relaxation = 0; relaxation < 3; relaxation++) {
+            // While a rocket burns, also try gaining altitude at the aim point — height is the one thing a
+            // burning rocket buys for free, and the nether always wants more of it.
+            final int[] heights = s.boostTicks() > 0 ? new int[]{16, 8, 0} : new int[]{0};
+            final double margin = relaxation == 0 ? 0.4 : relaxation == 1 ? 0.2 : 0.0;
+            final int step = relaxation == 0 ? 2 : 1;           // strict pass skips every other point (cheap)
+            for (int i = Math.min(near + 20, last); i >= near; i -= step) {
+                final int[] p = route.get(i);
+                for (final int dy : heights) {
+                    final double cx = p[0] + 0.5, cy = p[1] + 0.5 + dy, cz = p[2] + 0.5;
+                    if (cy > s.roofCap() - 1) continue;
+                    if (dy != 0) {
+                        // a climbing candidate must keep the onward route visible — never climb into a lip
+                        final int[] onward = route.get(Math.min(i + 3, last));
+                        if (!rayClear(cx, cy, cz, onward[0] + 0.5, onward[1] + 0.5, onward[2] + 0.5)) continue;
+                    }
+                    if (!hitboxClear(s, cx, cy, cz, margin)) continue;
+                    final Float pitch = solvePitch(s, cx, cy, cz, relaxation, budget);
+                    if (pitch != null) return new FlightSolution(s.x(), s.y(), s.z(), cx, cy, cz, pitch, false);
+                    if (budget[0] <= 0) break;
+                }
+                if (budget[0] <= 0) break;
+            }
+            if (budget[0] <= 0) break;
+        }
+
+        // Desperate: nothing escapes unpowered. Would a rocket save us? Only force one the sim says works
+        // (Baritone's forced-firework test) — blind panic boosts into terrain are how totems get eaten.
+        final int[] p = route.get(Math.min(near + 4, last));
+        for (final int delay : new int[]{3, 2, 1}) {
+            final Float pitch = sweepPitches(s, p[0] + 0.5, p[1] + 0.5, p[2] + 0.5, true, s.simTicks(), 10, delay);
+            if (pitch != null) return new FlightSolution(s.x(), s.y(), s.z(), p[0] + 0.5, p[1] + 0.5, p[2] + 0.5, pitch, true);
+        }
+        return null;
+    }
+
+    private Float solvePitch(SolveSnapshot s, double dx, double dy, double dz, int relaxation, int[] budget) {
+        if (budget[0]-- <= 0) return null;
+        final boolean desperate = relaxation == 2;
+        final int ticks = desperate ? 3
+            : s.boostTicks() > 0 ? Math.max(5, s.boostTicks())
+            : s.simTicks();
+        return sweepPitches(s, dx, dy, dz, desperate, ticks, s.boostTicks() > 0 ? ticks : 0, 0);
+    }
+
+    /**
+     * Try every candidate pitch around the direct line, simulate each, and return the collision-free pitch
+     * whose net displacement direction best matches the goal direction — verifying the goal stays visible
+     * along the winning future (a great-scoring path that loses sight of the goal is flying behind a wall).
+     */
+    private Float sweepPitches(SolveSnapshot s, double dx, double dy, double dz, boolean desperate,
+                               int ticks, int ticksBoosted, int boostDelay) {
+        final double gx = dx - s.x(), gy = dy - s.y(), gz = dz - s.z();
+        final double goalLen = Math.sqrt(gx * gx + gy * gy + gz * gz);
+        if (goalLen < 0.5) return null;
+        final double gnx = gx / goalLen, gny = gy / goalLen, gnz = gz / goalLen;
+        final float goodPitch = (float) Math.toDegrees(Math.atan2(-gy, Math.hypot(gx, gz)));
+        final float minPitch = desperate ? -88 : Math.max(goodPitch - s.pitchRange(), -88);
+        final float maxPitch = desperate ? 88 : Math.min(goodPitch + s.pitchRange(), 88);
+
+        Float bestPitch = null;
+        double bestDot = -2;
+        for (float pitch = goodPitch; pitch <= maxPitch; pitch++) {
+            final double d = evalPitch(s, dx, dy, dz, pitch, ticks, ticksBoosted, boostDelay, gnx, gny, gnz, bestDot, desperate);
+            if (d > bestDot) { bestDot = d; bestPitch = pitch; }
+        }
+        for (float pitch = goodPitch - 1; pitch >= minPitch; pitch--) {
+            final double d = evalPitch(s, dx, dy, dz, pitch, ticks, ticksBoosted, boostDelay, gnx, gny, gnz, bestDot, desperate);
+            if (d > bestDot) { bestDot = d; bestPitch = pitch; }
+        }
+        return bestPitch;
+    }
+
+    /** Score one pitch candidate: -2 (rejected) unless its simulated future is collision-free, beats the
+     *  best so far, and keeps the goal visible. */
+    private double evalPitch(SolveSnapshot s, double dx, double dy, double dz, float pitch,
+                             int ticks, int ticksBoosted, int boostDelay,
+                             double gnx, double gny, double gnz, double bestDot, boolean desperate) {
+        final double[] path = simulate(s, dx, dy, dz, pitch, ticks, ticksBoosted, boostDelay);
+        if (path == null) return -2;
+        final int n = path.length / 3 - 1;
+        final double ex = path[n * 3] - s.x(), ey = path[n * 3 + 1] - s.y(), ez = path[n * 3 + 2] - s.z();
+        final double len = Math.sqrt(ex * ex + ey * ey + ez * ez);
+        if (len < 1e-6) return -2;
+        final double dot = (ex * gnx + ey * gny + ez * gnz) / len;
+        if (dot <= bestDot) return -2;                          // not an improvement — skip the expensive rays
+        if (!simClear(path)) return -2;
+        if (!goalVisibleAlong(path, dx, dy, dz, desperate)) return -2;
+        return dot;
+    }
+
+    /**
+     * Fly the exact vanilla elytra physics forward from the snapshot state: each tick the yaw re-aims at
+     * what remains of the way to the aim point while the candidate pitch is held, mirroring how the real
+     * control loop flies. Returns absolute positions (x,y,z per tick, index 0 = start), ending early once
+     * within a block of the aim point; {@code null} when the future leaves the native cache's vertical range.
+     */
+    private double[] simulate(SolveSnapshot s, double dx, double dy, double dz, float pitch,
+                              int ticks, int ticksBoosted, int boostDelay) {
+        double px = s.x(), py = s.y(), pz = s.z();
+        final double[] m = { s.vx(), s.vy(), s.vz() };
+        final double[] out = new double[(ticks + 1) * 3];
+        out[0] = px; out[1] = py; out[2] = pz;
+        int n = 0;
+        int boostLeft = ticksBoosted;
+        for (int i = 0; i < ticks; i++) {
+            final double ddx = dx - px, ddy = dy - py, ddz = dz - pz;
+            if (ddx * ddx + ddy * ddy + ddz * ddz < 1) break;
+            final float yaw = (float) Math.toDegrees(Math.atan2(-ddx, ddz));
+            final Vector3d look = MathHelper.calculateViewVector(yaw, pitch);
+            stepMotion(m, look.getX(), look.getY(), look.getZ(), pitch);
+            px += m[0]; py += m[1]; pz += m[2];
+            if (py >= 126 || py <= 1) return null;              // above the roof / into the floor — reject
+            n++;
+            out[n * 3] = px; out[n * 3 + 1] = py; out[n * 3 + 2] = pz;
+            if (i >= boostDelay && boostLeft-- > 0) applyBoost(m, look.getX(), look.getY(), look.getZ());
+        }
+        if (n == 0) return null;
+        return n == ticks ? out : Arrays.copyOf(out, (n + 1) * 3);
+    }
+
+    /** Sweep the gliding hitbox (0.6 wide, 0.6 tall) along every simulated tick — one batched native raytrace. */
+    private boolean simClear(double[] path) {
+        final int steps = path.length / 3 - 1;
+        if (steps <= 0) return true;
+        final double r = 0.31;                                  // half-width + a hair of padding
+        final double[] off = {
+            -r, -0.01, -r,  -r, -0.01, r,  r, -0.01, -r,  r, -0.01, r,
+            -r, 0.61, -r,   -r, 0.61, r,   r, 0.61, -r,   r, 0.61, r,
+        };
+        final int count = steps * 8;
+        final double[] src = new double[count * 3], dst = new double[count * 3];
+        int k = 0;
+        for (int i = 0; i < steps; i++) {
+            for (int c = 0; c < 8; c++) {
+                src[k]     = path[i * 3]           + off[c * 3];
+                src[k + 1] = path[i * 3 + 1]       + off[c * 3 + 1];
+                src[k + 2] = path[i * 3 + 2]       + off[c * 3 + 2];
+                dst[k]     = path[(i + 1) * 3]     + off[c * 3];
+                dst[k + 1] = path[(i + 1) * 3 + 1] + off[c * 3 + 1];
+                dst[k + 2] = path[(i + 1) * 3 + 2] + off[c * 3 + 2];
+                if (src[k] == dst[k] && src[k + 1] == dst[k + 1] && src[k + 2] == dst[k + 2]) {
+                    dst[k + 1] += 1e-6;                         // zero-length rays crash the cpp tracer
+                }
+                k += 3;
+            }
+        }
+        return NetherRouter.INSTANCE.allClear(count, src, dst);
+    }
+
+    /** The aim point must stay visible from (each step of / the end of) the simulated future. */
+    private boolean goalVisibleAlong(double[] path, double dx, double dy, double dz, boolean finalOnly) {
+        final int steps = path.length / 3 - 1;
+        if (steps <= 0) return true;
+        if (finalOnly) return rayClear(path[steps * 3], path[steps * 3 + 1], path[steps * 3 + 2], dx, dy, dz);
+        final double[] src = new double[steps * 3], dst = new double[steps * 3];
+        for (int i = 1; i <= steps; i++) {
+            final int k = (i - 1) * 3;
+            src[k] = path[i * 3]; src[k + 1] = path[i * 3 + 1]; src[k + 2] = path[i * 3 + 2];
+            dst[k] = dx; dst[k + 1] = dy; dst[k + 2] = dz;
+            if (src[k] == dst[k] && src[k + 1] == dst[k + 1] && src[k + 2] == dst[k + 2]) dst[k + 1] += 1e-6;
+        }
+        return NetherRouter.INSTANCE.allClear(steps, src, dst);
+    }
+
+    /** Screen a candidate aim point: all 8 hitbox corners (inflated by {@code margin}) must reach it clear. */
+    private boolean hitboxClear(SolveSnapshot s, double dx, double dy, double dz, double margin) {
+        final double r = 0.3 + margin;
+        final double h0 = -margin, h1 = 0.6 + margin;
+        final double[] off = { -r, h0, -r,  -r, h0, r,  r, h0, -r,  r, h0, r,
+                               -r, h1, -r,  -r, h1, r,  r, h1, -r,  r, h1, r };
+        final double ox = dx - s.x(), oy = dy - s.y(), oz = dz - s.z();
+        final double[] src = new double[24], dst = new double[24];
+        for (int c = 0; c < 8; c++) {
+            src[c * 3]     = s.x() + off[c * 3];
+            src[c * 3 + 1] = s.y() + off[c * 3 + 1];
+            src[c * 3 + 2] = s.z() + off[c * 3 + 2];
+            dst[c * 3]     = src[c * 3] + ox;
+            dst[c * 3 + 1] = src[c * 3 + 1] + oy;
+            dst[c * 3 + 2] = src[c * 3 + 2] + oz;
+        }
+        return NetherRouter.INSTANCE.allClear(8, src, dst);
+    }
+
+    /** Single native raytrace (solver thread; blocks on the cache lock). True = clear. */
+    private boolean rayClear(double x0, double y0, double z0, double x1, double y1, double z1) {
+        if (x0 == x1 && y0 == y1 && z0 == z1) return true;
+        return NetherRouter.INSTANCE.allClear(1, new double[]{x0, y0, z0}, new double[]{x1, y1, z1});
+    }
+
+    /**
+     * Tick-thread LOS for aim selection: the native cache when it's free (sees seed-generated terrain beyond
+     * what the server has sent; unknown chunks = blocked), else the loaded-chunk scan (unloaded = clear).
+     */
+    private boolean flightLineClear(double x0, double y0, double z0, double x1, double y1, double z1) {
+        if (y0 > 1 && y0 < 126 && y1 > 1 && y1 < 126) {
+            final Boolean nv = NetherRouter.INSTANCE.tryIsVisible(x0, y0, z0, x1, y1, z1);
+            if (nv != null) return nv;
+        }
+        return losClear(x0, y0, z0, x1, y1, z1);
+    }
+
+    /**
+     * One tick of vanilla elytra glide physics ({@code travelFallFlying}), the Baritone port: mutates the
+     * motion vector in place given the unit look direction and pitch. The only term dropped is
+     * {@code min(1, |look|/0.4)}, which is always 1 for a unit look vector.
+     */
+    private static void stepMotion(double[] m, double lx, double ly, double lz, float pitchDeg) {
+        double mx = m[0], my = m[1], mz = m[2];
+        final double pitchRad = Math.toRadians(pitchDeg);
+        final double flatLook = Math.sqrt(lx * lx + lz * lz);
+        final double flatMotion = Math.sqrt(mx * mx + mz * mz);
+        double cosPitch = Math.cos(pitchRad);
+        cosPitch = cosPitch * cosPitch;
+        my += -0.08 + cosPitch * 0.06;
+        if (my < 0 && flatLook > 0) {                           // falling: the wings convert sink into lift
+            final double lift = my * -0.1 * cosPitch;
+            my += lift;
+            mx += lx * lift / flatLook;
+            mz += lz * lift / flatLook;
+        }
+        if (pitchRad < 0 && flatLook > 0) {                     // nose up: trade speed for height
+            final double pull = flatMotion * -Math.sin(pitchRad) * 0.04;
+            my += pull * 3.2;
+            mx -= lx * pull / flatLook;
+            mz -= lz * pull / flatLook;
+        }
+        if (flatLook > 0) {                                     // align flat motion with the look direction
+            mx += (lx / flatLook * flatMotion - mx) * 0.1;
+            mz += (lz / flatLook * flatMotion - mz) * 0.1;
+        }
+        m[0] = mx * 0.99;
+        m[1] = my * 0.98;
+        m[2] = mz * 0.99;
+    }
+
+    /** One tick of firework rocket thrust on the motion vector (vanilla FireworkRocketEntity). */
+    private static void applyBoost(double[] m, double lx, double ly, double lz) {
+        m[0] += lx * 0.1 + (lx * 1.5 - m[0]) * 0.5;
+        m[1] += ly * 0.1 + (ly * 1.5 - m[1]) * 0.5;
+        m[2] += lz * 0.1 + (lz * 1.5 - m[2]) * 0.5;
+    }
+
+    // ========================== end simulation flight solver ==========================
+
     /** Blocks of clear (air/water, non-lava) space directly above the bot before the first solid/lava (capped). */
     private int clearAboveCount(double x, double y, double z) {
         int bx = MathHelper.floorI(x), bz = MathHelper.floorI(z), fy = MathHelper.floorI(y);
@@ -919,7 +1341,7 @@ public class ElytraPilot extends Module {
         if (!BOT.isFallFlying() && redeployCooldown <= 0) { sendStartFallFlying(); redeployCooldown = cfg.bounceRedeployTicks; }
         boolean fire = fireSpaced(!overCap) && heldIsFirework();
         if (!fire) ensureFireworkHeld();
-        if (fire) ticksSinceFire = 0;
+        if (fire) noteRocketFired();
         submitMove(true, false, true, fire, yaw, -cfg.hopPitch); // forward+sprint, nose up, NO jump (don't bounce into it)
         boolean clearAhead = !terrainBlockedAhead(x, y, z, yaw, Math.min(cfg.lookAheadBlocks, 12));
         if (clearAhead && hopTicks >= HOP_MIN_TICKS) {
@@ -1027,7 +1449,7 @@ public class ElytraPilot extends Module {
         if (BOT.isFallFlying()) {
             boolean fire = heldIsFirework();
             if (!fire) ensureFireworkHeld();
-            if (fire) ticksSinceFire = 0;
+            if (fire) noteRocketFired();
             submitInput(false, fire, yaw, -10f);
             phase = CONFIG.client.extra.elytraPilot.ebounce ? Phase.BOUNCE : Phase.CRUISE;
             info("Elytra swapped — resuming flight");
@@ -1078,7 +1500,7 @@ public class ElytraPilot extends Module {
         wantFire = fireSpaced(wantFire);
         boolean fire = wantFire && heldIsFirework();
         if (wantFire && !fire) ensureFireworkHeld();
-        if (fire) ticksSinceFire = 0;
+        if (fire) noteRocketFired();
         submitInput(false, fire, yaw, pitch);
     }
 
@@ -1458,7 +1880,7 @@ public class ElytraPilot extends Module {
             jumpToggle = !jumpToggle;
             boolean fire = BOT.isFallFlying() && heldIsFirework();
             submitInput(jumpToggle, fire, desiredYaw(x, z), 0f);
-            if (fire) ticksSinceFire = 0;
+            if (fire) noteRocketFired();
             return;
         }
         if (cfg.swapElytra && hasSpareElytra()) { enterSwap(); return; }

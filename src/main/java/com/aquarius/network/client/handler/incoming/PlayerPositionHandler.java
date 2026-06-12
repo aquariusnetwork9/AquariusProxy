@@ -2,6 +2,7 @@ package com.aquarius.network.client.handler.incoming;
 
 import com.aquarius.Proxy;
 import com.aquarius.cache.data.PlayerCache;
+import com.aquarius.event.client.PlayerSetbackEvent;
 import com.aquarius.feature.spectator.SpectatorSync;
 import com.aquarius.module.impl.AntiAFK;
 import com.aquarius.network.client.ClientSession;
@@ -43,6 +44,7 @@ public class PlayerPositionHandler implements ClientEventLoopPacketHandler<Clien
         BARITONE.onPlayerPosRotate();
         SpectatorSync.syncPlayerPositionWithSpectators();
         MODULE.get(AntiAFK.class).handlePlayerPosRotate();
+        EVENT_BUS.postAsync(new PlayerSetbackEvent(packet.getId()));
         return true;
     }
 }

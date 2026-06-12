@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Full-route nether planning via babbaj/nether-pathfinder — the native C++ A* Baritone's elytra uses. It
@@ -20,8 +21,11 @@ import java.util.concurrent.Executors;
  * <p>Observed chunks are fed in as they stream from the server ({@code submitChunk}) and override generation,
  * so the route self-corrects where the real world differs from the seed (post-1.12 regenerated terrain, builds).
  *
- * <p>The native context is NOT thread-safe: every native call is confined to the single "NetherRouter" daemon
- * thread. Results come back as {@link CompletableFuture}s; callers poll/complete on their own threads.
+ * <p>Threading (the Baritone model): mutations of the native cache — context create/free, chunk inserts,
+ * culling, and {@code pathFind} with generation — run on the single "NetherRouter" daemon thread under the
+ * WRITE lock. Raytraces ({@code isVisible}/{@code isVisibleMulti}) are read-only and may run from any thread
+ * under the READ lock; the flight solver fires thousands of them per second. Results come back as
+ * {@link CompletableFuture}s; callers poll/complete on their own threads.
  *
  * <p>Waypoints are packed {@code x[26]<<38 | y[12]<<26 | z[26]} (verified empirically against a generated
  * route — NOT the vanilla BlockPos layout).
@@ -34,7 +38,10 @@ public final class NetherRouter {
     public record Route(List<int[]> points, boolean finished) { }
 
     private static final int MAX_HEIGHT = 128;
-    private static final double FAKE_CHUNK_COST = 1.0;   // neutral: trust generation as much as observation
+    // Baritone's value: generated (unobserved) chunks cost 8x observed ones, so where the real world is known
+    // the route threads through it — generated terrain is a *prediction* (post-1.12 regen + builds diverge),
+    // and a route through chunks we've actually seen never gets surprise-corrected mid-flight.
+    private static final double FAKE_CHUNK_COST = 8.0;
     private static final int CULL_DISTANCE_BLOCKS = 64000;
 
     private final ExecutorService exec = Executors.newSingleThreadExecutor(r -> {
@@ -43,9 +50,11 @@ public final class NetherRouter {
         return t;
     });
 
-    // All mutated on the router thread only.
-    private long context;
-    private long contextSeed;
+    // Guards the native chunk cache: router-thread mutations take the write lock; raytraces (any thread)
+    // take the read lock. The context handle itself only changes under the write lock.
+    private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
+    private volatile long context;
+    private long contextSeed;                      // router thread only
     private final LongSet fedChunks = new LongOpenHashSet();
     private int feedErrors;
 
@@ -60,6 +69,7 @@ public final class NetherRouter {
                                                  long seed, int timeoutMs) {
         final CompletableFuture<Route> f = new CompletableFuture<>();
         exec.execute(() -> {
+            rwl.writeLock().lock();   // pathFind generates chunks into the cache = a mutation
             try {
                 ensureContext(seed);
                 NetherPathfinder.cullFarChunks(context, sx >> 4, sz >> 4, CULL_DISTANCE_BLOCKS);
@@ -76,6 +86,8 @@ public final class NetherRouter {
                 f.complete(new Route(pts, seg.finished));
             } catch (final Throwable t) {
                 f.completeExceptionally(t);
+            } finally {
+                rwl.writeLock().unlock();
             }
         });
         return f;
@@ -88,6 +100,7 @@ public final class NetherRouter {
      */
     public void submitChunk(int chunkX, int chunkZ, long seed) {
         exec.execute(() -> {
+            rwl.writeLock().lock();
             try {
                 ensureContext(seed);
                 if (World.getChunk(chunkX, chunkZ) == null) return;
@@ -113,8 +126,44 @@ public final class NetherRouter {
                 if (feedErrors++ == 0) {
                     com.aquarius.Globals.MODULE_LOG.warn("[NetherRouter] chunk feed failed (logging first only): {}", t.toString());
                 }
+            } finally {
+                rwl.writeLock().unlock();
             }
         });
+    }
+
+    // --- raytraces against the native cache (observed chunks override seed-generated terrain; chunks the
+    // --- cache has never seen count as SOLID, the conservative Baritone semantic: never trust unknown space)
+
+    /**
+     * Single raytrace; {@code true} = the line is clear. Non-blocking: returns {@code null} when the cache is
+     * mid-write (a route computing / chunks inserting) or no context exists yet — callers fall back to their
+     * loaded-chunk scan. Safe from the tick thread.
+     */
+    public Boolean tryIsVisible(double sx, double sy, double sz, double ex, double ey, double ez) {
+        if (!rwl.readLock().tryLock()) return null;
+        try {
+            if (context == 0) return null;
+            if (sx == ex && sy == ey && sz == ez) return Boolean.TRUE; // zero-length rays crash the cpp tracer
+            return NetherPathfinder.isVisible(context, NetherPathfinder.CACHE_MISS_SOLID, sx, sy, sz, ex, ey, ez);
+        } finally {
+            rwl.readLock().unlock();
+        }
+    }
+
+    /**
+     * Batched raytrace, ALL semantics: {@code true} only if EVERY segment {@code src[i]->dst[i]} is clear.
+     * Blocks on the read lock (a computing route can hold the write lock for seconds) — call this from the
+     * flight-solver thread, never the tick thread. {@code false} when no context exists.
+     */
+    public boolean allClear(int count, double[] src, double[] dst) {
+        rwl.readLock().lock();
+        try {
+            if (context == 0) return false;
+            return NetherPathfinder.isVisibleMulti(context, NetherPathfinder.CACHE_MISS_SOLID, count, src, dst, false) == -1;
+        } finally {
+            rwl.readLock().unlock();
+        }
     }
 
     /** Feed failures since startup (first one is logged; the rest just count). */
