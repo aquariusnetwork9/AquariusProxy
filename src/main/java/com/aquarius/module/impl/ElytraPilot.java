@@ -70,7 +70,7 @@ public class ElytraPilot extends Module {
     private static final int PIN_WARN_TICKS = 100;           // ~5s of no cruise progress -> warn (likely pinned on terrain)
     private static final int PIN_ABORT_TICKS = 300;          // ~15s of no cruise progress -> walk out / abort
     private static final int WALKOUT_LEG_BLOCKS = 48;        // Baritone walk distance per walk-out leg, toward the target
-    private static final int WALKOUT_OPEN_SKY = 20;          // blocks of clear air overhead = enough room to fly again
+    private static final int WALKOUT_OPEN_SKY = 16;          // blocks of clear air overhead = enough room to fly again
     private static final int WALKOUT_TIMEOUT_TICKS = 1200;   // ~60s per walk-out leg
     private static final int MAX_WALKOUT_ATTEMPTS = 4;
     private static final float HIGHWAY_FRONTIER_FACTOR = 0.7f; // highways sit in previously-loaded, oft-reloaded chunks -> loading ~30% less of a problem; gentler governor than open nether
@@ -337,6 +337,15 @@ public class ElytraPilot extends Module {
             takeoffTicks = 0;
             enterWalkout("taking damage during takeoff");
             return;
+        }
+        // No headroom here? Walk somewhere flyable FIRST instead of burning ~10s (and sometimes a totem)
+        // discovering it the hard way against a ceiling.
+        if (takeoffTicks == 0 && cfg.hasTarget && walkoutAttempts < MAX_WALKOUT_ATTEMPTS) {
+            var pc = CACHE.getPlayerCache();
+            if (clearAboveCount(pc.getX(), pc.getY(), pc.getZ()) < 6) {
+                enterWalkout("no headroom to take off here");
+                return;
+            }
         }
         ensureFireworkHeld();
         boolean jump;
@@ -988,7 +997,10 @@ public class ElytraPilot extends Module {
             }
             int wx = MathHelper.floorI(x + u[0] * WALKOUT_LEG_BLOCKS);
             int wz = MathHelper.floorI(z + u[1] * WALKOUT_LEG_BLOCKS);
-            BARITONE.pathTo(new GoalNear(wx, MathHelper.floorI(y), wz, 12));
+            // Aim the leg into the walkable mid-band: from a roof perch the way out is DOWN, from the
+            // lava-sea level it is UP — walking 48 blocks at the bot's own Y is hopeless in both.
+            int wy = Math.min(Math.max(MathHelper.floorI(y), 50), 95);
+            BARITONE.pathTo(new GoalNear(wx, wy, wz, 12));
             baritoneStarted = true;
             walkoutTicks = 0;
             return;
