@@ -77,6 +77,7 @@ public class ElytraPilot extends Module {
     private static final int STALL_MIN_PROGRESS = 12;        // < this many blocks of NET horizontal travel per window -> stuck
     private static final int NATIVE_LOS_RANGE = 96;          // how far along the route to raytrace for the farthest VISIBLE aim point
     private static final int NATIVE_SCAN_WINDOW = 80;        // route points scanned forward per tick for the nearest-point tracker
+    private static final int NATIVE_REPLAN_TICKS = 40;       // continuous replanning: a route older than this (~2s) is stale
     private static final int EMERGENCY_FLOOR_Y = 55;         // below this, nether cruise climbs at full boost no matter what
     private static final int WALKOUT_LEG_BLOCKS = 48;        // Baritone walk distance per walk-out leg, toward the target
     private static final int WALKOUT_OPEN_SKY = 16;          // blocks of clear air overhead = enough room to fly again
@@ -119,6 +120,8 @@ public class ElytraPilot extends Module {
     private java.util.concurrent.CompletableFuture<NetherRouter.Route> nativeFuture;
     private boolean nativeRouteFinished;
     private int nativeReqCooldown;
+    private int routeAgeTicks;         // ticks since the active route was computed (staleness -> replan)
+    private int routeLogSquelch;       // continuous replans: only log every Nth route
     private boolean nativeFailLogged;
     private boolean nativeUnsupportedLogged;
     private boolean lastFlightSuccess; // DONE via arrival/landing (true) vs abort/emergency (false)
@@ -249,6 +252,8 @@ public class ElytraPilot extends Module {
         nativeFuture = null;          // abandoned futures complete harmlessly on the router thread
         nativeRouteFinished = false;
         nativeReqCooldown = 0;
+        routeAgeTicks = 0;
+        routeLogSquelch = 0;
         nativeFailLogged = false;
         lastFlightSuccess = false;
         lostFlightTicks = 0;
@@ -587,9 +592,13 @@ public class ElytraPilot extends Module {
         float pitch = clampF((float) Math.toDegrees(Math.atan2(-dy, horiz)), -cfg.climbPitch, 20f);
         boolean wantFire = !overCap && (dy > 2 || speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
         if (blind) {
-            // The route is below a lip / behind clutter: climb until it comes into view — never fly blind at it.
+            // The route is below a lip / behind clutter: climb until it comes into view — never fly blind at it —
+            // and re-solve the route from RIGHT HERE immediately (with the freshly observed chunks the new plan
+            // bends around whatever just blocked the view) instead of waiting out the replan cadence.
             pitch = -cfg.climbPitch * 0.7f;
             wantFire = !overCap;
+            routeAgeTicks = NATIVE_REPLAN_TICKS;
+            nativeReqCooldown = 0;
         } else if (horiz < 16) {
             // Visible horizon is short (cluttered terrain): bias upward to open the view while still pursuing.
             pitch = Math.min(pitch, -15f);
@@ -621,14 +630,23 @@ public class ElytraPilot extends Module {
             wantFire = !overCap;
             yaw += 30f;
         }
-        // Descent guard: never nose DOWN toward a close floor — especially LAVA. A live capture showed the bot
-        // diving to the y<EMERGENCY_FLOOR_Y line over a lava ocean, the hard climb overshooting to y104, then the
-        // route yanking it back down: a porpoise (y 53<->104) that froze horizontal progress in place and never
-        // crossed. Hold a crossing altitude with a gentle climb instead of diving; cross the lava at height.
-        int clearBelow = heightAboveGround(x, y, z);
+        // Terrain-following clearance floor. The native route's y HUGS the ground (the A* treats 6 blocks over
+        // terrain as free) — Baritone can thread that because it simulates elytra physics tick-by-tick; we cannot.
+        // A live capture showed the bot faithfully tracking the route's profile down 93->23 into a slope. So the
+        // route is LATERAL guidance only when low: hold a real clearance band over the local floor (more over
+        // lava), probe the floor AHEAD so rising slopes trigger the climb early, and never dive steeply when low.
+        double yawRadG = Math.toRadians(yaw);
+        int clearBelow = Math.min(
+            heightAboveGround(x, y, z),
+            heightAboveGround(x - Math.sin(yawRadG) * 8, y, z + Math.cos(yawRadG) * 8));
         if (clearBelow != Integer.MAX_VALUE) {
-            int minClear = lavaBelow(x, y, z) ? 30 : 6;
-            if (clearBelow < minClear && pitch > -8f) { pitch = -8f; wantFire = !overCap; }
+            int minClear = lavaBelow(x, y, z) ? 30 : 16;
+            if (clearBelow < minClear) {                              // below the band — climb out of it
+                pitch = Math.min(pitch, -12f);
+                wantFire = !overCap;
+            } else if (clearBelow < 40 && pitch > 12f) {              // near the band — no steep dives
+                pitch = 12f;
+            }
         }
         if (y < EMERGENCY_FLOOR_Y) {        // lava country — below this line, climbing outranks everything else
             pitch = -cfg.climbPitch;
@@ -714,12 +732,14 @@ public class ElytraPilot extends Module {
     }
 
     /**
-     * Keep a native full-route plan alive: consume finished requests, replan on deviation, extend partial
-     * segments before they run out. While a request is in flight the bot keeps flying whatever it has
-     * (old native route, or reactive toward the target) — it never waits in place.
+     * Keep the native route CONTINUOUSLY recomputed from wherever the bot actually is — not just on big
+     * deviation. Long straight pursuit lines don't survive the nether; the plan must stay fresh against the
+     * ever-growing observed-chunk picture (this is what makes Baritone's flight feel alive). While a request
+     * computes, the bot keeps flying the previous route — it never waits in place.
      */
     private void maintainNativeRoute(double x, double y, double z, com.aquarius.util.config.Config.Client.Extra.ElytraPilot cfg) {
         if (nativeReqCooldown > 0) nativeReqCooldown--;
+        routeAgeTicks++;
 
         if (nativeFuture != null && nativeFuture.isDone()) {
             try {
@@ -730,18 +750,26 @@ public class ElytraPilot extends Module {
                     netherPathIsNative = true;
                     nativeRouteFinished = r.finished();
                     nativeFailLogged = false;
-                    info("Native route: {} waypoints{} ({} observed chunks fed{})", r.points().size(),
-                        r.finished() ? "" : " (partial — will extend)", NetherRouter.INSTANCE.fedChunkCount(),
-                        NetherRouter.INSTANCE.feedErrorCount() > 0
-                            ? ", " + NetherRouter.INSTANCE.feedErrorCount() + " feed errors" : "");
-                } else if (!nativeFailLogged) {
-                    nativeFailLogged = true;
-                    warn("Native routing returned no route — using the local planner");
+                    routeAgeTicks = 0;
+                    if (--routeLogSquelch <= 0) {                // continuous replans: log ~every 10s, not every 2s
+                        routeLogSquelch = 5;
+                        info("Native route: {} waypoints{} ({} observed chunks fed{})", r.points().size(),
+                            r.finished() ? "" : " (partial — will extend)", NetherRouter.INSTANCE.fedChunkCount(),
+                            NetherRouter.INSTANCE.feedErrorCount() > 0
+                                ? ", " + NetherRouter.INSTANCE.feedErrorCount() + " feed errors" : "");
+                    }
+                } else {
+                    nativeReqCooldown = 100;                     // failing searches: back off to ~5s
+                    if (!nativeFailLogged) {
+                        nativeFailLogged = true;
+                        warn("Native routing returned no route — flying reactive");
+                    }
                 }
             } catch (final Exception e) {
+                nativeReqCooldown = 100;
                 if (!nativeFailLogged) {
                     nativeFailLogged = true;
-                    warn("Native routing failed ({}) — using the local planner", e.toString());
+                    warn("Native routing failed ({}) — flying reactive", e.toString());
                 }
             }
             nativeFuture = null;
@@ -752,13 +780,14 @@ public class ElytraPilot extends Module {
             final int[] cur = netherPath.get(Math.min(pathIdx, netherPath.size() - 1));
             final boolean deviated = horizDist(x, z, cur[0], cur[2]) > 48;
             final boolean nearEnd = !nativeRouteFinished && pathIdx >= netherPath.size() - 8;
+            final boolean stale = routeAgeTicks >= NATIVE_REPLAN_TICKS;
             // Keep flying the current route while the replacement computes — never drop to a hold mid-flight.
-            need = deviated || nearEnd;
+            need = deviated || nearEnd || stale;
         } else {
             need = true;
         }
         if (need && nativeFuture == null && nativeReqCooldown <= 0) {
-            nativeReqCooldown = 100;                             // at most one request per ~5s
+            nativeReqCooldown = NATIVE_REPLAN_TICKS;             // continuous replanning cadence (~2s)
             // Feed the loaded neighbourhood first so observation overrides generation where we actually are.
             final int pcx = MathHelper.floorI(x) >> 4, pcz = MathHelper.floorI(z) >> 4;
             for (int dx = -10; dx <= 10; dx++) {
