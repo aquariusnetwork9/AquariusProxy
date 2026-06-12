@@ -35,7 +35,7 @@ public final class ElytraPathfinder {
 
     private static final int CELL = 4;                 // grid cell size in blocks
     private static final byte OPEN = 0, BLOCKED = 1, UNLOADED = 2;
-    private static final int BLIND_MIN_Y = 80, BLIND_MAX_Y = 118;
+    private static final int BLIND_MIN_Y = 80, BLIND_MAX_Y = 108; // top kept well clear of the roof-adjacent terrain (a 118 top pinned the bot against bedrock at y120)
     private static final double BLIND_COST = 2.5;      // step-cost multiplier through unseen (high-band) cells
     private static final double CONFINE_COST = 0.35;   // extra step cost per blocked face neighbour
     private static final int[][] SAMPLE_COLS = {{1, 1}, {0, 0}, {3, 3}}; // columns sampled per cell (centre + diagonal corners)
