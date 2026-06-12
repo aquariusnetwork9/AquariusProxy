@@ -75,7 +75,7 @@ public class ElytraPilot extends Module {
     private static final int PIN_ABORT_TICKS = 300;          // ~15s of no cruise progress -> walk out / abort
     private static final int STALL_WINDOW_TICKS = 60;        // ~3s window for the NET-progress stall check (porpoise-proof)
     private static final int STALL_MIN_PROGRESS = 12;        // < this many blocks of NET horizontal travel per window -> stuck
-    private static final int NATIVE_LOOKAHEAD = 40;          // pure-pursuit aim distance (blocks) along the native route
+    private static final int NATIVE_LOS_RANGE = 96;          // how far along the route to raytrace for the farthest VISIBLE aim point
     private static final int NATIVE_SCAN_WINDOW = 80;        // route points scanned forward per tick for the nearest-point tracker
     private static final int EMERGENCY_FLOOR_Y = 55;         // below this, nether cruise climbs at full boost no matter what
     private static final int WALKOUT_LEG_BLOCKS = 48;        // Baritone walk distance per walk-out leg, toward the target
@@ -567,18 +567,34 @@ public class ElytraPilot extends Module {
             double d = horizDist(x, z, p[0], p[2]);
             if (d < nearestD) { nearestD = d; pathIdx = i; }
         }
-        // Aim a REAL lookahead distance along the route — chasing the next waypoint ~10 blocks out at flight speed
-        // is what made the pursuit orbit. A far aim point gives gentle curvature that elytra physics can track.
-        int aimIdx = pathIdx;
-        while (aimIdx < netherPath.size() - 1
-                && horizDist(x, z, netherPath.get(aimIdx)[0], netherPath.get(aimIdx)[2]) < NATIVE_LOOKAHEAD)
-            aimIdx++;
+        // Aim at the FARTHEST route point the bot can actually SEE (the Baritone way: visibility-based pursuit,
+        // raytraced through the LOADED chunks — unloaded chunks cannot collide, so they count as clear). A fixed
+        // lookahead aimed sight-unseen and cut corners straight through the local terrain the route bent around,
+        // which was the #1 cause of lost-flight near builds.
+        int aimIdx = -1;
+        final int lastIdx = netherPath.size() - 1;
+        for (int i = pathIdx; i <= lastIdx; i++) {
+            int[] p = netherPath.get(i);
+            if (horizDist(x, z, p[0], p[2]) > NATIVE_LOS_RANGE) break;
+            if (losClear(x, y + 1, z, p[0] + 0.5, p[1] + 0.5, p[2] + 0.5)) aimIdx = i;
+        }
+        boolean blind = aimIdx < 0;                             // can't see ANY of the route from here
+        if (blind) aimIdx = Math.min(pathIdx + 2, lastIdx);
         int[] w = netherPath.get(aimIdx);
         float yaw = (float) Math.toDegrees(Math.atan2(-(w[0] + 0.5 - x), w[2] + 0.5 - z));
         double dy = (w[1] + 0.5) - y;
         double horiz = Math.max(1.0, horizDist(x, z, w[0], w[2]));
         float pitch = clampF((float) Math.toDegrees(Math.atan2(-dy, horiz)), -cfg.climbPitch, 20f);
         boolean wantFire = !overCap && (dy > 2 || speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
+        if (blind) {
+            // The route is below a lip / behind clutter: climb until it comes into view — never fly blind at it.
+            pitch = -cfg.climbPitch * 0.7f;
+            wantFire = !overCap;
+        } else if (horiz < 16) {
+            // Visible horizon is short (cluttered terrain): bias upward to open the view while still pursuing.
+            pitch = Math.min(pitch, -15f);
+            wantFire = !overCap;
+        }
 
         // OBSERVED terrain disagrees with the generated route (regenerated chunks, builds): climb over it now
         // and replan immediately — the freshly-fed chunks make the new route avoid it.
@@ -1600,6 +1616,27 @@ public class ElytraPilot extends Module {
             if (!b.isAir() && !World.isWater(b)) return dy;
         }
         return Integer.MAX_VALUE;
+    }
+
+    /**
+     * Straight-line clearance check through LOADED chunks only — unloaded chunks count as clear, because the
+     * bot can only ever collide with loaded terrain (the native route handles the unloaded world). Steps the
+     * segment at ~1-block intervals; lava counts as blocked (never aim a flight line through it).
+     */
+    private boolean losClear(double x0, double y0, double z0, double x1, double y1, double z1) {
+        final double dx = x1 - x0, dy = y1 - y0, dz = z1 - z0;
+        final int steps = (int) Math.ceil(Math.sqrt(dx * dx + dy * dy + dz * dz));
+        if (steps <= 0) return true;
+        for (int i = 1; i <= steps; i++) {
+            final double t = (double) i / steps;
+            final int bx = MathHelper.floorI(x0 + dx * t);
+            final int by = MathHelper.floorI(y0 + dy * t);
+            final int bz = MathHelper.floorI(z0 + dz * t);
+            if (!World.isChunkLoadedChunkPos(bx >> 4, bz >> 4)) continue;
+            final var b = World.getBlock(bx, by, bz);
+            if (!b.isAir() && !World.isWater(b)) return false;
+        }
+        return true;
     }
 
     /** True if the first non-air, non-water block below the bot (within a cap) is lava — i.e. flying over a lava sea. */
