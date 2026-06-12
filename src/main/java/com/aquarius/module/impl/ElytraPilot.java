@@ -73,6 +73,8 @@ public class ElytraPilot extends Module {
     private static final int EPISODE_DECAY_TICKS = 300;     // ~15s of healthy flight resets the lost-flight episode count
     private static final int PIN_WARN_TICKS = 100;           // ~5s of no cruise progress -> warn (likely pinned on terrain)
     private static final int PIN_ABORT_TICKS = 300;          // ~15s of no cruise progress -> walk out / abort
+    private static final int STALL_WINDOW_TICKS = 60;        // ~3s window for the NET-progress stall check (porpoise-proof)
+    private static final int STALL_MIN_PROGRESS = 12;        // < this many blocks of NET horizontal travel per window -> stuck
     private static final int EMERGENCY_FLOOR_Y = 55;         // below this, nether cruise climbs at full boost no matter what
     private static final int WALKOUT_LEG_BLOCKS = 48;        // Baritone walk distance per walk-out leg, toward the target
     private static final int WALKOUT_OPEN_SKY = 16;          // blocks of clear air overhead = enough room to fly again
@@ -124,6 +126,8 @@ public class ElytraPilot extends Module {
     private boolean lostLogged;
     private float landSpinYaw;         // helicopter-landing yaw spin
     private int pinTicks;              // consecutive cruise ticks at near-zero speed (wall-pin watchdog)
+    private double stallAnchorX, stallAnchorZ; // window-start position for the net-progress stall watchdog
+    private int stallWindowTicks;      // ticks since the last net-progress sample
     private int walkoutTicks;          // ticks in the current walk-out leg
     private int walkoutAttempts;
     private double loopX, loopZ;       // centre of a repeated takeoff-fail loop (chimney trap)
@@ -250,6 +254,9 @@ public class ElytraPilot extends Module {
         healthyTicks = 0;
         lostLogged = false;
         pinTicks = 0;
+        stallWindowTicks = 0;
+        stallAnchorX = 0;
+        stallAnchorZ = 0;
         walkoutTicks = 0;
         walkoutAttempts = 0;
         loopCount = 0;
@@ -355,6 +362,7 @@ public class ElytraPilot extends Module {
         if (BOT.isFallFlying()) {
             phase = CONFIG.client.extra.elytraPilot.ebounce ? Phase.BOUNCE : Phase.CRUISE;
             ticksSinceFire = Integer.MAX_VALUE / 2; // fire immediately on the first cruise tick
+            anchorStallWatch();                     // start net-progress tracking from the takeoff point
             info("Airborne — entering " + (CONFIG.client.extra.elytraPilot.ebounce ? "bounce" : "cruise"));
             return;
         }
@@ -394,6 +402,14 @@ public class ElytraPilot extends Module {
         }
     }
 
+    /** (Re)start the net-progress stall watchdog from the current position — call on each entry into cruise. */
+    private void anchorStallWatch() {
+        var pc = CACHE.getPlayerCache();
+        stallAnchorX = pc.getX();
+        stallAnchorZ = pc.getZ();
+        stallWindowTicks = 0;
+    }
+
     private void tickCruise(double x, double y, double z, double speed) {
         var cfg = CONFIG.client.extra.elytraPilot;
         float yaw = steerYaw(x, y, z);
@@ -423,8 +439,24 @@ public class ElytraPilot extends Module {
         // upper layers, so the bot is almost never near the ceiling out here — don't climb to a ceiling. Fly level
         // at a clear altitude and react to obstacles in 3D (over / under / around). Highways stay on the bounce path.
         if (inNether() && !cfg.highway) {
-            // Wall-pin watchdog: a live capture showed the bot pressed against terrain, boosting into it every tick,
-            // position frozen, while still "fall-flying" (so the lost-flight watchdog never fired). Bound it.
+            // Net-progress stall watchdog: the bot can make ZERO net progress while still "moving" — a live capture
+            // showed it pinned on terrain near the start, porpoising y 53<->104 off the emergency floor while x,z were
+            // frozen. The z micro-wobble kept instantaneous speed above the wall-pin threshold, so that check never
+            // fired. Measure NET horizontal travel over a window instead; a porpoise can't fake it. -> walk out.
+            if (++stallWindowTicks >= STALL_WINDOW_TICKS) {
+                double netMoved = horizDist(x, z, stallAnchorX, stallAnchorZ);
+                stallAnchorX = x; stallAnchorZ = z; stallWindowTicks = 0;
+                if (netMoved < STALL_MIN_PROGRESS) {
+                    pinTicks = 0;
+                    if (walkoutAttempts < MAX_WALKOUT_ATTEMPTS)
+                        enterWalkout("stuck (" + (int) netMoved + "b net in " + (STALL_WINDOW_TICKS / 20) + "s) at "
+                            + (int) x + ", " + (int) y + ", " + (int) z);
+                    else
+                        abort("stuck (no net progress) at " + (int) x + ", " + (int) y + ", " + (int) z);
+                    return;
+                }
+            }
+            // Fast wall-pin catch: position frozen while still "fall-flying" (so the lost-flight watchdog never fires).
             if (speed * 20.0 < 2.0) {
                 pinTicks++;
                 if (pinTicks == PIN_WARN_TICKS)
