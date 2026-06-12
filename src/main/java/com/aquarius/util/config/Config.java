@@ -482,26 +482,13 @@ public final class Config {
                  *  the bot holds roughly this Y and dodges obstacles in 3D around it. */
                 public int netherCruiseY = 70;
 
-                /** Use the 3D look-ahead pathfinder in open nether (route around pockets) vs pure reactive dodging. */
-                public boolean netherPathfind = true;
-
-                /** Ticks between open-nether route re-plans (look-ahead refresh). */
-                public int netherPlanInterval = 30;
-
-                /** A* node-expansion budget per open-nether re-plan (cost guard). */
-                public int netherPlanNodes = 9000;
-
-                /** Open-nether route search-box half-extent, in 4-block cells (64 ≈ 256 blocks — past the loaded
-                 *  frontier; unloaded high-band cells are blind-routable so the leg still gets a sane direction). */
-                public int netherPlanRadiusCells = 64;
-
-                /** "Don't outrun the chunk loader." 2b2t serves only ~12 chunks and streams them slowly, so the bot can
-                 *  fly past the edge of LOADED terrain and into pop-in. When the loaded corridor straight ahead is shorter
-                 *  than this (blocks), stop boosting and coast so loading can catch up. */
+                /** Highway e-bounce "don't outrun the chunk loader": 2b2t serves only ~12 chunks and streams them slowly.
+                 *  When the loaded corridor straight ahead is shorter than this (blocks), stop bouncing and coast so loading
+                 *  catches up. (Open-nether flight uses the native pathfinder, which is valid through unloaded chunks.) */
                 public int netherFrontierSlow = 56;
 
-                /** When the loaded corridor ahead is shorter than this (blocks), actively brake (nose up to bleed speed)
-                 *  and loiter for chunks to stream in — we're right at the frontier and must not charge into the unseen. */
+                /** Highway e-bounce: when the loaded corridor ahead is shorter than this (blocks), settle toward a stop and
+                 *  loiter for chunks to stream in — right at the frontier, don't charge into the unseen on the bounce path. */
                 public int netherFrontierHold = 28;
 
                 /** Nose-up pitch while gliding over an on-road obstacle (HOP); higher = climbs steeper. */
@@ -519,10 +506,6 @@ public final class Config {
 
                 /** Ticks to wait after entering the nether before starting the flight leg (lets the first chunks stream in). */
                 public int tripNetherEntryGraceTicks = 100;
-
-                /** Yaw degrees per tick while spiral-holding at the chunk frontier (circling in loaded space while
-                 *  terrain streams in — decoded from a Baritone elytra climb-out capture). */
-                public float spiralYawStep = 8.0f;
 
                 /** Continuous ticks of lost flight (grounded mid-cruise) before escalating to a fresh ground takeoff. */
                 public int stallRecoverTicks = 100;
