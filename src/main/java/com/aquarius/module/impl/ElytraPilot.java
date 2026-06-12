@@ -439,14 +439,15 @@ public class ElytraPilot extends Module {
         // upper layers, so the bot is almost never near the ceiling out here — don't climb to a ceiling. Fly level
         // at a clear altitude and react to obstacles in 3D (over / under / around). Highways stay on the bounce path.
         if (inNether() && !cfg.highway) {
-            // Net-progress stall watchdog: the bot can make ZERO net progress while still "moving" — a live capture
-            // showed it pinned on terrain near the start, porpoising y 53<->104 off the emergency floor while x,z were
-            // frozen. The z micro-wobble kept instantaneous speed above the wall-pin threshold, so that check never
-            // fired. Measure NET horizontal travel over a window instead; a porpoise can't fake it. -> walk out.
+            // Net-progress stall watchdog: the bot can make ZERO net progress while still "moving". Measure NET
+            // horizontal travel over a window (a porpoise/wobble can't fake it). If stuck over WALKABLE ground, walk
+            // out to open sky and retake off. Over LAVA there is nothing to walk to — the descent guard holds a
+            // crossing altitude there, so don't walk out; just re-anchor and keep flying across.
             if (++stallWindowTicks >= STALL_WINDOW_TICKS) {
                 double netMoved = horizDist(x, z, stallAnchorX, stallAnchorZ);
                 stallAnchorX = x; stallAnchorZ = z; stallWindowTicks = 0;
-                if (netMoved < STALL_MIN_PROGRESS) {
+                boolean walkable = !lavaBelow(x, y, z) && heightAboveGround(x, y, z) < 40;
+                if (netMoved < STALL_MIN_PROGRESS && walkable) {
                     pinTicks = 0;
                     if (walkoutAttempts < MAX_WALKOUT_ATTEMPTS)
                         enterWalkout("stuck (" + (int) netMoved + "b net in " + (STALL_WINDOW_TICKS / 20) + "s) at "
@@ -585,6 +586,15 @@ public class ElytraPilot extends Module {
             pitch = y < roofCap - 8 ? -cfg.climbPitch * 0.7f : 8f;
             wantFire = !overCap;
             yaw += 30f;
+        }
+        // Descent guard: never nose DOWN toward a close floor — especially LAVA. A live capture showed the bot
+        // diving to the y<EMERGENCY_FLOOR_Y line over a lava ocean, the hard climb overshooting to y104, then the
+        // route yanking it back down: a porpoise (y 53<->104) that froze horizontal progress in place and never
+        // crossed. Hold a crossing altitude with a gentle climb instead of diving; cross the lava at height.
+        int clearBelow = heightAboveGround(x, y, z);
+        if (clearBelow != Integer.MAX_VALUE) {
+            int minClear = lavaBelow(x, y, z) ? 30 : 6;
+            if (clearBelow < minClear && pitch > -8f) { pitch = -8f; wantFire = !overCap; }
         }
         if (y < EMERGENCY_FLOOR_Y) {        // lava country — below this line, climbing outranks everything else
             pitch = -cfg.climbPitch;
@@ -1570,6 +1580,21 @@ public class ElytraPilot extends Module {
             if (!b.isAir() && !World.isWater(b)) return dy;
         }
         return Integer.MAX_VALUE;
+    }
+
+    /** True if the first non-air, non-water block below the bot (within a cap) is lava — i.e. flying over a lava sea. */
+    private boolean lavaBelow(double x, double y, double z) {
+        int bx = MathHelper.floorI(x), bz = MathHelper.floorI(z);
+        if (!World.isChunkLoadedChunkPos(bx >> 4, bz >> 4)) return false;
+        int fy = MathHelper.floorI(y);
+        for (int dy = 1; dy <= 64; dy++) {
+            int yy = fy - dy;
+            if (yy < -64) break;
+            var b = World.getBlock(bx, yy, bz);
+            if (b.isAir() || World.isWater(b)) continue;
+            return World.isFluid(b);   // first non-air/water block below: lava if it's a (non-water) fluid
+        }
+        return false;
     }
 
     private boolean heldIsFirework() {
