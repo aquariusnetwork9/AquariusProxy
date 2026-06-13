@@ -79,14 +79,10 @@ public class ElytraPilot extends Module {
     private static final int HOP_MIN_TICKS = 6;             // commit to a hop for at least this long so we clear the block
     private static final int EPISODE_DECAY_TICKS = 300;     // ~15s of healthy flight resets the lost-flight episode count
     private static final int PIN_WARN_TICKS = 100;           // ~5s of no cruise progress -> warn (likely pinned on terrain)
-    private static final int PIN_ABORT_TICKS = 300;          // ~15s of no cruise progress -> walk out / abort
-    private static final int STALL_WINDOW_TICKS = 60;        // ~3s window for the NET-progress stall check (porpoise-proof)
-    private static final int STALL_MIN_PROGRESS = 12;        // < this many blocks of NET horizontal travel per window -> stuck
+    private static final int PIN_ABORT_TICKS = 300;          // 2x this (~30s) frozen against terrain -> abort cleanly
     private static final int NATIVE_LOS_RANGE = 96;          // how far along the route to raytrace for the farthest VISIBLE aim point
     private static final int NATIVE_SCAN_WINDOW = 80;        // route points scanned forward per tick for the nearest-point tracker
     private static final int NATIVE_REPLAN_TICKS = 40;       // continuous replanning: a route older than this (~2s) is stale
-    private static final int CLIMBOUT_TICKS = 60;            // first ~3s airborne: climb for altitude before pursuing the route
-    private static final int EMERGENCY_FLOOR_Y = 55;         // below this, nether cruise climbs at full boost no matter what
     private static final int WALKOUT_LEG_BLOCKS = 48;        // Baritone walk distance per walk-out leg, toward the target
     private static final int WALKOUT_OPEN_SKY = 16;          // blocks of clear air overhead = enough room to fly again
     private static final int WALKOUT_TIMEOUT_TICKS = 1200;   // ~60s per walk-out leg
@@ -510,45 +506,24 @@ public class ElytraPilot extends Module {
             }
         }
 
-        // Open nether (off-highway): on 2b2t the bedrock roof is INACCESSIBLE and modern nether terrain fills the
-        // upper layers, so the bot is almost never near the ceiling out here — don't climb to a ceiling. Fly level
-        // at a clear altitude and react to obstacles in 3D (over / under / around). Highways stay on the bounce path.
+        // Open nether (off-highway): follow the native route through the terrain. The route threads the holes,
+        // so the bot does NOT cruise at an altitude, climb over obstacles, or fly up looking for open air —
+        // there is none. The only watchdog is a genuine wall-pin: frozen against terrain while still fall-flying.
         if (inNether() && !cfg.highway) {
-            // Net-progress stall watchdog: the bot can make ZERO net progress while still "moving". Measure NET
-            // horizontal travel over a window (a porpoise/wobble can't fake it). If stuck over WALKABLE ground, walk
-            // out to open sky and retake off. Over LAVA there is nothing to walk to — the descent guard holds a
-            // crossing altitude there, so don't walk out; just re-anchor and keep flying across.
-            if (++stallWindowTicks >= STALL_WINDOW_TICKS) {
-                double netMoved = horizDist(x, z, stallAnchorX, stallAnchorZ);
-                stallAnchorX = x; stallAnchorZ = z; stallWindowTicks = 0;
-                boolean walkable = !lavaBelow(x, y, z) && heightAboveGround(x, y, z) < 40;
-                if (netMoved < STALL_MIN_PROGRESS && walkable) {
-                    pinTicks = 0;
-                    if (walkoutAttempts < MAX_WALKOUT_ATTEMPTS)
-                        enterWalkout("stuck (" + (int) netMoved + "b net in " + (STALL_WINDOW_TICKS / 20) + "s) at "
-                            + (int) x + ", " + (int) y + ", " + (int) z);
-                    else
-                        abort("stuck (no net progress) at " + (int) x + ", " + (int) y + ", " + (int) z);
-                    return;
-                }
-            }
-            // Fast wall-pin catch: position frozen while still "fall-flying" (so the lost-flight watchdog never fires).
             if (speed * 20.0 < 2.0) {
                 pinTicks++;
+                // Pin = the route assumed a way through that the real terrain blocks. Replan immediately (fresh
+                // chunks bend the route through a different opening); do NOT walk out or climb to escape.
+                if (pinTicks == 1) { nativeReqCooldown = 0; routeAgeTicks = NATIVE_REPLAN_TICKS; }
                 if (pinTicks == PIN_WARN_TICKS)
-                    warn("No cruise progress at {}, {}, {} — likely pinned on terrain", (int) x, (int) y, (int) z);
-                if (pinTicks > PIN_ABORT_TICKS) {
-                    pinTicks = 0;
-                    if (walkoutAttempts < MAX_WALKOUT_ATTEMPTS)
-                        enterWalkout("pinned against terrain at " + (int) x + ", " + (int) y + ", " + (int) z);
-                    else
-                        abort("pinned against terrain at " + (int) x + ", " + (int) y + ", " + (int) z);
+                    warn("No cruise progress at {}, {}, {} — replanning the route through a different gap", (int) x, (int) y, (int) z);
+                if (pinTicks > PIN_ABORT_TICKS * 2) {   // ~30s genuinely stuck — stop cleanly, never thrash
+                    abort("pinned against terrain at " + (int) x + ", " + (int) y + ", " + (int) z);
                     return;
                 }
             } else {
                 pinTicks = 0;
             }
-            airborneTicks++;
             tickNetherCruise(x, y, z, speed);
             return;
         }
@@ -595,10 +570,11 @@ public class ElytraPilot extends Module {
     }
 
     /**
-     * Open-nether flight. The babbaj/nether-pathfinder route IS the flight plan — full-leg waypoints through unloaded
-     * chunks generated from the seed in C++; the bot simply flies them. While a route is still computing (~0.3-3s),
-     * or on the rare system without native support, it falls back to {@link #tickNetherReactive} — reactive
-     * steering that always makes forward progress toward the target (never circles in place).
+     * Open-nether flight. The babbaj/nether-pathfinder route IS the flight plan — full-leg waypoints threaded
+     * THROUGH the terrain (including unloaded chunks generated from the seed in C++); the bot simply follows
+     * them. There is no cruise altitude and no climbing over obstacles — the route already goes through the
+     * openings. While a route is still computing (~0.3-3s), or on the rare system without native support, it
+     * falls back to {@link #tickNetherBridge} — a brief level hold heading at the target, never a climb.
      */
     private void tickNetherCruise(double x, double y, double z, double speed) {
         var cfg = CONFIG.client.extra.elytraPilot;
@@ -608,12 +584,18 @@ public class ElytraPilot extends Module {
         }
         if (cfg.nativeRouting && !NetherRouter.INSTANCE.isSupported() && !nativeUnsupportedLogged) {
             nativeUnsupportedLogged = true;
-            warn("Native nether routing unsupported on this system — flying reactive toward the target");
+            warn("Native nether routing unsupported on this system — holding heading toward the target");
         }
-        tickNetherReactive(x, y, z, speed);                     // `native off`, no target, or unsupported
+        tickNetherBridge(x, y, z, speed);                       // `native off`, no target, or unsupported
     }
 
-    /** Fly the native full-leg route. The route leads; only damage/lava/roof emergencies override it. */
+    /**
+     * Fly the native route THROUGH the terrain. The route leads and the bot follows it — via the physics solver
+     * when it has a collision-free solution, else by geometric pure-pursuit of the route. It follows the route's
+     * own altitude (up and down through the openings) and NEVER climbs toward open air or flies over obstacles;
+     * when the way is blocked it replans through a different gap. Only the bedrock-roof cap and a sideways
+     * ghast-fire jink override the route.
+     */
     private void tickNetherNative(double x, double y, double z, double speed) {
         var cfg = CONFIG.client.extra.elytraPilot;
         boolean overCap = speed * 20.0 >= cfg.maxSpeed;
@@ -621,7 +603,7 @@ public class ElytraPilot extends Module {
 
         maintainNativeRoute(x, y, z, cfg);
         if (!netherPathIsNative || netherPath == null || netherPath.size() < 2) {
-            tickNetherReactive(x, y, z, speed);                 // fly toward the target while the route computes (~0.3-3s)
+            tickNetherBridge(x, y, z, speed);                   // brief level hold while the route computes (~0.3-3s)
             return;
         }
 
@@ -648,101 +630,52 @@ public class ElytraPilot extends Module {
             return;
         }
 
-        // Aim at the FARTHEST route point the bot can actually SEE (the Baritone way: visibility-based pursuit).
-        // Sight is raytraced through the NATIVE terrain cache when it's free — that sees the seed-generated
-        // world beyond what the server has sent, and counts unknown space as solid (never trust it). While the
-        // cache is mid-write it falls back to the loaded-chunk scan (unloaded = clear). A fixed lookahead used
-        // to aim sight-unseen and cut corners through local terrain — the #1 cause of lost-flight near builds.
+        // NO SOLVER SOLUTION THIS TICK (solver still computing, or genuinely no collision-free trajectory):
+        // pure-pursue the route by GEOMETRY. This is THE difference from every prior iteration — the fallback
+        // aims AT the route, which the C++ pathfinder already threaded THROUGH the openings, and follows the
+        // route's OWN altitude. It never climbs toward "open air" (there is none in the nether) and never tries
+        // to fly over terrain (the route goes through it). When the way ahead is blocked, we replan and coast —
+        // the fresh chunks bend the route through a different gap — we do not go up.
         int aimIdx = -1;
         final int lastIdx = netherPath.size() - 1;
         for (int i = pathIdx; i <= lastIdx; i++) {
             int[] p = netherPath.get(i);
             if (horizDist(x, z, p[0], p[2]) > NATIVE_LOS_RANGE) break;
-            if (flightLineClear(x, y + 1, z, p[0] + 0.5, p[1] + 0.5, p[2] + 0.5)) aimIdx = i;
+            if (flightLineClear(x, y + 0.5, z, p[0] + 0.5, p[1] + 0.5, p[2] + 0.5)) aimIdx = i;  // farthest visible
         }
-        boolean blind = aimIdx < 0;                             // can't see ANY of the route from here
-        if (blind) aimIdx = Math.min(pathIdx + 2, lastIdx);
+        if (aimIdx < 0) {                                       // can't see any route point — aim just ahead, replan now
+            aimIdx = Math.min(pathIdx + 2, lastIdx);
+            routeAgeTicks = NATIVE_REPLAN_TICKS;
+            nativeReqCooldown = 0;
+        }
         int[] w = netherPath.get(aimIdx);
         float yaw = (float) Math.toDegrees(Math.atan2(-(w[0] + 0.5 - x), w[2] + 0.5 - z));
         double dy = (w[1] + 0.5) - y;
         double horiz = Math.max(1.0, horizDist(x, z, w[0], w[2]));
-        float pitch = clampF((float) Math.toDegrees(Math.atan2(-dy, horiz)), -cfg.climbPitch, 20f);
-        boolean wantFire = !overCap && (dy > 2 || speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
-        if (blind) {
-            // The route is below a lip / behind clutter: climb until it comes into view — never fly blind at it —
-            // and re-solve the route from RIGHT HERE immediately (with the freshly observed chunks the new plan
-            // bends around whatever just blocked the view) instead of waiting out the replan cadence.
-            pitch = -cfg.climbPitch * 0.7f;
-            wantFire = !overCap;
-            routeAgeTicks = NATIVE_REPLAN_TICKS;
-            nativeReqCooldown = 0;
-        } else if (horiz < 16) {
-            // Visible horizon is short (cluttered terrain): bias upward to open the view while still pursuing.
-            pitch = Math.min(pitch, -15f);
-            wantFire = !overCap;
-        }
+        // Aim straight at the route point — follow its altitude up OR down through the openings. Clamp only for
+        // physical sanity; this is pursuit, not a climb bias.
+        float pitch = clampF((float) Math.toDegrees(Math.atan2(-dy, horiz)), -30f, 30f);
+        boolean wantFire = !overCap && (speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
 
-        // OBSERVED terrain disagrees with the generated route (regenerated chunks, builds): climb over it now
-        // and replan immediately — the freshly-fed chunks make the new route avoid it.
+        // Observed terrain blocks the heading the route assumed (regenerated chunks / builds): replan immediately
+        // so the route bends through a different opening, and coast while it recomputes. We do NOT climb over it.
         if (terrainBlockedAhead(x, y, z, yaw, 8)) {
-            pitch = -cfg.climbPitch * 0.7f;
-            wantFire = !overCap;
             nativeReqCooldown = 0;
-            nativeRouteFinished = false;                        // force an extension/replan on the next maintain
+            routeAgeTicks = NATIVE_REPLAN_TICKS;
+            nativeRouteFinished = false;
+            wantFire = false;
         }
-
         // Corner discipline: coast into sharp route bends instead of boosting through them.
-        if (wantFire && aimIdx < netherPath.size() - 1) {
-            int[] w2 = netherPath.get(Math.min(aimIdx + 8, netherPath.size() - 1));
+        if (wantFire && aimIdx < lastIdx) {
+            int[] w2 = netherPath.get(Math.min(aimIdx + 8, lastIdx));
             double b2 = Math.toDegrees(Math.atan2(-(w2[0] - w[0]), w2[2] - w[2]));
             if (Math.abs(wrapDeg(b2 - yaw)) > 35) wantFire = false;
         }
+        // Hazard: jink sideways out of a ghast's line of fire — a YAW change only, never a climb.
+        if (hazardClimbTicks > 0) yaw += 30f;
+        // Safety only: never deliberately fly up into the inaccessible bedrock roof.
+        if (y >= roofCap - 1 && pitch < 0f) pitch = 0f;
 
-        // The native route is generated from seed terrain, so it is valid through UNLOADED chunks — boost into them
-        // at full speed (this is how Baritone's elytra flies). No frontier governor: throttling at the loaded edge is
-        // exactly what stalled a cold-started bot (nothing loaded ahead -> thrust suppressed every tick -> spin in place).
-
-        if (hazardClimbTicks > 0) {         // repeated hits — climb + jink out of the line of fire
-            pitch = y < roofCap - 8 ? -cfg.climbPitch * 0.7f : 8f;
-            wantFire = !overCap;
-            yaw += 30f;
-        }
-        // Terrain-following clearance floor. The native route's y HUGS the ground (the A* treats 6 blocks over
-        // terrain as free) — Baritone can thread that because it simulates elytra physics tick-by-tick; we cannot.
-        // A live capture showed the bot faithfully tracking the route's profile down 93->23 into a slope. So the
-        // route is LATERAL guidance only when low: hold a real clearance band over the local floor (more over
-        // lava), probe the floor AHEAD so rising slopes trigger the climb early, and never dive steeply when low.
-        // Probe the floor up to 32 blocks AHEAD, not just below: at ~40 b/s an 8-block probe gives 4 ticks of
-        // warning — a rising ridge stayed invisible until the bot was committed into the pocket behind it (it
-        // then curved along the route's lateral line into the bowl and burned all 4 walkout legs there). Seeing
-        // the ridge 32 blocks out converts "trapped in the pocket" into "climb over the ridge".
-        double yawRadG = Math.toRadians(yaw);
-        double gx = -Math.sin(yawRadG), gz = Math.cos(yawRadG);
-        int clearBelow = heightAboveGround(x, y, z);
-        for (int ahead = 8; ahead <= 32; ahead += 8) {
-            clearBelow = Math.min(clearBelow, heightAboveGround(x + gx * ahead, y, z + gz * ahead));
-        }
-        if (clearBelow != Integer.MAX_VALUE) {
-            int minClear = lavaBelow(x, y, z) ? 30 : 16;
-            if (clearBelow < minClear) {                              // floor rising into the path — climb early
-                pitch = Math.min(pitch, -20f);
-                wantFire = !overCap;
-            } else if (clearBelow < 40 && pitch > 12f) {              // near the band — no steep dives
-                pitch = 12f;
-            }
-        }
-        // Climb-out: for the first ~3s after going airborne, get UP before pursuing. Post-walkout takeoffs
-        // kept clipping straight back into the trap because the bot chased route points laterally through
-        // clutter at low speed and altitude — a trap burned all 4 walkout legs that way and aborted the leg.
-        if (airborneTicks < CLIMBOUT_TICKS && y < roofCap - 10 && clearAboveCount(x, y, z) > 4) {
-            pitch = Math.min(pitch, -Math.max(25f, cfg.climbPitch * 0.7f));
-            wantFire = !overCap;
-        }
-        if (y < EMERGENCY_FLOOR_Y) {        // lava country — below this line, climbing outranks everything else
-            pitch = -cfg.climbPitch;
-            wantFire = !overCap;
-        }
-        if (y >= roofCap - 1 && pitch < 0f) pitch = 0f;         // never climb into the inaccessible roof
         wantFire = fireSpaced(wantFire);
         boolean fire = wantFire && heldIsFirework();
         if (wantFire && !fire) ensureFireworkHeld();
@@ -769,61 +702,24 @@ public class ElytraPilot extends Module {
      * obstacles in 3D: reroute horizontally (steerYaw), else climb over or dive under — whichever side has more room
      * (never into the bedrock roof or into lava). Sustains level flight with periodic fireworks (no free roof glide).
      */
-    private void tickNetherReactive(double x, double y, double z, double speed) {
+    private void tickNetherBridge(double x, double y, double z, double speed) {
         var cfg = CONFIG.client.extra.elytraPilot;
-        float yaw = steerYaw(x, y, z);                          // horizontal reroute around walls (±maxRerouteDeg)
+        int roofCap = Math.min(cfg.netherCeilingY, 122);
         boolean overCap = speed * 20.0 >= cfg.maxSpeed;
-        int roofCap = Math.min(cfg.netherCeilingY, 125);        // never climb into the (inaccessible) bedrock roof
-
-        // No fixed cruise altitude: the nether has no open layer, so fly the LOCAL air gap — keep clearance off
-        // the floor, don't scrape ceilings, level otherwise. Vertical position is wherever the terrain allows.
-        float pitch;
-        boolean wantFire;
-        int above = clearAboveCount(x, y, z);
-        int below = heightAboveGround(x, y, z);                 // stops at lava (lava scans as solid)
-        if (terrainBlockedAhead(x, y, z, yaw, Math.min(cfg.lookAheadBlocks, 24))) {
-            // walled after the horizontal reroute -> go vertical. PREFER CLIMBING: "under" routes in the nether
-            // are pockets and lava more often than passages (a dive into one killed the bot); dive only when the
-            // roof truly blocks climbing and there is generous room below. EXCEPT near the bedrock roof, where
-            // climbing just pins the bot against the ceiling (live incident at y120) — there, down is the way out.
-            boolean nearRoof = y >= roofCap - 8;
-            boolean canClimb = !nearRoof && y < roofCap - 1 && above > 3;
-            boolean canDive = below > (nearRoof ? 6 : 10);
-            if (canClimb)     { pitch = -cfg.climbPitch * 0.7f; wantFire = !overCap; }
-            else if (canDive) { pitch = 22f; wantFire = false; }                        // dive under
-            else              { pitch = -cfg.climbPitch * 0.7f; wantFire = !overCap; }  // boxed in -> try up
-        } else if (below < 10) {
-            pitch = -12f; wantFire = !overCap;                  // hugging the floor -> get clearance
-        } else if (above < 4) {
-            pitch = 8f; wantFire = false;                       // scraping a ceiling -> ease down (free)
-        } else {
-            pitch = -2f;                                        // level in the local gap; boost only to keep speed
-            wantFire = !overCap && (speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
-        }
+        float yaw = desiredYaw(x, z);                           // straight at the target; the route takes over shortly
+        // Near-level: a touch of lift ONLY if scraping the floor, otherwise hold level. No climb, no obstacle
+        // dodging — threading terrain is the native route's job, and it is milliseconds away. This is just a
+        // momentary hold so the bot doesn't sink while the first route computes.
+        int below = heightAboveGround(x, y, z);
+        float pitch = below < 8 ? -8f : -2f;
         if (y >= roofCap - 1 && pitch < 0f) pitch = 0f;
-
-        if (hazardClimbTicks > 0) {         // repeated hits — climb + jink out of the line of fire
-            pitch = y < roofCap - 8 ? -cfg.climbPitch * 0.7f : 8f; // near the roof, ease DOWN — climbing pins it on bedrock
-            wantFire = !overCap;
-            yaw += 30f;
-        }
-        if (y < EMERGENCY_FLOOR_Y) {        // lava country — below this line, climbing outranks everything else
-            pitch = -cfg.climbPitch;
-            wantFire = !overCap;
-        }
-        wantFire = fireSpaced(wantFire);
+        boolean wantFire = fireSpaced(!overCap
+            && (speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks));
         boolean fire = wantFire && heldIsFirework();
         if (wantFire && !fire) ensureFireworkHeld();
         if (fire) noteRocketFired();
         submitInput(false, fire, yaw, pitch);
-
-        if (cfg.hasTarget) {
-            double lead = Math.max(cfg.descendRadius, (y - cfg.approxGroundY) * cfg.glideRatio);
-            if (horizDist(x, z, cfg.targetX, cfg.targetZ) <= lead) {
-                phase = Phase.DESCEND;
-                info("Approaching target — descending");
-            }
-        }
+        maybeBeginDescent(x, y, z, cfg);
     }
 
     /**
@@ -937,14 +833,15 @@ public class ElytraPilot extends Module {
     /** Per-solve budget of pitch sweeps, so a fully boxed-in solve cannot run away (each sweep = ~50 sims). */
     private static final int SOLVE_PITCH_BUDGET = 40;
 
-    /** Hand over the queued async solution if it still applies to where the bot actually is. */
+    /** Hand over the queued async solution unless the bot has jumped far from where it was solved. */
     private FlightSolution takeSolution(double x, double y, double z) {
         FlightSolution s = pendingSolution;
         pendingSolution = null;                    // single use
         if (s == null) return null;
-        // Solved from the PREDICTED post-physics state of last tick; a real divergence (server setback,
-        // collision, lag) means the future it verified is fiction — discard and let the heuristics carry.
-        if (Math.abs(x - s.startX()) > 1.0 || Math.abs(y - s.startY()) > 1.0 || Math.abs(z - s.startZ()) > 1.0) return null;
+        // The solve ran from the bot's real state LAST tick, so a normal tick of travel (~2 blocks) is
+        // expected and fine — flySolution recomputes yaw live and only borrows the simulated pitch. Discard
+        // only on a big jump (a teleport/rubberband the setback handler did not already clear the solution for).
+        if (horizDist(x, z, s.startX(), s.startZ()) > 12 || Math.abs(y - s.startY()) > 12) return null;
         return s;
     }
 
@@ -986,14 +883,14 @@ public class ElytraPilot extends Module {
         submitInput(false, fire, yaw, pitch);
         var cfg = CONFIG.client.extra.elytraPilot;
         if (!cfg.solver || !netherPathIsNative || netherPath == null) return;
-        if (solverTask != null && !solverTask.isDone()) return; // still busy — heuristics carry the next tick
+        if (solverTask != null && !solverTask.isDone()) return; // still busy — fallback pursuit carries this tick
+        // Solve from the bot's CURRENT real state. The result is consumed next tick, ~1 tick (a couple blocks)
+        // stale — acceptable, since flySolution recomputes the yaw live and only borrows the simulated pitch.
+        // (Baritone predicts the post-tick state in an end-of-tick hook; the proxy has no such hook, and a real
+        // physics prediction proved too fragile in chaotic terrain — every solution got discarded.)
         var vel = BOT.getVelocity();
-        double[] m = { vel.getX(), vel.getY(), vel.getZ() };
-        Vector3d look = MathHelper.calculateViewVector(yaw, pitch);
-        stepMotion(m, look.getX(), look.getY(), look.getZ(), pitch);
-        if (boostGuaranteeTicks > 0) applyBoost(m, look.getX(), look.getY(), look.getZ());
         final SolveSnapshot snap = new SolveSnapshot(
-            x + m[0], y + m[1], z + m[2], m[0], m[1], m[2],
+            x, y, z, vel.getX(), vel.getY(), vel.getZ(),
             netherPath, pathIdx, boostGuaranteeTicks,
             Math.max(5, cfg.solverSimTicks), Math.max(5, cfg.solverPitchRange), roofCap);
         solverTask = solverExec.submit(() -> {
@@ -1013,9 +910,10 @@ public class ElytraPilot extends Module {
         final int[] budget = { SOLVE_PITCH_BUDGET };
 
         for (int relaxation = 0; relaxation < 3; relaxation++) {
-            // While a rocket burns, also try gaining altitude at the aim point — height is the one thing a
-            // burning rocket buys for free, and the nether always wants more of it.
-            final int[] heights = s.boostTicks() > 0 ? new int[]{16, 8, 0} : new int[]{0};
+            // Fly the route's OWN altitude. The C++ pathfinder already threaded the route through the openings,
+            // so the aim point's Y is the correct Y — we do NOT add upward candidates. There is no open layer
+            // to climb to in the nether; biasing up is exactly the bug that failed every prior iteration.
+            final int[] heights = {0};
             final double margin = relaxation == 0 ? 0.4 : relaxation == 1 ? 0.2 : 0.0;
             final int step = relaxation == 0 ? 2 : 1;           // strict pass skips every other point (cheap)
             for (int i = Math.min(near + 20, last); i >= near; i -= step) {
