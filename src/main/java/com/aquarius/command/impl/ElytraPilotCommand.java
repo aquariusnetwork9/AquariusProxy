@@ -81,7 +81,8 @@ public class ElytraPilotCommand extends Command {
                 "trip <x> <z> [y]      (plan a journey to OVERWORLD coords: direct if within ~100k of spawn, else via the nether)",
                 "trip nether <x> <z>   (destination IS in the nether: enter a portal, fly to the exact coords, land there)",
                 "trip highways <on/off>(nether transit leg: e-bounce a highway vs fly open-nether straight to the target)",
-                "trip off              (cancel an in-progress trip)",
+                "trip off              (cancel/reset an in-progress trip)",
+                "trip startonconnect <on/off> (armed trip starts/resumes when the bot enters the world)",
                 "panel                 (post an interactive trip panel to Discord: dimension dropdown + typed X/Y/Z modal + launch)",
                 "netherceiling <y>     (hard altitude cap in the nether; never climb above it / into bedrock)",
                 "nethercruise <y>      (preferred open-nether flight altitude; holds ~this Y and dodges in 3D)",
@@ -396,6 +397,11 @@ public class ElytraPilotCommand extends Command {
                     CONFIG.client.extra.elytraPilot.tripGearUp = getToggle(c, "toggle");
                     c.getSource().getEmbed().title("ElytraPilot trip gear-up " + toggleStrCaps(CONFIG.client.extra.elytraPilot.tripGearUp))
                         .description("When on, a naked bot first Regears the flight kit (elytra+fireworks+armor+totem) from a nearby ender chest before flying.");
+                })))
+                .then(literal("startonconnect").then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.tripStartOnConnect = getToggle(c, "toggle");
+                    c.getSource().getEmbed().title("ElytraPilot trip start-on-connect " + toggleStrCaps(CONFIG.client.extra.elytraPilot.tripStartOnConnect))
+                        .description("When on, an armed trip starts/resumes when the bot enters the world — set it while logged out and it flies on login (also resumes after a disconnect).");
                 })))
                 .then(literal("off").executes(c -> {
                     CONFIG.client.extra.elytraPilot.tripActive = false;

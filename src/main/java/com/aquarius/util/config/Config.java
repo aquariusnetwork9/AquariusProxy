@@ -553,6 +553,11 @@ public final class Config {
                 /** Whether the trip planner is actively running a multi-leg journey. */
                 public boolean tripActive = false;
 
+                /** Start (or resume) an armed trip ({@link #tripActive}) when the bot enters the world — so a trip set
+                 *  while logged out begins on login, and an in-progress trip resumes after a disconnect. Off → a
+                 *  connect leaves the planner idle until you Launch again. */
+                public boolean tripStartOnConnect = true;
+
                 /**
                  * Pre-flight gear-up: before a trip, audit the flight kit against the checklist below and, if
                  * anything is short, run Regear to top up ONLY the missing items from a nearby ender chest (kit

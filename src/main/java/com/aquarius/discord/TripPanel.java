@@ -34,7 +34,8 @@ public final class TripPanel {
     private TripPanel() {}
 
     private static final String DIM = "trip:dim", COORDS = "trip:coords", HIGHWAYS = "trip:highways",
-        GEARUP = "trip:gearup", LAUNCH = "trip:launch", CANCEL = "trip:cancel", MODAL = "trip:coordsmodal";
+        GEARUP = "trip:gearup", STARTCONN = "trip:startconn", LAUNCH = "trip:launch", CANCEL = "trip:cancel",
+        MODAL = "trip:coordsmodal";
 
     // ---------------------------------------------------------------- panel render
 
@@ -48,6 +49,7 @@ public final class TripPanel {
             .addField("Dimension", c.tripTargetIsNether ? "Nether destination" : "Overworld (auto-route)", true)
             .addField("Nether leg", c.tripUseHighways ? "highways" : "open-nether", true)
             .addField("Gear-up", c.tripGearUp ? "on" : "off", true)
+            .addField("Start on connect", c.tripStartOnConnect ? "on" : "off", true)
             .addField("Status", c.tripActive ? "🟢 ACTIVE" : "idle", true);
     }
 
@@ -63,11 +65,12 @@ public final class TripPanel {
             ActionRow.of(
                 Button.secondary(COORDS, "Set Coordinates"),
                 Button.secondary(HIGHWAYS, "Highways: " + (c.tripUseHighways ? "ON" : "off")),
-                Button.secondary(GEARUP, "Gear-up: " + (c.tripGearUp ? "ON" : "off"))
+                Button.secondary(GEARUP, "Gear-up: " + (c.tripGearUp ? "ON" : "off")),
+                Button.secondary(STARTCONN, "Start on connect: " + (c.tripStartOnConnect ? "ON" : "off"))
             ),
             ActionRow.of(
                 Button.success(LAUNCH, "🚀 Launch"),
-                Button.danger(CANCEL, "Cancel trip")
+                Button.danger(CANCEL, "🛑 Cancel / Reset")
             )
         );
     }
@@ -113,6 +116,7 @@ public final class TripPanel {
             case COORDS -> { e.replyModal(coordsModal()).queue(); return; }   // modal reply IS the response
             case HIGHWAYS -> c.tripUseHighways = !c.tripUseHighways;
             case GEARUP -> c.tripGearUp = !c.tripGearUp;
+            case STARTCONN -> c.tripStartOnConnect = !c.tripStartOnConnect;
             case LAUNCH -> {
                 c.tripActive = true;
                 MODULE.get(ElytraTrip.class).syncEnabledFromConfig();
