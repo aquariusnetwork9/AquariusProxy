@@ -59,6 +59,8 @@ final class FlightGear {
     private static ItemStack worn(EquipmentSlot slot) { return CACHE.getPlayerCache().getEquipment(slot); }
 
     static boolean elytraWorn() { return isElytra(worn(EquipmentSlot.CHESTPLATE)); }
+    /** Total elytras carried = the worn one + any spares in the inventory (each elytra is a single, unstacked item). */
+    static int elytraCount() { return (elytraWorn() ? 1 : 0) + countItems(FlightGear::isElytra, false); }
 
     /** Other armour pieces present anywhere (worn helmet/legs/boots + any armour piece carried in the inventory). */
     static int armorPiecesAnywhere() {
@@ -112,10 +114,27 @@ final class FlightGear {
         return Math.max(base, est);
     }
 
+    /**
+     * Required elytra count (worn + spares) for the trip. An elytra lasts only ~432s of flight, so a long leg
+     * outlasts one — the gear-up pulls this many and the mid-flight {@code swapElytra} redeploys them as they wear
+     * out. Overworld-direct trips size it to the leg distance ({@code ceil(dist/elytraBlocksPerElytra × margin)});
+     * nether-routed legs keep the flat {@code preflightMinElytras}.
+     */
+    static int requiredElytras() {
+        var c = cfg();
+        int base = Math.max(1, c.preflightMinElytras);
+        if (!c.tripEstimateFireworks || !c.tripActive || c.tripTargetIsNether) return base;
+        double dist = Math.hypot(c.tripTargetX, c.tripTargetZ);
+        if (dist > c.spawnRegionRadius) return base;
+        int est = (int) Math.ceil(dist / Math.max(1.0, c.elytraBlocksPerElytra) * c.fireworkSafetyMargin);
+        return Math.max(base, est);
+    }
+
     /** All REQUIRED checks pass (the sword/axe is optional and never gates). */
     static boolean ready() {
         var c = cfg();
         return elytraWorn()
+            && elytraCount() >= requiredElytras()
             && armorPiecesAnywhere() >= c.preflightMinArmor
             && totemCount() >= c.preflightMinTotems
             && (!c.preflightOffhandTotem || offhandTotem())
@@ -129,8 +148,11 @@ final class FlightGear {
     static String report() {
         var c = cfg();
         StringBuilder b = new StringBuilder("Pre-flight check:\n");
-        mark(b, "elytra+armor", elytraWorn() && armorPiecesAnywhere() >= c.preflightMinArmor,
-            (elytraWorn() ? "elytra" : "NO elytra") + " + " + armorPiecesAnywhere() + "/" + c.preflightMinArmor + " armor");
+        int needEl = requiredElytras();
+        mark(b, "elytra+armor", elytraWorn() && elytraCount() >= needEl && armorPiecesAnywhere() >= c.preflightMinArmor,
+            (elytraWorn() ? elytraCount() + "/" + needEl + " elytra" : "NO elytra worn")
+                + (needEl > c.preflightMinElytras ? " (trip est.)" : "")
+                + " + " + armorPiecesAnywhere() + "/" + c.preflightMinArmor + " armor");
         mark(b, "totems", totemCount() >= c.preflightMinTotems && (!c.preflightOffhandTotem || offhandTotem()),
             totemCount() + "/" + c.preflightMinTotems + (offhandTotem() ? ", offhand ok" : ", offhand EMPTY"));
         int needFw = requiredFireworks();
@@ -156,7 +178,7 @@ final class FlightGear {
      */
     static boolean stillNeeds(ItemStack candidate) {
         var c = cfg();
-        if (isElytra(candidate))   return !elytraAnywhere();
+        if (isElytra(candidate))   return elytraCount() < requiredElytras();
         if (isOtherArmor(candidate)) return armorPiecesAnywhere() < c.preflightMinArmor;
         if (isTotem(candidate))    return totemCount() < c.preflightMinTotems;
         if (isFirework(candidate)) return fireworkCount() < requiredFireworks();
