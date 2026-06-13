@@ -18,6 +18,7 @@ import static com.mojang.brigadier.arguments.LongArgumentType.longArg;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.word;
 import static com.aquarius.Globals.CONFIG;
+import static com.aquarius.Globals.DISCORD;
 import static com.aquarius.Globals.MODULE;
 import static com.aquarius.command.brigadier.ToggleArgumentType.getToggle;
 import static com.aquarius.command.brigadier.ToggleArgumentType.toggle;
@@ -81,6 +82,7 @@ public class ElytraPilotCommand extends Command {
                 "trip nether <x> <z>   (destination IS in the nether: enter a portal, fly to the exact coords, land there)",
                 "trip highways <on/off>(nether transit leg: e-bounce a highway vs fly open-nether straight to the target)",
                 "trip off              (cancel an in-progress trip)",
+                "panel                 (post an interactive trip panel to Discord: dimension dropdown + typed X/Y/Z modal + launch)",
                 "netherceiling <y>     (hard altitude cap in the nether; never climb above it / into bedrock)",
                 "nethercruise <y>      (preferred open-nether flight altitude; holds ~this Y and dodges in 3D)",
                 "native <on/off>       (native nether-pathfinder: full-route planning through UNLOADED chunks via seed terrain-gen)",
@@ -276,6 +278,14 @@ public class ElytraPilotCommand extends Command {
                 CONFIG.client.extra.elytraPilot.landDivePitch = (float) getDouble(c, "degrees");
                 c.getSource().getEmbed().title("ElytraPilot land dive pitch = " + CONFIG.client.extra.elytraPilot.landDivePitch + "° (nose-down spiral dive)");
             })))
+            .then(literal("panel").executes(c -> {
+                boolean posted = DISCORD.openTripPanel();
+                c.getSource().getEmbed()
+                    .title(posted ? "Trip panel posted to Discord" : "Discord bot not running")
+                    .description(posted
+                        ? "In Discord: pick the dimension (dropdown), Set Coordinates (typed X/Y/Z modal), toggle Highways/Gear-up, then Launch."
+                        : "Enable the Discord bot to use the interactive trip panel.");
+            }))
             .then(literal("cruisescale").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.cruiseScaleCeiling = getToggle(c, "toggle");
                 c.getSource().getEmbed().title("ElytraPilot distance-scaled cruise ceiling " + toggleStrCaps(CONFIG.client.extra.elytraPilot.cruiseScaleCeiling))

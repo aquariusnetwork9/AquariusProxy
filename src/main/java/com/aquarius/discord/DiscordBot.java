@@ -1,5 +1,6 @@
 package com.aquarius.discord;
 
+import com.github.rfresh2.EventConsumer;
 import com.github.rfresh2.SimpleEventBus;
 import com.aquarius.Proxy;
 import com.aquarius.command.api.CommandContext;
@@ -75,6 +76,9 @@ public class DiscordBot {
             of(SessionInvalidateEvent.class, e -> DISCORD_LOG.info("Session invalidated")),
             of(StatusChangeEvent.class, e -> DISCORD_LOG.debug("JDA Status: {}", e.getNewStatus()))
         );
+        // Trip-planner interactive panel (buttons / dimension dropdown / coords modal). Distinct owner key so it
+        // never collides with the subscription above.
+        jdaEventBus.subscribe(TripPanel.class, TripPanel.listeners().toArray(new EventConsumer[0]));
         EVENT_BUS.subscribe(
             this,
             of(DiscordMainChannelCommandReceivedEvent.class, this::executeDiscordCommand)
@@ -442,6 +446,13 @@ public class DiscordBot {
     public void sendRelayMessage(final String message) {
         if (!CONFIG.discord.chatRelay.enable) return;
         sendMessageTo(relayChannel, message);
+    }
+
+    /** Post the interactive trip-planner panel (dropdown + coords modal + launch buttons) to the main channel. */
+    public boolean openTripPanel() {
+        if (!isRunning() || mainChannel == null) return false;
+        TripPanel.open(mainChannel);
+        return true;
     }
 
     public void sendEmbedMessageWithButtonsTo(TextChannel channel, @Nullable String message, Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> eventConsumer, Duration timeout) {
