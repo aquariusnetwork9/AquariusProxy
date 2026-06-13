@@ -135,9 +135,6 @@ public class ElytraPilot extends Module {
     private boolean lostLogged;
     private float landSpinYaw;         // helicopter-landing yaw spin
     private int pinTicks;              // consecutive cruise ticks at near-zero speed (wall-pin watchdog)
-    private boolean pocketActive;      // relaunch pocket-trap detector armed
-    private double pocketAnchorX, pocketAnchorZ; // where the current relaunch effort is anchored
-    private int pocketTicks;           // ticks spent relaunching near the anchor (survives the deploy/fall bob)
     private int walkoutTicks;          // ticks in the current walk-out leg
     private int walkoutAttempts;
     private double loopX, loopZ;       // centre of a repeated takeoff-fail loop (chimney trap)
@@ -286,8 +283,6 @@ public class ElytraPilot extends Module {
         healthyTicks = 0;
         lostLogged = false;
         pinTicks = 0;
-        pocketActive = false;
-        pocketTicks = 0;
         walkoutTicks = 0;
         walkoutAttempts = 0;
         loopCount = 0;
@@ -430,51 +425,28 @@ public class ElytraPilot extends Module {
             return;
         }
         var cfg = CONFIG.client.extra.elytraPilot;
-        if (hpDropped && cfg.hasTarget && walkoutAttempts < MAX_WALKOUT_ATTEMPTS) {
-            takeoffTicks = 0;
-            enterWalkout("taking damage during takeoff");
+        // No elytra worn — no amount of jumping/rocketing can take off; give up (don't loop until maxFlight).
+        if (!isElytra(chestplate()) && ++takeoffTicks > TAKEOFF_TIMEOUT_TICKS) {
+            abort("could not take off (no worn elytra)");
             return;
-        }
-        // No headroom here? Walk somewhere flyable FIRST instead of burning ~10s (and sometimes a totem)
-        // discovering it the hard way against a ceiling.
-        if (takeoffTicks == 0 && cfg.hasTarget && walkoutAttempts < MAX_WALKOUT_ATTEMPTS) {
-            var pc = CACHE.getPlayerCache();
-            if (clearAboveCount(pc.getX(), pc.getY(), pc.getZ()) < 6) {
-                enterWalkout("no headroom to take off here");
-                return;
-            }
         }
         var pc = CACHE.getPlayerCache();
         boolean onGround = BOT.isOnGround();
-        // Force-deploy the instant we leave the ground, then fire a rocket nosed up — punch into the air hard
-        // instead of relying on a bare hop that just falls back down (this is what gets the bot off flat ground
-        // or out of a lava pool, the same aggressive launch the lost-flight recovery uses).
+        boolean inLava = BOT.isTouchingLava();
+        // Deploy + rocket nearly straight UP, persistently, until we are flying — the same dead-simple launch
+        // the lost-flight recovery uses. No headroom check, no Baritone walkout: just punch into the air.
         if (!onGround && !BOT.isFallFlying() && redeployCooldown <= 0) {
             sendStartFallFlying();
             redeployCooldown = cfg.bounceRedeployTicks;
         }
-        boolean fire = BOT.isFallFlying() && heldIsFirework() && ticksSinceFire >= 5 && setbackHoldTicks <= 0;
+        boolean fire = BOT.isFallFlying() && heldIsFirework() && ticksSinceFire >= cfg.bounceRedeployTicks && setbackHoldTicks <= 0;
         if (!heldIsFirework()) ensureFireworkHeld();
         if (fire) noteRocketFired();
-        boolean jump;
-        if (cfg.doubleJumpTakeoff) {
-            jump = jumpToggle || onGround;   // alternate so a fresh jump edge lands while airborne; keep hopping on the ground
-            jumpToggle = !jumpToggle;
-        } else {
-            jump = true;                // assume already airborne (ledge/tower) — just deploy
-        }
-        float pitch = BOT.isFallFlying() ? -35f : 0f;   // once gliding, nose up so the rocket climbs us out
+        jumpToggle = !jumpToggle;
+        boolean jump = onGround || inLava || jumpToggle;   // keep hopping / swimming up until airborne
+        float pitch = BOT.isFallFlying() ? cfg.relaunchPitch : 0f;
         submitMove(false, jump, false, fire, pc.getYaw(), pitch);
-        if (++takeoffTicks > TAKEOFF_TIMEOUT_TICKS) {
-            // No headroom here (pocket/overhang)? Walk toward open ground and retry before giving up —
-            // but only if an elytra is actually worn (walking can't fix a missing elytra).
-            if (cfg.hasTarget && isElytra(chestplate()) && walkoutAttempts < MAX_WALKOUT_ATTEMPTS) {
-                takeoffTicks = 0;
-                enterWalkout("could not take off here");
-            } else {
-                abort("could not take off (need open sky above + a worn elytra)");
-            }
-        }
+        takeoffTicks++;
     }
 
     private void tickCruise(double x, double y, double z, double speed) {
@@ -669,9 +641,6 @@ public class ElytraPilot extends Module {
         }
         // Hazard: jink sideways out of a ghast's line of fire — a YAW change only, never a climb.
         if (hazardClimbTicks > 0) yaw += 30f;
-        // Lava cushion: don't follow the route down to the lava surface — hold a little air over it (and power it).
-        float floored = applyLavaFloor(pitch, x, y, z, roofCap);
-        if (floored < pitch - 0.5f) { pitch = floored; wantFire = !overCap; }
         // Safety only: never deliberately fly up into the inaccessible bedrock roof.
         if (y >= roofCap - 1 && pitch < 0f) pitch = 0f;
 
@@ -857,15 +826,12 @@ public class ElytraPilot extends Module {
         float pitch = sol.pitch();
         if (hazardClimbTicks > 0) yaw += 30f;                   // line-of-fire jink — the sim can't see ghasts
         if (y >= roofCap - 1 && pitch < 0f) pitch = 0f;         // never climb into the inaccessible roof
-        float floored = applyLavaFloor(pitch, x, y, z, roofCap);
-        boolean lavaClimb = floored < pitch - 0.5f;             // the lava cushion forced a climb — power it
-        pitch = floored;
 
         var vel = BOT.getVelocity();
         double vy = y < sol.destY() ? Math.max(0, vel.getY()) : vel.getY();  // climbing toward the aim: sink is fine
         double speed3d = Math.sqrt(vel.getX() * vel.getX() + vy * vy + vel.getZ() * vel.getZ());
         boolean shortOfAim = y < sol.destY() - 5 || horizDist(x, z, sol.destX(), sol.destZ()) > 5;
-        boolean wantFire = sol.forceBoost() || lavaClimb
+        boolean wantFire = sol.forceBoost()
             || (boostMaxTicks <= 0 && shortOfAim && speed3d * 20.0 < cfg.boostBelowSpeed);
         if (overCap && !sol.forceBoost()) wantFire = false;     // never thrust past the 2b2t speed cap
         wantFire = fireSpaced(wantFire);                        // spacing + post-setback rocket hold
@@ -1738,14 +1704,11 @@ public class ElytraPilot extends Module {
     }
 
     /**
-     * Called from CRUISE/DESCEND when the bot has fallen out of flight (onto land or into lava, or been knocked
-     * down). Response: relaunch HARD, immediately, in place — hop off the ground / swim up out of the lava,
-     * deploy the elytra the instant we leave the ground, and fire a rocket nosed up to punch back into the sky.
-     * This clears a pit or a lava pool in ~1-2s, far faster than walking, and is the behaviour to want over the
-     * old "stand and pulse-jump with no thrust" (which could never leave flat ground or lava and just burned
-     * totems). Lava/fire damage during the brief relaunch is covered by the totem-pop abort+logout backstop.
-     * Only when we genuinely cannot get airborne here after {@code stallRecoverTicks} (a sealed pocket / no
-     * headroom) do we fall back to a bounded Baritone walkout.
+     * Called from CRUISE/DESCEND when the bot has fallen out of flight — onto land or into lava. This is the ONLY
+     * takeover: the route-follower flies normally otherwise. Response is dead simple and what the user asked for —
+     * deploy the elytra and fire rockets nearly straight UP, persistently, until the bot is flying again. No
+     * Baritone pathing, no walkout: just punch up out of the lava/off the ground. The totem-pop abort+logout (on
+     * repeated lethal hits) and the overall maxFlightTicks cap remain the only backstops.
      */
     private void handleLostFlight(double x, double y, double z) {
         var cfg = CONFIG.client.extra.elytraPilot;
@@ -1756,41 +1719,24 @@ public class ElytraPilot extends Module {
         }
         if (!lostLogged) {
             lostLogged = true;
-            warn("Lost flight at {}, {}, {} — relaunching hard", (int) x, (int) y, (int) z);
+            warn("On the ground / in lava at {}, {}, {} — deploying + rocketing UP until airborne", (int) x, (int) y, (int) z);
         }
         boolean onGround = BOT.isOnGround();
         boolean inLava = BOT.isTouchingLava();
-        // Deploy the instant we are airborne (a fresh jump edge auto-deploys, but force it too so a held jump
+        // Deploy the instant we leave the ground (a fresh jump edge auto-deploys, but force it too so a held jump
         // or a lava-float still engages the wing).
         if (!onGround && !BOT.isFallFlying() && redeployCooldown <= 0) {
             sendStartFallFlying();
             redeployCooldown = cfg.bounceRedeployTicks;
         }
-        // Fire a rocket the moment we are gliding — angled well up, the thrust lifts us clear of the pit/lava.
-        // Modest spacing so we punch out hard without dumping the whole stack if we keep clipping back down.
-        boolean fire = BOT.isFallFlying() && heldIsFirework() && ticksSinceFire >= 5 && setbackHoldTicks <= 0;
+        // Fire a rocket the moment we are gliding — aimed nearly straight up so the thrust drives us out of the
+        // lava / off the ground. Keep firing until we are flying.
+        boolean fire = BOT.isFallFlying() && heldIsFirework() && ticksSinceFire >= cfg.bounceRedeployTicks && setbackHoldTicks <= 0;
         if (!heldIsFirework()) ensureFireworkHeld();
         if (fire) noteRocketFired();
         jumpToggle = !jumpToggle;
-        boolean jump = onGround || inLava || jumpToggle;          // keep hopping/swimming up until airborne
-        submitMove(false, jump, false, fire, desiredYaw(x, z), -35f);
-
-        // Pocket-trap escape. The relaunch bobs between fall-flying and grounded, which resets the per-tick
-        // lost-flight timer every other tick — so a sealed lava pocket would loop here FOREVER (seen live:
-        // pinned at y23 for 40+s). Anchor on the relaunch spot instead: if we keep relaunching within ~12
-        // blocks of it past stallRecoverTicks, it's sealed (low ceiling / walls) — stop bobbing and walk out
-        // (then abort). A genuine escape moves us far from the anchor and re-arms a fresh budget.
-        if (!pocketActive || horizDist(x, z, pocketAnchorX, pocketAnchorZ) > 12) {
-            pocketActive = true; pocketAnchorX = x; pocketAnchorZ = z; pocketTicks = 0;
-        }
-        if (++pocketTicks > cfg.stallRecoverTicks) {
-            pocketActive = false;
-            if (cfg.hasTarget && walkoutAttempts < MAX_WALKOUT_ATTEMPTS) {
-                enterWalkout("trapped relaunching in a pocket at " + (int) x + ", " + (int) y + ", " + (int) z);
-            } else {
-                abort("trapped relaunching at " + (int) x + ", " + (int) y + ", " + (int) z);
-            }
-        }
+        boolean jump = onGround || inLava || jumpToggle;          // keep hopping / swimming up until airborne
+        submitMove(false, jump, false, fire, desiredYaw(x, z), cfg.relaunchPitch);
     }
 
     private void enterSwap() {
@@ -2014,40 +1960,6 @@ public class ElytraPilot extends Module {
         return true;
     }
 
-    /** True if the first non-air, non-water block below the bot (within a cap) is lava — i.e. flying over a lava sea. */
-    private boolean lavaBelow(double x, double y, double z) {
-        return lavaDistBelow(x, y, z) != Integer.MAX_VALUE;
-    }
-
-    /** Blocks of clear air below the bot before the first LAVA surface; {@code MAX_VALUE} if none within the cap. */
-    private int lavaDistBelow(double x, double y, double z) {
-        int bx = MathHelper.floorI(x), bz = MathHelper.floorI(z);
-        if (!World.isChunkLoadedChunkPos(bx >> 4, bz >> 4)) return Integer.MAX_VALUE;
-        int fy = MathHelper.floorI(y);
-        for (int dy = 0; dy <= 48; dy++) {
-            int yy = fy - dy;
-            if (yy < -64) break;
-            var b = World.getBlock(bx, yy, bz);
-            if (b.isAir() || World.isWater(b)) continue;
-            return World.isFluid(b) ? dy : Integer.MAX_VALUE;   // first solid surface below: stop scanning
-        }
-        return Integer.MAX_VALUE;
-    }
-
-    /**
-     * Lava cushion. The route can thread a low air gap right over a lava pool, and following it down to the
-     * surface is how the bot sinks in and gets pinned. So whenever lava is within {@code lavaClearanceBlocks}
-     * below, nose up GENTLY to hold that cushion — never more than a shallow climb, never past the roof cap.
-     * This is lava-avoidance, NOT the old "climb toward open air": it only triggers over lava and only rises
-     * enough to keep a cushion, then lets the route lead again.
-     */
-    private float applyLavaFloor(float pitch, double x, double y, double z, int roofCap) {
-        int lava = lavaDistBelow(x, y, z);
-        if (lava < CONFIG.client.extra.elytraPilot.lavaClearanceBlocks && y < roofCap - 1) {
-            pitch = Math.min(pitch, -15f);                      // shallow climb to clear the lava
-        }
-        return pitch;
-    }
 
     private boolean heldIsFirework() {
         var pc = CACHE.getPlayerCache();
