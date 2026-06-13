@@ -477,11 +477,11 @@ public final class Config {
                 public int pathClearance = 4;
 
                 /**
-                 * Lava cushion (nether): when lava is within this many blocks below, the route-follower noses up
-                 * gently to hold the cushion instead of following the route down to the lava surface (where the
-                 * bot sinks in and gets pinned). Lava-avoidance only — it never climbs past a small cushion.
+                 * Pitch (degrees) held while relaunching off the ground / out of lava — negative = nose up. The
+                 * recovery deploys the elytra and fires rockets at this pitch until the bot is flying again.
+                 * Steep (≈ −70) so the thrust drives almost straight up out of a lava pool.
                  */
-                public int lavaClearanceBlocks = 14;
+                public float relaunchPitch = -70.0f;
 
                 /** Radius (blocks) to search outward from the target for a clear, flat air-landing spot. */
                 public int landingSearchRadius = 12;
