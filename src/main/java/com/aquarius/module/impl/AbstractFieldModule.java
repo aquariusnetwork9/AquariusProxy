@@ -242,23 +242,55 @@ public abstract class AbstractFieldModule extends Module {
     /** A clear air cell beside the bot, on solid non-fluid floor, that neither the bot's own body nor a
      *  cached entity occupies (those make a place fail with "entity blocking the place position"). Null if
      *  none. {@code avoid} skips a cell a place just failed at. Mirrors AquariusMiner.selectStorageSpot. */
+    /**
+     * Pick an empty cell beside the bot to place a shulker/echest. A shulker attaches to ANY face of a
+     * neighbouring block (Baritone's {@code placeBlock} picks a reachable face), so don't demand a flat floor —
+     * that was failing on uneven spawn terrain (walls but no floor-neighbour). Two passes: (1) prefer a clean
+     * flat spot — solid floor with air above, so the lid opens upward; (2) fall back to ANY reachable air cell
+     * that has at least one solid neighbour to attach to (wall, ceiling, or floor), scanning a block lower too.
+     */
     protected @Nullable BlockPos selectSpotBeside(@Nullable BlockPos avoid) {
         BlockPos pf = BARITONE.getPlayerContext().playerFeet();
         int[][] dirs = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
+        // Pass 1 — preferred: flat floor + air above (shulker sits on the ground and opens cleanly upward).
         for (int dy = 0; dy <= 1; dy++) {
             for (int[] d : dirs) {
                 BlockPos cand = pf.add(d[0], dy, d[1]);
-                if (cand.equals(pf) || cand.equals(pf.above())) continue;
-                if (avoid != null && cand.equals(avoid)) continue;
-                if (!World.getBlock(cand.x(), cand.y(), cand.z()).isAir()) continue;
+                if (!placeCellOpen(cand, pf, avoid)) continue;
                 Block floor = World.getBlock(cand.x(), cand.y() - 1, cand.z());
                 if (floor.isAir() || World.isFluid(floor)) continue;
-                if (playerBoxIntersects(cand)) continue;
-                if (entityOccupies(cand)) continue;
+                if (!World.getBlock(cand.x(), cand.y() + 1, cand.z()).isAir()) continue; // lid clearance
                 return cand;
             }
         }
+        // Pass 2 — fallback: any open cell with a face to attach to (wall/ceiling/floor); also one block lower.
+        for (int dy = -1; dy <= 1; dy++) {
+            for (int[] d : dirs) {
+                BlockPos cand = pf.add(d[0], dy, d[1]);
+                if (!placeCellOpen(cand, pf, avoid)) continue;
+                if (hasSolidNeighbor(cand)) return cand;
+            }
+        }
         return null;
+    }
+
+    /** The cell is empty air, not the bot's own footprint, not the avoid spot, and not occupied by an entity. */
+    private boolean placeCellOpen(BlockPos cand, BlockPos pf, @Nullable BlockPos avoid) {
+        if (cand.equals(pf) || cand.equals(pf.above())) return false;
+        if (avoid != null && cand.equals(avoid)) return false;
+        if (!World.getBlock(cand.x(), cand.y(), cand.z()).isAir()) return false;
+        if (playerBoxIntersects(cand)) return false;
+        return !entityOccupies(cand);
+    }
+
+    /** Any of the 6 neighbouring blocks is solid (non-air, non-fluid) — a face the shulker can attach to. */
+    private boolean hasSolidNeighbor(BlockPos c) {
+        int[][] faces = {{0, -1, 0}, {0, 1, 0}, {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+        for (int[] f : faces) {
+            Block b = World.getBlock(c.x() + f[0], c.y() + f[1], c.z() + f[2]);
+            if (!b.isAir() && !World.isFluid(b)) return true;
+        }
+        return false;
     }
 
     private boolean entityOccupies(BlockPos p) {
