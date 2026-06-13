@@ -135,9 +135,6 @@ public class ElytraPilot extends Module {
     private boolean lostLogged;
     private float landSpinYaw;         // helicopter-landing yaw spin
     private int pinTicks;              // consecutive cruise ticks at near-zero speed (wall-pin watchdog)
-    private double stallAnchorX, stallAnchorZ; // window-start position for the net-progress stall watchdog
-    private int stallWindowTicks;      // ticks since the last net-progress sample
-    private int airborneTicks;         // ticks since this cruise began (climb-out window after takeoff)
     private int walkoutTicks;          // ticks in the current walk-out leg
     private int walkoutAttempts;
     private double loopX, loopZ;       // centre of a repeated takeoff-fail loop (chimney trap)
@@ -286,10 +283,6 @@ public class ElytraPilot extends Module {
         healthyTicks = 0;
         lostLogged = false;
         pinTicks = 0;
-        airborneTicks = 0;
-        stallWindowTicks = 0;
-        stallAnchorX = 0;
-        stallAnchorZ = 0;
         walkoutTicks = 0;
         walkoutAttempts = 0;
         loopCount = 0;
@@ -427,7 +420,7 @@ public class ElytraPilot extends Module {
         if (BOT.isFallFlying()) {
             phase = CONFIG.client.extra.elytraPilot.ebounce ? Phase.BOUNCE : Phase.CRUISE;
             ticksSinceFire = Integer.MAX_VALUE / 2; // fire immediately on the first cruise tick
-            anchorStallWatch();                     // start net-progress tracking from the takeoff point
+            pinTicks = 0;
             info("Airborne — entering " + (CONFIG.client.extra.elytraPilot.ebounce ? "bounce" : "cruise"));
             return;
         }
@@ -465,20 +458,6 @@ public class ElytraPilot extends Module {
                 abort("could not take off (need open sky above + a worn elytra)");
             }
         }
-    }
-
-    /**
-     * (Re)start the net-progress stall watchdog from the current position — call on each entry into cruise.
-     * Starts with a grace period: a fresh takeoff spends its first seconds deploying + climbing with little
-     * horizontal travel, and checking the first window immediately put the bot in a walkout->takeoff->walkout
-     * loop (live: "stuck (10b net in 3s)" fired at y112 — it was CLIMBING, not stalled).
-     */
-    private void anchorStallWatch() {
-        var pc = CACHE.getPlayerCache();
-        stallAnchorX = pc.getX();
-        stallAnchorZ = pc.getZ();
-        stallWindowTicks = -2 * STALL_WINDOW_TICKS;   // ~6s grace before the first 3s window is judged
-        airborneTicks = 0;                            // restart the post-takeoff climb-out window
     }
 
     private void tickCruise(double x, double y, double z, double speed) {
