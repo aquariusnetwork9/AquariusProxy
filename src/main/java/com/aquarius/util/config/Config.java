@@ -1245,6 +1245,16 @@ public final class Config {
                 /** Shulker colour to match when {@link #matchByColor} is on (the dye-colour prefix of the shulker name). */
                 public String kitShulkerColor = "";
 
+                /**
+                 * Identify the kit shulker by its CONTENTS instead of name/colour: read each shulker's items (from
+                 * its CONTAINER component, no opening needed) and pick the one that looks like a flight kit. Gate:
+                 * it must contain an elytra AND fireworks; among those, the most complete kit wins, scored by the
+                 * preflight priority elytra &gt; fireworks &gt; food(egap) &gt; pickaxe(any) &gt; armour(non-chest) &gt; weapon &gt;
+                 * echest. Handles kits that weren't named, are a different colour, or are a slightly different kit.
+                 * Takes precedence over {@link #matchByColor} / {@link #kitShulkerName} when on.
+                 */
+                public boolean matchByContents = false;
+
                 /** Fallback only: when no ender chest is carried to place, scan this radius (blocks) for a placed one. */
                 public int echestScanRadius = 48;
 

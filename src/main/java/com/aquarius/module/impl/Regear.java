@@ -337,9 +337,13 @@ public class Regear extends AbstractFieldModule {
         Container c = openContainer();
         if (c == null) { timer = cfg.actionDelayTicks; return; }
         if (findPlayerWindowSlot(c, this::isKitShulker) != -1) { go(State.CLOSE_ECHEST); return; } // already pulled
-        int src = findContainerSlot(c, this::isKitShulker);
+        // Contents mode picks the most-complete flight-kit shulker; name/colour mode takes the first match.
+        int src = cfg.matchByContents ? findBestKitShulkerSlot(c) : findContainerSlot(c, this::isKitShulker);
         if (src == -1) {
-            abort(cfg.matchByColor ? "no " + cfg.kitShulkerColor + " kit shulker in the ender chest"
+            // Ender storage is shared across all echests, so a missing kit shulker can't be fixed by relocating —
+            // abort so the user re-stocks it (don't suicide-loop looking for a kit that isn't in ender storage).
+            abort(cfg.matchByContents ? "no shulker matching the flight-kit contents (elytra + fireworks) in the ender chest"
+                : cfg.matchByColor ? "no " + cfg.kitShulkerColor + " kit shulker in the ender chest"
                                    : "no kit shulker named '" + cfg.kitShulkerName + "' in the ender chest");
             return;
         }
@@ -514,10 +518,11 @@ public class Regear extends AbstractFieldModule {
         {EquipmentSlot.HELMET, EquipmentSlot.CHESTPLATE, EquipmentSlot.LEGGINGS, EquipmentSlot.BOOTS};
     private static final String[] ARMOR_SUFFIX = {"_helmet", "_chestplate", "_leggings", "_boots"};
 
-    /** The kit shulker: a shulker box matched by colour prefix or by custom (anvil) name. */
+    /** The kit shulker: matched by CONTENTS (flight kit), else by colour prefix, else by custom (anvil) name. */
     private boolean isKitShulker(@Nullable ItemStack s) {
         if (!isShulkerBox(s)) return false;
         var cfg = CONFIG.client.extra.regear;
+        if (cfg.matchByContents) return kitContentsScore(s) >= 0;
         if (cfg.matchByColor && !cfg.kitShulkerColor.isBlank()) {
             String n = itemName(s);
             return n != null && n.startsWith(cfg.kitShulkerColor.toLowerCase() + "_");
@@ -525,6 +530,42 @@ public class Regear extends AbstractFieldModule {
         String cn = customName(s);
         return cn != null && !cfg.kitShulkerName.isBlank()
             && cn.toLowerCase().contains(cfg.kitShulkerName.toLowerCase());
+    }
+
+    /**
+     * Score a shulker by how much it looks like a flight kit, reading its CONTAINER contents (no opening). Returns
+     * -1 if it isn't a flight kit (must contain an elytra AND fireworks); otherwise a higher score = more complete,
+     * weighted by the preflight priority so the most complete kit wins when several qualify. Reuses {@link FlightGear}'s
+     * item predicates (pickaxe = any material; armour = a non-chestplate piece).
+     */
+    private int kitContentsScore(@Nullable ItemStack shulker) {
+        boolean elytra = false, fw = false, food = false, pick = false, armor = false, weapon = false, echest = false;
+        for (ItemStack inner : containerContents(shulker)) {
+            if (inner == null || inner == Container.EMPTY_STACK) continue;
+            if (FlightGear.isElytra(inner)) elytra = true;
+            else if (FlightGear.isFirework(inner)) fw = true;
+            else if (FlightGear.isEgap(inner)) food = true;
+            else if (FlightGear.isPickaxe(inner)) pick = true;
+            else if (FlightGear.isOtherArmor(inner)) armor = true;
+            else if (FlightGear.isWeapon(inner)) weapon = true;
+            else if (FlightGear.isEchest(inner)) echest = true;
+        }
+        if (!(elytra && fw)) return -1;   // not a flight kit — needs at least the elytra + fireworks to fly
+        return (elytra ? 64 : 0) + (fw ? 32 : 0) + (food ? 16 : 0) + (pick ? 8 : 0)
+             + (armor ? 4 : 0) + (weapon ? 2 : 0) + (echest ? 1 : 0);
+    }
+
+    /** Contents mode: the echest slot holding the most-complete flight-kit shulker, or -1 if none qualifies. */
+    private int findBestKitShulkerSlot(Container c) {
+        int chestSlots = Math.max(0, c.getSize() - 36);
+        int best = -1, bestScore = -1;
+        for (int i = 0; i < chestSlots; i++) {
+            ItemStack s = c.getItemStack(i);
+            if (!isShulkerBox(s)) continue;
+            int sc = kitContentsScore(s);
+            if (sc > bestScore) { bestScore = sc; best = i; }
+        }
+        return best;
     }
 
     private int findSilkPick() {
