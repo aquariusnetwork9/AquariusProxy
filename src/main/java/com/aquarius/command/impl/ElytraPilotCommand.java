@@ -82,7 +82,8 @@ public class ElytraPilotCommand extends Command {
                 "pitchrange <deg>      (pitch sweep around the direct line, ± degrees; Baritone uses 25)",
                 "boostbelow <bps>      (solver path: fire a rocket when speed drops below this and not already boosted)",
                 "setbackhold <ticks>   (after a server position setback, hold all rockets this long; never fight a rubberband)",
-                "relaunchpitch <deg>   (pitch when relaunching off land/out of lava; negative=up, shallow ~-20 = forward more than up)"
+                "relaunchpitch <deg>   (relaunch pitch when a CEILING is above: shallow ~-20 = slide forward out from under it)",
+                "relaunchpitchup <deg> (relaunch pitch when OPEN SKY is above: steep ~-75 = punch straight up out of a lava ocean)"
             )
             .build();
     }
@@ -311,8 +312,13 @@ public class ElytraPilotCommand extends Command {
             })))
             .then(literal("relaunchpitch").then(argument("degrees", doubleArg(-89, 89)).executes(c -> {
                 CONFIG.client.extra.elytraPilot.relaunchPitch = (float) getDouble(c, "degrees");
-                c.getSource().getEmbed().title("ElytraPilot relaunch pitch = " + CONFIG.client.extra.elytraPilot.relaunchPitch
-                    + "° (negative = nose up; shallow = forward more than up)");
+                c.getSource().getEmbed().title("ElytraPilot relaunch pitch (ceiling/forward) = " + CONFIG.client.extra.elytraPilot.relaunchPitch
+                    + "° (negative = nose up; shallow = forward out from under an overhang)");
+            })))
+            .then(literal("relaunchpitchup").then(argument("degrees", doubleArg(-89, 89)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.relaunchPitchUp = (float) getDouble(c, "degrees");
+                c.getSource().getEmbed().title("ElytraPilot relaunch pitch (open/up) = " + CONFIG.client.extra.elytraPilot.relaunchPitchUp
+                    + "° (steep = punch straight up out of a lava ocean / open ground)");
             })))
             .then(literal("trip")
                 .then(literal("highways").then(argument("toggle", toggle()).executes(c -> {

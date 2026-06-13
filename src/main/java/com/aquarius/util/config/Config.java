@@ -477,12 +477,22 @@ public final class Config {
                 public int pathClearance = 4;
 
                 /**
-                 * Pitch (degrees) held while relaunching off the ground / out of lava — negative = nose up. The
-                 * recovery redeploys the elytra and fires rockets at this pitch, aimed at the target heading,
-                 * driving the bot FORWARD (with a little lift) back onto its flight path. Shallow (≈ −20) =
-                 * forward more than up, so it slides out from under a rock ceiling instead of jamming into it.
+                 * Relaunch pitch when there is a CEILING above (a covered pocket) — negative = nose up. Shallow
+                 * (≈ −20) drives the bot FORWARD out from under the overhang while the redeploy+firework gets it
+                 * going, rather than jamming straight up into the rock.
                  */
                 public float relaunchPitch = -20.0f;
+
+                /**
+                 * Relaunch pitch when there is OPEN SKY above (a lava ocean / open ground) — negative = nose up.
+                 * Steep (≈ −75) punches the bot STRAIGHT UP out of the lava. Critically, in this case the relaunch
+                 * also stops pressing forward: forward input just skims the bot horizontally through the lava
+                 * (you cannot deploy an elytra while in lava — you must swim up out of it first).
+                 */
+                public float relaunchPitchUp = -75.0f;
+
+                /** Blocks of clear air above to treat the spot as "open" (punch up) vs a covered pocket (slide forward). */
+                public int relaunchClearUp = 6;
 
                 /** Radius (blocks) to search outward from the target for a clear, flat air-landing spot. */
                 public int landingSearchRadius = 12;
