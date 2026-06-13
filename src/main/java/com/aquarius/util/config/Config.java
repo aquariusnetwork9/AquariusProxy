@@ -478,10 +478,11 @@ public final class Config {
 
                 /**
                  * Pitch (degrees) held while relaunching off the ground / out of lava — negative = nose up. The
-                 * recovery deploys the elytra and fires rockets at this pitch until the bot is flying again.
-                 * Steep (≈ −70) so the thrust drives almost straight up out of a lava pool.
+                 * recovery redeploys the elytra and fires rockets at this pitch, aimed at the target heading,
+                 * driving the bot FORWARD (with a little lift) back onto its flight path. Shallow (≈ −20) =
+                 * forward more than up, so it slides out from under a rock ceiling instead of jamming into it.
                  */
-                public float relaunchPitch = -70.0f;
+                public float relaunchPitch = -20.0f;
 
                 /** Radius (blocks) to search outward from the target for a clear, flat air-landing spot. */
                 public int landingSearchRadius = 12;

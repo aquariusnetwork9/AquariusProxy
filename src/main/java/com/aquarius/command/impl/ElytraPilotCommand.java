@@ -81,7 +81,8 @@ public class ElytraPilotCommand extends Command {
                 "simticks <n>          (ticks of elytra physics simulated per candidate pitch; Baritone uses 20)",
                 "pitchrange <deg>      (pitch sweep around the direct line, ± degrees; Baritone uses 25)",
                 "boostbelow <bps>      (solver path: fire a rocket when speed drops below this and not already boosted)",
-                "setbackhold <ticks>   (after a server position setback, hold all rockets this long; never fight a rubberband)"
+                "setbackhold <ticks>   (after a server position setback, hold all rockets this long; never fight a rubberband)",
+                "relaunchpitch <deg>   (pitch when relaunching off land/out of lava; negative=up, shallow ~-20 = forward more than up)"
             )
             .build();
     }
@@ -307,6 +308,11 @@ public class ElytraPilotCommand extends Command {
                 CONFIG.client.extra.elytraPilot.setbackHoldTicks = getInteger(c, "ticks");
                 c.getSource().getEmbed().title("ElytraPilot setback rocket hold = "
                     + CONFIG.client.extra.elytraPilot.setbackHoldTicks + " ticks");
+            })))
+            .then(literal("relaunchpitch").then(argument("degrees", doubleArg(-89, 89)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.relaunchPitch = (float) getDouble(c, "degrees");
+                c.getSource().getEmbed().title("ElytraPilot relaunch pitch = " + CONFIG.client.extra.elytraPilot.relaunchPitch
+                    + "° (negative = nose up; shallow = forward more than up)");
             })))
             .then(literal("trip")
                 .then(literal("highways").then(argument("toggle", toggle()).executes(c -> {
