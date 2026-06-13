@@ -569,6 +569,10 @@ public final class Config {
                 // --- pre-flight checklist minimums (audited before each trip; Regear refills only the deficits) ---
                 /** Minimum armour pieces worn besides the elytra (helmet/leggings/boots), any material. */
                 public int preflightMinArmor = 1;
+                /** Minimum elytras carried (worn + spares). An elytra lasts only ~432s of flight, so long hauls need
+                 *  spares for the mid-flight auto-swap ({@code swapElytra}); the gear-up pulls this many from the kit.
+                 *  Floor for the distance estimate below. */
+                public int preflightMinElytras = 2;
                 /** Minimum totems of undying carried (offhand + inventory). */
                 public int preflightMinTotems = 2;
                 /** Require a totem in the offhand. */
@@ -583,8 +587,13 @@ public final class Config {
                  * floored at {@link #preflightMinFireworks}.
                  */
                 public boolean tripEstimateFireworks = true;
-                /** Safety multiplier on the estimated rocket count (covers rubberbanding, terrain headwind, lag). */
+                /** Safety multiplier on the estimated rocket count (covers rubberbanding, terrain headwind, lag).
+                 *  Also applied to the elytra estimate below. */
                 public double fireworkSafetyMargin = 1.5;
+                /** Blocks of flight one elytra lasts (~432s × ~30 b/s ≈ 13k, derated). The gear-up pulls
+                 *  {@code ceil(dist / this × fireworkSafetyMargin)} elytras (floored at {@link #preflightMinElytras})
+                 *  for overworld-direct trips, so the mid-flight swap has enough to cover the whole leg. */
+                public double elytraBlocksPerElytra = 10000.0;
                 /** Minimum ENCHANTED golden apples, counted by item quantity. 64 = one stack. */
                 public int preflightMinEgaps = 64;
                 /** Require a pickaxe (any material/enchant) in the inventory. */
