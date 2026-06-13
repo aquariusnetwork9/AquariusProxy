@@ -13,6 +13,7 @@ import com.aquarius.mc.item.ItemRegistry;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
@@ -39,7 +40,7 @@ import static com.aquarius.Globals.INVENTORY;
 public class Regear extends AbstractFieldModule {
 
     private enum State {
-        IDLE, ACQUIRE, PLACE_ECHEST, PATH_ECHEST, OPEN_ECHEST, PULL_KIT, CLOSE_ECHEST,
+        IDLE, RELOCATE, ACQUIRE, PLACE_ECHEST, PATH_ECHEST, OPEN_ECHEST, PULL_KIT, CLOSE_ECHEST,
         PLACE_KIT, OPEN_KIT, EMPTY_KIT, CLOSE_KIT, BREAK_KIT,
         RETURN_OPEN, RETURN_DEPOSIT, RETURN_CLOSE, RECOVER_ECHEST, GEAR_UP, DONE
     }
@@ -63,6 +64,7 @@ public class Regear extends AbstractFieldModule {
     private boolean flightRefill;   // set by ElytraTrip: pull ONLY items the flight checklist is missing
 
     private int gearArmorIdx;   // gear-up: which armour slot we're filling (0-3)
+    private int relocateAttempts;  // self-kills spent looking for an open-sky spot with a reachable echest
 
     /** ElytraTrip's pre-flight gear-up: pull only the items {@link FlightGear} reports as missing, not the whole kit. */
     public void setFlightRefill(boolean b) { flightRefill = b; }
@@ -82,9 +84,15 @@ public class Regear extends AbstractFieldModule {
     public void onEnable() {
         paused = false; complete = false; hazardPaused = false;
         gearArmorIdx = 0;
+        relocateAttempts = 0;
         ownEchest = false; echPos = null; shulkPos = null; pathGoal = null; kitShulkerItem = null; avoidSpot = null;
-        go(State.ACQUIRE);
-        info("Regear: starting - looking for the kit shulker.");
+        if (CONFIG.client.extra.regear.selfKillRelocate) {
+            go(State.RELOCATE);
+            info("Regear: starting - relocation enabled, scanning for an open-sky spot with a reachable echest.");
+        } else {
+            go(State.ACQUIRE);
+            info("Regear: starting - looking for the kit shulker.");
+        }
     }
 
     @Override
@@ -146,6 +154,7 @@ public class Regear extends AbstractFieldModule {
         if (timer > 0) { timer--; return; }
 
         switch (state) {
+            case RELOCATE -> tickRelocate();
             case ACQUIRE -> tickAcquire();
             case PLACE_ECHEST -> tickPlaceEchest();
             case PATH_ECHEST -> tickPathEchest();
@@ -169,6 +178,41 @@ public class Regear extends AbstractFieldModule {
 
     // ---------------------------------------------------------------- phases
 
+    /**
+     * Self-kill relocation: on a hostile 2b2t spawn the bot may land boxed into a lavacast or with no reachable
+     * ender chest in range. Rather than abort, {@code /kill} and let AutoRespawn drop it at a fresh spawn point;
+     * repeat until it lands somewhere with open sky (room to take off) AND an ender chest within scan range, then
+     * gear up there. The ticks-skipped-while-dead gate in {@link #notReady()} means this state simply pauses
+     * through each death and resumes scanning on the new spot.
+     */
+    private void tickRelocate() {
+        var cfg = CONFIG.client.extra.regear;
+        switch (step) {
+            case 0 -> {
+                BlockPos pf = playerFeet();
+                boolean sky = openSkyAbove(cfg.relocateMinSkyClearance);
+                BlockPos ech = nearestBlock(cfg.echestScanRadius, pf.y() - 6, pf.y() + 6, n -> n.equals("ender_chest"));
+                if (sky && ech != null) {
+                    info("Relocate: good spot at {} - open sky + ender chest at {}. Gearing up.", pf, ech);
+                    go(State.ACQUIRE);
+                    return;
+                }
+                if (++relocateAttempts > cfg.relocateMaxAttempts) {
+                    abort("relocate gave up after " + (relocateAttempts - 1)
+                        + " self-kills (no open-sky spot with a reachable echest)");
+                    return;
+                }
+                String why = (!sky ? "boxed-in" : "") + (ech == null ? (sky ? "no echest in range" : " + no echest") : "");
+                warn("Relocate: bad spot ({}) - self-killing to respawn (attempt {}/{}).", why, relocateAttempts, cfg.relocateMaxAttempts);
+                inGameAlertActivePlayer("<yellow>Regear relocate: self-kill " + relocateAttempts + "/" + cfg.relocateMaxAttempts + " (" + why + ")");
+                sendClientPacketAsync(new ServerboundChatPacket("/kill"));
+                step = 1; timer = cfg.relocateKillWaitTicks;
+            }
+            // waited through the death + respawn (ticks are skipped while dead); re-scan the new spot.
+            default -> { step = 0; timer = cfg.actionDelayTicks; }
+        }
+    }
+
     /** Decide the ender-chest source: place a carried one, else walk to a placed one nearby. */
     private void tickAcquire() {
         var cfg = CONFIG.client.extra.regear;
@@ -182,12 +226,34 @@ public class Regear extends AbstractFieldModule {
         // fallback: no ender chest carried -> find the nearest placed one
         BlockPos p = playerFeet();
         BlockPos found = nearestBlock(cfg.echestScanRadius, p.y() - 6, p.y() + 6, n -> n.equals("ender_chest"));
-        if (found == null) { abort("no ender chest carried and none placed within " + cfg.echestScanRadius + " blocks"); return; }
+        if (found == null) { failOrRelocate("no ender chest carried and none placed within " + cfg.echestScanRadius + " blocks"); return; }
         ownEchest = false;
         echPos = found;
         pathGoal = pathToNear(found);
         info("Regear: no ender chest carried - walking to the placed one at {}.", found);
         go(State.PATH_ECHEST);
+    }
+
+    /** A failure that relocation can recover from: self-kill to a new spawn (if enabled), else abort the cycle. */
+    private void failOrRelocate(String reason) {
+        if (CONFIG.client.extra.regear.selfKillRelocate) { warn("Regear: {} - relocating.", reason); go(State.RELOCATE); }
+        else abort(reason);
+    }
+
+    /** Open a container with the ghost-hand when in range (no LOS needed), else the normal path-and-raytrace open. */
+    private void openContainerGhostAware(@Nullable BlockPos pos) {
+        var cfg = CONFIG.client.extra.regear;
+        if (cfg.ghostInteract && pos != null && distToBot(pos) <= cfg.ghostReach) openGhost(pos);
+        else open(pos);
+    }
+
+    /** True if {@code clearance} air blocks are clear directly above the bot's head (room to take off / not encased). */
+    private boolean openSkyAbove(int clearance) {
+        BlockPos pf = playerFeet();
+        for (int dy = 2; dy < 2 + Math.max(1, clearance); dy++) {
+            if (!isAir(new BlockPos(pf.x(), pf.y() + dy, pf.z()))) return false;
+        }
+        return true;
     }
 
     private void tickPlaceEchest() {
@@ -210,11 +276,12 @@ public class Regear extends AbstractFieldModule {
 
     private void tickPathEchest() {
         var cfg = CONFIG.client.extra.regear;
-        if (arrivedAt(pathGoal)) {
+        boolean ghostClose = cfg.ghostInteract && echPos != null && distToBot(echPos) <= cfg.ghostReach;
+        if (arrivedAt(pathGoal) || ghostClose) {            // adjacent, OR close enough to ghost-open through a wall
             if (BARITONE.isActive()) BARITONE.stop();
             go(State.OPEN_ECHEST);
         } else if (!BARITONE.isActive() && ++attempts > 3) {
-            abort("couldn't path to the placed ender chest");
+            failOrRelocate("couldn't path to the placed ender chest");
         } else {
             timer = cfg.actionDelayTicks;
         }
@@ -223,7 +290,7 @@ public class Regear extends AbstractFieldModule {
     private void tickOpenEchest() {
         var cfg = CONFIG.client.extra.regear;
         switch (step) {
-            case 0 -> { open(echPos); timer = cfg.settleTicks; step = 1; }
+            case 0 -> { openContainerGhostAware(echPos); timer = cfg.settleTicks; step = 1; }
             default -> {
                 if (openContainerId() != 0) go(State.PULL_KIT);
                 else if (++attempts >= 6) abort("ender chest wouldn't open");
@@ -279,7 +346,7 @@ public class Regear extends AbstractFieldModule {
     private void tickOpenKit() {
         var cfg = CONFIG.client.extra.regear;
         switch (step) {
-            case 0 -> { open(shulkPos); timer = cfg.settleTicks; step = 1; }
+            case 0 -> { openContainerGhostAware(shulkPos); timer = cfg.settleTicks; step = 1; }
             default -> {
                 if (openContainerId() != 0) go(State.EMPTY_KIT);
                 else if (++attempts >= 6) abort("kit shulker wouldn't open");
@@ -452,4 +519,6 @@ public class Regear extends AbstractFieldModule {
     }
     public boolean isPaused() { return paused; }
     public boolean isComplete() { return complete; }
+    /** In the self-kill relocation loop (intentional deaths) — ElytraTrip uses this to not cancel the trip. */
+    public boolean isRelocating() { return state == State.RELOCATE; }
 }

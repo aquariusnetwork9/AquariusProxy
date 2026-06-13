@@ -83,6 +83,9 @@ public class ElytraTrip extends Module {
             of(ClientBotTick.Stopped.class, e -> { phase = Phase.IDLE; legStarted = false; }),
             of(ClientDeathEvent.class, e -> {
                 // A death invalidates everything (gear dropped, respawned at bed/spawn) — never march on.
+                // EXCEPTION: during gear-up with self-kill relocation, deaths are intentional (escaping a boxed-in
+                // 2b2t spawn) and the bot has no gear yet to lose — let Regear keep relocating, don't cancel.
+                if (phase == Phase.GEAR_UP && CONFIG.client.extra.regear.selfKillRelocate) return;
                 if (phase != Phase.IDLE && phase != Phase.DONE && phase != Phase.FAILED)
                     abort("bot died — trip cancelled (it respawned at its bed/spawn; gear is at the death point)");
             })
@@ -203,6 +206,7 @@ public class ElytraTrip extends Module {
             else abort("gear-up finished but the kit was short. Still missing:\n" + FlightGear.report());
             return;
         }
+        if (rg.isRelocating()) { guardTicks = 0; return; }   // self-kill relocation in progress — don't time it out
         if ((guardTicks += THROTTLE_TICKS) > GEAR_GUARD_TICKS) {
             restoreRegearConfig(); gearStarted = false;
             abort("gear-up timed out");
