@@ -506,6 +506,48 @@ public final class Config {
                 /** Over the landing spot, cut the glide and drop straight in once within this many blocks of the ground. */
                 public int landCutClearance = 6;
 
+                // --- Distance-scaled climb-glide economy (OVERWORLD + END only; the nether profile is unaffected) ---
+
+                /**
+                 * Size the cruise climb to the trip instead of using the fixed {@link #glideCeilingY}: the bot climbs
+                 * only as high as the leg needs ({@code approxGroundY + legDistance / cruiseGlideRatio}, capped at
+                 * {@link #cruiseCeilingMaxY}) and sawtooths in a {@link #cruiseBandHeight} band below that, then glides
+                 * in. Above y320 there is no terrain anywhere, so a high glide is collision-free. When on, the final
+                 * descent is also timed with {@link #cruiseGlideRatio} (the measured ratio) instead of {@link #glideRatio}.
+                 */
+                public boolean cruiseScaleCeiling = true;
+
+                /**
+                 * Measured elytra glide ratio (horizontal blocks per block of altitude lost) for sizing the cruise
+                 * ceiling, the final-descent lead, and the firework-cost estimate. From a live flight-3 capture
+                 * (~3.3:1 at +2°, low speed) — deliberately conservative: a faster glide does better, so this
+                 * over-provisions rockets and starts the descent late enough to reach the target. Kept separate from
+                 * {@link #glideRatio} (legacy descent lead when {@link #cruiseScaleCeiling} is off).
+                 */
+                public double cruiseGlideRatio = 3.3;
+
+                /** Absolute hard cap on the distance-scaled cruise altitude (overworld/End). Total rockets are
+                 *  cap-independent (climb cost = distance/glideRatio either way); the cap only bounds altitude/fall risk. */
+                public int cruiseCeilingMaxY = 3000;
+
+                /** Sawtooth amplitude: glide down this many blocks below the cruise ceiling before climbing again. */
+                public int cruiseBandHeight = 1000;
+
+                /**
+                 * Patient climb firing cadence (ticks) for the overworld/End firework-climb: fire one rocket, then
+                 * zoom-climb and coast on momentum this long before the next. A live capture of efficient manual flight
+                 * fired every ~6-8s and gained ~150 blocks of altitude per rocket; the old {@link #maxBoostIntervalTicks}
+                 * top-up (~1.5s) re-fired ~4-5× more often and burned the kit. 120 ≈ 6s.
+                 */
+                public int cruiseClimbFireIntervalTicks = 120;
+
+                /**
+                 * Measured blocks of ALTITUDE gained per flight-3 rocket at {@link #climbPitch} (~150 from a live
+                 * capture, derated for margin). Only used by the firework-cost estimate; horizontal blocks per rocket
+                 * via climb-glide ≈ {@code climbAltPerRocket × cruiseGlideRatio}.
+                 */
+                public double climbAltPerRocket = 140.0;
+
                 // --- Trip planner (multi-leg overworld / nether-highway routing; driven by the ElytraTrip module) ---
 
                 /** Whether the trip planner is actively running a multi-leg journey. */
@@ -526,8 +568,18 @@ public final class Config {
                 public int preflightMinTotems = 2;
                 /** Require a totem in the offhand. */
                 public boolean preflightOffhandTotem = true;
-                /** Minimum firework rockets (any flight duration), counted by item quantity. 64 = one stack. */
+                /** Minimum firework rockets (any flight duration), counted by item quantity. 64 = one stack. Acts as
+                 *  the floor for the distance-based estimate when {@link #tripEstimateFireworks} is on. */
                 public int preflightMinFireworks = 64;
+                /**
+                 * Size the required firework count to the trip distance instead of the flat {@link #preflightMinFireworks}.
+                 * OVERWORLD-DIRECT trips only — nether-routed legs aren't modeled here and keep the flat minimum.
+                 * Estimate: {@code ceil(legDistance / (climbAltPerRocket × cruiseGlideRatio) × fireworkSafetyMargin)},
+                 * floored at {@link #preflightMinFireworks}.
+                 */
+                public boolean tripEstimateFireworks = true;
+                /** Safety multiplier on the estimated rocket count (covers rubberbanding, terrain headwind, lag). */
+                public double fireworkSafetyMargin = 1.5;
                 /** Minimum ENCHANTED golden apples, counted by item quantity. 64 = one stack. */
                 public int preflightMinEgaps = 64;
                 /** Require a pickaxe (any material/enchant) in the inventory. */
