@@ -76,9 +76,11 @@ public class DiscordBot {
             of(SessionInvalidateEvent.class, e -> DISCORD_LOG.info("Session invalidated")),
             of(StatusChangeEvent.class, e -> DISCORD_LOG.debug("JDA Status: {}", e.getNewStatus()))
         );
-        // Trip-planner interactive panel (buttons / dimension dropdown / coords modal). Distinct owner key so it
-        // never collides with the subscription above.
-        jdaEventBus.subscribe(TripPanel.class, TripPanel.listeners().toArray(new EventConsumer[0]));
+        // Interactive module control panels (buttons / dropdowns / modals). Each registers under its own class as
+        // the owner key so its prefix-routed handlers never collide with each other or the subscription above.
+        for (DiscordPanel panel : Panels.ALL) {
+            jdaEventBus.subscribe(panel.getClass(), panel.listeners().toArray(new EventConsumer[0]));
+        }
         EVENT_BUS.subscribe(
             this,
             of(DiscordMainChannelCommandReceivedEvent.class, this::executeDiscordCommand)
@@ -448,11 +450,16 @@ public class DiscordBot {
         sendMessageTo(relayChannel, message);
     }
 
+    /** Post an interactive module control panel to the main channel. Returns false if the bot isn't running. */
+    public boolean openPanel(DiscordPanel panel) {
+        if (!isRunning() || mainChannel == null) return false;
+        panel.open(mainChannel);
+        return true;
+    }
+
     /** Post the interactive trip-planner panel (dropdown + coords modal + launch buttons) to the main channel. */
     public boolean openTripPanel() {
-        if (!isRunning() || mainChannel == null) return false;
-        TripPanel.open(mainChannel);
-        return true;
+        return openPanel(Panels.TRIP);
     }
 
     public void sendEmbedMessageWithButtonsTo(TextChannel channel, @Nullable String message, Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> eventConsumer, Duration timeout) {

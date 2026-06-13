@@ -22,10 +22,12 @@ import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.word;
 import static com.aquarius.Globals.CACHE;
+import static com.aquarius.Globals.DISCORD;
 import static com.aquarius.Globals.MODULE;
 import static com.aquarius.command.brigadier.ToggleArgumentType.getToggle;
 import static com.aquarius.command.brigadier.ToggleArgumentType.toggle;
 import static com.aquarius.Globals.CONFIG;
+import com.aquarius.discord.Panels;
 
 public class AquariusMinerCommand extends Command {
     @Override
@@ -78,7 +80,8 @@ public class AquariusMinerCommand extends Command {
                 "deposit on/off",
                 "deposit chest add <x> <y> <z> | clear",
                 "deposit supply add <x> <y> <z> | clear",
-                "deposit refill on/off | empties <n> | maxdist <blocks>"
+                "deposit refill on/off | empties <n> | maxdist <blocks>",
+                "panel  (post an interactive miner panel to Discord: mode/area dropdowns + toggles + bounds modal + run/scan)"
             )
             .build();
     }
@@ -513,7 +516,15 @@ public class AquariusMinerCommand extends Command {
                         c.getSource().getEmbed().title("Sniffer template: " + resolved)
                             .description("Matches names containing: " + String.join(", ", AquariusSnifferCodec.templateSubs(resolved)));
                         return OK;
-                    }))))
+                    })))
+                .then(literal("panel").executes(c -> {
+                    boolean posted = DISCORD.openPanel(Panels.SNIFFER);
+                    c.getSource().getEmbed()
+                        .title(posted ? "Sniffer panel posted to Discord" : "Discord bot not running")
+                        .description(posted
+                            ? "In Discord: pick direction + template (dropdowns), toggle enabled/live/body, set a filter (modal), and Dump/Clear/Capture."
+                            : "Enable the Discord bot to use the interactive sniffer panel.");
+                })))
             .then(literal("deposit")
                 .then(argument("toggle", toggle()).executes(c -> {
                     CONFIG.client.extra.aquariusMiner.depositToChests = getToggle(c, "toggle");
@@ -549,7 +560,15 @@ public class AquariusMinerCommand extends Command {
                 .then(literal("maxdist").then(argument("blocks", integer(0)).executes(c -> {
                     CONFIG.client.extra.aquariusMiner.maxDepositDistance = getInteger(c, "blocks");
                     c.getSource().getEmbed().title("Max deposit distance: " + getInteger(c, "blocks") + " blocks");
-                }))));
+                }))))
+            .then(literal("panel").executes(c -> {
+                boolean posted = DISCORD.openPanel(Panels.MINER);
+                c.getSource().getEmbed()
+                    .title(posted ? "Miner panel posted to Discord" : "Discord bot not running")
+                    .description(posted
+                        ? "In Discord: pick the mode + area (dropdowns), toggle the behaviour/safety options, Bounds (Y band + chunk size modal), Scan, then Run. Deep config (ore list, deposit coords, sniffer) stays on .aqm commands."
+                        : "Enable the Discord bot to use the interactive miner panel.");
+            }));
     }
 
     /** Cardinal name for a unit chunk-direction (one axis zero): -Z north, +Z south, +X east, -X west. */

@@ -7,6 +7,7 @@ import com.aquarius.command.api.CommandCategory;
 import com.aquarius.command.api.CommandContext;
 import com.aquarius.command.api.CommandUsage;
 import com.aquarius.command.brigadier.CustomStringArgumentType;
+import com.aquarius.discord.Panels;
 import com.aquarius.feature.player.World;
 import com.aquarius.module.impl.VillagerTrader;
 import com.aquarius.util.config.Config.Client.Extra.VillagerTrader.Trade;
@@ -17,6 +18,7 @@ import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.aquarius.Globals.CONFIG;
+import static com.aquarius.Globals.DISCORD;
 import static com.aquarius.Globals.MODULE;
 import static com.aquarius.command.brigadier.BlockPosArgument.blockPos;
 import static com.aquarius.command.brigadier.BlockPosArgument.getBlockPos;
@@ -54,7 +56,8 @@ public class VillagerTraderCommand extends Command {
                 "list",
                 "set help",
                 "waitForInteractTimeout <ticks>",
-                "logTradeStatusToDiscord on/off"
+                "logTradeStatusToDiscord on/off",
+                "panel  (post an interactive trader panel to Discord: toggle trades + timeout modal + run)"
             )
             .build();
     }
@@ -608,7 +611,15 @@ public class VillagerTraderCommand extends Command {
                 CONFIG.client.extra.villagerTrader.logTradeStatusToDiscord = getToggle(c, "toggle");
                 c.getSource().getEmbed()
                     .title("Log Trade Status To Discord " + toggleStrCaps(CONFIG.client.extra.villagerTrader.logTradeStatusToDiscord));
-            })));
+            })))
+            .then(literal("panel").executes(c -> {
+                boolean posted = DISCORD.openPanel(Panels.TRADER);
+                c.getSource().getEmbed()
+                    .title(posted ? "Trader panel posted to Discord" : "Discord bot not running")
+                    .description(posted
+                        ? "In Discord: toggle individual trades (dropdown), flip log-to-Discord, set the interact timeout (modal), then Run. Adding/editing trades stays on .trader add / set."
+                        : "Enable the Discord bot to use the interactive trader panel.");
+            }));
     }
 
     @Override

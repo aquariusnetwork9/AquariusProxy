@@ -14,10 +14,12 @@ import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.word;
+import static com.aquarius.Globals.DISCORD;
 import static com.aquarius.Globals.MODULE;
 import static com.aquarius.command.brigadier.ToggleArgumentType.getToggle;
 import static com.aquarius.command.brigadier.ToggleArgumentType.toggle;
 import static com.aquarius.Globals.CONFIG;
+import com.aquarius.discord.Panels;
 
 public class RegearCommand extends Command {
     @Override
@@ -45,7 +47,8 @@ public class RegearCommand extends Command {
                 "ghostreach <n>  (max blocks for a ghost-hand open; 2b2t tolerates ~6)",
                 "relocate on/off  (self-kill to respawn until open sky + a reachable echest)",
                 "skyclearance <n>  (air blocks above head required to count as open sky)",
-                "relocateattempts <n>  (max self-kills before giving up)"
+                "relocateattempts <n>  (max self-kills before giving up)",
+                "panel  (post an interactive Regear panel to Discord: match-mode dropdown + toggles + kit/threshold modals + run)"
             )
             .build();
     }
@@ -133,7 +136,15 @@ public class RegearCommand extends Command {
             .then(literal("relocateattempts").then(argument("n", integer(1)).executes(c -> {
                 CONFIG.client.extra.regear.relocateMaxAttempts = getInteger(c, "n");
                 c.getSource().getEmbed().title("Relocate max self-kills: " + getInteger(c, "n"));
-            })));
+            })))
+            .then(literal("panel").executes(c -> {
+                boolean posted = DISCORD.openPanel(Panels.REGEAR);
+                c.getSource().getEmbed()
+                    .title(posted ? "Regear panel posted to Discord" : "Discord bot not running")
+                    .description(posted
+                        ? "In Discord: pick the match mode (dropdown), toggle gear-up/safety options, Set kit (name/colour) or Thresholds (modals), then Run regear."
+                        : "Enable the Discord bot to use the interactive regear panel.");
+            }));
     }
 
     @Override

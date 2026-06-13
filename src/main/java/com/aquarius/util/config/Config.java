@@ -510,27 +510,31 @@ public final class Config {
 
                 /**
                  * Size the cruise climb to the trip instead of using the fixed {@link #glideCeilingY}: the bot climbs
-                 * only as high as the leg needs ({@code approxGroundY + legDistance / cruiseGlideRatio}, capped at
-                 * {@link #cruiseCeilingMaxY}) and sawtooths in a {@link #cruiseBandHeight} band below that, then glides
-                 * in. Above y320 there is no terrain anywhere, so a high glide is collision-free. When on, the final
-                 * descent is also timed with {@link #cruiseGlideRatio} (the measured ratio) instead of {@link #glideRatio}.
+                 * ONCE to the optimal height for the leg ({@code approxGroundY + legDistance / cruiseGlideRatio},
+                 * capped at {@link #cruiseCeilingMaxY}), then holds a single continuous best-glide all the way to the
+                 * target — no sawtooth. It only re-climbs as a backstop if, mid-glide, the target is no longer
+                 * reachable at {@link #cruiseGlideRatio} (genuine undershoot, or a leg longer than the cap allows).
+                 * Above y320 there is no terrain anywhere, so a high glide is collision-free. The final descent is
+                 * timed with {@link #cruiseGlideRatio} instead of {@link #glideRatio}.
                  */
                 public boolean cruiseScaleCeiling = true;
 
                 /**
-                 * Measured elytra glide ratio (horizontal blocks per block of altitude lost) for sizing the cruise
-                 * ceiling, the final-descent lead, and the firework-cost estimate. From a live flight-3 capture
-                 * (~3.3:1 at +2°, low speed) — deliberately conservative: a faster glide does better, so this
-                 * over-provisions rockets and starts the descent late enough to reach the target. Kept separate from
-                 * {@link #glideRatio} (legacy descent lead when {@link #cruiseScaleCeiling} is off).
+                 * Elytra glide ratio (horizontal blocks per block of altitude lost) at the managed cruise speed band,
+                 * used to size the single climb-to-ceiling, gate the undershoot re-climb, time the final-descent lead,
+                 * and estimate firework cost. ~6 is a safe mid value — a free +2° glide measures higher (~9 at full
+                 * cruise speed), but the speed-managed {@link #cruiseSpeedSoftMin}-{@link #cruiseSpeedSoftMax} b/s
+                 * glide sits lower; tune against a capture. Too high → undershoot (caught by the re-climb backstop);
+                 * too low → over-climb (wasted rockets, shed by the landing dive). Kept separate from {@link #glideRatio}.
                  */
-                public double cruiseGlideRatio = 3.3;
+                public double cruiseGlideRatio = 6.0;
 
                 /** Absolute hard cap on the distance-scaled cruise altitude (overworld/End). Total rockets are
                  *  cap-independent (climb cost = distance/glideRatio either way); the cap only bounds altitude/fall risk. */
                 public int cruiseCeilingMaxY = 3000;
 
-                /** Sawtooth amplitude: glide down this many blocks below the cruise ceiling before climbing again. */
+                /** Legacy sawtooth amplitude — no longer the cruise rhythm (the profile is now a single climb + a
+                 *  continuous glide with an undershoot-only re-climb). Retained for config compatibility; unused. */
                 public int cruiseBandHeight = 1000;
 
                 /**
@@ -547,6 +551,31 @@ public final class Config {
                  * via climb-glide ≈ {@code climbAltPerRocket × cruiseGlideRatio}.
                  */
                 public double climbAltPerRocket = 140.0;
+
+                // --- Glide speed management (OVERWORLD + END only; the nether profile uses maxSpeed instead) ---
+
+                /**
+                 * Target glide speed band (blocks/second). After the one-time climb to the cruise ceiling, the bot
+                 * holds a continuous best-glide and trims its pitch to keep horizontal speed inside this band: below
+                 * {@link #cruiseSpeedSoftMin} it noses down ({@code glidePitch + cruiseGlideTrimDeg}) to regain speed;
+                 * above {@link #cruiseSpeedSoftMax} it raises the nose ({@code glidePitch - cruiseGlideTrimDeg}) to
+                 * bleed it; inside the band it holds {@link #glidePitch} (max distance per altitude).
+                 */
+                public double cruiseSpeedSoftMin = 30.0;
+                public double cruiseSpeedSoftMax = 35.0;
+
+                /**
+                 * Hard speed cap (blocks/second) for the overworld/End glide + climb: never fire a firework at or
+                 * above it, and if the glide overspeeds past it, pitch the nose up {@link #cruiseBrakePitch}° to
+                 * brake. Separate from the nether {@link #maxSpeed}.
+                 */
+                public double cruiseSpeedHardMax = 55.0;
+
+                /** Pitch trim (degrees) added to / subtracted from {@link #glidePitch} to hold the soft speed band. */
+                public float cruiseGlideTrimDeg = 8.0f;
+
+                /** Nose-up pitch magnitude (degrees) used to brake when the glide overspeeds past {@link #cruiseSpeedHardMax}. */
+                public float cruiseBrakePitch = 25.0f;
 
                 // --- Trip planner (multi-leg overworld / nether-highway routing; driven by the ElytraTrip module) ---
 

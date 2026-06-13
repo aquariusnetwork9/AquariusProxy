@@ -18,9 +18,11 @@ import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 import static com.aquarius.Globals.CONFIG;
+import static com.aquarius.Globals.DISCORD;
 import static com.aquarius.Globals.MODULE;
 import static com.aquarius.command.brigadier.ToggleArgumentType.getToggle;
 import static com.aquarius.command.brigadier.ToggleArgumentType.toggle;
+import com.aquarius.discord.Panels;
 
 public class PearlDropCommand extends Command {
 
@@ -51,7 +53,8 @@ public class PearlDropCommand extends Command {
                 "spacing <ticks>        (ticks between throws into one chamber)",
                 "eyeheight <d>          (eye height used to aim; ~1.27 sneaking)",
                 "priority <n>           (input priority for the sneak/aim/throw control)",
-                "closetrapdoor <on/off> (shut an open trapdoor before depositing)"
+                "closetrapdoor <on/off> (shut an open trapdoor before depositing)",
+                "panel                  (post an interactive pearl-drop panel to Discord: scan/drop buttons + drop/settings modals)"
             )
             .build();
     }
@@ -125,7 +128,15 @@ public class PearlDropCommand extends Command {
             .then(literal("closetrapdoor").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.pearlDrop.closeOpenTrapdoor = getToggle(c, "toggle");
                 c.getSource().getEmbed().title("PearlDrop close-open-trapdoor " + toggleStrCaps(CONFIG.client.extra.pearlDrop.closeOpenTrapdoor));
-            })));
+            })))
+            .then(literal("panel").executes(c -> {
+                boolean posted = DISCORD.openPanel(Panels.PEARLDROP);
+                c.getSource().getEmbed()
+                    .title(posted ? "Pearl Drop panel posted to Discord" : "Discord bot not running")
+                    .description(posted
+                        ? "In Discord: Scan, Drop all empty, or Drop near coords (modal); tune the settings (modal). Index-pick deposits stay on /pd pick."
+                        : "Enable the Discord bot to use the interactive pearl-drop panel.");
+            }));
     }
 
     private int runScan(com.mojang.brigadier.context.CommandContext<CommandContext> c, int radius) {
