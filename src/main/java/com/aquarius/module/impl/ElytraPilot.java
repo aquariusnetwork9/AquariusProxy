@@ -433,8 +433,14 @@ public class ElytraPilot extends Module {
         var pc = CACHE.getPlayerCache();
         boolean onGround = BOT.isOnGround();
         boolean inLava = BOT.isTouchingLava();
-        // Deploy + rocket nearly straight UP, persistently, until we are flying — the same dead-simple launch
-        // the lost-flight recovery uses. No headroom check, no Baritone walkout: just punch into the air.
+        // Submerged in lava (head under the surface): swim straight UP first — don't deploy/fire while submerged
+        // (deploying sinks the bot, a rocket just detonates). Once the head clears, deploy + boost.
+        if (inLava && headInLava(pc.getX(), pc.getY(), pc.getZ())) {
+            submitMove(false, true, false, false, desiredYaw(pc.getX(), pc.getZ()), cfg.relaunchPitchUp);
+            takeoffTicks++;
+            return;
+        }
+        // Deploy + rocket, persistently, until we are flying — the same launch the lost-flight recovery uses.
         if (!onGround && !BOT.isFallFlying() && redeployCooldown <= 0) {
             sendStartFallFlying();
             redeployCooldown = cfg.bounceRedeployTicks;
@@ -443,7 +449,7 @@ public class ElytraPilot extends Module {
         if (!heldIsFirework()) ensureFireworkHeld();
         if (fire) noteRocketFired();
         jumpToggle = !jumpToggle;
-        boolean jump = onGround || inLava || jumpToggle;   // keep hopping / swimming up until airborne
+        boolean jump = onGround || jumpToggle;   // hop off the ground until airborne
         // Open sky above -> punch UP, no forward (lava ocean / open ground); ceiling -> slide forward out.
         boolean clearAbove = clearAboveCount(pc.getX(), pc.getY(), pc.getZ()) >= cfg.relaunchClearUp;
         boolean forward = !clearAbove;
@@ -1138,6 +1144,15 @@ public class ElytraPilot extends Module {
     }
 
     /**
+     * True if lava fills the bot's HEAD block — i.e. it's submerged, not yet high enough to deploy. Once the
+     * head clears the lava surface (this returns false) the bot can redeploy + fire, even with its feet still in.
+     */
+    private boolean headInLava(double x, double y, double z) {
+        var b = World.getBlock(MathHelper.floorI(x), MathHelper.floorI(y) + 1, MathHelper.floorI(z));
+        return World.isFluid(b) && !World.isWater(b);
+    }
+
+    /**
      * E-bounce: skip along a flat road with no fireworks. Holds forward+jump+sprint at +2° pitch and re-sends
      * START_FALL_FLYING each bounce. The held jump auto-jumps the instant the bot touches the road (vanilla
      * physics, with its own ~10-tick jump cooldown setting the bounce cadence), and the re-engaged elytra glide
@@ -1720,29 +1735,39 @@ public class ElytraPilot extends Module {
             phase = Phase.EMERGENCY;
             return;
         }
-        if (!lostLogged) {
-            lostLogged = true;
-            warn("On the ground / in lava at {}, {}, {} — deploying + rocketing UP until airborne", (int) x, (int) y, (int) z);
-        }
         boolean onGround = BOT.isOnGround();
         boolean inLava = BOT.isTouchingLava();
-        // Deploy the instant we leave the ground (a fresh jump edge auto-deploys, but force it too so a held jump
-        // or a lava-float still engages the wing).
+        if (!lostLogged) {
+            lostLogged = true;
+            warn(inLava ? "In lava at {}, {}, {} — swimming up to the surface first"
+                        : "On the ground at {}, {}, {} — deploying + rocketing back into flight",
+                (int) x, (int) y, (int) z);
+        }
+
+        // SUBMERGED IN LAVA (head still under the surface): swim straight UP first — do NOT deploy and do NOT
+        // fire here. Deploying the elytra while submerged makes the bot SINK, and a rocket fired while
+        // submerged just detonates in place (it never propels a player who isn't validly gliding). Hold jump
+        // only (swim up, +0.04/tick), no forward (forward skims the bot sideways through the lava). Once the
+        // head clears the lava (high enough), the block below deploys THEN fires — in that order.
+        if (inLava && headInLava(x, y, z)) {
+            pinTicks = 0;                                        // swimming up IS progress — don't let the watchdog abort it
+            submitMove(false, true, false, false, desiredYaw(x, z), cfg.relaunchPitchUp);
+            return;
+        }
+
+        // OUT OF THE LAVA (on land, or airborne above the surface): now deploy the instant we're airborne and
+        // fire rockets to climb/slide clear before we fall back in.
         if (!onGround && !BOT.isFallFlying() && redeployCooldown <= 0) {
             sendStartFallFlying();
             redeployCooldown = cfg.bounceRedeployTicks;
         }
-        // Fire a rocket the moment we are gliding — aimed nearly straight up so the thrust drives us out of the
-        // lava / off the ground. Keep firing until we are flying.
         boolean fire = BOT.isFallFlying() && heldIsFirework() && ticksSinceFire >= cfg.bounceRedeployTicks && setbackHoldTicks <= 0;
         if (!heldIsFirework()) ensureFireworkHeld();
         if (fire) noteRocketFired();
         jumpToggle = !jumpToggle;
-        boolean jump = onGround || inLava || jumpToggle;          // keep hopping / swimming up until airborne
-        // Pick the escape by what's actually above. OPEN SKY (lava ocean / open ground): punch straight UP and
-        // do NOT press forward — you can't deploy an elytra while in lava, so the bot must swim up out of it
-        // first, and forward input just skims it horizontally through the lava forever. CEILING (covered
-        // pocket): slide FORWARD out from under the overhang instead of jamming up into the rock.
+        boolean jump = onGround || jumpToggle;                   // hop off the ground until airborne
+        // OPEN SKY above (lava ocean / open ground): punch straight UP, no forward. CEILING (covered pocket):
+        // slide FORWARD out from under the overhang instead of jamming up into the rock.
         boolean clearAbove = clearAboveCount(x, y, z) >= cfg.relaunchClearUp;
         float pitch = clearAbove ? cfg.relaunchPitchUp : cfg.relaunchPitch;
         boolean forward = !clearAbove;
