@@ -714,8 +714,19 @@ public final class Config {
                 /** Swap the worn elytra once its remaining durability drops to this (an elytra's max is 432). */
                 public int elytraMinDurability = 20;
 
-                /** Only treat an inventory elytra as a usable spare if its remaining durability exceeds this. */
-                public int freshElytraMinDurability = 50;
+                /** Hard floor (exclusive) for a usable spare: an inventory elytra counts only if its remaining
+                 *  durability exceeds this. The swap always picks the HIGHEST-durability spare above this floor, so a
+                 *  slightly-used elytra is still used — just after the better ones. 10 = don't bother with near-dead ones. */
+                public int freshElytraMinDurability = 10;
+
+                /** Last-elytra emergency: when NO usable spare remains and the worn elytra drops to this, dive to a
+                 *  safe landing while it can still glide and (per {@link #lastElytraLogout}) log out — never fly the
+                 *  last elytra to breaking and fall. 100 ≈ ~100s of glide left to get down. */
+                public int lastElytraEmergencyDurability = 100;
+
+                /** On the last-elytra emergency landing, disconnect to preserve the bot + kit where it lands (and
+                 *  cancel the trip so it doesn't re-arm into a fall on reconnect). */
+                public boolean lastElytraLogout = true;
 
                 /**
                  * Minimum blocks of clearance above the ground before a (flight-dropping) swap is attempted.

@@ -109,6 +109,7 @@ public class ElytraPilot extends Module {
     private int passAttempts;
     private int passTX, passTZ;
     private boolean emergencyAlerted;
+    private boolean emergencyLogout;   // EMERGENCY entered for the last-elytra case: log out + cancel the trip on land
     private boolean noSpareWarned;
     private double lastX, lastZ;
     private boolean haveLast;
@@ -265,6 +266,7 @@ public class ElytraPilot extends Module {
         passTicks = 0;
         passAttempts = 0;
         emergencyAlerted = false;
+        emergencyLogout = false;
         noSpareWarned = false;
         haveLast = false;
         haveLandSpot = false;
@@ -467,26 +469,8 @@ public class ElytraPilot extends Module {
         var cfg = CONFIG.client.extra.elytraPilot;
         float yaw = steerYaw(x, y, z);
 
-        // Elytra wear management.
-        if (cfg.swapElytra && needsElytraSwap()) {
-            if (hasSpareElytra()) {
-                if (heightAboveGround(x, y, z) >= cfg.minSwapClearance) {
-                    enterSwap();
-                    return;
-                }
-                // too low to safely drop flight for a swap: climb first
-                boolean fire = heldIsFirework();
-                if (!fire) ensureFireworkHeld(); else noteRocketFired();
-                submitInput(false, fire, yaw, -35f);
-                return;
-            } else {
-                if (!noSpareWarned) {
-                    inGameAlertActivePlayer("<yellow>ElytraPilot: elytra low, no spare — flying until it fails");
-                    noSpareWarned = true;
-                }
-                if (wornElytraDurability() <= 2) { phase = Phase.EMERGENCY; return; }
-            }
-        }
+        // Elytra wear management: swap to the best spare at low durability, or emergency-land the last elytra.
+        if (manageElytraWear(x, y, z, yaw)) return;
 
         // Open nether (off-highway): follow the native route through the terrain. The route threads the holes,
         // so the bot does NOT cruise at an altitude, climb over obstacles, or fly up looking for open air —
@@ -1200,13 +1184,7 @@ public class ElytraPilot extends Module {
         }
 
         // Elytra wear is the same in bounce mode (fall-flying still drains durability); SWAP returns to BOUNCE.
-        if (cfg.swapElytra && needsElytraSwap()) {
-            if (hasSpareElytra()) { enterSwap(); return; }
-            if (wornElytraDurability() <= 2 && !noSpareWarned) {
-                inGameAlertActivePlayer("<yellow>ElytraPilot: elytra low, no spare");
-                noSpareWarned = true;
-            }
-        }
+        if (manageElytraWear(x, y, z, yaw)) return;
 
         // Obstacle handling: glide OVER a block/lava patch ahead (fast, stays in flight); only settle + walk (PASS)
         // when we actually stall hard against something. terrainBlockedAhead now treats lava as a hazard too.
@@ -1731,7 +1709,16 @@ public class ElytraPilot extends Module {
         } else {
             submitInput(false, false, yaw, 0f);                   // nothing left — falling
         }
-        if (!BOT.isFallFlying() && heightAboveGround(x, y, z) <= 2) complete("emergency landing complete", false);
+        if (!BOT.isFallFlying() && heightAboveGround(x, y, z) <= 2) {
+            if (emergencyLogout) {
+                var cfg = CONFIG.client.extra.elytraPilot;
+                if (cfg.tripActive) { cfg.tripActive = false; MODULE.get(ElytraTrip.class).syncEnabledFromConfig(); }
+                complete("emergency landing — logging out to preserve the bot + kit", false);
+                Proxy.getInstance().disconnect("ElytraPilot: last elytra spent — emergency logout");
+            } else {
+                complete("emergency landing complete", false);
+            }
+        }
     }
 
     /**
@@ -1772,7 +1759,7 @@ public class ElytraPilot extends Module {
         var cfg = CONFIG.client.extra.elytraPilot;
         if (wornElytraDurability() <= 2) {                       // a worn-out elytra can't relaunch
             if (cfg.swapElytra && hasSpareElytra()) { enterSwap(); return; }
-            phase = Phase.EMERGENCY;
+            enterEmergencyLanding();                             // truly out of usable elytra — land + log out
             return;
         }
         boolean onGround = BOT.isOnGround();
@@ -1814,11 +1801,51 @@ public class ElytraPilot extends Module {
         submitMove(forward, jump, forward, fire, desiredYaw(x, z), pitch);
     }
 
+    /**
+     * Elytra-wear management, shared by cruise + bounce. Returns true if it took over this tick. With a usable
+     * spare: swap to the BEST (highest-durability) one once the worn drops to {@code elytraMinDurability} (climb
+     * first if too low to safely drop flight). With NO usable spare: this is the last elytra — at
+     * {@code lastElytraEmergencyDurability} dive to a safe landing + log out rather than fly it to breaking and fall.
+     */
+    private boolean manageElytraWear(double x, double y, double z, float yaw) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (!cfg.swapElytra) return false;
+        int wornDur = wornElytraDurability();
+        if (wornDur <= 0) return false;                       // no elytra worn — lost-flight handles it
+        if (hasSpareElytra()) {
+            if (wornDur > cfg.elytraMinDurability) return false;  // still good; a spare is ready for when it isn't
+            if (heightAboveGround(x, y, z) >= cfg.minSwapClearance) { enterSwap(); return true; }
+            boolean fire = heldIsFirework();                  // too low to drop flight for a swap: climb first
+            if (!fire) ensureFireworkHeld(); else noteRocketFired();
+            submitInput(false, fire, yaw, -35f);
+            return true;
+        }
+        // No usable spare: the last elytra. Come down to a safe landing while it can still glide, then log out.
+        if (wornDur <= cfg.lastElytraEmergencyDurability) {
+            warn("Last elytra at {} durability, no spare — emergency landing{}.", wornDur, cfg.lastElytraLogout ? " + logout" : "");
+            enterEmergencyLanding();
+            return true;
+        }
+        if (!noSpareWarned) {
+            inGameAlertActivePlayer("<yellow>ElytraPilot: last elytra (" + wornDur + " dura), no spare — will emergency-land at "
+                + cfg.lastElytraEmergencyDurability);
+            noSpareWarned = true;
+        }
+        return false;
+    }
+
+    /** Last-elytra / no-elytra failsafe: glide down to a landing and (per config) log out to preserve the bot. */
+    private void enterEmergencyLanding() {
+        emergencyLogout = CONFIG.client.extra.elytraPilot.lastElytraLogout;
+        emergencyAlerted = false;
+        phase = Phase.EMERGENCY;
+    }
+
     private void enterSwap() {
         phase = Phase.SWAP;
         swapRedeploying = false;
         swapTicks = 0;
-        info("Elytra worn out — swapping in a fresh one");
+        info("Elytra worn out — swapping in the best spare");
     }
 
     // --- elytra swap mechanics ---
@@ -1830,16 +1857,15 @@ public class ElytraPilot extends Module {
      */
     private boolean equipFreshElytraProgress() {
         if (INVENTORY.hasActiveRequest()) return false; // let the previous action settle
-        if (isFreshElytra(chestplate())) return true;   // a fresh elytra is already worn — done
-
-        int slot = findFreshElytraHotbar();
-        if (slot < 0) slot = findFreshElytraMain();
-        if (slot < 0) return false;                     // no spare (caller handles via timeout)
-
-        // ONE reliable swap: fresh elytra <-> the chestplate armour slot — the exact path Regear uses to equip the
+        int best = findBestSpareElytraSlot();
+        if (best < 0)                                   // no usable spare left — done iff a usable elytra is worn
+            return isElytra(chestplate()) && wornElytraDurability() > CONFIG.client.extra.elytraPilot.freshElytraMinDurability;
+        int spareDur = remainingDurability(CACHE.getPlayerCache().getPlayerInventory().get(best));
+        if (isElytra(chestplate()) && wornElytraDurability() >= spareDur) return true; // already wearing the best
+        // ONE reliable swap: best spare <-> the chestplate armour slot — the exact path Regear uses to equip the
         // flight elytra (swapSlots(invSlot, 6)). Replaces the old pick-up / click-armour-slot / stash cursor dance,
         // which failed to seat the elytra into the armour slot mid-air (the worn one stayed; the bot fell).
-        submitInvAction(InventoryActionMacros.swapSlots(slot, CHESTPLATE_SLOT).toArray(new InventoryAction[0]));
+        submitInvAction(InventoryActionMacros.swapSlots(best, CHESTPLATE_SLOT).toArray(new InventoryAction[0]));
         return false;
     }
 
@@ -1848,7 +1874,21 @@ public class ElytraPilot extends Module {
     }
 
     private boolean hasSpareElytra() {
-        return findFreshElytraHotbar() >= 0 || findFreshElytraMain() >= 0;
+        return findBestSpareElytraSlot() >= 0;
+    }
+
+    /** Inventory slot (9-44) of the HIGHEST-durability usable spare elytra (durability > freshElytraMinDurability),
+     *  or -1 if none — so the swap always equips the best spare first and works down to the slightly-used ones. */
+    private int findBestSpareElytraSlot() {
+        List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+        int best = -1, bestDur = CONFIG.client.extra.elytraPilot.freshElytraMinDurability; // exclusive floor (hard cap)
+        for (int s = 9; s <= 44; s++) {
+            ItemStack it = inv.get(s);
+            if (!isElytra(it)) continue;
+            int d = remainingDurability(it);
+            if (d > bestDur) { bestDur = d; best = s; }
+        }
+        return best;
     }
 
     private int findFreshElytraHotbar() {
