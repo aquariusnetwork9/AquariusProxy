@@ -70,10 +70,13 @@ public class ElytraPilotCommand extends Command {
                 "landcut <n>           (cut the glide + drop in within this many blocks of the ground)",
                 "divefloor <y>         (over target: dive hard above this Y to shed excess altitude, land gently below)",
                 "divepitch <deg>       (nose-down pitch for the aggressive over-target spiral dive)",
-                "cruisescale <on/off>  (overworld/End: distance-scale the cruise ceiling — climb only as high as the leg needs, then glide)",
-                "cruiseglide <r>       (measured glide ratio; sizes the climb, descent lead, and firework estimate)",
+                "cruisescale <on/off>  (overworld/End: distance-scale the cruise ceiling — climb ONCE to the height the leg needs, then glide all the way in)",
+                "cruiseglide <r>       (glide ratio at the managed speed band; sizes the climb, descent lead, undershoot re-climb, and firework estimate)",
                 "cruiseceil <y>        (hard cap on the distance-scaled cruise altitude; total rockets are cap-independent)",
-                "cruiseband <n>        (sawtooth amplitude: glide this far below the ceiling before climbing again)",
+                "cruisespeed <min> <max> <hard>  (overworld/End glide speed band b/s: hold min-max, never overspeed/thrust past hard)",
+                "cruisetrim <deg>      (pitch nudge ± off glidepitch used to hold the speed band)",
+                "cruisebrake <deg>     (nose-up pitch to brake when the glide overspeeds past the hard cap)",
+                "cruiseband <n>        (legacy sawtooth amplitude — unused by the single climb+glide profile)",
                 "climbfire <ticks>     (patient climb cadence — one rocket then coast; ~120 = 6s, matches efficient manual flight)",
                 "altperrocket <n>      (blocks of altitude per flight-3 rocket at climbpitch; feeds the firework estimate)",
                 "estimatefw <on/off>   (size the pre-flight firework requirement to the overworld-direct trip distance)",
@@ -290,21 +293,44 @@ public class ElytraPilotCommand extends Command {
             .then(literal("cruisescale").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.cruiseScaleCeiling = getToggle(c, "toggle");
                 c.getSource().getEmbed().title("ElytraPilot distance-scaled cruise ceiling " + toggleStrCaps(CONFIG.client.extra.elytraPilot.cruiseScaleCeiling))
-                    .description("Overworld/End: climb only as high as the leg needs (dist/glideratio, capped), then glide in. Off = fixed ceiling/floor band.");
+                    .description("Overworld/End: climb ONCE to the height the leg needs (dist/glideratio, capped), then a single continuous glide to the target. Off = fixed ceiling/floor band.");
             })))
             .then(literal("cruiseglide").then(argument("ratio", doubleArg(0.5)).executes(c -> {
                 CONFIG.client.extra.elytraPilot.cruiseGlideRatio = getDouble(c, "ratio");
                 c.getSource().getEmbed().title("ElytraPilot cruise glide ratio = " + CONFIG.client.extra.elytraPilot.cruiseGlideRatio
-                    + " (sizes the climb, the descent lead, and the firework estimate)");
+                    + " (sizes the climb, the descent lead, the undershoot re-climb, and the firework estimate)");
             })))
             .then(literal("cruiseceil").then(argument("y", integer()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.cruiseCeilingMaxY = getInteger(c, "y");
                 c.getSource().getEmbed().title("ElytraPilot cruise ceiling cap = y" + CONFIG.client.extra.elytraPilot.cruiseCeilingMaxY
                     + " (total rockets are cap-independent; this only bounds altitude/fall risk)");
             })))
+            .then(literal("cruisespeed")
+                .then(argument("min", doubleArg(1))
+                .then(argument("max", doubleArg(1))
+                .then(argument("hard", doubleArg(1)).executes(c -> {
+                    var cfg = CONFIG.client.extra.elytraPilot;
+                    cfg.cruiseSpeedSoftMin = getDouble(c, "min");
+                    cfg.cruiseSpeedSoftMax = getDouble(c, "max");
+                    cfg.cruiseSpeedHardMax = getDouble(c, "hard");
+                    c.getSource().getEmbed().title("ElytraPilot cruise speed band = " + cfg.cruiseSpeedSoftMin + "-" + cfg.cruiseSpeedSoftMax
+                        + " b/s (hard cap " + cfg.cruiseSpeedHardMax + ")")
+                        .description("Overworld/End glide trims pitch to hold the soft band; never thrusts or overspeed-glides past the hard cap.");
+                })))))
+            .then(literal("cruisetrim").then(argument("deg", doubleArg(0)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.cruiseGlideTrimDeg = (float) getDouble(c, "deg");
+                c.getSource().getEmbed().title("ElytraPilot cruise glide trim = ±" + CONFIG.client.extra.elytraPilot.cruiseGlideTrimDeg
+                    + "° (pitch nudge off glidepitch to hold the speed band)");
+            })))
+            .then(literal("cruisebrake").then(argument("deg", doubleArg(0)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.cruiseBrakePitch = (float) getDouble(c, "deg");
+                c.getSource().getEmbed().title("ElytraPilot cruise brake pitch = " + CONFIG.client.extra.elytraPilot.cruiseBrakePitch
+                    + "° nose-up (brake when the glide overspeeds past the hard cap)");
+            })))
             .then(literal("cruiseband").then(argument("blocks", integer()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.cruiseBandHeight = getInteger(c, "blocks");
-                c.getSource().getEmbed().title("ElytraPilot cruise sawtooth band = " + CONFIG.client.extra.elytraPilot.cruiseBandHeight + " blocks below the ceiling");
+                c.getSource().getEmbed().title("ElytraPilot cruise band = " + CONFIG.client.extra.elytraPilot.cruiseBandHeight
+                    + " blocks (legacy sawtooth amplitude — unused by the single climb+glide profile)");
             })))
             .then(literal("climbfire").then(argument("ticks", integer(1)).executes(c -> {
                 CONFIG.client.extra.elytraPilot.cruiseClimbFireIntervalTicks = getInteger(c, "ticks");

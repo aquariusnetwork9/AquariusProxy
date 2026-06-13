@@ -22,9 +22,11 @@ import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.word;
 import static com.aquarius.Globals.CONFIG;
+import static com.aquarius.Globals.DISCORD;
 import static com.aquarius.Globals.MODULE;
 import static com.aquarius.command.brigadier.ToggleArgumentType.getToggle;
 import static com.aquarius.command.brigadier.ToggleArgumentType.toggle;
+import com.aquarius.discord.Panels;
 
 public class EnchanterCommand extends Command {
     @Override
@@ -53,7 +55,8 @@ public class EnchanterCommand extends Command {
                 "pace <action> <settle> <fill> <anvil>  (tick delays)",
                 "pauseplayer on/off",
                 "autodc on/off  (disconnect when done)",
-                "status  (print the discovered layout + progress)"
+                "status  (print the discovered layout + progress)",
+                "panel  (post an interactive enchanter panel to Discord: toggles + scan/XP modals + run)"
             )
             .build();
     }
@@ -175,6 +178,14 @@ public class EnchanterCommand extends Command {
                 var module = MODULE.get(Enchanter.class);
                 c.getSource().getEmbed().title("Enchanter status")
                     .description(module.statusLine() + "\n" + module.setupLine());
+            }))
+            .then(literal("panel").executes(c -> {
+                boolean posted = DISCORD.openPanel(Panels.ENCHANTER);
+                c.getSource().getEmbed()
+                    .title(posted ? "Enchanter panel posted to Discord" : "Discord bot not running")
+                    .description(posted
+                        ? "In Discord: toggle XP/pause/auto-dc, set scan + XP settings (modals), Rescan, then Run. Variant/curse template choices stay on .enc commands."
+                        : "Enable the Discord bot to use the interactive enchanter panel.");
             }));
     }
 

@@ -494,29 +494,31 @@ public class ElytraPilot extends Module {
             return;
         }
 
-        // Overworld / End long-haul profile: firework-climb (nose up) to the ceiling, then glide (nose ≈ +2) back
-        // down, repeat. The ceiling is distance-scaled (climb only as high as the leg needs, capped) when flying to
-        // a target; otherwise the fixed glideCeilingY/glideFloorY band. NETHER never reaches here (handled above).
-        int ceilingY = cfg.glideCeilingY, floorY = cfg.glideFloorY;
+        // Overworld / End long-haul profile: ONE firework-climb (nose up) to the optimal cruise height for the leg,
+        // then a single continuous best-glide to the target — no sawtooth. The ceiling is distance-scaled (climb
+        // only as high as the leg needs, capped) when flying to a target; otherwise the fixed glideCeilingY band.
+        // NETHER never reaches here (handled above).
+        int ceilingY = cfg.glideCeilingY;
         if (cfg.cruiseScaleCeiling && cfg.hasTarget) {
             if (cruiseCeilingY == 0) computeCruiseBand(x, z); // size once per flight from the leg distance
             ceilingY = cruiseCeilingY;
-            floorY = cruiseFloorY;
         }
-        if (floorY < ceilingY) {
-            // Latch the glide at the coast point (ceiling - climbStopMargin), NOT the full ceiling: the climb stops
-            // firing climbStopMargin below the ceiling, so it never reaches the full ceiling and would otherwise
-            // bobble in that margin (frequent top-ups) instead of committing to the free glide down to the floor.
-            if (gliding && y <= floorY) gliding = false;                       // sank to the floor -> climb again
-            else if (!gliding && y >= ceilingY - cfg.climbStopMargin) gliding = true; // reached the coast band -> glide
-        } else {
-            gliding = y >= ceilingY;                            // degenerate band
+        double bps = speed * 20.0;
+        // Climb until we reach the coast band just under the ceiling, then glide and STAY gliding. The only thing
+        // that flips back to climbing is the undershoot backstop: mid-glide, the target is no longer reachable at
+        // the assumed glide ratio (a leg longer than the cap allows, or a worse-than-assumed glide) — top up the
+        // altitude. Normal flights never hit this; it just stops a misjudged leg from gliding into the ground.
+        if (!gliding) {
+            if (y >= ceilingY - cfg.climbStopMargin) gliding = true;           // reached the coast band -> commit to glide
+        } else if (cfg.hasTarget && y < ceilingY - cfg.climbStopMargin
+                   && horizDist(x, z, cfg.targetX, cfg.targetZ) > (y - cfg.approxGroundY) * cfg.cruiseGlideRatio) {
+            gliding = false;                                                   // would fall short -> climb to top up
         }
-        boolean overCap = speed * 20.0 >= cfg.maxSpeed; // 2b2t ~40 b/s limit — never boost past it
+        boolean overCap = bps >= cfg.cruiseSpeedHardMax; // hard speed cap — never thrust (or overspeed-glide) past it
         float pitch;
         boolean wantFire;
         if (gliding) {
-            pitch = cfg.glidePitch;   // shallow nose-down glide = max distance per altitude; no fireworks
+            pitch = glidePitchForSpeed(bps);   // best-glide angle, trimmed to hold the soft speed band; no fireworks
             wantFire = false;
         } else {
             // Firework climb — but coast (no boost) the last stretch into the ceiling instead of powering past it
@@ -549,16 +551,28 @@ public class ElytraPilot extends Module {
         }
     }
 
-    /** Size the distance-scaled overworld/End cruise band once per flight from the leg distance to the target. */
+    /** Size the single distance-scaled overworld/End climb-to-ceiling once per flight from the leg distance. */
     private void computeCruiseBand(double x, double z) {
         var cfg = CONFIG.client.extra.elytraPilot;
         double dist = horizDist(x, z, cfg.targetX, cfg.targetZ);
         int climb = (int) (dist / Math.max(1.0, cfg.cruiseGlideRatio));
         cruiseCeilingY = Math.min(cfg.approxGroundY + Math.max(200, climb), cfg.cruiseCeilingMaxY);
-        cruiseFloorY = Math.max(cfg.approxGroundY + 100, cruiseCeilingY - cfg.cruiseBandHeight);
-        if (cruiseFloorY >= cruiseCeilingY) cruiseFloorY = cruiseCeilingY - 50;
-        info("Cruise band sized for {}b leg: glide {}..{} (ratio {})",
-            (long) dist, cruiseFloorY, cruiseCeilingY, cfg.cruiseGlideRatio);
+        cruiseFloorY = cfg.approxGroundY;   // no sawtooth floor in the single-glide profile
+        info("Cruise sized for {}b leg: climb once to y{} then glide (ratio {})",
+            (long) dist, cruiseCeilingY, cfg.cruiseGlideRatio);
+    }
+
+    /**
+     * Glide pitch for the overworld/End cruise, trimmed to hold the managed speed band: nose down to regain speed
+     * below the soft floor, raise the nose to bleed above the soft ceiling, brake hard above the hard cap, else the
+     * best-glide pitch. (Minecraft pitch: positive = nose down.)
+     */
+    private float glidePitchForSpeed(double bps) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (bps >= cfg.cruiseSpeedHardMax) return -cfg.cruiseBrakePitch;                    // over hard cap -> brake
+        if (bps > cfg.cruiseSpeedSoftMax)  return cfg.glidePitch - cfg.cruiseGlideTrimDeg;  // too fast -> bleed
+        if (bps < cfg.cruiseSpeedSoftMin)  return cfg.glidePitch + cfg.cruiseGlideTrimDeg;  // too slow -> gain
+        return cfg.glidePitch;                                                              // in band -> best glide
     }
 
     /**

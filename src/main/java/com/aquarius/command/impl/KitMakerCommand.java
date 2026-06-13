@@ -11,10 +11,12 @@ import com.aquarius.discord.Embed;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
+import static com.aquarius.Globals.DISCORD;
 import static com.aquarius.Globals.MODULE;
 import static com.aquarius.command.brigadier.ToggleArgumentType.getToggle;
 import static com.aquarius.command.brigadier.ToggleArgumentType.toggle;
 import static com.aquarius.Globals.CONFIG;
+import com.aquarius.discord.Panels;
 
 public class KitMakerCommand extends Command {
     @Override
@@ -37,7 +39,8 @@ public class KitMakerCommand extends Command {
                 "maxkits <n>  (0 = until shulkers/materials run out)",
                 "pauseplayer on/off",
                 "autodc on/off  (disconnect when done)",
-                "status  (print the discovered layout)"
+                "status  (print the discovered layout)",
+                "panel  (post an interactive kit-maker panel to Discord: match dropdown + toggles + template/scan modals + run)"
             )
             .build();
     }
@@ -95,6 +98,14 @@ public class KitMakerCommand extends Command {
             .then(literal("status").executes(c -> {
                 c.getSource().getEmbed().title("Kit Maker status")
                     .description(MODULE.get(KitMaker.class).statusLine() + "\n" + MODULE.get(KitMaker.class).setupLine());
+            }))
+            .then(literal("panel").executes(c -> {
+                boolean posted = DISCORD.openPanel(Panels.KITMAKER);
+                c.getSource().getEmbed()
+                    .title(posted ? "Kit Maker panel posted to Discord" : "Discord bot not running")
+                    .description(posted
+                        ? "In Discord: pick the match mode (dropdown), toggle the options, set the template chest + scan settings (modals), then Run."
+                        : "Enable the Discord bot to use the interactive kit-maker panel.");
             }));
     }
 
