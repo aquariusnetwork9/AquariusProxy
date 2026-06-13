@@ -34,6 +34,7 @@ public class RegearCommand extends Command {
                 "on/off",
                 "name <text>  (custom name of the kit shulker)",
                 "color <name>/off  (match the kit shulker by colour instead)",
+                "contents on/off  (match the kit by its contents: elytra+fireworks+kit items, any name/colour)",
                 "scanradius <n>  (fallback: find a placed echest within n blocks)",
                 "armor on/off  (equip the kit's armor on finish)",
                 "totem on/off  (put a totem in the offhand on finish)",
@@ -60,6 +61,7 @@ public class RegearCommand extends Command {
             .then(literal("name").then(argument("text", word()).executes(c -> {
                 CONFIG.client.extra.regear.kitShulkerName = getString(c, "text");
                 CONFIG.client.extra.regear.matchByColor = false;
+                CONFIG.client.extra.regear.matchByContents = false;
                 c.getSource().getEmbed().title("Kit shulker name: " + getString(c, "text"))
                     .description("Matches a shulker whose custom name contains this (case-insensitive).");
             })))
@@ -71,9 +73,16 @@ public class RegearCommand extends Command {
                 .then(argument("name", word()).executes(c -> {
                     CONFIG.client.extra.regear.kitShulkerColor = getString(c, "name").toLowerCase();
                     CONFIG.client.extra.regear.matchByColor = true;
+                    CONFIG.client.extra.regear.matchByContents = false;
                     c.getSource().getEmbed().title("Kit shulker color: " + getString(c, "name"))
                         .description("Matches a " + getString(c, "name") + "_shulker_box.");
                 })))
+            .then(literal("contents").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.regear.matchByContents = getToggle(c, "toggle");
+                if (CONFIG.client.extra.regear.matchByContents) CONFIG.client.extra.regear.matchByColor = false;
+                c.getSource().getEmbed().title("Match kit by contents " + toggleStrCaps(CONFIG.client.extra.regear.matchByContents))
+                    .description("Identifies the kit shulker by what's inside it (elytra + fireworks required), ignoring name/colour. Picks the most complete flight kit.");
+            })))
             .then(literal("scanradius").then(argument("n", integer(1)).executes(c -> {
                 CONFIG.client.extra.regear.echestScanRadius = getInteger(c, "n");
                 c.getSource().getEmbed().title("Echest fallback scan radius: " + getInteger(c, "n") + " blocks");
@@ -135,7 +144,8 @@ public class RegearCommand extends Command {
             .primaryColor()
             .addField("Enabled", toggleStr(cfg.enabled))
             .addField("State", module.statusLine())
-            .addField("Kit shulker", cfg.matchByColor ? "color: " + cfg.kitShulkerColor : "name: " + cfg.kitShulkerName)
+            .addField("Kit shulker", cfg.matchByContents ? "by contents (elytra+fireworks)"
+                : cfg.matchByColor ? "color: " + cfg.kitShulkerColor : "name: " + cfg.kitShulkerName)
             .addField("Echest", "place own (fallback scan " + cfg.echestScanRadius + "b)")
             .addField("Gear up", "armor " + toggleStr(cfg.equipArmor) + ", totem " + toggleStr(cfg.offhandTotem))
             .addField("Return shulker", toggleStr(cfg.returnShulker))
