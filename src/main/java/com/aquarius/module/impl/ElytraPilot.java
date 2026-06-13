@@ -98,6 +98,8 @@ public class ElytraPilot extends Module {
     private int ticksSinceFire;
     private boolean jumpToggle;
     private boolean gliding;
+    private int cruiseCeilingY;        // distance-scaled overworld/End cruise band, sized once per flight (0 = unset)
+    private int cruiseFloorY;
     private boolean swapRedeploying;
     private int redeployCooldown;
     private int bounceStallTicks;
@@ -253,6 +255,8 @@ public class ElytraPilot extends Module {
         ticksSinceFire = Integer.MAX_VALUE / 2;
         jumpToggle = false;
         gliding = false;
+        cruiseCeilingY = 0;
+        cruiseFloorY = 0;
         swapRedeploying = false;
         redeployCooldown = 0;
         bounceStallTicks = 0;
@@ -505,12 +509,20 @@ public class ElytraPilot extends Module {
             return;
         }
 
-        // Overworld long-haul profile: firework-climb (nose up) to the ceiling, then glide (nose ≈ +2) to the floor.
-        if (cfg.glideFloorY < cfg.glideCeilingY) {
-            if (gliding && y <= cfg.glideFloorY) gliding = false;        // sank to the floor -> climb again
-            else if (!gliding && y >= cfg.glideCeilingY) gliding = true; // reached the ceiling -> glide
+        // Overworld / End long-haul profile: firework-climb (nose up) to the ceiling, then glide (nose ≈ +2) back
+        // down, repeat. The ceiling is distance-scaled (climb only as high as the leg needs, capped) when flying to
+        // a target; otherwise the fixed glideCeilingY/glideFloorY band. NETHER never reaches here (handled above).
+        int ceilingY = cfg.glideCeilingY, floorY = cfg.glideFloorY;
+        if (cfg.cruiseScaleCeiling && cfg.hasTarget) {
+            if (cruiseCeilingY == 0) computeCruiseBand(x, z); // size once per flight from the leg distance
+            ceilingY = cruiseCeilingY;
+            floorY = cruiseFloorY;
+        }
+        if (floorY < ceilingY) {
+            if (gliding && y <= floorY) gliding = false;        // sank to the floor -> climb again
+            else if (!gliding && y >= ceilingY) gliding = true; // reached the ceiling -> glide
         } else {
-            gliding = y >= cfg.glideCeilingY;                           // degenerate band
+            gliding = y >= ceilingY;                            // degenerate band
         }
         boolean overCap = speed * 20.0 >= cfg.maxSpeed; // 2b2t ~40 b/s limit — never boost past it
         float pitch;
@@ -521,10 +533,11 @@ public class ElytraPilot extends Module {
         } else {
             // Firework climb — but coast (no boost) the last stretch into the ceiling instead of powering past it
             // and wasting rockets; ease the nose toward glide as we approach. Conserves fireworks on long hauls.
-            boolean nearCeiling = y >= cfg.glideCeilingY - cfg.climbStopMargin;
+            boolean nearCeiling = y >= ceilingY - cfg.climbStopMargin;
             pitch = nearCeiling ? cfg.glidePitch : -cfg.climbPitch; // nose-up ascent = max height per firework
-            wantFire = !overCap && !nearCeiling
-                && (speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
+            // Patient zoom-climb cadence: one rocket, then coast up on momentum until the interval elapses. (The old
+            // `speed < minBoostSpeed` top-up fired almost every tick on the decelerating climb and burned the kit.)
+            wantFire = !overCap && !nearCeiling && ticksSinceFire >= cfg.cruiseClimbFireIntervalTicks;
         }
         if (terrainBlockedAhead(x, y, z, yaw, cfg.lookAheadBlocks)) { // pull up + boost over obstacles
             pitch = -cfg.climbPitch;
@@ -536,14 +549,28 @@ public class ElytraPilot extends Module {
         if (fire) noteRocketFired();
         submitInput(false, fire, yaw, pitch);
 
-        // Begin the final descent early enough to glide down to the target (lead scales with altitude).
+        // Begin the final descent early enough to glide down to the target (lead scales with altitude). Use the
+        // measured cruiseGlideRatio when scaling the ceiling so a high climb still starts the glide-in on time.
         if (cfg.hasTarget) {
-            double lead = Math.max(cfg.descendRadius, (y - cfg.approxGroundY) * cfg.glideRatio);
+            double gr = cfg.cruiseScaleCeiling ? cfg.cruiseGlideRatio : cfg.glideRatio;
+            double lead = Math.max(cfg.descendRadius, (y - cfg.approxGroundY) * gr);
             if (horizDist(x, z, cfg.targetX, cfg.targetZ) <= lead) {
                 phase = Phase.DESCEND;
                 info("Approaching target — descending");
             }
         }
+    }
+
+    /** Size the distance-scaled overworld/End cruise band once per flight from the leg distance to the target. */
+    private void computeCruiseBand(double x, double z) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        double dist = horizDist(x, z, cfg.targetX, cfg.targetZ);
+        int climb = (int) (dist / Math.max(1.0, cfg.cruiseGlideRatio));
+        cruiseCeilingY = Math.min(cfg.approxGroundY + Math.max(200, climb), cfg.cruiseCeilingMaxY);
+        cruiseFloorY = Math.max(cfg.approxGroundY + 100, cruiseCeilingY - cfg.cruiseBandHeight);
+        if (cruiseFloorY >= cruiseCeilingY) cruiseFloorY = cruiseCeilingY - 50;
+        info("Cruise band sized for {}b leg: glide {}..{} (ratio {})",
+            (long) dist, cruiseFloorY, cruiseCeilingY, cfg.cruiseGlideRatio);
     }
 
     /**

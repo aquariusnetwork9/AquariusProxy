@@ -95,6 +95,23 @@ final class FlightGear {
 
     // ---------------------------------------------------------------- gating + reporting
 
+    /**
+     * Required firework count for the current trip. When {@code tripEstimateFireworks} is on and this is an
+     * OVERWORLD-DIRECT trip (within the spawn region, not a nether destination), size it to the leg distance via
+     * the climb-glide economy: {@code ceil(dist / (climbAltPerRocket × cruiseGlideRatio) × fireworkSafetyMargin)},
+     * floored at {@code preflightMinFireworks}. Nether-routed legs aren't modeled — they keep the flat minimum.
+     */
+    static int requiredFireworks() {
+        var c = cfg();
+        int base = c.preflightMinFireworks;
+        if (!c.tripEstimateFireworks || !c.tripActive || c.tripTargetIsNether) return base;
+        double dist = Math.hypot(c.tripTargetX, c.tripTargetZ);
+        if (dist > c.spawnRegionRadius) return base;   // nether-routed transit: not modeled here
+        double perRocket = Math.max(1.0, c.climbAltPerRocket * c.cruiseGlideRatio);
+        int est = (int) Math.ceil(dist / perRocket * c.fireworkSafetyMargin);
+        return Math.max(base, est);
+    }
+
     /** All REQUIRED checks pass (the sword/axe is optional and never gates). */
     static boolean ready() {
         var c = cfg();
@@ -102,7 +119,7 @@ final class FlightGear {
             && armorPiecesAnywhere() >= c.preflightMinArmor
             && totemCount() >= c.preflightMinTotems
             && (!c.preflightOffhandTotem || offhandTotem())
-            && fireworkCount() >= c.preflightMinFireworks
+            && fireworkCount() >= requiredFireworks()
             && egapCount() >= c.preflightMinEgaps
             && (!c.preflightRequirePickaxe || hasPickaxe())
             && echestCount() >= c.preflightMinEchests;
@@ -116,7 +133,9 @@ final class FlightGear {
             (elytraWorn() ? "elytra" : "NO elytra") + " + " + armorPiecesAnywhere() + "/" + c.preflightMinArmor + " armor");
         mark(b, "totems", totemCount() >= c.preflightMinTotems && (!c.preflightOffhandTotem || offhandTotem()),
             totemCount() + "/" + c.preflightMinTotems + (offhandTotem() ? ", offhand ok" : ", offhand EMPTY"));
-        mark(b, "fireworks", fireworkCount() >= c.preflightMinFireworks, fireworkCount() + "/" + c.preflightMinFireworks);
+        int needFw = requiredFireworks();
+        mark(b, "fireworks", fireworkCount() >= needFw, fireworkCount() + "/" + needFw
+            + (needFw > c.preflightMinFireworks ? " (trip estimate)" : ""));
         mark(b, "egaps", egapCount() >= c.preflightMinEgaps, egapCount() + "/" + c.preflightMinEgaps);
         mark(b, "pickaxe", !c.preflightRequirePickaxe || hasPickaxe(), hasPickaxe() ? "ok" : "missing");
         mark(b, "weapon (opt)", true, hasWeapon() ? "ok" : "MISSING (optional)");
@@ -140,7 +159,7 @@ final class FlightGear {
         if (isElytra(candidate))   return !elytraAnywhere();
         if (isOtherArmor(candidate)) return armorPiecesAnywhere() < c.preflightMinArmor;
         if (isTotem(candidate))    return totemCount() < c.preflightMinTotems;
-        if (isFirework(candidate)) return fireworkCount() < c.preflightMinFireworks;
+        if (isFirework(candidate)) return fireworkCount() < requiredFireworks();
         if (isEgap(candidate))     return egapCount() < c.preflightMinEgaps;
         if (isPickaxe(candidate))  return c.preflightRequirePickaxe && !hasPickaxe();
         if (isWeapon(candidate))   return c.preflightWantWeapon && !hasWeapon();

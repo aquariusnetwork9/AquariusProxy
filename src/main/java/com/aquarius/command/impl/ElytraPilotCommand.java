@@ -67,6 +67,14 @@ public class ElytraPilotCommand extends Command {
                 "baritoneland <on/off> (walk the last leg with Baritone if covered/indoors/underground)",
                 "climbmargin <n>       (stop boosting this many blocks below the ceiling; saves fireworks)",
                 "landcut <n>           (cut the glide + drop in within this many blocks of the ground)",
+                "cruisescale <on/off>  (overworld/End: distance-scale the cruise ceiling — climb only as high as the leg needs, then glide)",
+                "cruiseglide <r>       (measured glide ratio; sizes the climb, descent lead, and firework estimate)",
+                "cruiseceil <y>        (hard cap on the distance-scaled cruise altitude; total rockets are cap-independent)",
+                "cruiseband <n>        (sawtooth amplitude: glide this far below the ceiling before climbing again)",
+                "climbfire <ticks>     (patient climb cadence — one rocket then coast; ~120 = 6s, matches efficient manual flight)",
+                "altperrocket <n>      (blocks of altitude per flight-3 rocket at climbpitch; feeds the firework estimate)",
+                "estimatefw <on/off>   (size the pre-flight firework requirement to the overworld-direct trip distance)",
+                "fwmargin <m>          (safety multiplier on the estimated rocket count)",
                 "trip <x> <z> [y]      (plan a journey to OVERWORLD coords: direct if within ~100k of spawn, else via the nether)",
                 "trip nether <x> <z>   (destination IS in the nether: enter a portal, fly to the exact coords, land there)",
                 "trip highways <on/off>(nether transit leg: e-bounce a highway vs fly open-nether straight to the target)",
@@ -256,6 +264,44 @@ public class ElytraPilotCommand extends Command {
             .then(literal("landcut").then(argument("blocks", integer()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.landCutClearance = getInteger(c, "blocks");
                 c.getSource().getEmbed().title("ElytraPilot land-cut clearance = " + CONFIG.client.extra.elytraPilot.landCutClearance);
+            })))
+            .then(literal("cruisescale").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.cruiseScaleCeiling = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("ElytraPilot distance-scaled cruise ceiling " + toggleStrCaps(CONFIG.client.extra.elytraPilot.cruiseScaleCeiling))
+                    .description("Overworld/End: climb only as high as the leg needs (dist/glideratio, capped), then glide in. Off = fixed ceiling/floor band.");
+            })))
+            .then(literal("cruiseglide").then(argument("ratio", doubleArg(0.5)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.cruiseGlideRatio = getDouble(c, "ratio");
+                c.getSource().getEmbed().title("ElytraPilot cruise glide ratio = " + CONFIG.client.extra.elytraPilot.cruiseGlideRatio
+                    + " (sizes the climb, the descent lead, and the firework estimate)");
+            })))
+            .then(literal("cruiseceil").then(argument("y", integer()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.cruiseCeilingMaxY = getInteger(c, "y");
+                c.getSource().getEmbed().title("ElytraPilot cruise ceiling cap = y" + CONFIG.client.extra.elytraPilot.cruiseCeilingMaxY
+                    + " (total rockets are cap-independent; this only bounds altitude/fall risk)");
+            })))
+            .then(literal("cruiseband").then(argument("blocks", integer()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.cruiseBandHeight = getInteger(c, "blocks");
+                c.getSource().getEmbed().title("ElytraPilot cruise sawtooth band = " + CONFIG.client.extra.elytraPilot.cruiseBandHeight + " blocks below the ceiling");
+            })))
+            .then(literal("climbfire").then(argument("ticks", integer(1)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.cruiseClimbFireIntervalTicks = getInteger(c, "ticks");
+                c.getSource().getEmbed().title("ElytraPilot patient climb cadence = " + CONFIG.client.extra.elytraPilot.cruiseClimbFireIntervalTicks
+                    + " ticks/rocket (" + String.format("%.1f", CONFIG.client.extra.elytraPilot.cruiseClimbFireIntervalTicks / 20.0) + "s)");
+            })))
+            .then(literal("altperrocket").then(argument("blocks", doubleArg(1)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.climbAltPerRocket = getDouble(c, "blocks");
+                c.getSource().getEmbed().title("ElytraPilot altitude per rocket = " + CONFIG.client.extra.elytraPilot.climbAltPerRocket
+                    + "b (flight-3 @ climbpitch; feeds the firework estimate)");
+            })))
+            .then(literal("estimatefw").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.tripEstimateFireworks = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("ElytraPilot trip firework estimate " + toggleStrCaps(CONFIG.client.extra.elytraPilot.tripEstimateFireworks))
+                    .description("On = size the pre-flight firework requirement to the (overworld-direct) trip distance; off = flat 1-stack minimum.");
+            })))
+            .then(literal("fwmargin").then(argument("mult", doubleArg(1.0)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.fireworkSafetyMargin = getDouble(c, "mult");
+                c.getSource().getEmbed().title("ElytraPilot firework safety margin = " + CONFIG.client.extra.elytraPilot.fireworkSafetyMargin + "×");
             })))
             .then(literal("netherceiling").then(argument("y", integer()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.netherCeilingY = getInteger(c, "y");
