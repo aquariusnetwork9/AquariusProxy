@@ -511,6 +511,14 @@ public final class Config {
                 /** Whether the trip planner is actively running a multi-leg journey. */
                 public boolean tripActive = false;
 
+                /**
+                 * Pre-flight gear-up: if the bot has no elytra worn when a trip starts, first run Regear to pull
+                 * the flight kit from a nearby ender chest (equip elytra + armour + totem) before flying. Needs a
+                 * kit shulker named per {@code regear.kitShulkerName} in the echest, containing an elytra +
+                 * fireworks (+ optional armour/totems). Off → a naked bot just aborts with "no worn elytra".
+                 */
+                public boolean tripGearUp = true;
+
                 /** Final destination of the trip (overworld coordinates). */
                 public int tripTargetX = 0;
                 public int tripTargetY = 64;
@@ -1172,6 +1180,13 @@ public final class Config {
 
                 /** After emptying the kit, equip the best matching armour piece into each empty armour slot. */
                 public boolean equipArmor = true;
+
+                /**
+                 * After emptying the kit, equip an ELYTRA into the chest slot (instead of a chestplate) — for
+                 * flight gear-up. The ElytraTrip pre-flight gear-up forces this on; it's off by default so a
+                 * normal combat regear still equips a chestplate.
+                 */
+                public boolean equipElytra = false;
 
                 /** After emptying the kit, move a totem of undying into the offhand (if one was in the kit). */
                 public boolean offhandTotem = true;
