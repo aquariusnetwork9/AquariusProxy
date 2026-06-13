@@ -368,11 +368,19 @@ public class Regear extends AbstractFieldModule {
     /** Equip the kit's armour into empty armour slots, then a totem into the offhand. */
     private void tickGearUp() {
         var cfg = CONFIG.client.extra.regear;
-        if (cfg.equipArmor && gearArmorIdx < ARMOR_EQUIP.length) {
+        if ((cfg.equipArmor || cfg.equipElytra) && gearArmorIdx < ARMOR_EQUIP.length) {
             if (inventoryBusy()) { timer = cfg.actionDelayTicks; return; }
-            if (CACHE.getPlayerCache().getEquipment(ARMOR_EQUIP[gearArmorIdx]) == Container.EMPTY_STACK) { // only fill empty slots
-                final int idx = gearArmorIdx;
-                int piece = findInInv(s -> { String n = itemName(s); return n != null && n.endsWith(ARMOR_SUFFIX[idx]); });
+            final int idx = gearArmorIdx;
+            // Chest slot in flight gear-up: equip an ELYTRA (not a chestplate), replacing a chestplate if one is
+            // worn. Every other slot: the best matching armour piece into an empty slot, as usual.
+            final boolean chestElytra = idx == 1 && cfg.equipElytra;
+            var worn = CACHE.getPlayerCache().getEquipment(ARMOR_EQUIP[idx]);
+            boolean wornIsElytra = worn != Container.EMPTY_STACK && ItemRegistry.REGISTRY.get(worn.getId()) == ItemRegistry.ELYTRA;
+            boolean needFill = chestElytra ? !wornIsElytra : (cfg.equipArmor && worn == Container.EMPTY_STACK);
+            if (needFill) {
+                int piece = chestElytra
+                    ? findInInv(s -> { String n = itemName(s); return n != null && n.equals("elytra"); })
+                    : findInInv(s -> { String n = itemName(s); return n != null && n.endsWith(ARMOR_SUFFIX[idx]); });
                 if (piece != -1) {
                     INVENTORY.submit(InventoryActionRequest.builder().owner(this)
                         .actions(InventoryActionMacros.swapSlots(piece, 5 + idx)).priority(ACTION_PRIORITY).build()); // armour slots 5..8

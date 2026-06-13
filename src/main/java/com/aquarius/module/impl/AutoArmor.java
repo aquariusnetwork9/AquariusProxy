@@ -54,6 +54,12 @@ public class AutoArmor extends Module {
             final EquipmentSlot equipmentSlot = ARMOR_SLOTS.get(i);
             // identify if we have the best possible armor equipped for the slot
             final ItemStack currentItemStack = CACHE.getPlayerCache().getEquipment(equipmentSlot);
+            // NEVER strip a worn elytra for a chestplate — the elytra is worn on purpose (flight). An elytra has
+            // no armour material, so without this guard AutoArmor would swap in any chestplate and ground the bot.
+            if (equipmentSlot == EquipmentSlot.CHESTPLATE && currentItemStack != Container.EMPTY_STACK
+                && ItemRegistry.REGISTRY.get(currentItemStack.getId()) == ItemRegistry.ELYTRA) {
+                continue;
+            }
             final int invSlotId = ARMOR_SLOTS.indexOf(equipmentSlot) + 5;
             final BestArmorData bestArmorInInventory = getBestArmorInInventory(equipmentSlot);
             if (bestArmorInInventory == null) continue;

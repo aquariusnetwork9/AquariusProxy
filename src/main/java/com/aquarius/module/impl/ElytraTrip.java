@@ -1,13 +1,16 @@
 package com.aquarius.module.impl;
 
 import com.github.rfresh2.EventConsumer;
+import com.aquarius.cache.data.inventory.Container;
 import com.aquarius.event.client.ClientBotTick;
 import com.aquarius.event.client.ClientDeathEvent;
 import com.aquarius.feature.player.World;
 import com.aquarius.mc.block.BlockRegistry;
 import com.aquarius.mc.dimension.DimensionRegistry;
+import com.aquarius.mc.item.ItemRegistry;
 import com.aquarius.module.api.Module;
 import com.aquarius.util.config.Config.Client.Extra.ElytraPilot.HighwayDir;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
 
 import java.util.List;
 
@@ -45,6 +48,7 @@ public class ElytraTrip extends Module {
 
     private enum Phase {
         IDLE,
+        GEAR_UP,           // naked at the start: Regear the flight kit from a nearby ender chest, then fly
         OW_DIRECT,         // destination within the spawn region: fly the overworld straight there
         ENTER_NETHER,      // walk into the nearest portal, wait for the nether
         NETHER_HIGHWAY,    // e-bounce along the nearest highway toward the target's nether coords
@@ -59,6 +63,7 @@ public class ElytraTrip extends Module {
     private static final int THROTTLE_TICKS = 20;        // run the planner ~once a second
     private static final int PORTAL_GUARD_TICKS = 3600;  // ~3 min on a portal leg before giving up
     private static final int HIGHWAY_GUARD_TICKS = 24000;// ~20 min on a single highway leg before giving up
+    private static final int GEAR_GUARD_TICKS = 3600;    // ~3 min for the pre-flight gear-up before giving up
     private static final double HW_S = 0.7071067811865476; // 1/sqrt(2)
 
     private Phase phase = Phase.IDLE;
@@ -66,6 +71,8 @@ public class ElytraTrip extends Module {
     private int guardTicks;
     private int graceTicks;   // post-portal wait before starting a nether flight leg (chunks stream in first)
     private boolean legStarted;
+    private boolean gearStarted;      // GEAR_UP: have we kicked off Regear yet
+    private boolean savedEquipElytra; // GEAR_UP: prior regear.equipElytra, restored when gear-up ends
 
     @Override
     public boolean enabledSetting() {
@@ -87,6 +94,22 @@ public class ElytraTrip extends Module {
 
     @Override
     public void onEnable() {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        guardTicks = 0;
+        graceTicks = 0;
+        legStarted = false;
+        gearStarted = false;
+        // Naked? Gear up from the ender chest before flying (Regear pulls the flight kit). Otherwise start flying.
+        if (cfg.tripGearUp && !elytraWorn()) {
+            phase = Phase.GEAR_UP;
+            info("Trip: no elytra worn — gearing up from the ender chest first.");
+            return;
+        }
+        decideStartPhase();
+    }
+
+    /** Choose the first flight/portal leg from the destination (called at start, and after a gear-up). */
+    private void decideStartPhase() {
         var cfg = CONFIG.client.extra.elytraPilot;
         guardTicks = 0;
         graceTicks = 0;
@@ -115,6 +138,12 @@ public class ElytraTrip extends Module {
     public void onDisable() {
         phase = Phase.IDLE;
         legStarted = false;
+        if (gearStarted) {                       // cancelled mid gear-up: stop Regear + restore its config
+            gearStarted = false;
+            restoreRegearConfig();
+            CONFIG.client.extra.regear.enabled = false;
+            MODULE.get(Regear.class).syncEnabledFromConfig();
+        }
         elytra().endFlight();
         BARITONE.stop();
     }
@@ -125,6 +154,7 @@ public class ElytraTrip extends Module {
         try {
             var cfg = CONFIG.client.extra.elytraPilot;
             switch (phase) {
+                case GEAR_UP          -> tickGearUp();
                 case OW_DIRECT        -> tickOwDirect(cfg.tripTargetX, cfg.tripTargetZ);
                 case ENTER_NETHER     -> tickEnterNether();
                 case NETHER_HIGHWAY   -> tickNetherHighway(cfg);
@@ -140,6 +170,65 @@ public class ElytraTrip extends Module {
     }
 
     // --- legs ---
+
+    /**
+     * Pre-flight gear-up: the bot has no elytra worn, so run Regear to pull the flight kit from a nearby ender
+     * chest (forcing the elytra into the chest slot), wait until it's geared (elytra worn + fireworks in
+     * inventory), then hand off to the normal flight leg. Aborts the trip if Regear can't kit up.
+     */
+    private void tickGearUp() {
+        var rg = MODULE.get(Regear.class);
+        if (elytraWorn() && hasFireworks()) {              // geared — go fly
+            if (gearStarted) { restoreRegearConfig(); gearStarted = false; info("Geared up — starting the trip."); }
+            decideStartPhase();
+            return;
+        }
+        if (!gearStarted) {                                // kick off Regear, forcing the elytra into the chest
+            savedEquipElytra = CONFIG.client.extra.regear.equipElytra;
+            CONFIG.client.extra.regear.equipElytra = true;
+            CONFIG.client.extra.regear.enabled = true;
+            rg.syncEnabledFromConfig();
+            gearStarted = true;
+            guardTicks = 0;
+            info("Trip gear-up: running Regear to pull the flight kit from the ender chest.");
+            return;
+        }
+        if (rg.isPaused()) {                               // Regear couldn't kit up (no echest / kit shulker)
+            restoreRegearConfig(); gearStarted = false;
+            abort("gear-up failed — Regear could not kit up (check the ender chest + a kit shulker named per `regear name`)");
+            return;
+        }
+        if (rg.isComplete()) {                             // Regear finished but the kit lacked something we need
+            restoreRegearConfig(); gearStarted = false;
+            if (!elytraWorn())  { abort("gear-up finished but no elytra equipped — add an elytra to the kit shulker"); return; }
+            if (!hasFireworks()) { abort("gear-up finished but no fireworks — add firework rockets to the kit shulker"); return; }
+            decideStartPhase();
+            return;
+        }
+        if ((guardTicks += THROTTLE_TICKS) > GEAR_GUARD_TICKS) {
+            restoreRegearConfig(); gearStarted = false;
+            abort("gear-up timed out");
+        }
+    }
+
+    private void restoreRegearConfig() {
+        CONFIG.client.extra.regear.equipElytra = savedEquipElytra;
+    }
+
+    private boolean elytraWorn() {
+        var chest = CACHE.getPlayerCache().getEquipment(EquipmentSlot.CHESTPLATE);
+        return chest != Container.EMPTY_STACK && ItemRegistry.REGISTRY.get(chest.getId()) == ItemRegistry.ELYTRA;
+    }
+
+    private boolean hasFireworks() {
+        var inv = CACHE.getPlayerCache().getPlayerInventory();
+        for (int i = 9; i <= 44; i++) {
+            if (inv.size() <= i) break;
+            var s = inv.get(i);
+            if (s != Container.EMPTY_STACK && ItemRegistry.REGISTRY.get(s.getId()) == ItemRegistry.FIREWORK_ROCKET) return true;
+        }
+        return false;
+    }
 
     private void tickOwDirect(int tx, int tz) {
         if (!legStarted) { startFlightTo(tx, tz); return; }

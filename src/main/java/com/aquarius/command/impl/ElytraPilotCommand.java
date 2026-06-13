@@ -325,6 +325,11 @@ public class ElytraPilotCommand extends Command {
                     CONFIG.client.extra.elytraPilot.tripUseHighways = getToggle(c, "toggle");
                     c.getSource().getEmbed().title("ElytraPilot trip highways " + toggleStrCaps(CONFIG.client.extra.elytraPilot.tripUseHighways));
                 })))
+                .then(literal("gearup").then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.tripGearUp = getToggle(c, "toggle");
+                    c.getSource().getEmbed().title("ElytraPilot trip gear-up " + toggleStrCaps(CONFIG.client.extra.elytraPilot.tripGearUp))
+                        .description("When on, a naked bot first Regears the flight kit (elytra+fireworks+armor+totem) from a nearby ender chest before flying.");
+                })))
                 .then(literal("off").executes(c -> {
                     CONFIG.client.extra.elytraPilot.tripActive = false;
                     MODULE.get(ElytraTrip.class).syncEnabledFromConfig();

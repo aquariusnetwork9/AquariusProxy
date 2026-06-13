@@ -75,6 +75,11 @@ public class RegearCommand extends Command {
                 CONFIG.client.extra.regear.equipArmor = getToggle(c, "toggle");
                 c.getSource().getEmbed().title("Equip armor " + toggleStrCaps(CONFIG.client.extra.regear.equipArmor));
             })))
+            .then(literal("elytra").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.regear.equipElytra = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("Equip elytra (chest slot) " + toggleStrCaps(CONFIG.client.extra.regear.equipElytra))
+                    .description("Equips an elytra into the chest slot instead of a chestplate (for flight). The ElytraTrip pre-flight gear-up forces this on automatically.");
+            })))
             .then(literal("totem").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.regear.offhandTotem = getToggle(c, "toggle");
                 c.getSource().getEmbed().title("Offhand totem " + toggleStrCaps(CONFIG.client.extra.regear.offhandTotem));
