@@ -80,6 +80,14 @@ public class ElytraTrip extends Module {
     public List<EventConsumer<?>> registerEvents() {
         return List.of(
             of(ClientBotTick.class, this::onTick),
+            of(ClientBotTick.Starting.class, e -> {
+                // Re-arm an armed trip when the bot (re)enters the world: a trip set while logged out — or
+                // interrupted by a disconnect — begins/resumes on login. Toggleable; off → a connect leaves it idle.
+                if (CONFIG.client.extra.elytraPilot.tripActive && CONFIG.client.extra.elytraPilot.tripStartOnConnect) {
+                    info("Bot entered the world with an armed trip — starting it.");
+                    armTrip();
+                } else { phase = Phase.IDLE; legStarted = false; }
+            }),
             of(ClientBotTick.Stopped.class, e -> { phase = Phase.IDLE; legStarted = false; }),
             of(ClientDeathEvent.class, e -> {
                 // A death invalidates everything (gear dropped, respawned at bed/spawn) — never march on.
@@ -94,6 +102,12 @@ public class ElytraTrip extends Module {
 
     @Override
     public void onEnable() {
+        armTrip();
+    }
+
+    /** Initialise the trip: gear up first if the pre-flight checklist isn't satisfied, else pick the first leg.
+     *  Called on enable (Launch / {@code /fly trip}) and again on world-enter when {@code tripStartOnConnect}. */
+    private void armTrip() {
         var cfg = CONFIG.client.extra.elytraPilot;
         guardTicks = 0;
         graceTicks = 0;
