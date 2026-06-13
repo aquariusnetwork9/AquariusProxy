@@ -439,15 +439,27 @@ public class ElytraPilot extends Module {
                 return;
             }
         }
-        ensureFireworkHeld();
+        var pc = CACHE.getPlayerCache();
+        boolean onGround = BOT.isOnGround();
+        // Force-deploy the instant we leave the ground, then fire a rocket nosed up — punch into the air hard
+        // instead of relying on a bare hop that just falls back down (this is what gets the bot off flat ground
+        // or out of a lava pool, the same aggressive launch the lost-flight recovery uses).
+        if (!onGround && !BOT.isFallFlying() && redeployCooldown <= 0) {
+            sendStartFallFlying();
+            redeployCooldown = cfg.bounceRedeployTicks;
+        }
+        boolean fire = BOT.isFallFlying() && heldIsFirework() && ticksSinceFire >= 5 && setbackHoldTicks <= 0;
+        if (!heldIsFirework()) ensureFireworkHeld();
+        if (fire) noteRocketFired();
         boolean jump;
         if (cfg.doubleJumpTakeoff) {
-            jump = jumpToggle;          // alternate press/release so a fresh jump edge lands while airborne
+            jump = jumpToggle || onGround;   // alternate so a fresh jump edge lands while airborne; keep hopping on the ground
             jumpToggle = !jumpToggle;
         } else {
             jump = true;                // assume already airborne (ledge/tower) — just deploy
         }
-        submitInput(jump, false, CACHE.getPlayerCache().getYaw(), 0f);
+        float pitch = BOT.isFallFlying() ? -35f : 0f;   // once gliding, nose up so the rocket climbs us out
+        submitMove(false, jump, false, fire, pc.getYaw(), pitch);
         if (++takeoffTicks > TAKEOFF_TIMEOUT_TICKS) {
             // No headroom here (pocket/overhang)? Walk toward open ground and retry before giving up —
             // but only if an elytra is actually worn (walking can't fix a missing elytra).
@@ -1715,53 +1727,52 @@ public class ElytraPilot extends Module {
     }
 
     /**
-     * Called from CRUISE/DESCEND when the bot is unexpectedly not fall-flying. Bounded: after
-     * {@code stallRecoverTicks} of failed re-deploys it escalates to a fresh ground TAKEOFF (whose own timeout
-     * aborts the flight), and after {@code maxGroundRecoveries} episodes it aborts outright — the first live
-     * nether trip died in a silent 2.5-minute redeploy-vs-server fight on the ground; never again.
+     * Called from CRUISE/DESCEND when the bot has fallen out of flight (onto land or into lava, or been knocked
+     * down). Response: relaunch HARD, immediately, in place — hop off the ground / swim up out of the lava,
+     * deploy the elytra the instant we leave the ground, and fire a rocket nosed up to punch back into the sky.
+     * This clears a pit or a lava pool in ~1-2s, far faster than walking, and is the behaviour to want over the
+     * old "stand and pulse-jump with no thrust" (which could never leave flat ground or lava and just burned
+     * totems). Lava/fire damage during the brief relaunch is covered by the totem-pop abort+logout backstop.
+     * Only when we genuinely cannot get airborne here after {@code stallRecoverTicks} (a sealed pocket / no
+     * headroom) do we fall back to a bounded Baritone walkout.
      */
     private void handleLostFlight(double x, double y, double z) {
         var cfg = CONFIG.client.extra.elytraPilot;
-        // Taking damage while grounded (lava/fire/mobs) — do NOT stand here methodically redeploying; that
-        // burned 11 totems in 11 seconds and killed the bot. Flee NOW (Baritone paths around lava).
-        if (hpDropped && cfg.hasTarget && walkoutAttempts < MAX_WALKOUT_ATTEMPTS) {
-            enterWalkout("taking damage while grounded at " + (int) x + ", " + (int) y + ", " + (int) z);
+        if (wornElytraDurability() <= 2) {                       // a worn-out elytra can't relaunch
+            if (cfg.swapElytra && hasSpareElytra()) { enterSwap(); return; }
+            phase = Phase.EMERGENCY;
             return;
         }
         if (!lostLogged) {
             lostLogged = true;
-            if (++lostEpisodes > cfg.maxGroundRecoveries) {
-                // Rapid-fire flight loss = this spot is unflyable (pocket/overhang) — redeploying here can never
-                // work. Walk toward open ground and retry (bounded), instead of giving up in place.
-                if (cfg.hasTarget && walkoutAttempts < MAX_WALKOUT_ATTEMPTS) {
-                    enterWalkout("kept losing flight at " + (int) x + ", " + (int) y + ", " + (int) z);
-                } else {
-                    abort("kept losing flight (" + lostEpisodes + " episodes in quick succession) at "
-                        + (int) x + ", " + (int) y + ", " + (int) z);
-                }
-                return;
-            }
-            warn("Lost flight at {}, {}, {} (episode {}/{}) — redeploying",
-                (int) x, (int) y, (int) z, lostEpisodes, cfg.maxGroundRecoveries);
+            warn("Lost flight at {}, {}, {} — relaunching hard", (int) x, (int) y, (int) z);
         }
+        boolean onGround = BOT.isOnGround();
+        boolean inLava = BOT.isTouchingLava();
+        // Deploy the instant we are airborne (a fresh jump edge auto-deploys, but force it too so a held jump
+        // or a lava-float still engages the wing).
+        if (!onGround && !BOT.isFallFlying() && redeployCooldown <= 0) {
+            sendStartFallFlying();
+            redeployCooldown = cfg.bounceRedeployTicks;
+        }
+        // Fire a rocket the moment we are gliding — angled well up, the thrust lifts us clear of the pit/lava.
+        // Modest spacing so we punch out hard without dumping the whole stack if we keep clipping back down.
+        boolean fire = BOT.isFallFlying() && heldIsFirework() && ticksSinceFire >= 5 && setbackHoldTicks <= 0;
+        if (!heldIsFirework()) ensureFireworkHeld();
+        if (fire) noteRocketFired();
+        jumpToggle = !jumpToggle;
+        boolean jump = onGround || inLava || jumpToggle;          // keep hopping/swimming up until airborne
+        submitMove(false, jump, false, fire, desiredYaw(x, z), -35f);
+
+        // Genuinely sealed in (no headroom): walk to open ground and retry, bounded; then abort.
         if (++lostFlightTicks > cfg.stallRecoverTicks) {
-            warn("Could not re-deploy in {} ticks — attempting a fresh ground takeoff", cfg.stallRecoverTicks);
-            inGameAlertActivePlayer("<yellow>ElytraPilot: grounded mid-flight — attempting a fresh takeoff");
             lostFlightTicks = 0;
-            takeoffTicks = 0;
-            jumpToggle = false;
-            phase = Phase.TAKEOFF;   // its own timeout aborts ("could not take off") if this fails too
-            return;
+            if (cfg.hasTarget && walkoutAttempts < MAX_WALKOUT_ATTEMPTS) {
+                enterWalkout("can't relaunch here at " + (int) x + ", " + (int) y + ", " + (int) z);
+            } else {
+                abort("could not relaunch at " + (int) x + ", " + (int) y + ", " + (int) z);
+            }
         }
-        if (wornElytraDurability() > 2) {            // still wearing a working elytra — just re-deploy
-            jumpToggle = !jumpToggle;
-            boolean fire = BOT.isFallFlying() && heldIsFirework();
-            submitInput(jumpToggle, fire, desiredYaw(x, z), 0f);
-            if (fire) noteRocketFired();
-            return;
-        }
-        if (cfg.swapElytra && hasSpareElytra()) { enterSwap(); return; }
-        phase = Phase.EMERGENCY;
     }
 
     private void enterSwap() {
