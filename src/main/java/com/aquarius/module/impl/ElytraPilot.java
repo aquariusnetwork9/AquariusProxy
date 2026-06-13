@@ -445,7 +445,8 @@ public class ElytraPilot extends Module {
         jumpToggle = !jumpToggle;
         boolean jump = onGround || inLava || jumpToggle;   // keep hopping / swimming up until airborne
         float pitch = BOT.isFallFlying() ? cfg.relaunchPitch : 0f;
-        submitMove(false, jump, false, fire, pc.getYaw(), pitch);
+        // Forward + sprint toward the target, shallow nose-up: drive onto the path, don't jam straight up.
+        submitMove(true, jump, true, fire, desiredYaw(pc.getX(), pc.getZ()), pitch);
         takeoffTicks++;
     }
 
@@ -1736,7 +1737,9 @@ public class ElytraPilot extends Module {
         if (fire) noteRocketFired();
         jumpToggle = !jumpToggle;
         boolean jump = onGround || inLava || jumpToggle;          // keep hopping / swimming up until airborne
-        submitMove(false, jump, false, fire, desiredYaw(x, z), cfg.relaunchPitch);
+        // Drive FORWARD toward the target (sprint), shallow nose-up: the redeploy+firework slides the bot out
+        // from under any rock ceiling and back onto its path, rather than jamming straight up into the roof.
+        submitMove(true, jump, true, fire, desiredYaw(x, z), cfg.relaunchPitch);
     }
 
     private void enterSwap() {
