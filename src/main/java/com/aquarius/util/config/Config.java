@@ -648,6 +648,17 @@ public final class Config {
                 /** Brake until horizontal speed (blocks/sec) is below this before the flutter descent starts. */
                 public double landBrakeSpeed = 6.0;
 
+                /**
+                 * Over the target but carrying excess altitude: above this soft-floor Y, dive HARD with a yaw spin
+                 * (ignoring the speed cap) to shed altitude fast — there is no terrain above the y320 build limit to
+                 * hit, so the high descent is free to be aggressive. At/below it, the speed-capped controlled descent
+                 * + helicopter landing take over. Set comfortably above max terrain (default 380).
+                 */
+                public int landDiveFloorY = 380;
+
+                /** Nose-down pitch (degrees, positive = down) for the aggressive spiral dive above {@link #landDiveFloorY}. */
+                public float landDivePitch = 70.0f;
+
                 /** Abort the flight after more than {@code totemPopLimit} totem pops (each pop = a lethal hit). */
                 public boolean totemPopAbort = true;
 
@@ -1274,8 +1285,10 @@ public final class Config {
                 /** Put the emptied shulker back into the ender chest buffer (vs. leaving it carried). */
                 public boolean returnShulker = true;
 
-                /** Soft-pause the cycle while a non-self player is within {@link #playerPauseRange} blocks. */
-                public boolean pauseOnPlayer = true;
+                /** Soft-pause the cycle while a non-self player is within {@link #playerPauseRange} blocks. Default
+                 *  OFF — at 2b2t spawn there's almost always someone within range, which would stall the gear-up /
+                 *  relocation indefinitely; turn it on for solo-field resupply if you want the safety pause. */
+                public boolean pauseOnPlayer = false;
                 public double playerPauseRange = 48.0;
 
                 /** One-shot: toggle the module off after a successful regear (vs. staying enabled / idle). */

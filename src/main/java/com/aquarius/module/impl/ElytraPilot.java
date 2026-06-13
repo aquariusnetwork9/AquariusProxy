@@ -519,8 +519,11 @@ public class ElytraPilot extends Module {
             floorY = cruiseFloorY;
         }
         if (floorY < ceilingY) {
-            if (gliding && y <= floorY) gliding = false;        // sank to the floor -> climb again
-            else if (!gliding && y >= ceilingY) gliding = true; // reached the ceiling -> glide
+            // Latch the glide at the coast point (ceiling - climbStopMargin), NOT the full ceiling: the climb stops
+            // firing climbStopMargin below the ceiling, so it never reaches the full ceiling and would otherwise
+            // bobble in that margin (frequent top-ups) instead of committing to the free glide down to the floor.
+            if (gliding && y <= floorY) gliding = false;                       // sank to the floor -> climb again
+            else if (!gliding && y >= ceilingY - cfg.climbStopMargin) gliding = true; // reached the coast band -> glide
         } else {
             gliding = y >= ceilingY;                            // degenerate band
         }
@@ -1389,7 +1392,16 @@ public class ElytraPilot extends Module {
         // Over the landing spot: drop straight in.
         if (horiz <= cfg.arriveRadius) {
             if (clearance <= 16) { phase = Phase.LAND; landTicks = 0; info("Over landing spot — landing"); return; }
-            submitInput(false, false, yaw, overCap ? 0f : 28f);   // glide down (steep but speed-capped)
+            // Carrying excess altitude (the conservative glide ratio starts the descent early): above the soft floor
+            // there is no terrain to hit (max y320), so dive HARD with a yaw spin — ignore the speed cap and shed
+            // altitude fast while the spin keeps us over the spot. Below it, the speed-capped glide takes over.
+            if (y > cfg.landDiveFloorY) {
+                landSpinYaw += cfg.landSpinStep;
+                if (landSpinYaw > 180f) landSpinYaw -= 360f;
+                submitInput(false, false, landSpinYaw, cfg.landDivePitch);   // aggressive spiral dive, no speed cap
+                return;
+            }
+            submitInput(false, false, yaw, overCap ? 0f : 28f);   // near terrain: glide down (steep but speed-capped)
             return;
         }
 
