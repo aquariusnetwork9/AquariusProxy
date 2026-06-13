@@ -1279,6 +1279,35 @@ public final class Config {
 
                 /** Per-step timeout (ticks) before a stuck phase is retried / the cycle aborts. */
                 public int stepTimeoutTicks = 200;
+
+                // --- ghost-hand + self-kill relocation (2b2t spawn gear-up) ---
+
+                /**
+                 * Ghost-hand: open containers (ender chest / kit shulker) by sending the interaction packet directly
+                 * once within {@link #ghostReach}, skipping Baritone's line-of-sight raytrace. 2b2t doesn't enforce
+                 * LOS/strict reach, so this opens chests through walls / when a clean sightline isn't possible.
+                 */
+                public boolean ghostInteract = true;
+
+                /** Max distance (blocks) at which a ghost-hand open is attempted. Keep modest — 2b2t tolerates ~6. */
+                public double ghostReach = 6.0;
+
+                /**
+                 * Self-kill relocation (flight gear-up from a hostile spawn): if the bot is boxed in (no open sky) or
+                 * has no reachable ender chest in range, send {@code /kill} and let AutoRespawn drop it at a fresh
+                 * 2b2t spawn point; repeat until it lands somewhere with open sky AND a reachable echest, then gear
+                 * up. Default OFF — a normal Regear must NOT suicide-loop; turn on for fly-from-spawn. Needs AutoRespawn.
+                 */
+                public boolean selfKillRelocate = false;
+
+                /** Relocation "open sky" test: this many air blocks must be clear directly above the bot's head. */
+                public int relocateMinSkyClearance = 4;
+
+                /** Relocation safety cap: give up after this many self-kills without finding a good spot. */
+                public int relocateMaxAttempts = 25;
+
+                /** Ticks to wait after a /kill for the death + AutoRespawn before re-scanning the new spot. */
+                public int relocateKillWaitTicks = 60;
             }
 
             /**

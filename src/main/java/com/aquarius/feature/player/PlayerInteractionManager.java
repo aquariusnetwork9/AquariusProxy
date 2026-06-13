@@ -468,6 +468,23 @@ public class PlayerInteractionManager {
         return InteractionResult.PASS;
     }
 
+    /**
+     * Ghost-hand: send a use-item-on-block for an arbitrary block + face with NO line-of-sight raytrace or
+     * adjacency check (unlike {@link InteractWithProcess}, which raytraces and paths to a clean sightline first).
+     * 2b2t does not enforce strict reach/LOS on interactions, so this opens containers through walls / from a few
+     * blocks away. The CALLER is responsible for staying within a sane reach (the server still bounds it ~6 blocks).
+     */
+    public void ghostUseItemOn(int x, int y, int z, Direction face, Hand hand) {
+        startPrediction(seqId -> new ServerboundUseItemOnPacket(
+            x, y, z,
+            face.mcpl(),
+            hand,
+            0, 0, 0,
+            false,
+            false,
+            seqId));
+    }
+
     // todo: is this allowed if we are not holding a usable item? or any item at all?
     protected InteractionResult useItem(Hand hand) {
         startPrediction(seqId -> {

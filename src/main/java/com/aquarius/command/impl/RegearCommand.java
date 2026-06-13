@@ -8,6 +8,8 @@ import com.aquarius.command.api.CommandContext;
 import com.aquarius.command.api.CommandUsage;
 import com.aquarius.discord.Embed;
 
+import static com.mojang.brigadier.arguments.DoubleArgumentType.doubleArg;
+import static com.mojang.brigadier.arguments.DoubleArgumentType.getDouble;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
@@ -37,7 +39,12 @@ public class RegearCommand extends Command {
                 "totem on/off  (put a totem in the offhand on finish)",
                 "return on/off  (return the emptied shulker to the echest)",
                 "pauseplayer on/off",
-                "once on/off  (toggle the module off after a successful regear)"
+                "once on/off  (toggle the module off after a successful regear)",
+                "ghost on/off  (open containers through walls/no-LOS within ghostreach)",
+                "ghostreach <n>  (max blocks for a ghost-hand open; 2b2t tolerates ~6)",
+                "relocate on/off  (self-kill to respawn until open sky + a reachable echest)",
+                "skyclearance <n>  (air blocks above head required to count as open sky)",
+                "relocateattempts <n>  (max self-kills before giving up)"
             )
             .build();
     }
@@ -95,6 +102,28 @@ public class RegearCommand extends Command {
             .then(literal("once").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.regear.disableWhenDone = getToggle(c, "toggle");
                 c.getSource().getEmbed().title("Disable-when-done " + toggleStrCaps(CONFIG.client.extra.regear.disableWhenDone));
+            })))
+            .then(literal("ghost").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.regear.ghostInteract = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("Ghost-hand open " + toggleStrCaps(CONFIG.client.extra.regear.ghostInteract))
+                    .description("Open containers via a direct interaction packet (no line-of-sight) once within ghostreach — opens chests through walls.");
+            })))
+            .then(literal("ghostreach").then(argument("n", doubleArg(1)).executes(c -> {
+                CONFIG.client.extra.regear.ghostReach = getDouble(c, "n");
+                c.getSource().getEmbed().title("Ghost-hand reach: " + CONFIG.client.extra.regear.ghostReach + " blocks (2b2t tolerates ~6)");
+            })))
+            .then(literal("relocate").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.regear.selfKillRelocate = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("Self-kill relocate " + toggleStrCaps(CONFIG.client.extra.regear.selfKillRelocate))
+                    .description("If boxed-in / no reachable echest, /kill and let AutoRespawn relocate the bot; repeat until open sky + a reachable echest. Needs AutoRespawn.");
+            })))
+            .then(literal("skyclearance").then(argument("n", integer(1)).executes(c -> {
+                CONFIG.client.extra.regear.relocateMinSkyClearance = getInteger(c, "n");
+                c.getSource().getEmbed().title("Relocate sky clearance: " + getInteger(c, "n") + " air blocks above the head");
+            })))
+            .then(literal("relocateattempts").then(argument("n", integer(1)).executes(c -> {
+                CONFIG.client.extra.regear.relocateMaxAttempts = getInteger(c, "n");
+                c.getSource().getEmbed().title("Relocate max self-kills: " + getInteger(c, "n"));
             })));
     }
 
@@ -111,6 +140,9 @@ public class RegearCommand extends Command {
             .addField("Gear up", "armor " + toggleStr(cfg.equipArmor) + ", totem " + toggleStr(cfg.offhandTotem))
             .addField("Return shulker", toggleStr(cfg.returnShulker))
             .addField("Safety", "player-pause " + toggleStr(cfg.pauseOnPlayer) + " (" + (int) cfg.playerPauseRange + "b)")
-            .addField("One-shot", toggleStr(cfg.disableWhenDone));
+            .addField("One-shot", toggleStr(cfg.disableWhenDone))
+            .addField("Ghost-hand", toggleStr(cfg.ghostInteract) + " (" + (int) cfg.ghostReach + "b)")
+            .addField("Self-kill relocate", toggleStr(cfg.selfKillRelocate)
+                + " (sky " + cfg.relocateMinSkyClearance + ", max " + cfg.relocateMaxAttempts + ")");
     }
 }

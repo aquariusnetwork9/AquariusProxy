@@ -12,9 +12,12 @@ import com.aquarius.feature.pathfinder.goals.GoalNear;
 import com.aquarius.feature.player.World;
 import com.aquarius.mc.block.Block;
 import com.aquarius.mc.block.BlockPos;
+import com.aquarius.mc.block.Direction;
 import com.aquarius.mc.item.ItemData;
 import com.aquarius.mc.item.ItemRegistry;
 import com.aquarius.module.api.Module;
+import com.aquarius.util.math.MathHelper;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ClickItemAction;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.MoveToHotbarAction;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ShiftClickItemAction;
@@ -27,6 +30,7 @@ import java.util.List;
 import java.util.function.Predicate;
 
 import static com.aquarius.Globals.BARITONE;
+import static com.aquarius.Globals.BOT;
 import static com.aquarius.Globals.CACHE;
 import static com.aquarius.Globals.CONFIG;
 import static com.aquarius.Globals.INVENTORY;
@@ -110,6 +114,31 @@ public abstract class AbstractFieldModule extends Module {
     }
     protected void open(@Nullable BlockPos pos) {
         if (pos != null) BARITONE.rightClickBlock(pos.x(), pos.y(), pos.z());
+    }
+    /**
+     * Ghost-hand open: send the use-on-block packet directly (no Baritone path/raytrace), clicking the face that
+     * points toward the bot. Lets the bot open a container it can't get a clean sightline to (walled in). The
+     * caller must already be within a sane reach ({@code regear.ghostReach}); the server bounds it at ~6 blocks.
+     */
+    protected void openGhost(@Nullable BlockPos pos) {
+        if (pos == null) return;
+        BOT.getInteractions().ghostUseItemOn(pos.x(), pos.y(), pos.z(), faceTowardBot(pos), Hand.MAIN_HAND);
+    }
+    /** 3D distance from the bot to a block's centre. */
+    protected double distToBot(BlockPos p) {
+        return MathHelper.distance3d(
+            CACHE.getPlayerCache().getX(), CACHE.getPlayerCache().getY(), CACHE.getPlayerCache().getZ(),
+            p.x() + 0.5, p.y() + 0.5, p.z() + 0.5);
+    }
+    /** The block face pointing toward the bot (dominant axis) — a natural face to claim for a ghost click. */
+    private Direction faceTowardBot(BlockPos p) {
+        double dx = CACHE.getPlayerCache().getX() - (p.x() + 0.5);
+        double dy = (CACHE.getPlayerCache().getY() + 1.0) - (p.y() + 0.5);
+        double dz = CACHE.getPlayerCache().getZ() - (p.z() + 0.5);
+        double ax = Math.abs(dx), ay = Math.abs(dy), az = Math.abs(dz);
+        if (ay >= ax && ay >= az) return dy >= 0 ? Direction.UP : Direction.DOWN;
+        if (ax >= az) return dx >= 0 ? Direction.EAST : Direction.WEST;
+        return dz >= 0 ? Direction.SOUTH : Direction.NORTH;
     }
     protected void breakAt(@Nullable BlockPos pos, boolean autoTool) {
         if (pos != null) BARITONE.breakBlock(pos.x(), pos.y(), pos.z(), autoTool);
