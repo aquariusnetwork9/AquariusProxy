@@ -67,6 +67,8 @@ public class ElytraPilotCommand extends Command {
                 "baritoneland <on/off> (walk the last leg with Baritone if covered/indoors/underground)",
                 "climbmargin <n>       (stop boosting this many blocks below the ceiling; saves fireworks)",
                 "landcut <n>           (cut the glide + drop in within this many blocks of the ground)",
+                "divefloor <y>         (over target: dive hard above this Y to shed excess altitude, land gently below)",
+                "divepitch <deg>       (nose-down pitch for the aggressive over-target spiral dive)",
                 "cruisescale <on/off>  (overworld/End: distance-scale the cruise ceiling — climb only as high as the leg needs, then glide)",
                 "cruiseglide <r>       (measured glide ratio; sizes the climb, descent lead, and firework estimate)",
                 "cruiseceil <y>        (hard cap on the distance-scaled cruise altitude; total rockets are cap-independent)",
@@ -264,6 +266,15 @@ public class ElytraPilotCommand extends Command {
             .then(literal("landcut").then(argument("blocks", integer()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.landCutClearance = getInteger(c, "blocks");
                 c.getSource().getEmbed().title("ElytraPilot land-cut clearance = " + CONFIG.client.extra.elytraPilot.landCutClearance);
+            })))
+            .then(literal("divefloor").then(argument("y", integer()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.landDiveFloorY = getInteger(c, "y");
+                c.getSource().getEmbed().title("ElytraPilot land dive floor = y" + CONFIG.client.extra.elytraPilot.landDiveFloorY)
+                    .description("Over the target, dive hard (no speed cap) above this Y to shed excess altitude fast, then land gently below it. Keep above max terrain (~y320).");
+            })))
+            .then(literal("divepitch").then(argument("degrees", doubleArg(0, 89)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.landDivePitch = (float) getDouble(c, "degrees");
+                c.getSource().getEmbed().title("ElytraPilot land dive pitch = " + CONFIG.client.extra.elytraPilot.landDivePitch + "° (nose-down spiral dive)");
             })))
             .then(literal("cruisescale").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.cruiseScaleCeiling = getToggle(c, "toggle");
