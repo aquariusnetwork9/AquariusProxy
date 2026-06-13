@@ -444,9 +444,11 @@ public class ElytraPilot extends Module {
         if (fire) noteRocketFired();
         jumpToggle = !jumpToggle;
         boolean jump = onGround || inLava || jumpToggle;   // keep hopping / swimming up until airborne
-        float pitch = BOT.isFallFlying() ? cfg.relaunchPitch : 0f;
-        // Forward + sprint toward the target, shallow nose-up: drive onto the path, don't jam straight up.
-        submitMove(true, jump, true, fire, desiredYaw(pc.getX(), pc.getZ()), pitch);
+        // Open sky above -> punch UP, no forward (lava ocean / open ground); ceiling -> slide forward out.
+        boolean clearAbove = clearAboveCount(pc.getX(), pc.getY(), pc.getZ()) >= cfg.relaunchClearUp;
+        boolean forward = !clearAbove;
+        float pitch = BOT.isFallFlying() ? (clearAbove ? cfg.relaunchPitchUp : cfg.relaunchPitch) : 0f;
+        submitMove(forward, jump, forward, fire, desiredYaw(pc.getX(), pc.getZ()), pitch);
         takeoffTicks++;
     }
 
@@ -1737,9 +1739,14 @@ public class ElytraPilot extends Module {
         if (fire) noteRocketFired();
         jumpToggle = !jumpToggle;
         boolean jump = onGround || inLava || jumpToggle;          // keep hopping / swimming up until airborne
-        // Drive FORWARD toward the target (sprint), shallow nose-up: the redeploy+firework slides the bot out
-        // from under any rock ceiling and back onto its path, rather than jamming straight up into the roof.
-        submitMove(true, jump, true, fire, desiredYaw(x, z), cfg.relaunchPitch);
+        // Pick the escape by what's actually above. OPEN SKY (lava ocean / open ground): punch straight UP and
+        // do NOT press forward — you can't deploy an elytra while in lava, so the bot must swim up out of it
+        // first, and forward input just skims it horizontally through the lava forever. CEILING (covered
+        // pocket): slide FORWARD out from under the overhang instead of jamming up into the rock.
+        boolean clearAbove = clearAboveCount(x, y, z) >= cfg.relaunchClearUp;
+        float pitch = clearAbove ? cfg.relaunchPitchUp : cfg.relaunchPitch;
+        boolean forward = !clearAbove;
+        submitMove(forward, jump, forward, fire, desiredYaw(x, z), pitch);
     }
 
     private void enterSwap() {
