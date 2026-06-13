@@ -13,6 +13,7 @@ import com.aquarius.feature.inventory.actions.ClickItem;
 import com.aquarius.feature.inventory.actions.InventoryAction;
 import com.aquarius.feature.inventory.actions.MoveToHotbarSlot;
 import com.aquarius.feature.inventory.actions.SetHeldItem;
+import com.aquarius.feature.inventory.util.InventoryActionMacros;
 import com.aquarius.feature.player.ClickTarget;
 import com.aquarius.feature.player.Input;
 import com.aquarius.feature.player.InputRequest;
@@ -1829,31 +1830,16 @@ public class ElytraPilot extends Module {
      */
     private boolean equipFreshElytraProgress() {
         if (INVENTORY.hasActiveRequest()) return false; // let the previous action settle
-        ItemStack mouse = CACHE.getPlayerCache().getInventoryCache().getMouseStack();
-        boolean mouseEmpty = isEmpty(mouse);
-        ItemStack chest = chestplate();
+        if (isFreshElytra(chestplate())) return true;   // a fresh elytra is already worn — done
 
-        if (mouseEmpty && isFreshElytra(chest)) return true;
+        int slot = findFreshElytraHotbar();
+        if (slot < 0) slot = findFreshElytraMain();
+        if (slot < 0) return false;                     // no spare (caller handles via timeout)
 
-        if (mouseEmpty) {
-            int h = findFreshElytraHotbar();
-            if (h >= 0) { // fast path: single MOVE_TO_HOTBAR_SLOT swap (chestplate <-> hotbar slot)
-                submitInvAction(new MoveToHotbarSlot(CHESTPLATE_SLOT, MoveToHotbarAction.from(h - 36)));
-                return false;
-            }
-            int m = findFreshElytraMain();
-            if (m >= 0) { submitInvAction(new ClickItem(m, ClickItemAction.LEFT_CLICK)); return false; } // pick up fresh
-            return false; // no spare (caller handles via timeout)
-        }
-
-        // cursor holds something
-        if (isFreshElytra(mouse)) { // place the fresh elytra into the chestplate (cursor then holds the old one)
-            submitInvAction(new ClickItem(CHESTPLATE_SLOT, ClickItemAction.LEFT_CLICK));
-            return false;
-        }
-        int free = findEmptyPlayerSlot(); // stash whatever we're holding (the old elytra)
-        if (free >= 0) { submitInvAction(new ClickItem(free, ClickItemAction.LEFT_CLICK)); return false; }
-        warn("No free slot to stash the worn elytra during swap");
+        // ONE reliable swap: fresh elytra <-> the chestplate armour slot — the exact path Regear uses to equip the
+        // flight elytra (swapSlots(invSlot, 6)). Replaces the old pick-up / click-armour-slot / stash cursor dance,
+        // which failed to seat the elytra into the armour slot mid-air (the worn one stayed; the bot fell).
+        submitInvAction(InventoryActionMacros.swapSlots(slot, CHESTPLATE_SLOT).toArray(new InventoryAction[0]));
         return false;
     }
 
