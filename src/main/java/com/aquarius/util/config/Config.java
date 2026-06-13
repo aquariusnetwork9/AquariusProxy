@@ -1304,7 +1304,14 @@ public final class Config {
                 public int relocateMinSkyClearance = 4;
 
                 /** Relocation safety cap: give up after this many self-kills without finding a good spot. */
-                public int relocateMaxAttempts = 25;
+                public int relocateMaxAttempts = 40;
+
+                /**
+                 * Abandon-impossible-pathing: while walking to the echest, if the bot makes no progress toward it
+                 * for this many ticks (stuck in a water flow, on an isolated block, repeatedly "no path found"),
+                 * give up on this spot and self-kill to relocate instead of grinding. 100 ≈ 5s.
+                 */
+                public int relocateStuckTicks = 100;
 
                 /** Ticks to wait after a /kill for the death + AutoRespawn before re-scanning the new spot. */
                 public int relocateKillWaitTicks = 60;
