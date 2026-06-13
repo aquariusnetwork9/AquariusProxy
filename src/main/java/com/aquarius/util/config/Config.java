@@ -476,6 +476,13 @@ public final class Config {
                 /** Vertical clearance (blocks) the glide path must keep above terrain; closer than this counts as blocked. */
                 public int pathClearance = 4;
 
+                /**
+                 * Lava cushion (nether): when lava is within this many blocks below, the route-follower noses up
+                 * gently to hold the cushion instead of following the route down to the lava surface (where the
+                 * bot sinks in and gets pinned). Lava-avoidance only — it never climbs past a small cushion.
+                 */
+                public int lavaClearanceBlocks = 14;
+
                 /** Radius (blocks) to search outward from the target for a clear, flat air-landing spot. */
                 public int landingSearchRadius = 12;
 

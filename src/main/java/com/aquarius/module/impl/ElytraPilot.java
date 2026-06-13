@@ -135,6 +135,9 @@ public class ElytraPilot extends Module {
     private boolean lostLogged;
     private float landSpinYaw;         // helicopter-landing yaw spin
     private int pinTicks;              // consecutive cruise ticks at near-zero speed (wall-pin watchdog)
+    private boolean pocketActive;      // relaunch pocket-trap detector armed
+    private double pocketAnchorX, pocketAnchorZ; // where the current relaunch effort is anchored
+    private int pocketTicks;           // ticks spent relaunching near the anchor (survives the deploy/fall bob)
     private int walkoutTicks;          // ticks in the current walk-out leg
     private int walkoutAttempts;
     private double loopX, loopZ;       // centre of a repeated takeoff-fail loop (chimney trap)
@@ -283,6 +286,8 @@ public class ElytraPilot extends Module {
         healthyTicks = 0;
         lostLogged = false;
         pinTicks = 0;
+        pocketActive = false;
+        pocketTicks = 0;
         walkoutTicks = 0;
         walkoutAttempts = 0;
         loopCount = 0;
@@ -664,6 +669,9 @@ public class ElytraPilot extends Module {
         }
         // Hazard: jink sideways out of a ghast's line of fire — a YAW change only, never a climb.
         if (hazardClimbTicks > 0) yaw += 30f;
+        // Lava cushion: don't follow the route down to the lava surface — hold a little air over it (and power it).
+        float floored = applyLavaFloor(pitch, x, y, z, roofCap);
+        if (floored < pitch - 0.5f) { pitch = floored; wantFire = !overCap; }
         // Safety only: never deliberately fly up into the inaccessible bedrock roof.
         if (y >= roofCap - 1 && pitch < 0f) pitch = 0f;
 
@@ -849,12 +857,15 @@ public class ElytraPilot extends Module {
         float pitch = sol.pitch();
         if (hazardClimbTicks > 0) yaw += 30f;                   // line-of-fire jink — the sim can't see ghasts
         if (y >= roofCap - 1 && pitch < 0f) pitch = 0f;         // never climb into the inaccessible roof
+        float floored = applyLavaFloor(pitch, x, y, z, roofCap);
+        boolean lavaClimb = floored < pitch - 0.5f;             // the lava cushion forced a climb — power it
+        pitch = floored;
 
         var vel = BOT.getVelocity();
         double vy = y < sol.destY() ? Math.max(0, vel.getY()) : vel.getY();  // climbing toward the aim: sink is fine
         double speed3d = Math.sqrt(vel.getX() * vel.getX() + vy * vy + vel.getZ() * vel.getZ());
         boolean shortOfAim = y < sol.destY() - 5 || horizDist(x, z, sol.destX(), sol.destZ()) > 5;
-        boolean wantFire = sol.forceBoost()
+        boolean wantFire = sol.forceBoost() || lavaClimb
             || (boostMaxTicks <= 0 && shortOfAim && speed3d * 20.0 < cfg.boostBelowSpeed);
         if (overCap && !sol.forceBoost()) wantFire = false;     // never thrust past the 2b2t speed cap
         wantFire = fireSpaced(wantFire);                        // spacing + post-setback rocket hold
@@ -1764,13 +1775,20 @@ public class ElytraPilot extends Module {
         boolean jump = onGround || inLava || jumpToggle;          // keep hopping/swimming up until airborne
         submitMove(false, jump, false, fire, desiredYaw(x, z), -35f);
 
-        // Genuinely sealed in (no headroom): walk to open ground and retry, bounded; then abort.
-        if (++lostFlightTicks > cfg.stallRecoverTicks) {
-            lostFlightTicks = 0;
+        // Pocket-trap escape. The relaunch bobs between fall-flying and grounded, which resets the per-tick
+        // lost-flight timer every other tick — so a sealed lava pocket would loop here FOREVER (seen live:
+        // pinned at y23 for 40+s). Anchor on the relaunch spot instead: if we keep relaunching within ~12
+        // blocks of it past stallRecoverTicks, it's sealed (low ceiling / walls) — stop bobbing and walk out
+        // (then abort). A genuine escape moves us far from the anchor and re-arms a fresh budget.
+        if (!pocketActive || horizDist(x, z, pocketAnchorX, pocketAnchorZ) > 12) {
+            pocketActive = true; pocketAnchorX = x; pocketAnchorZ = z; pocketTicks = 0;
+        }
+        if (++pocketTicks > cfg.stallRecoverTicks) {
+            pocketActive = false;
             if (cfg.hasTarget && walkoutAttempts < MAX_WALKOUT_ATTEMPTS) {
-                enterWalkout("can't relaunch here at " + (int) x + ", " + (int) y + ", " + (int) z);
+                enterWalkout("trapped relaunching in a pocket at " + (int) x + ", " + (int) y + ", " + (int) z);
             } else {
-                abort("could not relaunch at " + (int) x + ", " + (int) y + ", " + (int) z);
+                abort("trapped relaunching at " + (int) x + ", " + (int) y + ", " + (int) z);
             }
         }
     }
@@ -1998,17 +2016,37 @@ public class ElytraPilot extends Module {
 
     /** True if the first non-air, non-water block below the bot (within a cap) is lava — i.e. flying over a lava sea. */
     private boolean lavaBelow(double x, double y, double z) {
+        return lavaDistBelow(x, y, z) != Integer.MAX_VALUE;
+    }
+
+    /** Blocks of clear air below the bot before the first LAVA surface; {@code MAX_VALUE} if none within the cap. */
+    private int lavaDistBelow(double x, double y, double z) {
         int bx = MathHelper.floorI(x), bz = MathHelper.floorI(z);
-        if (!World.isChunkLoadedChunkPos(bx >> 4, bz >> 4)) return false;
+        if (!World.isChunkLoadedChunkPos(bx >> 4, bz >> 4)) return Integer.MAX_VALUE;
         int fy = MathHelper.floorI(y);
-        for (int dy = 1; dy <= 64; dy++) {
+        for (int dy = 0; dy <= 48; dy++) {
             int yy = fy - dy;
             if (yy < -64) break;
             var b = World.getBlock(bx, yy, bz);
             if (b.isAir() || World.isWater(b)) continue;
-            return World.isFluid(b);   // first non-air/water block below: lava if it's a (non-water) fluid
+            return World.isFluid(b) ? dy : Integer.MAX_VALUE;   // first solid surface below: stop scanning
         }
-        return false;
+        return Integer.MAX_VALUE;
+    }
+
+    /**
+     * Lava cushion. The route can thread a low air gap right over a lava pool, and following it down to the
+     * surface is how the bot sinks in and gets pinned. So whenever lava is within {@code lavaClearanceBlocks}
+     * below, nose up GENTLY to hold that cushion — never more than a shallow climb, never past the roof cap.
+     * This is lava-avoidance, NOT the old "climb toward open air": it only triggers over lava and only rises
+     * enough to keep a cushion, then lets the route lead again.
+     */
+    private float applyLavaFloor(float pitch, double x, double y, double z, int roofCap) {
+        int lava = lavaDistBelow(x, y, z);
+        if (lava < CONFIG.client.extra.elytraPilot.lavaClearanceBlocks && y < roofCap - 1) {
+            pitch = Math.min(pitch, -15f);                      // shallow climb to clear the lava
+        }
+        return pitch;
     }
 
     private boolean heldIsFirework() {
