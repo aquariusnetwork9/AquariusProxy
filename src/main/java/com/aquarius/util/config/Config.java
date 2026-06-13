@@ -512,12 +512,30 @@ public final class Config {
                 public boolean tripActive = false;
 
                 /**
-                 * Pre-flight gear-up: if the bot has no elytra worn when a trip starts, first run Regear to pull
-                 * the flight kit from a nearby ender chest (equip elytra + armour + totem) before flying. Needs a
-                 * kit shulker named per {@code regear.kitShulkerName} in the echest, containing an elytra +
-                 * fireworks (+ optional armour/totems). Off → a naked bot just aborts with "no worn elytra".
+                 * Pre-flight gear-up: before a trip, audit the flight kit against the checklist below and, if
+                 * anything is short, run Regear to top up ONLY the missing items from a nearby ender chest (kit
+                 * shulker named per {@code regear.kitShulkerName}), then re-check and fly. Off → skip the audit
+                 * (a naked bot just aborts with "no worn elytra").
                  */
                 public boolean tripGearUp = true;
+
+                // --- pre-flight checklist minimums (audited before each trip; Regear refills only the deficits) ---
+                /** Minimum armour pieces worn besides the elytra (helmet/leggings/boots), any material. */
+                public int preflightMinArmor = 1;
+                /** Minimum totems of undying carried (offhand + inventory). */
+                public int preflightMinTotems = 2;
+                /** Require a totem in the offhand. */
+                public boolean preflightOffhandTotem = true;
+                /** Minimum firework rockets (any flight duration), counted by item quantity. 64 = one stack. */
+                public int preflightMinFireworks = 64;
+                /** Minimum ENCHANTED golden apples, counted by item quantity. 64 = one stack. */
+                public int preflightMinEgaps = 64;
+                /** Require a pickaxe (any material/enchant) in the inventory. */
+                public boolean preflightRequirePickaxe = true;
+                /** Pull a sword/axe if one is in the kit (and note if missing) — never blocks the flight. */
+                public boolean preflightWantWeapon = true;
+                /** Minimum ender chests carried. */
+                public int preflightMinEchests = 8;
 
                 /** Final destination of the trip (overworld coordinates). */
                 public int tripTargetX = 0;

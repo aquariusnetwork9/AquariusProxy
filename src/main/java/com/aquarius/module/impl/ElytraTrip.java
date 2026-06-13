@@ -1,16 +1,13 @@
 package com.aquarius.module.impl;
 
 import com.github.rfresh2.EventConsumer;
-import com.aquarius.cache.data.inventory.Container;
 import com.aquarius.event.client.ClientBotTick;
 import com.aquarius.event.client.ClientDeathEvent;
 import com.aquarius.feature.player.World;
 import com.aquarius.mc.block.BlockRegistry;
 import com.aquarius.mc.dimension.DimensionRegistry;
-import com.aquarius.mc.item.ItemRegistry;
 import com.aquarius.module.api.Module;
 import com.aquarius.util.config.Config.Client.Extra.ElytraPilot.HighwayDir;
-import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
 
 import java.util.List;
 
@@ -99,10 +96,10 @@ public class ElytraTrip extends Module {
         graceTicks = 0;
         legStarted = false;
         gearStarted = false;
-        // Naked? Gear up from the ender chest before flying (Regear pulls the flight kit). Otherwise start flying.
-        if (cfg.tripGearUp && !elytraWorn()) {
+        // Pre-flight checklist not satisfied? Gear up (Regear tops up the deficits from the echest) first.
+        if (cfg.tripGearUp && !FlightGear.ready()) {
             phase = Phase.GEAR_UP;
-            info("Trip: no elytra worn — gearing up from the ender chest first.");
+            info("Trip: pre-flight check not satisfied — gearing up first.\n{}", FlightGear.report());
             return;
         }
         decideStartPhase();
@@ -178,31 +175,32 @@ public class ElytraTrip extends Module {
      */
     private void tickGearUp() {
         var rg = MODULE.get(Regear.class);
-        if (elytraWorn() && hasFireworks()) {              // geared — go fly
-            if (gearStarted) { restoreRegearConfig(); gearStarted = false; info("Geared up — starting the trip."); }
+        if (FlightGear.ready()) {                          // checklist satisfied — go fly
+            if (gearStarted) { restoreRegearConfig(); gearStarted = false; }
+            info("Pre-flight check passed — starting the trip.");
             decideStartPhase();
             return;
         }
-        if (!gearStarted) {                                // kick off Regear, forcing the elytra into the chest
+        if (!gearStarted) {                                // top up the deficits from the echest (refill mode)
             savedEquipElytra = CONFIG.client.extra.regear.equipElytra;
             CONFIG.client.extra.regear.equipElytra = true;
             CONFIG.client.extra.regear.enabled = true;
+            rg.setFlightRefill(true);                      // pull ONLY what the checklist is missing
             rg.syncEnabledFromConfig();
             gearStarted = true;
             guardTicks = 0;
-            info("Trip gear-up: running Regear to pull the flight kit from the ender chest.");
+            info("Pre-flight: gear missing — running Regear to top up from the ender chest.\n{}", FlightGear.report());
             return;
         }
         if (rg.isPaused()) {                               // Regear couldn't kit up (no echest / kit shulker)
             restoreRegearConfig(); gearStarted = false;
-            abort("gear-up failed — Regear could not kit up (check the ender chest + a kit shulker named per `regear name`)");
+            abort("gear-up failed — Regear could not kit up (check the ender chest + a kit shulker named per `regear name`).\n" + FlightGear.report());
             return;
         }
-        if (rg.isComplete()) {                             // Regear finished but the kit lacked something we need
+        if (rg.isComplete()) {                             // Regear finished — re-check the full checklist
             restoreRegearConfig(); gearStarted = false;
-            if (!elytraWorn())  { abort("gear-up finished but no elytra equipped — add an elytra to the kit shulker"); return; }
-            if (!hasFireworks()) { abort("gear-up finished but no fireworks — add firework rockets to the kit shulker"); return; }
-            decideStartPhase();
+            if (FlightGear.ready()) decideStartPhase();
+            else abort("gear-up finished but the kit was short. Still missing:\n" + FlightGear.report());
             return;
         }
         if ((guardTicks += THROTTLE_TICKS) > GEAR_GUARD_TICKS) {
@@ -213,21 +211,7 @@ public class ElytraTrip extends Module {
 
     private void restoreRegearConfig() {
         CONFIG.client.extra.regear.equipElytra = savedEquipElytra;
-    }
-
-    private boolean elytraWorn() {
-        var chest = CACHE.getPlayerCache().getEquipment(EquipmentSlot.CHESTPLATE);
-        return chest != Container.EMPTY_STACK && ItemRegistry.REGISTRY.get(chest.getId()) == ItemRegistry.ELYTRA;
-    }
-
-    private boolean hasFireworks() {
-        var inv = CACHE.getPlayerCache().getPlayerInventory();
-        for (int i = 9; i <= 44; i++) {
-            if (inv.size() <= i) break;
-            var s = inv.get(i);
-            if (s != Container.EMPTY_STACK && ItemRegistry.REGISTRY.get(s.getId()) == ItemRegistry.FIREWORK_ROCKET) return true;
-        }
-        return false;
+        MODULE.get(Regear.class).setFlightRefill(false);
     }
 
     private void tickOwDirect(int tx, int tz) {

@@ -60,8 +60,12 @@ public class Regear extends AbstractFieldModule {
     private boolean paused;
     private boolean complete;
     private boolean hazardPaused;
+    private boolean flightRefill;   // set by ElytraTrip: pull ONLY items the flight checklist is missing
 
     private int gearArmorIdx;   // gear-up: which armour slot we're filling (0-3)
+
+    /** ElytraTrip's pre-flight gear-up: pull only the items {@link FlightGear} reports as missing, not the whole kit. */
+    public void setFlightRefill(boolean b) { flightRefill = b; }
 
     @Override
     public boolean enabledSetting() { return CONFIG.client.extra.regear.enabled; }
@@ -88,6 +92,7 @@ public class Regear extends AbstractFieldModule {
         if (BARITONE.isActive()) BARITONE.stop();
         restoreBreaking();
         state = State.IDLE;
+        flightRefill = false;
         echPos = null; shulkPos = null; pathGoal = null; kitShulkerItem = null; avoidSpot = null;
     }
 
@@ -103,6 +108,7 @@ public class Regear extends AbstractFieldModule {
         restoreBreaking();
         paused = true;
         state = State.IDLE;
+        flightRefill = false;
         warn("Regear paused: {}. Toggle /regear off/on to retry.", reason);
         inGameAlertActivePlayer("<red>Regear paused: " + reason);
     }
@@ -111,6 +117,7 @@ public class Regear extends AbstractFieldModule {
         restoreBreaking();
         complete = true;
         state = State.IDLE;
+        flightRefill = false;
         info("Regear complete - geared up.");
         inGameAlertActivePlayer("<green>Regear complete");
         if (CONFIG.client.extra.regear.disableWhenDone) {
@@ -287,8 +294,12 @@ public class Regear extends AbstractFieldModule {
         if (openContainerId() == 0) { go(State.CLOSE_KIT); return; }   // already empty/closed
         Container c = openContainer();
         if (c == null) { timer = cfg.actionDelayTicks; return; }
-        int src = findContainerSlot(c, s -> s != Container.EMPTY_STACK);
-        if (src == -1) { go(State.CLOSE_KIT); return; }                // shulker empty
+        // Flight refill: pull ONLY items the pre-flight checklist is still short on (re-evaluated per pull, so
+        // each category stops once satisfied). Normal regear: empty the whole kit.
+        int src = flightRefill
+            ? findContainerSlot(c, s -> s != Container.EMPTY_STACK && FlightGear.stillNeeds(s))
+            : findContainerSlot(c, s -> s != Container.EMPTY_STACK);
+        if (src == -1) { go(State.CLOSE_KIT); return; }                // shulker empty / all deficits met
         if (emptyMainSlots() <= 0 && countInInv(s -> s == Container.EMPTY_STACK) == 0) {
             abort("inventory full while emptying the kit"); return;
         }
