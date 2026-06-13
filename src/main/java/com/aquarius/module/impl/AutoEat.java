@@ -11,7 +11,9 @@ import com.aquarius.feature.player.Input;
 import com.aquarius.feature.player.InputRequest;
 import com.aquarius.mc.food.FoodData;
 import com.aquarius.mc.food.FoodRegistry;
+import com.aquarius.mc.item.ItemRegistry;
 import com.aquarius.util.RequestFuture;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 
@@ -27,6 +29,7 @@ public class AutoEat extends AbstractInventoryModule {
     private int delay = 0;
     private Instant lastAutoEatOutOfFoodWarning = Instant.EPOCH;
     private boolean isEating = false;
+    private boolean fireMode = false;   // this eat is a fire-protection gapple (target apples, ignore hunger)
     RequestFuture swapFuture = RequestFuture.rejected;
 
     public AutoEat() {
@@ -74,7 +77,10 @@ public class AutoEat extends AbstractInventoryModule {
                 INPUTS.submit(InputRequest.noInput(this, getPriority()));
                 return;
             }
-            if (!playerHealthBelowThreshold()) {
+            // Fire protection takes precedence over (and is independent of) the hunger/health trigger: if we're
+            // in lava without Fire Resistance, eat a golden apple now no matter how full we are.
+            fireMode = fireProtectionNeeded();
+            if (!fireMode && !playerHealthBelowThreshold()) {
                 return;
             }
             var invActionResult = doInventoryActionsV2();
@@ -145,7 +151,30 @@ public class AutoEat extends AbstractInventoryModule {
         delay = 0;
         lastAutoEatOutOfFoodWarning = Instant.EPOCH;
         isEating = false;
+        fireMode = false;
         swapFuture = RequestFuture.rejected;
+    }
+
+    /**
+     * True when the bot is in lava without Fire Resistance and is holding a usable golden apple — the trigger
+     * to eat one for fire protection. (Only ENCHANTED golden apples grant Fire Resistance; a regular one is
+     * eaten too when {@code fireProtectionEnchantedOnly} is off, for the Absorption/Regen tank.)
+     */
+    boolean fireProtectionNeeded() {
+        if (!CONFIG.client.extra.autoEat.fireProtection || !BOT.isTouchingLava()) {
+            return false;
+        }
+        if (CACHE.getPlayerCache().getThePlayer().getPotionEffectMap().containsKey(Effect.FIRE_RESISTANCE)) {
+            return false; // already protected — don't waste an apple
+        }
+        return InventoryUtil.searchPlayerInventory(this::isFireApple) != -1;
+    }
+
+    boolean isFireApple(ItemStack itemStack) {
+        if (itemStack == null) return false;
+        var data = ItemRegistry.REGISTRY.get(itemStack.getId());
+        if (data == ItemRegistry.ENCHANTED_GOLDEN_APPLE) return true;
+        return !CONFIG.client.extra.autoEat.fireProtectionEnchantedOnly && data == ItemRegistry.GOLDEN_APPLE;
     }
 
     boolean playerHealthBelowThreshold() {
@@ -155,7 +184,7 @@ public class AutoEat extends AbstractInventoryModule {
 
     @Override
     public boolean itemPredicate(final ItemStack itemStack) {
-        return hasFood(itemStack);
+        return fireMode ? isFireApple(itemStack) : hasFood(itemStack);
     }
 
     boolean hasFood(boolean ignoreHunger, ItemStack itemStack) {

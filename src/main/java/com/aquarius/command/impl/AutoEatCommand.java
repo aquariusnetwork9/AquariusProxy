@@ -46,6 +46,8 @@ public class AutoEatCommand extends Command {
                 "hunger <int>",
                 "warning on/off",
                 "allowUnsafeFood on/off",
+                "fireProtection on/off   (eat a golden apple for fire res while in lava; enchanted = fire immunity)",
+                "fireProtectionEnchantedOnly on/off  (off = also eat regular golden apples: Absorption/Regen tank only)",
                 "mode <all/whitelist/blacklist>",
                 "add/del <food>",
                 "addAll <food1>,<food2>,...",
@@ -87,6 +89,18 @@ public class AutoEatCommand extends Command {
                 CONFIG.client.extra.autoEat.allowUnsafeFood = getToggle(c, "toggle");
                 c.getSource().getEmbed()
                     .title("AutoEat Allow Unsafe Food " + toggleStrCaps(CONFIG.client.extra.autoEat.allowUnsafeFood));
+            })))
+            .then(literal("fireProtection").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.autoEat.fireProtection = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("AutoEat Fire Protection " + toggleStrCaps(CONFIG.client.extra.autoEat.fireProtection))
+                    .description("Eats a golden apple while in lava (no Fire Resistance active). Only ENCHANTED "
+                        + "golden apples grant Fire Resistance — stock those for true lava immunity.");
+            })))
+            .then(literal("fireProtectionEnchantedOnly").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.autoEat.fireProtectionEnchantedOnly = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("AutoEat Fire Protection Enchanted-Only " + toggleStrCaps(CONFIG.client.extra.autoEat.fireProtectionEnchantedOnly));
             })))
             .then(literal("mode").then(argument("mode", enumStrings("all", "whitelist", "blacklist")).executes(c -> {
                 var modeString = getString(c, "mode").toUpperCase();
@@ -154,6 +168,8 @@ public class AutoEatCommand extends Command {
             .addField("Hunger Threshold", CONFIG.client.extra.autoEat.hungerThreshold)
             .addField("Warning", toggleStr(CONFIG.client.extra.autoEat.warning))
             .addField("Allow Unsafe Food", toggleStr(CONFIG.client.extra.autoEat.allowUnsafeFood))
+            .addField("Fire Protection", toggleStr(CONFIG.client.extra.autoEat.fireProtection)
+                + (CONFIG.client.extra.autoEat.fireProtectionEnchantedOnly ? " (enchanted only)" : " (any golden apple)"))
             .primaryColor();
     }
 

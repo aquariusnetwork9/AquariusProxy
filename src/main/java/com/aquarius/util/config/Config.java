@@ -1642,6 +1642,20 @@ public final class Config {
                     WHITELIST
                 }
                 public HashSet<String> foods = new HashSet<>();
+
+                /**
+                 * Eat a golden apple for fire protection when the bot is in lava (regardless of health/hunger),
+                 * skipped while Fire Resistance is already active. NOTE: only ENCHANTED golden apples grant Fire
+                 * Resistance (5 min); a regular golden apple only gives Absorption + Regeneration (tanks damage,
+                 * no fire immunity). Off by default.
+                 */
+                public boolean fireProtection = false;
+
+                /**
+                 * Require an ENCHANTED golden apple for {@link #fireProtection} (the only kind that grants Fire
+                 * Resistance). When false, a regular golden apple is eaten too (Absorption/Regen tank only).
+                 */
+                public boolean fireProtectionEnchantedOnly = true;
             }
 
             public static final class AutoOmen {
