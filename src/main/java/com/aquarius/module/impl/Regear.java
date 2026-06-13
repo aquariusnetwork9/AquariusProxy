@@ -65,6 +65,9 @@ public class Regear extends AbstractFieldModule {
 
     private int gearArmorIdx;   // gear-up: which armour slot we're filling (0-3)
     private int relocateAttempts;  // self-kills spent looking for an open-sky spot with a reachable echest
+    private boolean relocateForceKill;  // RELOCATE entered from a reach failure: self-kill, don't re-accept this spot
+    private double pathBestDist;   // closest we've gotten to the echest this attempt (stuck detector)
+    private int pathStuckTicks;    // ticks of no progress toward the echest
 
     /** ElytraTrip's pre-flight gear-up: pull only the items {@link FlightGear} reports as missing, not the whole kit. */
     public void setFlightRefill(boolean b) { flightRefill = b; }
@@ -85,6 +88,7 @@ public class Regear extends AbstractFieldModule {
         paused = false; complete = false; hazardPaused = false;
         gearArmorIdx = 0;
         relocateAttempts = 0;
+        relocateForceKill = false; pathBestDist = Double.MAX_VALUE; pathStuckTicks = 0;
         ownEchest = false; echPos = null; shulkPos = null; pathGoal = null; kitShulkerItem = null; avoidSpot = null;
         if (CONFIG.client.extra.regear.selfKillRelocate) {
             go(State.RELOCATE);
@@ -189,6 +193,10 @@ public class Regear extends AbstractFieldModule {
         var cfg = CONFIG.client.extra.regear;
         switch (step) {
             case 0 -> {
+                // Entered from a reach failure (couldn't path / stuck): the echest here is unreachable, so don't
+                // re-accept this spot — self-kill straight away. (Otherwise the scan below would keep saying "good
+                // spot, echest in range" and we'd loop forever without progress.)
+                if (relocateForceKill) { relocateForceKill = false; doSelfKill("echest here is unreachable"); return; }
                 BlockPos pf = playerFeet();
                 boolean sky = openSkyAbove(cfg.relocateMinSkyClearance);
                 BlockPos ech = nearestBlock(cfg.echestScanRadius, pf.y() - 6, pf.y() + 6, n -> n.equals("ender_chest"));
@@ -197,20 +205,24 @@ public class Regear extends AbstractFieldModule {
                     go(State.ACQUIRE);
                     return;
                 }
-                if (++relocateAttempts > cfg.relocateMaxAttempts) {
-                    abort("relocate gave up after " + (relocateAttempts - 1)
-                        + " self-kills (no open-sky spot with a reachable echest)");
-                    return;
-                }
-                String why = (!sky ? "boxed-in" : "") + (ech == null ? (sky ? "no echest in range" : " + no echest") : "");
-                warn("Relocate: bad spot ({}) - self-killing to respawn (attempt {}/{}).", why, relocateAttempts, cfg.relocateMaxAttempts);
-                inGameAlertActivePlayer("<yellow>Regear relocate: self-kill " + relocateAttempts + "/" + cfg.relocateMaxAttempts + " (" + why + ")");
-                sendClientPacketAsync(new ServerboundChatPacket("/kill"));
-                step = 1; timer = cfg.relocateKillWaitTicks;
+                doSelfKill((!sky ? "boxed-in" : "") + (ech == null ? (sky ? "no echest in range" : " + no echest") : ""));
             }
             // waited through the death + respawn (ticks are skipped while dead); re-scan the new spot.
             default -> { step = 0; timer = cfg.actionDelayTicks; }
         }
+    }
+
+    /** Send /kill (capped) and wait for AutoRespawn; abort the cycle once the attempt cap is hit. */
+    private void doSelfKill(String why) {
+        var cfg = CONFIG.client.extra.regear;
+        if (++relocateAttempts > cfg.relocateMaxAttempts) {
+            abort("relocate gave up after " + (relocateAttempts - 1) + " self-kills (no open-sky spot with a reachable echest)");
+            return;
+        }
+        warn("Relocate: {} - self-killing to respawn (attempt {}/{}).", why, relocateAttempts, cfg.relocateMaxAttempts);
+        inGameAlertActivePlayer("<yellow>Regear relocate: self-kill " + relocateAttempts + "/" + cfg.relocateMaxAttempts + " (" + why + ")");
+        sendClientPacketAsync(new ServerboundChatPacket("/kill"));
+        step = 1; timer = cfg.relocateKillWaitTicks;
     }
 
     /** Decide the ender-chest source: place a carried one, else walk to a placed one nearby. */
@@ -226,18 +238,28 @@ public class Regear extends AbstractFieldModule {
         // fallback: no ender chest carried -> find the nearest placed one
         BlockPos p = playerFeet();
         BlockPos found = nearestBlock(cfg.echestScanRadius, p.y() - 6, p.y() + 6, n -> n.equals("ender_chest"));
-        if (found == null) { failOrRelocate("no ender chest carried and none placed within " + cfg.echestScanRadius + " blocks"); return; }
+        if (found == null) { failOrRelocate("no ender chest carried and none placed within " + cfg.echestScanRadius + " blocks", false); return; }
         ownEchest = false;
         echPos = found;
         pathGoal = pathToNear(found);
+        pathBestDist = Double.MAX_VALUE; pathStuckTicks = 0;   // reset the stuck detector for this approach
         info("Regear: no ender chest carried - walking to the placed one at {}.", found);
         go(State.PATH_ECHEST);
     }
 
-    /** A failure that relocation can recover from: self-kill to a new spawn (if enabled), else abort the cycle. */
-    private void failOrRelocate(String reason) {
-        if (CONFIG.client.extra.regear.selfKillRelocate) { warn("Regear: {} - relocating.", reason); go(State.RELOCATE); }
-        else abort(reason);
+    /**
+     * A failure that relocation can recover from: self-kill to a new spawn (if enabled), else abort the cycle.
+     * {@code forceKill} = the failure proves the echest here is unreachable (couldn't path / stuck), so RELOCATE
+     * must self-kill rather than re-accept this same spot.
+     */
+    private void failOrRelocate(String reason, boolean forceKill) {
+        if (CONFIG.client.extra.regear.selfKillRelocate) {
+            warn("Regear: {} - relocating.", reason);
+            relocateForceKill = forceKill;
+            go(State.RELOCATE);
+        } else {
+            abort(reason);
+        }
     }
 
     /** Open a container with the ghost-hand when in range (no LOS needed), else the normal path-and-raytrace open. */
@@ -276,12 +298,21 @@ public class Regear extends AbstractFieldModule {
 
     private void tickPathEchest() {
         var cfg = CONFIG.client.extra.regear;
-        boolean ghostClose = cfg.ghostInteract && echPos != null && distToBot(echPos) <= cfg.ghostReach;
+        double d = echPos == null ? Double.MAX_VALUE : distToBot(echPos);
+        boolean ghostClose = cfg.ghostInteract && echPos != null && d <= cfg.ghostReach;
         if (arrivedAt(pathGoal) || ghostClose) {            // adjacent, OR close enough to ghost-open through a wall
             if (BARITONE.isActive()) BARITONE.stop();
             go(State.OPEN_ECHEST);
+            return;
+        }
+        // Abandon clearly-impossible pathing: if we stop getting closer to the echest (stuck in a water flow, on an
+        // isolated block, "no path found"), self-kill to relocate rather than grind. Cheaper than fighting terrain.
+        if (d < pathBestDist - 0.5) { pathBestDist = d; pathStuckTicks = 0; }
+        else { pathStuckTicks += cfg.actionDelayTicks; }
+        if (pathStuckTicks >= cfg.relocateStuckTicks) {
+            failOrRelocate("no progress toward the echest (stuck)", true);
         } else if (!BARITONE.isActive() && ++attempts > 3) {
-            failOrRelocate("couldn't path to the placed ender chest");
+            failOrRelocate("couldn't path to the placed ender chest", true);
         } else {
             timer = cfg.actionDelayTicks;
         }
