@@ -105,6 +105,7 @@ public class ElytraPilot extends Module {
     private int redeployCooldown;
     private int bounceStallTicks;
     private double bouncePrevY = Double.NaN;   // last-tick Y, for the bounce telemetry's vertical-speed readout
+    private double bounceTargetBps;            // e-bounce: the ramped horizontal speed target (b/s)
     private boolean passPathing;
     private int passTicks;
     private int passAttempts;
@@ -263,6 +264,7 @@ public class ElytraPilot extends Module {
         swapRedeploying = false;
         redeployCooldown = 0;
         bounceStallTicks = 0;
+        bounceTargetBps = 0;
         passPathing = false;
         passTicks = 0;
         passAttempts = 0;
@@ -1183,13 +1185,15 @@ public class ElytraPilot extends Module {
     }
 
     /**
-     * E-bounce: fast no-firework road travel via the real Rusherhack recipe — auto-walk + auto-jump at a steep
-     * nose-down dive pitch ({@code bouncePitch} ~75°). Each skip the bot dives hard into the flat road, the held
-     * jump (vanilla auto-jump, ~10-tick cadence) kicks it back up, the elytra glide physics convert the dive into
-     * forward speed, and re-sending START_FALL_FLYING re-engages the wing on each ground touch. Reporting the steep
-     * dive pitch is also what keeps 2b2t's elytra movement check from rubberbanding the building speed (a "too fast
-     * for level flight" rejection). Speed builds over a few seconds toward the {@code maxSpeed} cap. Flat road only;
-     * genuine walls fall through to the stall → Baritone walk-past ({@code passObstacles}).
+     * E-bounce: fast no-firework road travel by INJECTING the movement -- the proxy generates the bot's position
+     * packets, so we drive the velocity directly. Launch (jump) to get airborne, deploy the elytra, then every tick
+     * set the horizontal velocity along the road to a ramped target ({@code bounceSpeed}, capped by {@code maxSpeed})
+     * and PIN the altitude a hair above {@code roadY} ({@code bounceSkimHeight}) so the bot never touches down. Staying
+     * a fall-flying entity is the whole trick: the server's fall-flying movement-speed tolerance is ~17 blocks/tick
+     * (~340 b/s), far above our target, so it accepts the injected speed (the envelope Lambda/Rusherhack rely on). The
+     * v1 mistake was gating the injection on the laggy isFallFlying mirror, so the bot sank onto the road, lost flight,
+     * and got rubberbanded as a grounded speeder. We report {@code bouncePitch} (~75) to match a real ebounce client's
+     * server-visible profile. Flat road only; genuine walls fall to the stall -> Baritone walk-past.
      */
     private void tickBounce(double x, double y, double z, double speed) {
         var cfg = CONFIG.client.extra.elytraPilot;
@@ -1204,59 +1208,78 @@ public class ElytraPilot extends Module {
         // Elytra wear is the same in bounce mode (fall-flying still drains durability); SWAP returns to BOUNCE.
         if (manageElytraWear(x, y, z, yaw)) return;
 
-        // Obstacle handling: glide OVER a block/lava patch ahead (fast, stays in flight); only settle + walk (PASS)
-        // when we actually stall hard against something. terrainBlockedAhead now treats lava as a hazard too.
-        if (cfg.passObstacles) {
+        boolean onGround = BOT.isOnGround();
+        boolean flying = BOT.isFallFlying();
+
+        // Obstacle/stall: only count a hard stall once airborne (don't false-abort during the ground launch or the
+        // slow initial speed build-up). A sustained near-stop while airborne = stuck on a wall -> walk past it.
+        if (cfg.passObstacles && !onGround) {
             if (speed * 20.0 < 2.0) bounceStallTicks++; else bounceStallTicks = 0;
-            if (bounceStallTicks > cfg.bounceStallLimit) { enterPass(); return; }        // stuck against it -> walk past
-            // Proactive glide-over is opt-in: it false-triggers on road ceilings/texture and thrashes the bounce.
+            if (bounceStallTicks > cfg.bounceStallLimit) { enterPass(); return; }
             if (cfg.bounceHopObstacles && terrainBlockedAhead(x, y, z, yaw, Math.min(cfg.lookAheadBlocks, 12))) { enterHop(); return; }
+        } else {
+            bounceStallTicks = 0;
         }
 
-        // Don't outrun chunk loading (see tickNetherCruise) — but highways sit in previously-loaded, often-reloaded
-        // chunks, so loading is ~30% less of a problem here: gentler thresholds. The bounce has no firework boost, so
-        // the brake is the jump hold — release it to stop bouncing and let the glide bleed speed; right at the frontier,
-        // also skip the redeploy so the bot settles toward a stop and waits for chunks to stream in.
+        // Don't outrun chunk loading: highways sit in oft-reloaded chunks (~30% less of a problem) -> gentler
+        // thresholds. At the frontier, ease off / settle and wait for chunks to stream in.
         int slowDist = Math.round(cfg.netherFrontierSlow * HIGHWAY_FRONTIER_FACTOR);
         int holdDist = Math.round(cfg.netherFrontierHold * HIGHWAY_FRONTIER_FACTOR);
         int corridor = loadedDistAhead(x, z, yaw, slowDist);
         boolean frontierCoast = corridor < slowDist;
         boolean frontierHold  = corridor <= holdDist;
 
-        boolean onGround = BOT.isOnGround();
-        boolean flying = BOT.isFallFlying();
+        double cap = cfg.maxSpeed;
 
-        boolean overCap = speed * 20.0 >= cfg.maxSpeed;  // 2b2t ~40 b/s cap -> release to bleed
+        // LAUNCH from the ground: jump to get airborne so the elytra can deploy (deploying while grounded is
+        // server-rejected). The injected skim below takes over the moment we leave the road.
+        if (onGround) {
+            submitMove(true, true, true, false, yaw, 0f);
+            bounceTargetBps = Math.max(bounceTargetBps, speed * 20.0);
+            bouncePrevY = y;
+            return;
+        }
 
-        // Re-deploy the elytra each time we leave the road (airborne, not yet flying). Deploying while grounded is
-        // rejected by the server, so only when airborne. (isFallFlying mirrors server metadata and lags a few ticks,
-        // so the redeploy cooldown rate-limits any harmless double-send.)
-        if (!onGround && !flying && !overCap && !frontierHold && redeployCooldown <= 0) {
+        // AIRBORNE -- keep the elytra deployed. Do NOT gate on BOT.isFallFlying() (that mirror lags server metadata a
+        // few ticks); just re-send while not-yet-flying, rate-limited, so flight establishes and stays established.
+        if (!flying && redeployCooldown <= 0) {
             sendStartFallFlying();
             redeployCooldown = cfg.bounceRedeployTicks;
         }
 
-        // Physics dive-bounce: auto-walk (forward+sprint) + auto-jump (held jump, vanilla auto-jumps on each ground
-        // touch ~every 10 ticks) at a STEEP nose-down dive pitch (bouncePitch). Each skip the bot dives hard into the
-        // road, the auto-jump kicks it back up, and the elytra glide physics convert the dive into forward speed.
-        // Reporting the steep dive pitch also makes 2b2t's elytra movement check expect (and accept) the building
-        // speed instead of rubberbanding a 'too fast for level flight' player. No fireworks. Speed builds over a few
-        // seconds toward the maxSpeed cap.
-        boolean jump = cfg.bounceJump && !overCap && !frontierCoast;  // held = auto-jump on each ground touch
-        boolean walk = !frontierHold;
-        submitMove(walk, jump, walk, false, yaw, cfg.bouncePitch);
+        // Ramp the speed target from our actual speed, so it starts low and within the pre-flight tolerance.
+        double target;
+        if (frontierHold) {
+            target = 0.0;
+        } else {
+            bounceTargetBps = Math.max(bounceTargetBps, speed * 20.0);
+            target = Math.min(Math.min(cfg.bounceSpeed, cap), bounceTargetBps + cfg.bounceAccel);
+            if (frontierCoast) target = Math.min(target, cap * 0.5);
+        }
+        bounceTargetBps = target;
+
+        // INJECT THE MOVEMENT. Drive the horizontal velocity along the road, and pin the altitude a hair above the
+        // road so the bot never touches down -- staying a fall-flying entity is what makes the server accept the speed.
+        var vel = BOT.getVelocity();
+        double perTick = target / 20.0 / 0.99;                 // pre-compensate the 0.99/tick fall-flying drag
+        double yawRad = Math.toRadians(yaw);                   // drive along the steering yaw (centerline pursuit)
+        vel.setX(-Math.sin(yawRad) * perTick);
+        vel.setZ(Math.cos(yawRad) * perTick);
+        double targetY = cfg.roadY + cfg.bounceSkimHeight;     // hold just above the road; bias up, never sink onto it
+        vel.setY(Math.max(-0.15, Math.min(0.6, (targetY - y) * 0.5)) + 0.02);
+        submitInput(false, false, yaw, cfg.bouncePitch);
 
         if (cfg.bounceDebug) {
             double dvy = Double.isNaN(bouncePrevY) ? 0 : (y - bouncePrevY);
-            info(String.format("[bounce] y=%.2f vy=%+.3f hsp=%.1f b/s pitch=%.0f og=%b ff=%b",
-                y, dvy, speed * 20.0, cfg.bouncePitch, onGround, flying));
+            info(String.format("[bounce] y=%.2f vy=%+.3f hsp=%.1f/%.0f b/s og=%b ff=%b",
+                y, dvy, speed * 20.0, target, onGround, flying));
         }
         bouncePrevY = y;
 
         if (cfg.hasTarget && horizDist(x, z, cfg.targetX, cfg.targetZ) <= cfg.arriveRadius) {
             phase = Phase.LAND;
             landTicks = 0;
-            info("Reached target — landing");
+            info("Reached target - landing");
         }
     }
 

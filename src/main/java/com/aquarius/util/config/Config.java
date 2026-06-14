@@ -812,6 +812,18 @@ public final class Config {
                  *  "too fast for level flight" player back to the road. */
                 public float bouncePitch = 75.0f;
 
+                /** E-bounce target cruise speed (blocks/second) the injected skim ramps up to and holds, capped by
+                 *  {@link #maxSpeed}. Keep a margin under 2b2t's ~40 b/s ceiling. */
+                public double bounceSpeed = 36.0;
+
+                /** E-bounce ramp: blocks/second of horizontal speed added per tick while accelerating up to
+                 *  {@link #bounceSpeed} (so 2.0 ~= +40 b/s per second; reaches cruise in ~1s). */
+                public double bounceAccel = 2.0;
+
+                /** E-bounce skim altitude: blocks above {@link #roadY} to pin the hover. Big enough that the bot never
+                 *  touches the road (touching ends fall-flying and gets it rubberbanded as a grounded speeder). */
+                public double bounceSkimHeight = 1.0;
+
                 /** E-bounce: allow the launch jump that gets the bot airborne from a standstill on the road, so the
                  *  elytra can deploy and the driven skim can take over. Off = never jump (only works if the bounce is
                  *  entered already airborne and fall-flying). */
