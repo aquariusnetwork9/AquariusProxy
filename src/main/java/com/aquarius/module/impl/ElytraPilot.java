@@ -104,6 +104,8 @@ public class ElytraPilot extends Module {
     private boolean swapRedeploying;
     private int redeployCooldown;
     private int bounceStallTicks;
+    private double bouncePrevY = Double.NaN;   // last-tick Y, for the bounce telemetry's vertical-speed readout
+    private double bounceTargetBps;            // driven-skim bounce: the ramped horizontal speed target (b/s)
     private boolean passPathing;
     private int passTicks;
     private int passAttempts;
@@ -262,6 +264,7 @@ public class ElytraPilot extends Module {
         swapRedeploying = false;
         redeployCooldown = 0;
         bounceStallTicks = 0;
+        bounceTargetBps = 0;
         passPathing = false;
         passTicks = 0;
         passAttempts = 0;
@@ -1182,10 +1185,15 @@ public class ElytraPilot extends Module {
     }
 
     /**
-     * E-bounce: skip along a flat road with no fireworks. Holds forward+jump+sprint at +2° pitch and re-sends
-     * START_FALL_FLYING each bounce. The held jump auto-jumps the instant the bot touches the road (vanilla
-     * physics, with its own ~10-tick jump cooldown setting the bounce cadence), and the re-engaged elytra glide
-     * carries the hop forward. Decoded from a real Rusherhack capture. Flat road only.
+     * E-bounce: fast no-firework road travel via a DRIVEN SKIM. The headless physics sim can't reproduce the real
+     * client's jumpless elytra-ground-skip, so the old sprint-jump workaround capped ~23 b/s. Because this is a
+     * proxy — it owns the outgoing position packets — we drive the {@code velocity} field directly instead: deploy
+     * the elytra, then each tick ramp the horizontal velocity along the road toward {@code bounceSpeed} (≤ the
+     * {@code maxSpeed} cap) and hold a low hover ({@code bounceSkimHeight}) just above {@code roadY}, staying
+     * fall-flying the whole time. The server sees fall-flying + smooth fast travel — the same envelope as firework
+     * elytra (which 2b2t accepts to ~40 b/s) — so nothing is burned. The proxy-native counterpart of the
+     * Rusherhack/Lambda velocity-boost bounce. Obstacle glide-over ({@code bounceHopObstacles}) is opt-in; genuine
+     * walls fall through to the stall → Baritone walk-past. Flat road only.
      */
     private void tickBounce(double x, double y, double z, double speed) {
         var cfg = CONFIG.client.extra.elytraPilot;
@@ -1205,7 +1213,8 @@ public class ElytraPilot extends Module {
         if (cfg.passObstacles) {
             if (speed * 20.0 < 2.0) bounceStallTicks++; else bounceStallTicks = 0;
             if (bounceStallTicks > cfg.bounceStallLimit) { enterPass(); return; }        // stuck against it -> walk past
-            if (terrainBlockedAhead(x, y, z, yaw, Math.min(cfg.lookAheadBlocks, 12))) { enterHop(); return; } // glide over
+            // Proactive glide-over is opt-in: it false-triggers on road ceilings/texture and thrashes the bounce.
+            if (cfg.bounceHopObstacles && terrainBlockedAhead(x, y, z, yaw, Math.min(cfg.lookAheadBlocks, 12))) { enterHop(); return; }
         }
 
         // Don't outrun chunk loading (see tickNetherCruise) — but highways sit in previously-loaded, often-reloaded
@@ -1218,13 +1227,57 @@ public class ElytraPilot extends Module {
         boolean frontierCoast = corridor < slowDist;
         boolean frontierHold  = corridor <= holdDist;
 
-        boolean overCap = speed * 20.0 >= cfg.maxSpeed; // 2b2t ~40 b/s limit — coast (no bounce) to bleed speed
-        if (!BOT.isFallFlying() && !overCap && !frontierHold && redeployCooldown <= 0) {
-            sendStartFallFlying();                       // re-engage the elytra at the bottom of each bounce
-            redeployCooldown = cfg.bounceRedeployTicks;
+        boolean onGround = BOT.isOnGround();
+
+        // BOOTSTRAP: not gliding yet. Jump off the road to get airborne, THEN deploy the elytra (deploying while
+        // grounded is rejected by the server and suppresses the launch jump). Once the server confirms fall-flying,
+        // the driven skim below takes over.
+        if (!BOT.isFallFlying()) {
+            if (onGround) {
+                submitMove(true, cfg.bounceJump, true, false, yaw, 0f);     // hop off the road to launch
+            } else {
+                if (redeployCooldown <= 0) { sendStartFallFlying(); redeployCooldown = cfg.bounceRedeployTicks; }
+                submitMove(true, false, true, false, yaw, 0f);
+            }
+            bounceTargetBps = Math.max(bounceTargetBps, speed * 20.0);       // carry whatever speed we already have
+            bouncePrevY = y;
+            return;
         }
-        boolean jump = !overCap && !frontierCoast;       // held jump auto-jumps on each ground touch
-        submitMove(true, jump, true, false, yaw, cfg.glidePitch);
+
+        // DRIVEN SKIM (the fix). Drive the velocity directly: ramp horizontal speed to the cruise target and hold a
+        // low hover just above the road, staying fall-flying so the server accepts the speed (firework-elytra
+        // envelope). The proxy owns the position packets, so the velocity field IS the boost.
+        double cap = cfg.maxSpeed;
+        double target;
+        if (frontierHold) {
+            target = 0.0;                                                    // outran chunk loading — stop and wait
+        } else {
+            bounceTargetBps = Math.max(bounceTargetBps, speed * 20.0);       // never command below our actual speed
+            target = Math.min(Math.min(cfg.bounceSpeed, cap), bounceTargetBps + cfg.bounceAccel);
+            if (frontierCoast) target = Math.min(target, cap * 0.5);         // near the frontier — ease off the gas
+        }
+        bounceTargetBps = target;
+
+        var vel = BOT.getVelocity();
+        if (target <= 0.001) {
+            vel.setX(0); vel.setZ(0);                                        // settle in place at the frontier
+        } else {
+            double perTick = target / 20.0 / 0.99;                          // pre-compensate the 0.99/tick glide drag
+            double yawRad = Math.toRadians(yaw);                            // drive along the steering yaw (= centerline
+            vel.setX(-Math.sin(yawRad) * perTick);                          //   pursuit), so drift corrects AND the
+            vel.setZ(Math.cos(yawRad) * perTick);                           //   fall-flying re-align term stays ~0
+        }
+        // Hold a low skim above the road: stay airborne (fall-flying persists) without climbing into the walls.
+        double targetY = cfg.roadY + cfg.bounceSkimHeight;
+        vel.setY(Math.max(-0.4, Math.min(0.5, (targetY - y) * 0.4)));
+        submitInput(false, false, yaw, cfg.bouncePitch);                    // level look; velocity is driven directly
+
+        if (cfg.bounceDebug) {
+            double vy = Double.isNaN(bouncePrevY) ? 0 : (y - bouncePrevY);
+            info(String.format("[bounce] y=%.2f vy=%+.3f hsp=%.1f/%.0f b/s ff=%b og=%b",
+                y, vy, speed * 20.0, target, BOT.isFallFlying(), onGround));
+        }
+        bouncePrevY = y;
 
         if (cfg.hasTarget && horizDist(x, z, cfg.targetX, cfg.targetZ) <= cfg.arriveRadius) {
             phase = Phase.LAND;
@@ -1310,10 +1363,11 @@ public class ElytraPilot extends Module {
         double[] d = travelUnit();
         double ahead = cfg.passAheadBlocks * passAttempts;
         double tx, tz;
-        if (cfg.highway) {                 // re-center on the highway line, past the obstacle
-            double t = x * d[0] + z * d[1];
-            tx = (t + ahead) * d[0];
-            tz = (t + ahead) * d[1];
+        if (cfg.highway) {                 // re-center on the road line (through its anchor), past the obstacle
+            double ax = cfg.roadAnchorX, az = cfg.roadAnchorZ;
+            double t = (x - ax) * d[0] + (z - az) * d[1];
+            tx = ax + (t + ahead) * d[0];
+            tz = az + (t + ahead) * d[1];
         } else {                           // plain heading bounce: straight ahead from here
             tx = x + d[0] * ahead;
             tz = z + d[1] * ahead;
@@ -1325,12 +1379,23 @@ public class ElytraPilot extends Module {
         passTicks = 0;
     }
 
-    /** Unit travel direction: the highway axis if in highway mode, else derived from the configured heading. */
+    /** Unit travel direction: the road axis if in highway mode, else derived from the configured heading. */
     private double[] travelUnit() {
         var cfg = CONFIG.client.extra.elytraPilot;
-        if (cfg.highway) return highwayUnit(cfg.highwayDir);
+        if (cfg.highway) return roadDir();
         double r = Math.toRadians(cfg.heading);
         return new double[]{ -Math.sin(r), Math.cos(r) };
+    }
+
+    /** Unit direction of the current road: an explicit custom direction (roadDirX/Z) if set — for off-spawn roads —
+     *  else the spawn-highway direction from {@code highwayDir}. */
+    private double[] roadDir() {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (cfg.roadDirX != 0 || cfg.roadDirZ != 0) {
+            double len = Math.hypot(cfg.roadDirX, cfg.roadDirZ);
+            return new double[]{ cfg.roadDirX / len, cfg.roadDirZ / len };
+        }
+        return highwayUnit(cfg.highwayDir);
     }
 
     /** Equip a fresh elytra mid-air, then re-deploy + re-boost. The bot free-falls while the chestplate is swapped. */
@@ -1992,12 +2057,13 @@ public class ElytraPilot extends Module {
     private float desiredYaw(double x, double z) {
         var cfg = CONFIG.client.extra.elytraPilot;
         if (cfg.highway) {
-            // Pure-pursuit along a highway centerline through (0,0): project the bot onto the road, then aim at a
-            // point further along it. This both heads down the road AND corrects sideways drift back to center.
-            double[] d = highwayUnit(cfg.highwayDir);
-            double t = x * d[0] + z * d[1];                  // how far along the road we are
-            double aimX = (t + cfg.highwayLookahead) * d[0];
-            double aimZ = (t + cfg.highwayLookahead) * d[1];
+            // Pure-pursuit along a road centerline through its anchor (0,0 for spawn highways): project the bot onto
+            // the road, then aim at a point further along it. Heads down the road AND corrects drift back to center.
+            double[] d = roadDir();
+            double ax = cfg.roadAnchorX, az = cfg.roadAnchorZ;
+            double t = (x - ax) * d[0] + (z - az) * d[1];    // how far along the road we are
+            double aimX = ax + (t + cfg.highwayLookahead) * d[0];
+            double aimZ = az + (t + cfg.highwayLookahead) * d[1];
             return (float) Math.toDegrees(Math.atan2(-(aimX - x), aimZ - z));
         }
         if (!cfg.hasTarget) return cfg.heading;

@@ -3,6 +3,7 @@ package com.aquarius.util.config;
 import com.google.common.collect.Lists;
 import com.google.gson.annotations.SerializedName;
 import com.aquarius.feature.chatschema.ChatSchema;
+import com.aquarius.feature.elytra.Route;
 import com.aquarius.feature.tasks.Task;
 import com.aquarius.feature.waypoints.Waypoint;
 import com.aquarius.feature.whitelist.PlayerEntry;
@@ -643,6 +644,29 @@ public final class Config {
                 /** In the nether, stop bouncing and seek an exit portal within this many (nether) blocks of the target's nether coords. */
                 public int netherExitRadius = 500;
 
+                /** Perpendicular distance (blocks) to the chosen highway's centerline below which the bot Baritone-walks
+                 *  ONTO the road — pillaring up to {@link #roadY} if below, tunnelling/centering on the 4-6-wide road —
+                 *  instead of open-nether flying. Beyond it, the trip flies to the road first ("nether fly only when
+                 *  outside this range"). */
+                public int highwayAcquireRadius = 100;
+
+                // --- e-bounce road line (anchor + direction) — lets the bounce follow ANY straight road, not just one
+                //     through spawn. Defaults (anchor 0,0 + zero direction) reproduce the origin-highway behaviour:
+                //     a zero direction means "use highwayDir". Set by the trip/route planner; `/fly highway` resets them. ---
+                public int roadAnchorX = 0;
+                public int roadAnchorZ = 0;
+                public double roadDirX = 0.0;
+                public double roadDirZ = 0.0;
+
+                // --- Saved multi-leg routes (named, reusable per base; driven by ElytraTrip). ---
+                /** Named routes: ride a highway to a milestone, branch off, arrive at an off-highway base. */
+                public Map<String, Route> tripRoutes = new LinkedHashMap<>();
+                /** The route currently armed (empty = a plain coord trip). Persists so a route resumes on (re)connect. */
+                public String tripActiveRoute = "";
+                /** Discord trip panel UI state: the route being edited, and whether the panel shows the route builder. */
+                public String tripPanelRoute = "";
+                public boolean tripPanelRouteView = false;
+
                 /** Hard safety cap on nether altitude — never climb above this (2b2t's bedrock roof at y127 is inaccessible). */
                 public int netherCeilingY = 122;
 
@@ -780,6 +804,44 @@ public final class Config {
 
                 /** E-bounce: minimum ticks between START_FALL_FLYING re-sends (anti-spam; the ~10-tick bounce cadence is set by vanilla jump cooldown). */
                 public int bounceRedeployTicks = 3;
+
+                /** E-bounce skim pitch (degrees; +pitch noses DOWN). Keep at ~0: the driven-skim bounce injects the
+                 *  horizontal velocity directly (see {@link com.aquarius.module.impl.ElytraPilot}), so the look vector
+                 *  must stay LEVEL and aligned with that velocity — a nose-down pitch makes the fall-flying physics
+                 *  rotate the velocity downward and bleed it. Only nudge this if a server needs a more glide-like look. */
+                public float bouncePitch = 0.0f;
+
+                /** E-bounce target cruise speed (blocks/second) the driven skim ramps up to and holds. Capped by
+                 *  {@link #maxSpeed} (2b2t's ~40 b/s ceiling); keep a small margin under it. The skim injects this
+                 *  velocity directly down the road while staying fall-flying — no fireworks; the proxy-native
+                 *  equivalent of a Rusherhack/Lambda velocity-boost bounce. */
+                public double bounceSpeed = 36.0;
+
+                /** E-bounce ramp: blocks/second of horizontal speed added per tick while accelerating up to
+                 *  {@link #bounceSpeed} (20 ticks/s, so 2.0 ≈ +40 b/s per second — reaches cruise in ~1s). */
+                public double bounceAccel = 2.0;
+
+                /** E-bounce skim altitude: how far (blocks) above {@link #roadY} to hold the hover. Big enough that
+                 *  the bot never touches the road (touching ends fall-flying), small enough not to climb into walls. */
+                public double bounceSkimHeight = 0.6;
+
+                /** E-bounce: allow the launch jump that gets the bot airborne from a standstill on the road, so the
+                 *  elytra can deploy and the driven skim can take over. Off = never jump (only works if the bounce is
+                 *  entered already airborne and fall-flying). */
+                public boolean bounceJump = true;
+
+                /** Legacy (pre-driven-skim): the old sprint-jump bounce relaunched the airborne jump below this speed.
+                 *  The driven-skim bounce injects velocity instead, so this is unused — kept only for config compat. */
+                public double bounceJumpBelowSpeed = 40.0;
+
+                /** E-bounce: log per-tick telemetry (y, vertical/horizontal speed, pitch, fall-flying) while bouncing,
+                 *  to tune the bounce against a packet capture. Spammy — turn off after diagnosing. */
+                public boolean bounceDebug = false;
+
+                /** E-bounce: proactively glide OVER terrain detected ahead (the HOP). Default off — a real bounce just
+                 *  skims through minor road clutter, and the proactive HOP false-triggers on ceilings/road texture and
+                 *  thrashes. Genuine walls are still handled by the stall → Baritone walk-past ({@link #passObstacles}). */
+                public boolean bounceHopObstacles = false;
 
                 /**
                  * Hard horizontal speed cap in blocks/second. 2b2t rejects sustained travel above ~40 b/s
