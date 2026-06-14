@@ -444,6 +444,10 @@ This is disabled by default. No AquariusProxy users contribute or collect data, 
 
   ```database time on/off```
 
+  ```database stash on/off  (stash system tables)```
+
+  ```database stash setup  (localhost quickstart: defaults + enable + start)```
+
 
 ### debug
 
@@ -1383,6 +1387,18 @@ outward from where the bot is when enabled. Short alias: .aqm
 
   ```aquariusminer area corners <x1> <z1> <x2> <z2>```
 
+  ```aquariusminer area loaded  (search the chunks loaded at start; stops when mined out)```
+
+  ```aquariusminer mode area/ore  (strip-mine vs tunnel to ore)```
+
+  ```aquariusminer tool fortune/silk  (ore: break for drops vs collect the block)```
+
+  ```aquariusminer ore add <block> | remove <block> | list | clear | reset```
+
+  ```aquariusminer autokeep on/off  (ore: derive the keep list from targets+tool)```
+
+  ```aquariusminer echestminy <y>  (lowest Y to place the field ender chest)```
+
   ```aquariusminer keep add <item> | remove <item> | list | clear | reset```
 
   ```aquariusminer cave on/off```
@@ -1435,6 +1451,8 @@ outward from where the bot is when enabled. Short alias: .aqm
 
   ```aquariusminer deposit refill on/off | empties <n> | maxdist <blocks>```
 
+  ```aquariusminer panel  (post an interactive miner panel to Discord: mode/area dropdowns + toggles + bounds modal + run/scan)```
+
 
 ### regear
 
@@ -1452,6 +1470,8 @@ kit shulker, empty it, return it, then gear up. One-shot. Short alias: .rg
 
   ```regear color <name>/off  (match the kit shulker by colour instead)```
 
+  ```regear contents on/off  (match the kit by its contents: elytra+fireworks+kit items, any name/colour)```
+
   ```regear scanradius <n>  (fallback: find a placed echest within n blocks)```
 
   ```regear armor on/off  (equip the kit's armor on finish)```
@@ -1463,6 +1483,18 @@ kit shulker, empty it, return it, then gear up. One-shot. Short alias: .rg
   ```regear pauseplayer on/off```
 
   ```regear once on/off  (toggle the module off after a successful regear)```
+
+  ```regear ghost on/off  (open containers through walls/no-LOS within ghostreach)```
+
+  ```regear ghostreach <n>  (max blocks for a ghost-hand open; 2b2t tolerates ~6)```
+
+  ```regear relocate on/off  (self-kill to respawn until open sky + a reachable echest)```
+
+  ```regear skyclearance <n>  (air blocks above head required to count as open sky)```
+
+  ```regear relocateattempts <n>  (max self-kills before giving up)```
+
+  ```regear panel  (post an interactive Regear panel to Discord: match-mode dropdown + toggles + kit/threshold modals + run)```
 
 
 ### kitmaker
@@ -1494,6 +1526,81 @@ example kit, auto-classifies nearby ground containers, then fills + deposits kit
   ```kitmaker autodc on/off  (disconnect when done)```
 
   ```kitmaker status  (print the discovered layout)```
+
+  ```kitmaker panel  (post an interactive kit-maker panel to Discord: match dropdown + toggles + template/scan modals + run)```
+
+
+### stashscanner
+
+Read-only stash census: walk storage containers, read each shulker's contents, classify it as
+
+a kit and snapshot it to Postgres. Never breaks/places. Requires the stash database. Alias: .ss
+
+**Aliases:** `ss`
+
+**Usage**
+
+  ```stashscanner on/off | scan  (start a scan)```
+
+  ```stashscanner mode region/list```
+
+  ```stashscanner region <x> <y> <z> <radius>  (0 0 0 = use the bot's feet)```
+
+  ```stashscanner band <down> <up>  (Y band around the origin)```
+
+  ```stashscanner dryrun on/off```
+
+  ```stashscanner seed [path]  (load kits.json into the catalog; default the bundled example)```
+
+  ```stashscanner dump  (print unknown signatures to label)```
+
+  ```stashscanner status```
+
+
+### orderfiller
+
+Payment-gated order picker: pop a paid job, withdraw the reserved kit shulkers and deposit them
+
+into the order's outgoing chest, then post a manifest. Never breaks/places. Alias: .of
+
+**Aliases:** `of`
+
+**Usage**
+
+  ```orderfiller on/off```
+
+  ```orderfiller pause / resume```
+
+  ```orderfiller maxpertrip <n>```
+
+  ```orderfiller partial on/off  (allow partial fills)```
+
+  ```orderfiller manifestchannel <id>  (Discord channel for the manifest; empty = main)```
+
+  ```orderfiller test <order_id>  (manually dispatch a paid order without Redis)```
+
+  ```orderfiller status```
+
+
+### order
+
+Stash order intake + manifest (native, payment-gated). Place orders, view the catalog/stock,
+
+register outgoing chests, and check/cancel orders. Delivery only runs after a paid signal.
+
+**Aliases:** `ord`
+
+**Usage**
+
+  ```order catalog | stock```
+
+  ```order <kit:qty> [kit:qty ...]   (place an order; soft-holds stock, awaits payment)```
+
+  ```order status <order_id> | cancel <order_id>```
+
+  ```order paid <order_id> [ref]     (admin/test: mark paid + enqueue the fill)```
+
+  ```order outgoing <x> <y> <z> [label]   (admin: register a pickup chest)```
 
 
 ### enchanter
@@ -1537,6 +1644,8 @@ max template to each item using the cheapest anvil combine order. Alias: .enc
   ```enchanter autodc on/off  (disconnect when done)```
 
   ```enchanter status  (print the discovered layout + progress)```
+
+  ```enchanter panel  (post an interactive enchanter panel to Discord: toggles + scan/XP modals + run)```
 
 
 ### autoArmor
@@ -1675,6 +1784,10 @@ Which foods to eat can be configured based on modes:
   ```autoEat warning on/off```
 
   ```autoEat allowUnsafeFood on/off```
+
+  ```autoEat fireProtection on/off   (eat a golden apple for fire res while in lava; enchanted = fire immunity)```
+
+  ```autoEat fireProtectionEnchantedOnly on/off  (off = also eat regular golden apples: Absorption/Regen tank only)```
 
   ```autoEat mode <all/whitelist/blacklist>```
 
@@ -1965,6 +2078,8 @@ Needs an elytra worn + firework rockets in the hotbar. Short alias: .fly
 
   ```elytrapilot arrive <blocks>       (how close to the target counts as arrived)```
 
+  ```elytrapilot maxflight <ticks>     (hard per-flight time cap before aborting; 20 ticks/s, 36000 = 30 min)```
+
   ```elytrapilot descend <blocks>      (distance from target to start descending)```
 
   ```elytrapilot takeoff <on/off>      (on = pulse-jump to deploy; off = assume airborne/ledge)```
@@ -1982,6 +2097,20 @@ Needs an elytra worn + firework rockets in the hotbar. Short alias: .fly
   ```elytrapilot road <y>              (the flat road's surface Y, for ebounce)```
 
   ```elytrapilot maxspeed <bps>        (speed cap in blocks/sec; 2b2t limit is 40 — keep ~38)```
+
+  ```elytrapilot bouncepitch <deg>     (e-bounce flat-road skim pitch; ~0 matches a real capture)```
+
+  ```elytrapilot bouncejump <on/off>   (e-bounce: allow the launch/recover jump; the bounce itself is a jumpless skip)```
+
+  ```elytrapilot bouncejumpspeed <bps> (e-bounce: only jump to launch/recover below this speed; above it the skip carries it low)```
+
+  ```elytrapilot bouncehop <on/off>    (e-bounce: proactively glide over terrain ahead; off = bounce through + walk-past real walls)```
+
+  ```elytrapilot bouncestall <ticks>   (ticks of near-zero bounce speed before giving up to a walk-past)```
+
+  ```elytrapilot redeploy <ticks>      (min ticks between START_FALL_FLYING re-sends during e-bounce)```
+
+  ```elytrapilot bouncedebug <on/off>  (log per-tick bounce telemetry: y / speeds / pitch / fall-flying, for tuning)```
 
   ```elytrapilot highway <dir>         (follow a 2b2t nether highway from 0,0: N/S/E/W/NE/SE/NW/SW; sets ebounce + y120)```
 
@@ -2003,21 +2132,81 @@ Needs an elytra worn + firework rockets in the hotbar. Short alias: .fly
 
   ```elytrapilot landcut <n>           (cut the glide + drop in within this many blocks of the ground)```
 
-  ```elytrapilot trip <x> <z> [y]      (plan a journey: overworld if within ~100k of spawn, else through the nether)```
+  ```elytrapilot divefloor <y>         (over target: dive hard above this Y to shed excess altitude, land gently below)```
 
-  ```elytrapilot trip highways <on/off>(nether leg: e-bounce a highway vs fly open-nether straight to the target)```
+  ```elytrapilot divepitch <deg>       (nose-down pitch for the aggressive over-target spiral dive)```
 
-  ```elytrapilot trip off              (cancel an in-progress trip)```
+  ```elytrapilot cruisescale <on/off>  (overworld/End: distance-scale the cruise ceiling — climb ONCE to the height the leg needs, then glide all the way in)```
+
+  ```elytrapilot cruiseglide <r>       (glide ratio at the managed speed band; sizes the climb, descent lead, undershoot re-climb, and firework estimate)```
+
+  ```elytrapilot cruiseceil <y>        (hard cap on the distance-scaled cruise altitude; total rockets are cap-independent)```
+
+  ```elytrapilot cruisespeed <min> <max> <hard>  (overworld/End glide speed band b/s: hold min-max, never overspeed/thrust past hard)```
+
+  ```elytrapilot cruisetrim <deg>      (pitch nudge ± off glidepitch used to hold the speed band)```
+
+  ```elytrapilot cruisebrake <deg>     (nose-up pitch to brake when the glide overspeeds past the hard cap)```
+
+  ```elytrapilot cruiseband <n>        (legacy sawtooth amplitude — unused by the single climb+glide profile)```
+
+  ```elytrapilot climbfire <ticks>     (patient climb cadence — one rocket then coast; ~120 = 6s, matches efficient manual flight)```
+
+  ```elytrapilot altperrocket <n>      (blocks of altitude per flight-3 rocket at climbpitch; feeds the firework estimate)```
+
+  ```elytrapilot estimatefw <on/off>   (size the pre-flight firework requirement to the overworld-direct trip distance)```
+
+  ```elytrapilot fwmargin <m>          (safety multiplier on the estimated rocket count)```
+
+  ```elytrapilot trip <x> <z> [y]      (plan a journey to OVERWORLD coords: direct if within ~100k of spawn, else via the nether)```
+
+  ```elytrapilot trip nether <x> <z>   (destination IS in the nether: enter a portal, fly to the exact coords, land there)```
+
+  ```elytrapilot trip highways <on/off>(nether transit leg: e-bounce a highway vs fly open-nether straight to the target)```
+
+  ```elytrapilot trip radius <blocks>  (overworld-direct cutoff: targets within this of 0,0 fly direct, beyond it route via the nether)```
+
+  ```elytrapilot trip acquire <blocks> (within this perpendicular distance of the chosen highway, Baritone walks onto the road instead of nether-flying)```
+
+  ```elytrapilot trip route new <name> ow <x> <y> <z> | nether   (create a saved multi-leg route; ends overworld at x,y,z or in the nether)```
+
+  ```elytrapilot trip route leg <name> <ride|fly> coord <nx> <nz> [roadY]   (append a leg to a nether endpoint; ride=e-bounce a road, fly=open-nether)```
+
+  ```elytrapilot trip route leg <name> <ride|fly> head <dir> <dist> [roadY] (append a leg by heading+distance from the last waypoint)```
+
+  ```elytrapilot trip route run|show|del|dellast <name> / trip route list   (run / inspect / manage saved routes)```
+
+  ```elytrapilot trip off              (cancel/reset an in-progress trip)```
+
+  ```elytrapilot trip startonconnect <on/off> (armed trip starts/resumes when the bot enters the world)```
+
+  ```elytrapilot panel                 (post an interactive trip panel to Discord: dimension dropdown + typed X/Y/Z modal + launch)```
 
   ```elytrapilot netherceiling <y>     (hard altitude cap in the nether; never climb above it / into bedrock)```
 
   ```elytrapilot nethercruise <y>      (preferred open-nether flight altitude; holds ~this Y and dodges in 3D)```
 
-  ```elytrapilot netherpath <on/off>   (3D look-ahead pathfinding in open nether vs pure reactive dodging)```
+  ```elytrapilot native <on/off>       (native nether-pathfinder: full-route planning through UNLOADED chunks via seed terrain-gen)```
 
-  ```elytrapilot netherfrontier <slow> <hold>  (blocks of loaded terrain ahead below which to coast / brake — don't outrun 2b2t's slow chunk loading)```
+  ```elytrapilot seed <long>           (world seed for native nether routing; default = 2b2t's nether seed)```
+
+  ```elytrapilot netherfrontier <slow> <hold>  (highway e-bounce: blocks of loaded terrain ahead below which to coast / brake)```
 
   ```elytrapilot hoppitch <deg>        (climb angle when gliding over an on-road obstacle)```
+
+  ```elytrapilot solver <on/off>       (simulation flight solver: fly only pitches whose simulated future is collision-free)```
+
+  ```elytrapilot simticks <n>          (ticks of elytra physics simulated per candidate pitch; Baritone uses 20)```
+
+  ```elytrapilot pitchrange <deg>      (pitch sweep around the direct line, ± degrees; Baritone uses 25)```
+
+  ```elytrapilot boostbelow <bps>      (solver path: fire a rocket when speed drops below this and not already boosted)```
+
+  ```elytrapilot setbackhold <ticks>   (after a server position setback, hold all rockets this long; never fight a rubberband)```
+
+  ```elytrapilot relaunchpitch <deg>   (relaunch pitch when a CEILING is above: shallow ~-20 = slide forward out from under it)```
+
+  ```elytrapilot relaunchpitchup <deg> (relaunch pitch when OPEN SKY is above: steep ~-75 = punch straight up out of a lava ocean)```
 
 
 ### extraChat
@@ -2306,6 +2495,8 @@ soul-sand centre, throws a pearl in, and backs off. Needs ender pearls in its in
   ```pearldrop priority <n>           (input priority for the sneak/aim/throw control)```
 
   ```pearldrop closetrapdoor <on/off> (shut an open trapdoor before depositing)```
+
+  ```pearldrop panel                  (post an interactive pearl-drop panel to Discord: scan/drop buttons + drop/settings modals)```
 
 
 ### pearlplus
@@ -2777,6 +2968,8 @@ See `set help` for additional commands that modify trade settings, like enchantm
   ```trader waitForInteractTimeout <ticks>```
 
   ```trader logTradeStatusToDiscord on/off```
+
+  ```trader panel  (post an interactive trader panel to Discord: toggle trades + timeout modal + run)```
 
 
 ### visualRange

@@ -1,9 +1,12 @@
 package com.aquarius.command.impl;
 
+import com.aquarius.feature.elytra.Route;
 import com.aquarius.module.impl.ElytraPilot;
 import com.aquarius.module.impl.ElytraTrip;
 import com.aquarius.util.config.Config.Client.Extra.ElytraPilot.HighwayDir;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+
+import java.util.ArrayList;
 import com.aquarius.command.api.Command;
 import com.aquarius.command.api.CommandCategory;
 import com.aquarius.command.api.CommandContext;
@@ -58,6 +61,13 @@ public class ElytraPilotCommand extends Command {
                 "ebounce <on/off>      (bounce-highway mode: skip along a flat road, no fireworks)",
                 "road <y>              (the flat road's surface Y, for ebounce)",
                 "maxspeed <bps>        (speed cap in blocks/sec; 2b2t limit is 40 — keep ~38)",
+                "bouncepitch <deg>     (e-bounce flat-road skim pitch; ~0 matches a real capture)",
+                "bouncejump <on/off>   (e-bounce: allow the launch/recover jump; the bounce itself is a jumpless skip)",
+                "bouncejumpspeed <bps> (e-bounce: only jump to launch/recover below this speed; above it the skip carries it low)",
+                "bouncehop <on/off>    (e-bounce: proactively glide over terrain ahead; off = bounce through + walk-past real walls)",
+                "bouncestall <ticks>   (ticks of near-zero bounce speed before giving up to a walk-past)",
+                "redeploy <ticks>      (min ticks between START_FALL_FLYING re-sends during e-bounce)",
+                "bouncedebug <on/off>  (log per-tick bounce telemetry: y / speeds / pitch / fall-flying, for tuning)",
                 "highway <dir>         (follow a 2b2t nether highway from 0,0: N/S/E/W/NE/SE/NW/SW; sets ebounce + y120)",
                 "pass <on/off>         (on obstacle: settle + Baritone past it along the axis, then resume bounce)",
                 "passahead <blocks>    (how far along the axis to aim the Baritone bypass)",
@@ -84,6 +94,12 @@ public class ElytraPilotCommand extends Command {
                 "trip <x> <z> [y]      (plan a journey to OVERWORLD coords: direct if within ~100k of spawn, else via the nether)",
                 "trip nether <x> <z>   (destination IS in the nether: enter a portal, fly to the exact coords, land there)",
                 "trip highways <on/off>(nether transit leg: e-bounce a highway vs fly open-nether straight to the target)",
+                "trip radius <blocks>  (overworld-direct cutoff: targets within this of 0,0 fly direct, beyond it route via the nether)",
+                "trip acquire <blocks> (within this perpendicular distance of the chosen highway, Baritone walks onto the road instead of nether-flying)",
+                "trip route new <name> ow <x> <y> <z> | nether   (create a saved multi-leg route; ends overworld at x,y,z or in the nether)",
+                "trip route leg <name> <ride|fly> coord <nx> <nz> [roadY]   (append a leg to a nether endpoint; ride=e-bounce a road, fly=open-nether)",
+                "trip route leg <name> <ride|fly> head <dir> <dist> [roadY] (append a leg by heading+distance from the last waypoint)",
+                "trip route run|show|del|dellast <name> / trip route list   (run / inspect / manage saved routes)",
                 "trip off              (cancel/reset an in-progress trip)",
                 "trip startonconnect <on/off> (armed trip starts/resumes when the bot enters the world)",
                 "panel                 (post an interactive trip panel to Discord: dimension dropdown + typed X/Y/Z modal + launch)",
@@ -218,6 +234,40 @@ public class ElytraPilotCommand extends Command {
                 CONFIG.client.extra.elytraPilot.maxSpeed = getDouble(c, "bps");
                 c.getSource().getEmbed().title("ElytraPilot max speed = " + CONFIG.client.extra.elytraPilot.maxSpeed + " b/s");
             })))
+            .then(literal("bouncepitch").then(argument("degrees", doubleArg()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bouncePitch = (float) getDouble(c, "degrees");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce pitch = " + CONFIG.client.extra.elytraPilot.bouncePitch + "°")
+                    .description("Flat-road skim pitch. A real capture bounces at ~0°; +pitch noses down (was glidePitch +2, which popped the bot up).");
+            })))
+            .then(literal("bouncejump").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceJump = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce launch jump " + toggleStrCaps(CONFIG.client.extra.elytraPilot.bounceJump))
+                    .description("Allows the launch/recover jump. The bounce itself is a jumpless skip; off = never jump (only works if already gliding).");
+            })))
+            .then(literal("bouncejumpspeed").then(argument("bps", doubleArg(0)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceJumpBelowSpeed = getDouble(c, "bps");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce jump-below speed = " + CONFIG.client.extra.elytraPilot.bounceJumpBelowSpeed + " b/s")
+                    .description("Only jump to launch/recover below this speed; above it the elytra-skip carries the bot low + builds speed (jumping every cycle bounced ~2 blocks into the walls).");
+            })))
+            .then(literal("bouncehop").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceHopObstacles = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce proactive hop " + toggleStrCaps(CONFIG.client.extra.elytraPilot.bounceHopObstacles))
+                    .description("Off = bounce through minor clutter (real walls still handled by the stall walk-past). On = glide over terrain ahead (can false-trigger on ceilings).");
+            })))
+            .then(literal("bouncestall").then(argument("ticks", integer(1)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceStallLimit = getInteger(c, "ticks");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce stall limit = " + CONFIG.client.extra.elytraPilot.bounceStallLimit + " ticks")
+                    .description("Ticks of near-zero bounce speed before giving up to a walk-past. Raise it if the bounce needs longer to build speed from a standstill.");
+            })))
+            .then(literal("redeploy").then(argument("ticks", integer(1)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceRedeployTicks = getInteger(c, "ticks");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce redeploy spacing = " + CONFIG.client.extra.elytraPilot.bounceRedeployTicks + " ticks");
+            })))
+            .then(literal("bouncedebug").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceDebug = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce telemetry " + toggleStrCaps(CONFIG.client.extra.elytraPilot.bounceDebug))
+                    .description("Logs per-tick y / vertical+horizontal speed / pitch / fall-flying while bouncing, for tuning. Spammy — turn off after.");
+            })))
             .then(literal("highway").then(argument("dir", word()).executes(c -> {
                 HighwayDir dir;
                 try {
@@ -232,6 +282,7 @@ public class ElytraPilotCommand extends Command {
                 cfg.ebounce = true;
                 cfg.roadY = 120;
                 cfg.hasTarget = false;
+                cfg.roadAnchorX = 0; cfg.roadAnchorZ = 0; cfg.roadDirX = 0; cfg.roadDirZ = 0;  // clean spawn highway
                 c.getSource().getEmbed()
                     .title("ElytraPilot highway " + dir)
                     .description("E-bounce along the " + dir + " nether highway (y" + cfg.roadY + "). Run /fly on to start.");
@@ -429,6 +480,36 @@ public class ElytraPilotCommand extends Command {
                     c.getSource().getEmbed().title("ElytraPilot trip start-on-connect " + toggleStrCaps(CONFIG.client.extra.elytraPilot.tripStartOnConnect))
                         .description("When on, an armed trip starts/resumes when the bot enters the world — set it while logged out and it flies on login (also resumes after a disconnect).");
                 })))
+                .then(literal("radius").then(argument("blocks", integer(0)).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.spawnRegionRadius = getInteger(c, "blocks");
+                    c.getSource().getEmbed().title("ElytraPilot trip overworld-direct radius = " + CONFIG.client.extra.elytraPilot.spawnRegionRadius + "b")
+                        .description("Destinations within this radius of 0,0 fly overworld-direct; beyond it the trip routes via the nether (8:1 scale).");
+                })))
+                .then(literal("acquire").then(argument("blocks", integer(0)).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.highwayAcquireRadius = getInteger(c, "blocks");
+                    c.getSource().getEmbed().title("ElytraPilot highway acquire radius = " + CONFIG.client.extra.elytraPilot.highwayAcquireRadius + "b")
+                        .description("Within this perpendicular distance of the chosen highway, the bot Baritone-walks onto the road (climb to y120 / tunnel / center) instead of nether-flying.");
+                })))
+                .then(literal("route")
+                    .then(literal("new").then(argument("name", word())
+                        .then(literal("ow").then(argument("x", integer()).then(argument("y", integer()).then(argument("z", integer()).executes(c -> {
+                            return newRoute(c.getSource(), getString(c, "name"), false, getInteger(c, "x"), getInteger(c, "y"), getInteger(c, "z")); })))))
+                        .then(literal("nether").executes(c -> {
+                            return newRoute(c.getSource(), getString(c, "name"), true, 0, 64, 0); }))))
+                    .then(literal("leg").then(argument("name", word()).then(argument("mode", word())
+                        .then(literal("coord").then(argument("nx", integer()).then(argument("nz", integer())
+                            .executes(c -> { return addLeg(c.getSource(), getString(c, "name"), isRide(c), getInteger(c, "nx"), getInteger(c, "nz"), 120); })
+                            .then(argument("roadY", integer()).executes(c -> {
+                                return addLeg(c.getSource(), getString(c, "name"), isRide(c), getInteger(c, "nx"), getInteger(c, "nz"), getInteger(c, "roadY")); })))))
+                        .then(literal("head").then(argument("dir", word()).then(argument("dist", integer(1))
+                            .executes(c -> { return addHeadLeg(c.getSource(), getString(c, "name"), isRide(c), getString(c, "dir"), getInteger(c, "dist"), 120); })
+                            .then(argument("roadY", integer()).executes(c -> {
+                                return addHeadLeg(c.getSource(), getString(c, "name"), isRide(c), getString(c, "dir"), getInteger(c, "dist"), getInteger(c, "roadY")); }))))))))
+                    .then(literal("dellast").then(argument("name", word()).executes(c -> { return dellastLeg(c.getSource(), getString(c, "name")); })))
+                    .then(literal("del").then(argument("name", word()).executes(c -> { return delRoute(c.getSource(), getString(c, "name")); })))
+                    .then(literal("list").executes(c -> { return listRoutes(c.getSource()); }))
+                    .then(literal("show").then(argument("name", word()).executes(c -> { return showRoute(c.getSource(), getString(c, "name")); })))
+                    .then(literal("run").then(argument("name", word()).executes(c -> { return runRoute(c.getSource(), getString(c, "name")); }))))
                 .then(literal("off").executes(c -> {
                     CONFIG.client.extra.elytraPilot.tripActive = false;
                     MODULE.get(ElytraTrip.class).syncEnabledFromConfig();
@@ -453,6 +534,7 @@ public class ElytraPilotCommand extends Command {
         cfg.tripTargetY = y;
         cfg.tripTargetZ = z;
         cfg.tripTargetIsNether = false;
+        cfg.tripActiveRoute = "";          // a plain coord trip, not a saved route
         cfg.tripActive = true;
         MODULE.get(ElytraTrip.class).syncEnabledFromConfig();
         double dist = Math.hypot(x, z);
@@ -471,6 +553,7 @@ public class ElytraPilotCommand extends Command {
         cfg.tripTargetY = 64;
         cfg.tripTargetZ = z;
         cfg.tripTargetIsNether = true;
+        cfg.tripActiveRoute = "";          // a plain coord trip, not a saved route
         cfg.tripActive = true;
         MODULE.get(ElytraTrip.class).syncEnabledFromConfig();
         ctx.getEmbed()
@@ -478,5 +561,134 @@ public class ElytraPilotCommand extends Command {
             .description("Nether destination " + x + ", " + z
                 + " — entering a portal if needed, then flying to the exact coords and landing there.");
         return OK;
+    }
+
+    // --- saved multi-leg routes ---
+
+    private int newRoute(CommandContext ctx, String name, boolean endInNether, int x, int y, int z) {
+        CONFIG.client.extra.elytraPilot.tripRoutes.put(name, new Route(name, endInNether, x, y, z, new ArrayList<>()));
+        ctx.getEmbed().title("Route '" + name + "' created")
+            .description(endInNether
+                ? "Ends in the nether at the last leg's coords. Add legs: `fly trip route leg " + name + " ...`."
+                : "Ends overworld at " + x + ", " + y + ", " + z + ". Add legs: `fly trip route leg " + name + " ...`.");
+        return OK;
+    }
+
+    private int addLeg(CommandContext ctx, String name, boolean ride, int nx, int nz, int roadY) {
+        Route r = CONFIG.client.extra.elytraPilot.tripRoutes.get(name);
+        if (r == null) {
+            ctx.getEmbed().title("No such route '" + name + "'").description("Create it first: `fly trip route new " + name + " ...`");
+            return ERROR;
+        }
+        r.legs().add(new Route.Leg(ride, nx, nz, roadY));
+        ctx.getEmbed().title("Route '" + name + "' — leg " + r.legs().size() + " added")
+            .description((ride ? "RIDE" : "FLY") + " to nether " + nx + ", " + nz + (ride ? " (road y" + roadY + ")" : ""));
+        return OK;
+    }
+
+    private int addHeadLeg(CommandContext ctx, String name, boolean ride, String dirStr, int dist, int roadY) {
+        Route r = CONFIG.client.extra.elytraPilot.tripRoutes.get(name);
+        if (r == null) {
+            ctx.getEmbed().title("No such route '" + name + "'").description("Create it first: `fly trip route new " + name + " ...`");
+            return ERROR;
+        }
+        HighwayDir dir;
+        try {
+            dir = HighwayDir.valueOf(dirStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            ctx.getEmbed().title("Bad direction").description("Direction must be one of: N S E W NE SE NW SW");
+            return ERROR;
+        }
+        int px = r.legs().isEmpty() ? 0 : r.legs().get(r.legs().size() - 1).x();
+        int pz = r.legs().isEmpty() ? 0 : r.legs().get(r.legs().size() - 1).z();
+        double[] u = unitVec(dir);
+        return addLeg(ctx, name, ride, px + (int) Math.round(u[0] * dist), pz + (int) Math.round(u[1] * dist), roadY);
+    }
+
+    private int dellastLeg(CommandContext ctx, String name) {
+        Route r = CONFIG.client.extra.elytraPilot.tripRoutes.get(name);
+        if (r == null || r.legs().isEmpty()) {
+            ctx.getEmbed().title("Nothing to remove").description("Route '" + name + "' has no legs.");
+            return ERROR;
+        }
+        r.legs().remove(r.legs().size() - 1);
+        ctx.getEmbed().title("Route '" + name + "' — last leg removed").description(r.legs().size() + " leg(s) left.");
+        return OK;
+    }
+
+    private int delRoute(CommandContext ctx, String name) {
+        boolean removed = CONFIG.client.extra.elytraPilot.tripRoutes.remove(name) != null;
+        ctx.getEmbed().title(removed ? "Route '" + name + "' deleted" : "No such route '" + name + "'");
+        return removed ? OK : ERROR;
+    }
+
+    private int listRoutes(CommandContext ctx) {
+        var routes = CONFIG.client.extra.elytraPilot.tripRoutes;
+        if (routes.isEmpty()) {
+            ctx.getEmbed().title("Saved routes").description("None. Create one: `fly trip route new <name> ow <x> <y> <z>`.");
+            return OK;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (Route r : routes.values())
+            sb.append("**").append(r.id()).append("** — ").append(r.legs().size()).append(" leg(s), ends ")
+              .append(r.endInNether() ? "nether" : "overworld " + r.destX() + "," + r.destY() + "," + r.destZ()).append('\n');
+        ctx.getEmbed().title("Saved routes (" + routes.size() + ")").description(sb.toString());
+        return OK;
+    }
+
+    private int showRoute(CommandContext ctx, String name) {
+        Route r = CONFIG.client.extra.elytraPilot.tripRoutes.get(name);
+        if (r == null) { ctx.getEmbed().title("No such route '" + name + "'"); return ERROR; }
+        ctx.getEmbed().title("Route '" + r.id() + "'").description(routeSummary(r));
+        return OK;
+    }
+
+    private int runRoute(CommandContext ctx, String name) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        Route r = cfg.tripRoutes.get(name);
+        if (r == null) {
+            ctx.getEmbed().title("No such route '" + name + "'").description("`fly trip route list` to see saved routes.");
+            return ERROR;
+        }
+        if (r.legs().isEmpty()) {
+            ctx.getEmbed().title("Route '" + name + "' has no legs").description("Add some with `fly trip route leg`.");
+            return ERROR;
+        }
+        cfg.tripActiveRoute = name;
+        cfg.tripActive = true;
+        MODULE.get(ElytraTrip.class).syncEnabledFromConfig();
+        ctx.getEmbed().title("Route '" + name + "' launched").description(routeSummary(r));
+        return OK;
+    }
+
+    private String routeSummary(Route r) {
+        StringBuilder sb = new StringBuilder();
+        int lastX = 0, lastZ = 0;
+        for (int i = 0; i < r.legs().size(); i++) {
+            Route.Leg leg = r.legs().get(i);
+            sb.append(i + 1).append(". ").append(leg.ride() ? "RIDE" : "FLY ").append(" → ")
+              .append(leg.x()).append(", ").append(leg.z());
+            if (leg.ride()) sb.append(" (y").append(leg.roadY()).append(')');
+            sb.append('\n');
+            lastX = leg.x(); lastZ = leg.z();
+        }
+        sb.append("Ends: ").append(r.endInNether()
+            ? "land in the nether at " + lastX + ", " + lastZ
+            : "overworld portal-out to " + r.destX() + ", " + r.destY() + ", " + r.destZ());
+        return sb.toString();
+    }
+
+    private static double[] unitVec(HighwayDir d) {
+        double s = 0.7071067811865476;
+        return switch (d) {
+            case N -> new double[]{0, -1};  case S -> new double[]{0, 1};
+            case E -> new double[]{1, 0};   case W -> new double[]{-1, 0};
+            case NE -> new double[]{s, -s}; case SE -> new double[]{s, s};
+            case SW -> new double[]{-s, s}; case NW -> new double[]{-s, -s};
+        };
+    }
+
+    private boolean isRide(com.mojang.brigadier.context.CommandContext<CommandContext> c) {
+        return getString(c, "mode").equalsIgnoreCase("ride");
     }
 }
