@@ -1185,15 +1185,15 @@ public class ElytraPilot extends Module {
     }
 
     /**
-     * E-bounce: fast no-firework road travel by INJECTING the movement -- the proxy generates the bot's position
-     * packets, so we drive the velocity directly. Launch (jump) to get airborne, deploy the elytra, then every tick
-     * set the horizontal velocity along the road to a ramped target ({@code bounceSpeed}, capped by {@code maxSpeed})
-     * and PIN the altitude a hair above {@code roadY} ({@code bounceSkimHeight}) so the bot never touches down. Staying
-     * a fall-flying entity is the whole trick: the server's fall-flying movement-speed tolerance is ~17 blocks/tick
-     * (~340 b/s), far above our target, so it accepts the injected speed (the envelope Lambda/Rusherhack rely on). The
-     * v1 mistake was gating the injection on the laggy isFallFlying mirror, so the bot sank onto the road, lost flight,
-     * and got rubberbanded as a grounded speeder. We report {@code bouncePitch} (~75) to match a real ebounce client's
-     * server-visible profile. Flat road only; genuine walls fall to the stall -> Baritone walk-past.
+     * E-bounce: fast no-firework highway travel (~40 b/s), replicating Rusherhack's ElytraFly bounce. Decoded from a
+     * live packet capture of the real client (see the aquarius-ebounce memory): the VERTICAL is a vanilla JUMP
+     * parabola -- hold jump so vanilla fires vy +0.42 on each road touch, gravity brings it back (~0.9-block bounce,
+     * onGround true for one tick per cycle); we do NOT set vy, physics owns it. The HORIZONTAL is an INJECTED boost
+     * (~2.0 blocks/tick) along the road every tick. Pitch is reported as bouncePitch (~75, the captured spoof: at 75
+     * there is almost no lift so the decel is ~gravity and the bounce stays tight). START_FALL_FLYING is re-sent once
+     * per cycle. The real client sends only MovePlayerPos + deploy -- no sprint, no input. The key vs the failed
+     * v3.27.2: that PINNED a flat altitude (an unnatural trajectory) and got rubberbanded; here the natural parabola
+     * is what 2b2t accepts. Flat road only; genuine walls fall to the stall -> Baritone walk-past.
      */
     private void tickBounce(double x, double y, double z, double speed) {
         var cfg = CONFIG.client.extra.elytraPilot;
@@ -1229,45 +1229,41 @@ public class ElytraPilot extends Module {
         boolean frontierCoast = corridor < slowDist;
         boolean frontierHold  = corridor <= holdDist;
 
-        double cap = cfg.maxSpeed;
-
-        // LAUNCH from the ground: jump to get airborne so the elytra can deploy (deploying while grounded is
-        // server-rejected). The injected skim below takes over the moment we leave the road.
-        if (onGround) {
-            submitMove(true, true, true, false, yaw, 0f);
-            bounceTargetBps = Math.max(bounceTargetBps, speed * 20.0);
-            bouncePrevY = y;
-            return;
-        }
-
-        // AIRBORNE -- keep the elytra deployed. Do NOT gate on BOT.isFallFlying() (that mirror lags server metadata a
-        // few ticks); just re-send while not-yet-flying, rate-limited, so flight establishes and stays established.
-        if (!flying && redeployCooldown <= 0) {
+        // Re-deploy the elytra each cycle, right after a road touch cancels flight (the captured real bounce sends
+        // START_FALL_FLYING ~2/s). Deploying while grounded is server-rejected, so only when airborne & not flying.
+        if (!onGround && !flying && !frontierHold && redeployCooldown <= 0) {
             sendStartFallFlying();
             redeployCooldown = cfg.bounceRedeployTicks;
         }
 
-        // Ramp the speed target from our actual speed, so it starts low and within the pre-flight tolerance.
+        // Ramp the horizontal speed target from our actual speed (starts low) up to bounceSpeed (~40 b/s).
         double target;
         if (frontierHold) {
             target = 0.0;
         } else {
             bounceTargetBps = Math.max(bounceTargetBps, speed * 20.0);
-            target = Math.min(Math.min(cfg.bounceSpeed, cap), bounceTargetBps + cfg.bounceAccel);
-            if (frontierCoast) target = Math.min(target, cap * 0.5);
+            target = Math.min(cfg.bounceSpeed, bounceTargetBps + cfg.bounceAccel);
+            if (frontierCoast) target = Math.min(target, cfg.bounceSpeed * 0.5);
         }
         bounceTargetBps = target;
 
-        // INJECT THE MOVEMENT. Drive the horizontal velocity along the road, and pin the altitude a hair above the
-        // road so the bot never touches down -- staying a fall-flying entity is what makes the server accept the speed.
-        var vel = BOT.getVelocity();
-        double perTick = target / 20.0 / 0.99;                 // pre-compensate the 0.99/tick fall-flying drag
-        double yawRad = Math.toRadians(yaw);                   // drive along the steering yaw (centerline pursuit)
-        vel.setX(-Math.sin(yawRad) * perTick);
-        vel.setZ(Math.cos(yawRad) * perTick);
-        double targetY = cfg.roadY + cfg.bounceSkimHeight;     // hold just above the road; bias up, never sink onto it
-        vel.setY(Math.max(-0.15, Math.min(0.6, (targetY - y) * 0.5)) + 0.02);
-        submitInput(false, false, yaw, cfg.bouncePitch);
+        // VERTICAL = real vanilla parabola: hold jump so vanilla fires a jump (vy +0.42) on each ground touch, then
+        // gravity brings it back down (~0.9-block bounce, road touch one tick per cycle). We do NOT set vy -- physics
+        // owns the vertical. pitch=bouncePitch (~75) is the captured spoof; at 75 there is ~no lift, so the decel is
+        // ~gravity and the bounce stays tight. No forward/sprint inputs -- the captured client sends none.
+        boolean jump = !frontierHold;                          // held = auto-jump on each ground touch
+        submitMove(false, jump, false, false, yaw, cfg.bouncePitch);
+
+        // HORIZONTAL = injected boost (~40 b/s), every tick incl. the onGround touch (the captured client moves 40 b/s
+        // even on the ground tick). Drive along the steering yaw; leaving vy to physics is the fix for v3.27.2's
+        // rubberband, which pinned a flat altitude (an unnatural trajectory the server rejected).
+        if (!frontierHold && target > 0.001) {
+            var vel = BOT.getVelocity();
+            double perTick = target / 20.0 / 0.99;             // pre-compensate the ~0.99/tick drag
+            double yawRad = Math.toRadians(yaw);
+            vel.setX(-Math.sin(yawRad) * perTick);
+            vel.setZ(Math.cos(yawRad) * perTick);
+        }
 
         if (cfg.bounceDebug) {
             double dvy = Double.isNaN(bouncePrevY) ? 0 : (y - bouncePrevY);

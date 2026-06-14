@@ -814,7 +814,7 @@ public final class Config {
 
                 /** E-bounce target cruise speed (blocks/second) the injected skim ramps up to and holds, capped by
                  *  {@link #maxSpeed}. Keep a margin under 2b2t's ~40 b/s ceiling. */
-                public double bounceSpeed = 36.0;
+                public double bounceSpeed = 40.0;
 
                 /** E-bounce ramp: blocks/second of horizontal speed added per tick while accelerating up to
                  *  {@link #bounceSpeed} (so 2.0 ~= +40 b/s per second; reaches cruise in ~1s). */
