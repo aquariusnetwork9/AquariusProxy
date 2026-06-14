@@ -1208,6 +1208,16 @@ public class ElytraPilot extends Module {
         // Elytra wear is the same in bounce mode (fall-flying still drains durability); SWAP returns to BOUNCE.
         if (manageElytraWear(x, y, z, yaw)) return;
 
+        // After a server position correction (a rubberband, or the teleport on (re)connect before the position
+        // has synced), HOLD: stop injecting/jumping and let it resync, then resume gently. Injecting 40 b/s
+        // against a correcting/unsynced position is the loop that stuck the bot right after a connect.
+        // setbackHoldTicks is armed by the PlayerSetbackEvent handler on every server correction.
+        if (setbackHoldTicks > 0) {
+            submitInput(false, false, yaw, cfg.bouncePitch);
+            bouncePrevY = y;
+            return;
+        }
+
         boolean onGround = BOT.isOnGround();
         boolean flying = BOT.isFallFlying();
 
@@ -1236,16 +1246,17 @@ public class ElytraPilot extends Module {
             redeployCooldown = cfg.bounceRedeployTicks;
         }
 
-        // Ramp the horizontal speed target from our actual speed (starts low) up to bounceSpeed (~40 b/s).
+        // Ramp tied to ACTUAL achieved speed: only ever command a little (bounceAccel) above what the bot is
+        // really doing, so the injection can't race ahead of it. Commanding the 40 b/s cap from a standstill /
+        // unsynced position is what 2b2t rubberbands; this builds up gradually as real speed follows.
         double target;
         if (frontierHold) {
             target = 0.0;
         } else {
-            bounceTargetBps = Math.max(bounceTargetBps, speed * 20.0);
-            target = Math.min(cfg.bounceSpeed, bounceTargetBps + cfg.bounceAccel);
+            target = Math.min(cfg.bounceSpeed, speed * 20.0 + cfg.bounceAccel);
             if (frontierCoast) target = Math.min(target, cfg.bounceSpeed * 0.5);
         }
-        bounceTargetBps = target;
+        bounceTargetBps = target;  // kept for the telemetry readout
 
         // VERTICAL = real vanilla parabola: hold jump so vanilla fires a jump (vy +0.42) on each ground touch, then
         // gravity brings it back down (~0.9-block bounce, road touch one tick per cycle). We do NOT set vy -- physics
