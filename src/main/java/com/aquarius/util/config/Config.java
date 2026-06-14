@@ -805,25 +805,12 @@ public final class Config {
                 /** E-bounce: minimum ticks between START_FALL_FLYING re-sends (anti-spam; the ~10-tick bounce cadence is set by vanilla jump cooldown). */
                 public int bounceRedeployTicks = 3;
 
-                /** E-bounce skim pitch (degrees; +pitch noses DOWN). Keep at ~0: the driven-skim bounce injects the
-                 *  horizontal velocity directly (see {@link com.aquarius.module.impl.ElytraPilot}), so the look vector
-                 *  must stay LEVEL and aligned with that velocity — a nose-down pitch makes the fall-flying physics
-                 *  rotate the velocity downward and bleed it. Only nudge this if a server needs a more glide-like look. */
-                public float bouncePitch = 0.0f;
-
-                /** E-bounce target cruise speed (blocks/second) the driven skim ramps up to and holds. Capped by
-                 *  {@link #maxSpeed} (2b2t's ~40 b/s ceiling); keep a small margin under it. The skim injects this
-                 *  velocity directly down the road while staying fall-flying — no fireworks; the proxy-native
-                 *  equivalent of a Rusherhack/Lambda velocity-boost bounce. */
-                public double bounceSpeed = 36.0;
-
-                /** E-bounce ramp: blocks/second of horizontal speed added per tick while accelerating up to
-                 *  {@link #bounceSpeed} (20 ticks/s, so 2.0 ≈ +40 b/s per second — reaches cruise in ~1s). */
-                public double bounceAccel = 2.0;
-
-                /** E-bounce skim altitude: how far (blocks) above {@link #roadY} to hold the hover. Big enough that
-                 *  the bot never touches the road (touching ends fall-flying), small enough not to climb into walls. */
-                public double bounceSkimHeight = 0.6;
+                /** E-bounce dive pitch (degrees; +pitch noses DOWN). The Rusherhack recipe uses ~75° (a steep dive):
+                 *  the bot auto-walks + auto-jumps and dives hard into the road each skip, the elytra glide physics
+                 *  convert the dive into forward speed, and — crucially — REPORTING a steep dive pitch is what makes
+                 *  2b2t's elytra movement check expect (and accept) the building speed instead of rubberbanding a
+                 *  "too fast for level flight" player back to the road. */
+                public float bouncePitch = 75.0f;
 
                 /** E-bounce: allow the launch jump that gets the bot airborne from a standstill on the road, so the
                  *  elytra can deploy and the driven skim can take over. Off = never jump (only works if the bounce is
@@ -868,8 +855,9 @@ public final class Config {
                 /** Max Baritone bypass attempts before aborting the flight. */
                 public int maxPassAttempts = 5;
 
-                /** Ticks of near-zero forward speed while bouncing that count as "stuck on an obstacle". */
-                public int bounceStallLimit = 40;
+                /** Ticks of near-zero forward speed while bouncing that count as "stuck on an obstacle". Generous so
+                 *  the slow initial dive-bounce speed build-up isn't mistaken for a wall and aborted early. */
+                public int bounceStallLimit = 100;
 
                 /** InputManager priority for flight control (high so it overrides other movement). */
                 public int inputPriority = 5000;
