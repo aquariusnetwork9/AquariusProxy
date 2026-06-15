@@ -788,6 +788,19 @@ public final class Config {
                  */
                 public int minSwapClearance = 50;
 
+                /** E-bounce: restock fresh elytra spares from the carried ender-chest kit when they run low (via the
+                 *  Regear cycle: place echest -> pull the kit shulker -> swap fresh elytras in / spent out -> break +
+                 *  return the kit -> recover the echest -> resume). Needs a carried ender chest + a silk-touch pickaxe
+                 *  + a stocked kit shulker. The worn (armor) elytra is never touched. */
+                public boolean resupplyFromEchest = true;
+
+                /** E-bounce resupply trigger: run a resupply when the count of FRESH spare elytras (inv/hotbar, above
+                 *  the fresh-durability floor) drops below this. */
+                public int resupplySpareThreshold = 2;
+
+                /** E-bounce resupply target: refill the inventory to this many fresh elytras from the kit. */
+                public int resupplyElytraCount = 9;
+
                 /**
                  * "E-bounce" mode: instead of the firework climb/glide profile, skip along a FLAT straight road
                  * with no fireworks (decoded from a Rusherhack capture). Holds forward+jump+sprint at +2° pitch
@@ -805,12 +818,49 @@ public final class Config {
                 /** E-bounce: minimum ticks between START_FALL_FLYING re-sends (anti-spam; the ~10-tick bounce cadence is set by vanilla jump cooldown). */
                 public int bounceRedeployTicks = 3;
 
-                /** E-bounce dive pitch (degrees; +pitch noses DOWN). The Rusherhack recipe uses ~75° (a steep dive):
-                 *  the bot auto-walks + auto-jumps and dives hard into the road each skip, the elytra glide physics
-                 *  convert the dive into forward speed, and — crucially — REPORTING a steep dive pitch is what makes
-                 *  2b2t's elytra movement check expect (and accept) the building speed instead of rubberbanding a
-                 *  "too fast for level flight" player back to the road. */
-                public float bouncePitch = 75.0f;
+                /** Airborne-glide e-bounce pitch (degrees). The decoded real Rusherhack capture flies LEVEL (~0°):
+                 *  it's a continuous airborne glide above the road, NOT a steep dive into it. (The old ~75° dive was
+                 *  for the abandoned ground-bounce model.) */
+                public float bouncePitch = 0.0f;
+
+                /** E-bounce: nose-down pitch (degrees) applied ONLY while the bot is above {@link #roadY}+{@link #bounceDiveHeight},
+                 *  to dive it back down to the road for the next sprint-jump bounce instead of floating into a level
+                 *  hover-glide (the over-climb failure). Near the road it flies level ({@link #bouncePitch}). The dive
+                 *  also converts altitude into extra horizontal speed. This is the MAX of the proportional ramp (see
+                 *  {@link #bounceDiveGain}); the ramp keeps the approach to it smooth so it doesn't desync. ~40. */
+                public float bounceDivePitch = 45.0f;
+
+                /** E-bounce: blocks above {@link #roadY} the bot must rise before re-deploying the elytra. Too LOW and the
+                 *  server rejects the deploy (still grounded) while our optimistic flag glides locally -> drag diverges ->
+                 *  setback; too HIGH and the bot stays ballistic (air-drag) too long and bleeds speed. ~0.3-0.6. */
+                public double bounceDeployHeight = 0.3;
+
+                /** E-bounce: only re-deploy the elytra once the bot's vertical velocity has dropped below this (i.e. at/near
+                 *  the apex, on the way DOWN). This keeps the RISE ballistic (full gravity 0.08 -> low apex ~roadY+1, so it
+                 *  never punches into the nether ceiling) like the real capture, then glides the descent (0.99 drag +
+                 *  dive-conversion build speed). Set high (e.g. 1.0) to deploy throughout the rise (over-climbs). ~0.1. */
+                public double bounceRedeployMaxVy = 0.10;
+
+                /** E-bounce: blocks above {@link #roadY} at which the nose-down dive starts ramping in. Below it the bot
+                 *  flies level ({@link #bouncePitch}). Above it, pitch ramps PROPORTIONALLY with height (see
+                 *  {@link #bounceDiveGain}) up to {@link #bounceDivePitch} — a smooth ramp, NOT a binary toggle, so each
+                 *  tick's pitch change stays small (an abrupt 0->30 jump spikes the velocity and Grim sets it back). */
+                public double bounceDiveHeight = 0.5;
+
+                /** E-bounce: degrees of extra nose-down per block above {@link #bounceDiveHeight}. The dive pitch =
+                 *  min(bounceDivePitch, (height-above-road - bounceDiveHeight) * bounceDiveGain). Higher gain caps the
+                 *  apex tighter; too high and the per-tick pitch change gets abrupt enough to desync. ~40. */
+                public double bounceDiveGain = 40.0;
+
+                /** E-bounce: clear fall-flying LOCALLY the tick the bot is onGround, mirroring what Grim does the tick it
+                 *  sees onGround=true in the move packet. Our Bot otherwise leaves ff=true until the server's metadata echo
+                 *  (~2 ticks later), so for those ticks WE glide (0.99 drag, -0.02 grav) while GRIM predicts ballistic
+                 *  (0.91 drag, -0.08 grav) -> divergence -> setback at speed (the ~24 b/s wall). Clearing locally keeps the
+                 *  two in lockstep; re-deploy happens at {@link #bounceDeployHeight} on the way up.
+                 *  DEFAULT OFF: clearing ff on the ground drops the bot into ground-walking physics for that tick, which
+                 *  ZEROES the horizontal speed (vx→0) every bounce so it can never build. The in-tick re-deploy hook
+                 *  (Bot.requestBounceRedeploy) keeps ff continuous instead, winning the metadata race a different way. */
+                public boolean bounceClearOnGround = false;
 
                 /** E-bounce target cruise speed (blocks/second) the injected skim ramps up to and holds, capped by
                  *  {@link #maxSpeed}. Keep a margin under 2b2t's ~40 b/s ceiling. */
@@ -836,6 +886,77 @@ public final class Config {
                 /** E-bounce: log per-tick telemetry (y, vertical/horizontal speed, pitch, fall-flying) while bouncing,
                  *  to tune the bounce against a packet capture. Spammy — turn off after diagnosing. */
                 public boolean bounceDebug = false;
+
+                /**
+                 * E-bounce KICKSTART pitch (degrees; +pitch noses down). While building speed from a standstill the
+                 * bounce fires REAL fireworks; a shallow pitch points the boost mostly horizontal so it accelerates
+                 * the bot down the road instead of into the floor. Used only until target speed is reached, then the
+                 * steeper {@link #bouncePitch} takes over for the tight HOLD bounce.
+                 */
+                public float bounceKickPitch = 10.0f;
+
+                /**
+                 * E-bounce HOLD maintenance-injection cap (blocks/tick). Once at target speed (reached legitimately via
+                 * fireworks), the bounce stops firing and instead tops up only the ~0.02 b/t the 0.99 elytra drag eats
+                 * each tick. This caps that per-tick top-up so a glitch can NEVER snap velocity (the cold-start jump that
+                 * 2b2t/Grim rejects). Steady-state need is ~0.02; the default leaves headroom without allowing a jump.
+                 */
+                public double bounceMaxInjectPerTick = 0.06;
+
+                /** E-bounce HOLD bleed-and-restore: spread the single per-cycle restore over this many ticks right
+                 *  after liftoff (1 = one sharp tick; higher = gentler per-tick deviation, each more likely under Grim's
+                 *  per-tick elytra tolerance). The total restore is the same; only its shape changes. */
+                // --- Airborne-glide e-bounce (decoded byte-for-byte from a real Rusherhack ElytraFly PacketLogger
+                // capture): jump ONCE to leave the road, then a continuous airborne fall-flying glide that never touches
+                // ground again -- a gentle vertical porpoise + smooth horizontal injection. ---
+
+                /** Airborne glide: low edge of the vertical porpoise band, in blocks ABOVE roadY (climb when below it). */
+                public double bounceHoverLow = 0.8;
+                /** Airborne glide: high edge of the porpoise band, in blocks above roadY (sink when above it). */
+                public double bounceHoverHigh = 1.4;
+                /** Airborne glide: vertical velocity SET during the climb phase. travelFallFlying then applies gravity
+                 *  (~-0.02/tick at level pitch), so ~0.03 nets a gentle +0.01/tick climb (matches the capture). */
+                public double bounceClimbVel = 0.03;
+                /** Airborne glide: horizontal injection smoothing factor, v += (target - v)*factor each tick. The
+                 *  captured client uses ~0.5 (speed ramps 0->target over ~8 ticks then holds). */
+                public double bounceBoostFactor = 0.5;
+
+                public int bounceRestoreTicks = 3;
+
+                /** E-bounce HOLD bleed-and-restore: hard cap on the TOTAL per-cycle restore (blocks/tick of horizontal
+                 *  speed). A real cycle's drag loss is ~0.18; this stops a glitch becoming a cold-start jump. */
+                public double bounceRestoreMax = 0.30;
+
+                /** E-bounce: hand off from KICKSTART to maintenance HOLD once measured speed reaches this fraction of
+                 *  {@link #bounceSpeed}. Lower it so a firework kickstart that plateaus below target still hands off to
+                 *  inject-hold (the firework establishes a clean server-tracked speed; HOLD then maintains it ~rocket-free). */
+                public double bounceHoldEnterFrac = 0.78;
+
+                /** E-bounce: drop out of HOLD back to KICKSTART if measured speed falls below this fraction of
+                 *  {@link #bounceSpeed} (inject-hold couldn't sustain it) so fireworks re-spin it up. */
+                public double bounceHoldExitFrac = 0.55;
+
+                public enum BounceKick { Firework, Sprint, Synth }
+
+                /**
+                 * How the e-bounce reaches target speed before the maintenance HOLD takes over:
+                 * <ul>
+                 *   <li>{@code Firework} -- boost to speed with real fireworks (robust, costs a few rockets).</li>
+                 *   <li>{@code Sprint} -- RUN on the ground (sprint+forward, no elytra) to get moving first, THEN deploy
+                 *       and ramp the injected speed up FROM that moving state. No fireworks. This is the classic
+                 *       "you have to be running to start the bounce" technique (true even on old Rusherhack): being in
+                 *       motion when the bounce starts keeps each tick within Grim's tolerance, unlike a standstill start.</li>
+                 * </ul>
+                 */
+                public BounceKick bounceKickStart = BounceKick.Firework;
+
+                /** E-bounce Sprint-start: ground speed (blocks/second) to reach by running before deploying + ramping. */
+                public double bounceRunStartSpeed = 5.0;
+
+                /** E-bounce Sprint-start: blocks/second of injected horizontal speed added per second while ramping from
+                 *  the running start up to {@link #bounceSpeed}. Lower = gentler (more likely to stay within Grim's
+                 *  tolerance), slower to reach cruise. ~25 reaches 40 from a 5 b/s run in ~1.4s. */
+                public double bounceRunRampPerSec = 25.0;
 
                 /** E-bounce: proactively glide OVER terrain detected ahead (the HOP). Default off — a real bounce just
                  *  skims through minor road clutter, and the proactive HOP false-triggers on ceilings/road texture and
@@ -870,6 +991,11 @@ public final class Config {
                 /** Ticks of near-zero forward speed while bouncing that count as "stuck on an obstacle". Generous so
                  *  the slow initial dive-bounce speed build-up isn't mistaken for a wall and aborted early. */
                 public int bounceStallLimit = 100;
+
+                /** Speed (b/s) below which a bounce tick counts toward {@link #bounceStallLimit} as "not progressing".
+                 *  Above it the stall counter resets. Set below the cruise speed but above the startup ramp's first
+                 *  ticks so a real wall (speed pinned ~0) is caught but normal flight never trips it. ~8. */
+                public double bounceStallSpeed = 8.0;
 
                 /** InputManager priority for flight control (high so it overrides other movement). */
                 public int inputPriority = 5000;
@@ -1381,6 +1507,14 @@ public final class Config {
                  * Takes precedence over {@link #matchByColor} / {@link #kitShulkerName} when on.
                  */
                 public boolean matchByContents = false;
+
+                /** Identify the kit shulker by ELYTRA COUNT: match the first shulker holding at least
+                 *  {@link #kitElytraCount} elytras, ignoring its name/colour/other items. For the e-bounce elytra
+                 *  resupply. Takes precedence over {@link #matchByContents} / {@link #matchByColor} / {@link #kitShulkerName}. */
+                public boolean matchByElytraCount = false;
+
+                /** Minimum elytras a shulker must hold to be the kit when {@link #matchByElytraCount} is on. */
+                public int kitElytraCount = 9;
 
                 /** Fallback only: when no ender chest is carried to place, scan this radius (blocks) for a placed one. */
                 public int echestScanRadius = 48;

@@ -23,6 +23,7 @@ import com.aquarius.mc.dimension.DimensionRegistry;
 import com.aquarius.mc.item.ItemRegistry;
 import com.aquarius.module.api.Module;
 import com.aquarius.util.config.Config.Client.Extra.ElytraPilot.HighwayDir;
+import com.aquarius.util.config.Config.Client.Extra.ElytraPilot.BounceKick;
 import com.aquarius.util.math.MathHelper;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerState;
@@ -67,7 +68,7 @@ import static com.aquarius.Globals.MODULE;
  */
 public class ElytraPilot extends Module {
 
-    private enum Phase { IDLE, TAKEOFF, CRUISE, BOUNCE, HOP, PASS, SWAP, DESCEND, LAND, LANDWALK, WALKOUT, EMERGENCY, DONE }
+    private enum Phase { IDLE, TAKEOFF, CRUISE, BOUNCE, HOP, PASS, SWAP, RESUPPLY, DESCEND, LAND, LANDWALK, WALKOUT, EMERGENCY, DONE }
 
     private static final int CHESTPLATE_SLOT = 6;          // container 0: 5=helm,6=chest,7=legs,8=boots
     private static final int TAKEOFF_TIMEOUT_TICKS = 200;  // ~10s to get airborne + deployed
@@ -104,8 +105,18 @@ public class ElytraPilot extends Module {
     private boolean swapRedeploying;
     private int redeployCooldown;
     private int bounceStallTicks;
-    private double bouncePrevY = Double.NaN;   // last-tick Y, for the bounce telemetry's vertical-speed readout
-    private double bounceTargetBps;            // e-bounce: the ramped horizontal speed target (b/s)
+    private boolean resupplyStarted;            // RESUPPLY: have we handed off to Regear yet (settle first)
+    private int resupplyTicks;                  // RESUPPLY: settle / overall guard counter
+    private boolean savedRgEquipElytra, savedRgEquipArmor, savedRgOffhandTotem, savedRgSelfKillRelocate; // restored after
+    private double bouncePrevY = Double.NaN;   // last-tick Y, for the bounce telemetry readout
+    private double bouncePrevX = Double.NaN;   // last-tick X, for the bounce telemetry's horizontal-delta readout
+    private int bounceRamp;                     // e-bounce Sprint-start: ticks since the ground RUN ended, drives the injected-speed ramp goal; reset on any disturbance
+    private boolean bounceReadyToJump;          // e-bounce: true once we've emitted an onGround=true landing frame, so the next tick's jump is server-legal
+    private boolean bounceHolding;              // e-bounce: false = KICKSTART (real fireworks build speed legitimately), true = HOLD (no fireworks; maintenance-inject only the tiny per-tick drag top-up). HOLD is entered ONLY after reaching target via fireworks, so the cold-start velocity injection that 2b2t/Grim rejects is never used. See EBOUNCE_LOG.md.
+    private boolean bounceRampStarted;         // e-bounce Sprint-start: true once we've finished the ground RUN and begun deploying+ramping the injected speed from the moving state (so we don't drop back to running mid-ramp)
+    private double synthPerTick;                // e-bounce Synth: current synthesized horizontal speed (b/tick), ramped 0 -> target so the packet stream has no cold-start jump
+    private int bounceRestoreTicksLeft;         // e-bounce HOLD bleed-and-restore: ticks of restore injection remaining this cycle (re-armed to bounceRestoreTicks on each ground touch)
+    private boolean bounceClimbing;             // airborne-glide e-bounce: vertical porpoise phase (true = climbing toward the band ceiling, false = sinking)
     private boolean passPathing;
     private int passTicks;
     private int passAttempts;
@@ -264,7 +275,16 @@ public class ElytraPilot extends Module {
         swapRedeploying = false;
         redeployCooldown = 0;
         bounceStallTicks = 0;
-        bounceTargetBps = 0;
+        resupplyStarted = false;
+        resupplyTicks = 0;
+        bounceRamp = 0;
+        bounceReadyToJump = false;
+        bounceHolding = false;
+        bounceRampStarted = false;
+        bounceRestoreTicksLeft = 0;
+        bounceClimbing = false;
+        synthPerTick = 0.0;
+        if (BOT.isEBounceActive()) BOT.stopEBounce();
         passPathing = false;
         passTicks = 0;
         passAttempts = 0;
@@ -401,6 +421,7 @@ public class ElytraPilot extends Module {
                     case HOP       -> tickHop(x, y, z, speed);
                     case PASS      -> tickPass(x, y, z, speed);
                     case SWAP      -> tickSwap(x, y, z);
+                    case RESUPPLY  -> tickResupply(x, y, z, speed);
                     case DESCEND   -> tickDescend(x, y, z, speed);
                     case LAND      -> tickLand(x, y, z, speed);
                     case LANDWALK  -> tickLandWalk(x, y, z);
@@ -409,6 +430,9 @@ public class ElytraPilot extends Module {
                     default        -> { }
                 }
             }
+            // Safety: the synthesized e-bounce stream must only run in BOUNCE. Any other phase (swap/land/abort/
+            // lost-flight) hands movement back to the physics engine.
+            if (BOT.isEBounceActive() && phase != Phase.BOUNCE) BOT.stopEBounce();
 
             lastX = x;
             lastZ = z;
@@ -1185,18 +1209,28 @@ public class ElytraPilot extends Module {
     }
 
     /**
-     * E-bounce: fast no-firework highway travel (~40 b/s), replicating Rusherhack's ElytraFly bounce. Decoded from a
-     * live packet capture of the real client (see the aquarius-ebounce memory): the VERTICAL is a vanilla JUMP
-     * parabola -- hold jump so vanilla fires vy +0.42 on each road touch, gravity brings it back (~0.9-block bounce,
-     * onGround true for one tick per cycle); we do NOT set vy, physics owns it. The HORIZONTAL is an INJECTED boost
-     * (~2.0 blocks/tick) along the road every tick. Pitch is reported as bouncePitch (~75, the captured spoof: at 75
-     * there is almost no lift so the decel is ~gravity and the bounce stays tight). START_FALL_FLYING is re-sent once
-     * per cycle. The real client sends only MovePlayerPos + deploy -- no sprint, no input. The key vs the failed
-     * v3.27.2: that PINNED a flat altitude (an unnatural trajectory) and got rubberbanded; here the natural parabola
-     * is what 2b2t accepts. Flat road only; genuine walls fall to the stall -> Baritone walk-past.
+     * E-bounce: fast no-firework highway travel (~33 b/s), replicating Rusherhack's ElytraFly -- DECODED byte-for-byte
+     * from a real client PacketLogger capture (tools/rusher_ebounce_capture_decoded.txt + EBOUNCE_LOG.md attempt #13).
+     *
+     * <p><b>The real technique is NOT a ground bounce</b> (despite the name): {@code onGround} is false the entire time.
+     * It is a CONTINUOUS AIRBORNE fall-flying glide at LEVEL pitch, flown just above the road (y≈roadY+1), with a gentle
+     * vertical porpoise (±~0.17 b) and a steady ~33 b/s horizontal speed held by injection. It NEVER touches the ground
+     * after the initial liftoff and NEVER toggles fall-flying.
+     *
+     * <p><b>Why this passes Grim where the old ground-bounce did not:</b> cold-start horizontal injection IS accepted --
+     * as long as it happens AIRBORNE with unbroken fall-flying. Every earlier version wrapped the injection in a repeated
+     * ground bounce (onGround toggling + a dwell-then-jump), and that implausible motion is what got rubberbanded. Here:
+     * jump ONCE to leave the road, deploy, then inject horizontally with the captured boost-smoothing
+     * {@code v += (target-v)*bounceBoostFactor} (ramps 0->target over ~8 ticks then holds), and hold altitude in a band
+     * above the road via a small climb/sink porpoise. A setback or the chunk frontier eases the injection off. Flat road.
      */
     private void tickBounce(double x, double y, double z, double speed) {
         var cfg = CONFIG.client.extra.elytraPilot;
+        // CENTERLINE-following yaw (pure-pursuit, gentle at the 64-block lookahead): keeps the bounce ON the road
+        // centerline instead of drifting into the edge GUARDRAIL blocks. Was locked to the raw road axis, which never
+        // corrected lateral drift, so any off-center nudge (knockback/obstacle/lag) sent the bot straight into the
+        // guardrail and stalled it. When already centered desiredYaw ≈ the axis (no disturbance to the tuned bounce);
+        // off-center it gently steers back. The yaw-change packets are normal player rotation — Grim accepts them.
         float yaw = desiredYaw(x, z);
 
         // Road sanity: bounce only works on a flat road. If we've sunk well below it, we hit a gap / fell off.
@@ -1206,82 +1240,118 @@ public class ElytraPilot extends Module {
         }
 
         // Elytra wear is the same in bounce mode (fall-flying still drains durability); SWAP returns to BOUNCE.
-        if (manageElytraWear(x, y, z, yaw)) return;
+        if (manageElytraWear(x, y, z, yaw)) { BOT.stopEBounce(); return; }
 
-        // After a server position correction (a rubberband, or the teleport on (re)connect before the position
-        // has synced), HOLD: stop injecting/jumping and let it resync, then resume gently. Injecting 40 b/s
-        // against a correcting/unsynced position is the loop that stuck the bot right after a connect.
-        // setbackHoldTicks is armed by the PlayerSetbackEvent handler on every server correction.
-        if (setbackHoldTicks > 0) {
-            submitInput(false, false, yaw, cfg.bouncePitch);
-            bouncePrevY = y;
+        // Restock fresh elytra spares from the carried ender-chest kit BEFORE they run out — pre-empts the
+        // emergency landing. Triggers on low fresh-spare count (the 0-tick swap keeps consuming them). Requires a
+        // carried ender chest; the kit + a silk pickaxe are verified by Regear (it pauses -> emergency if missing).
+        if (cfg.resupplyFromEchest && countSpareElytras() < cfg.resupplySpareThreshold && FlightGear.echestCount() > 0) {
+            BOT.stopEBounce();
+            enterResupply();
             return;
         }
 
-        boolean onGround = BOT.isOnGround();
-        boolean flying = BOT.isFallFlying();
-
-        // Obstacle/stall: only count a hard stall once airborne (don't false-abort during the ground launch or the
-        // slow initial speed build-up). A sustained near-stop while airborne = stuck on a wall -> walk past it.
-        if (cfg.passObstacles && !onGround) {
-            if (speed * 20.0 < 2.0) bounceStallTicks++; else bounceStallTicks = 0;
-            if (bounceStallTicks > cfg.bounceStallLimit) { enterPass(); return; }
-            if (cfg.bounceHopObstacles && terrainBlockedAhead(x, y, z, yaw, Math.min(cfg.lookAheadBlocks, 12))) { enterHop(); return; }
-        } else {
-            bounceStallTicks = 0;
-        }
-
-        // Don't outrun chunk loading: highways sit in oft-reloaded chunks (~30% less of a problem) -> gentler
-        // thresholds. At the frontier, ease off / settle and wait for chunks to stream in.
+        // Don't outrun chunk loading: at the frontier, hold heading and wait for chunks to stream in.
         int slowDist = Math.round(cfg.netherFrontierSlow * HIGHWAY_FRONTIER_FACTOR);
         int holdDist = Math.round(cfg.netherFrontierHold * HIGHWAY_FRONTIER_FACTOR);
         int corridor = loadedDistAhead(x, z, yaw, slowDist);
         boolean frontierCoast = corridor < slowDist;
         boolean frontierHold  = corridor <= holdDist;
 
-        // Re-deploy the elytra each cycle, right after a road touch cancels flight (the captured real bounce sends
-        // START_FALL_FLYING ~2/s). Deploying while grounded is server-rejected, so only when airborne & not flying.
-        if (!onGround && !flying && !frontierHold && redeployCooldown <= 0) {
-            sendStartFallFlying();
-            redeployCooldown = cfg.bounceRedeployTicks;
+        if (BOT.isEBounceActive()) BOT.stopEBounce();   // never the direct-position synth; the server rejects un-inputted moves
+        boolean onGround = BOT.isOnGround();
+        boolean flying = BOT.isFallFlying();
+
+        // CLEAR fall-flying locally on the onGround tick so OUR ff-state matches GRIM's: Grim clears fall-flying the tick
+        // it sees onGround=true in our move packet, but our Bot otherwise leaves ff=true until the server's metadata echo
+        // (~2 ticks late), so for those ticks we glide while Grim predicts a ballistic fall -> the divergence sets us back
+        // (the ~24 b/s wall). Mirroring the clear keeps both sides in lockstep; re-deploy re-engages at bounceDeployHeight.
+        if (cfg.bounceClearOnGround && onGround && flying) { BOT.stopFallFlying(); flying = false; }
+
+        // PURE-INPUT GROUND BOUNCE — the real Rusherhack technique, decoded byte-for-byte from a PacketLogger capture
+        // (tools/, latest.log @18:03:51+). The real client does just THREE things and then lets vanilla physics run:
+        //   1. holds ONE input forever: {forward=true, jump=true}  (it never changes for the whole flight)
+        //   2. sprints (START_SPRINTING once)
+        //   3. re-sends START_FALL_FLYING each airborne phase
+        // Holding jump auto-bounces off the road every ~10-11 ticks (each ground touch is exactly 1 tick, og=true at
+        // y=roadY; peak ~roadY+0.9). jump()'s sprint kick adds +0.2/cycle and the re-deployed fall-flying glide keeps
+        // ~0.99/tick of the horizontal, so speed RAMPS organically (capture: 5->22 b/s and still climbing toward ~40)
+        // with ZERO velocity injection and ZERO fireworks. Grim accepts it because every emitted position is the
+        // simulated consequence of those real inputs — exactly what its prediction expects. (Every prior model —
+        // velocity injection, position synth, single-deploy continuous glide — diverged from Grim's prediction and
+        // got rubberbanded; see EBOUNCE_LOG.md #1-#14.)
+
+        // NEVER BOUNCE AGAINST A RUBBERBAND: if the server just set us back, go fully neutral and let the position
+        // resync, THEN resume. Jumping into an active setback is what cascaded into the stuck-on-the-ground deadlock
+        // (jump -> rejected -> setback -> jump again -> ... pinned at spd=0). Settling lets setbackHoldTicks decay and
+        // the bot re-sync to the server position before it tries to bounce again. (Standing order: never fight a setback.)
+        if (setbackHoldTicks > 0) {
+            submitMove(false, false, false, false, yaw, 0f);
+            if (cfg.bounceDebug) info(String.format("[bounce] SETBACK-HOLD %d y=%.2f — settling, not bouncing", setbackHoldTicks, y));
+            return;
         }
 
-        // Ramp tied to ACTUAL achieved speed: only ever command a little (bounceAccel) above what the bot is
-        // really doing, so the injection can't race ahead of it. Commanding the 40 b/s cap from a standstill /
-        // unsynced position is what 2b2t rubberbands; this builds up gradually as real speed follows.
-        double target;
+        // FRONTIER: right at the edge of loaded chunks — stop bouncing, settle on the road, wait for chunks to stream in.
         if (frontierHold) {
-            target = 0.0;
+            submitMove(false, false, false, false, yaw, 0f);
+            if (cfg.bounceDebug) info(String.format("[bounce] FRONTIER-HOLD y=%.2f corridor<=%d — settling", y, holdDist));
+            return;
+        }
+
+        // OBSTACLE STALL: a griefed/blocked highway section pins the bounce in place (speed ~0, bouncing against a wall).
+        // Count ticks of no forward progress; once stuck too long, hand off to the obstacle pass (Baritone routes around
+        // it, then resumes bouncing) instead of bouncing into the wall forever. (My pure-input rewrite had dropped this.)
+        // Setback/frontier settles return above, so they never count here; the startup ramp clears 8 b/s well under the
+        // limit. Once moving, the counter resets.
+        if (speed * 20.0 < cfg.bounceStallSpeed) {
+            if (++bounceStallTicks > cfg.bounceStallLimit) {
+                bounceStallTicks = 0;
+                info("Bounce stalled on a highway obstacle (no forward progress) — routing around it");
+                if (cfg.passObstacles) enterPass();
+                else if (cfg.bounceHopObstacles) enterHop();
+                else { abort("blocked on the road and obstacle-pass is disabled"); }
+                return;
+            }
         } else {
-            target = Math.min(cfg.bounceSpeed, speed * 20.0 + cfg.bounceAccel);
-            if (frontierCoast) target = Math.min(target, cfg.bounceSpeed * 0.5);
+            bounceStallTicks = 0;
         }
-        bounceTargetBps = target;  // kept for the telemetry readout
 
-        // VERTICAL = real vanilla parabola: hold jump so vanilla fires a jump (vy +0.42) on each ground touch, then
-        // gravity brings it back down (~0.9-block bounce, road touch one tick per cycle). We do NOT set vy -- physics
-        // owns the vertical. pitch=bouncePitch (~75) is the captured spoof; at 75 there is ~no lift, so the decel is
-        // ~gravity and the bounce stays tight. No forward/sprint inputs -- the captured client sends none.
-        boolean jump = !frontierHold;                          // held = auto-jump on each ground touch
-        submitMove(false, jump, false, false, yaw, cfg.bouncePitch);
+        // RE-DEPLOY: re-engage the elytra EVERY airborne tick it isn't registered (the capture re-sends START_FALL_FLYING
+        // freely). deployElytra() flips fall-flying TRUE locally this tick (optimistic, like the vanilla client) so our
+        // physics glide immediately. Crucially NO cooldown gate here: the server clears fall-flying on each 1-tick ground
+        // touch, and a multi-tick redeploy cooldown left a window where the bot was moving fast airborne with ff=false —
+        // Grim then predicts a non-gliding fall, sees fast motion, and rubberbands. Re-sending every tick closes that gap
+        // (deployElytra is a no-op once flying, so it self-limits). Height guard avoids claiming fall-flying at the floor.
+        // RE-DEPLOY via Bot's in-tick hook (NOT deployElytra() here): requesting it makes Bot re-engage fall-flying
+        // INSIDE its own tick, after it reads the server metadata but before physics, so the server's ground-clear echo
+        // can't race in and drop the physics to air-drag for a frame (that 1-tick divergence from Grim was the ~24 b/s
+        // setback wall). minY keeps the deploy above the ground (deploying too low gets server-rejected).
+        BOT.requestBounceRedeploy(cfg.roadY + cfg.bounceDeployHeight);
 
-        // HORIZONTAL = injected boost (~40 b/s), every tick incl. the onGround touch (the captured client moves 40 b/s
-        // even on the ground tick). Drive along the steering yaw; leaving vy to physics is the fix for v3.27.2's
-        // rubberband, which pinned a flat altitude (an unnatural trajectory the server rejected).
-        if (!frontierHold && target > 0.001) {
-            var vel = BOT.getVelocity();
-            double perTick = target / 20.0 / 0.99;             // pre-compensate the ~0.99/tick drag
-            double yawRad = Math.toRadians(yaw);
-            vel.setX(-Math.sin(yawRad) * perTick);
-            vel.setZ(Math.cos(yawRad) * perTick);
-        }
+        // Speed governor without input-fighting: hold forward+jump always; drop SPRINT once at/over the cap so the
+        // per-cycle +0.2 kick stops and drag bleeds the glide back toward bounceSpeed. Coast (no sprint) at the frontier
+        // shoulder. NO velocity touched anywhere.
+        double bps = speed * 20.0;
+        boolean wantSprint = bps < cfg.bounceSpeed && !frontierCoast;
+
+        // PROPORTIONAL nose-down dive caps the apex so the bot never punches into the nether ceiling, WITHOUT abrupt
+        // pitch jumps (a binary 0->30 toggle spikes the velocity and Grim sets it back; a smooth ramp doesn't). Fly
+        // level near the road; above bounceDiveHeight, pitch ramps with height at bounceDiveGain deg/block up to the
+        // bounceDivePitch cap — so the higher it climbs the harder it noses down, and each tick's change stays small
+        // (height changes ~0.2/tick -> ~gain*0.2 deg/tick). The dive also converts the altitude back into speed.
+        double aboveRoad = y - cfg.roadY;
+        float pitch = aboveRoad <= cfg.bounceDiveHeight
+            ? cfg.bouncePitch
+            : (float) Math.min(cfg.bounceDivePitch, (aboveRoad - cfg.bounceDiveHeight) * cfg.bounceDiveGain);
+        submitMove(true, true, wantSprint, false, yaw, pitch);
 
         if (cfg.bounceDebug) {
-            double dvy = Double.isNaN(bouncePrevY) ? 0 : (y - bouncePrevY);
-            info(String.format("[bounce] y=%.2f vy=%+.3f hsp=%.1f/%.0f b/s og=%b ff=%b",
-                y, dvy, speed * 20.0, target, onGround, flying));
+            var v = BOT.getVelocity();
+            info(String.format("[bounce] og=%b ff=%b y=%.2f spd=%.1fb/s vx=%.3f vy=%.3f sprint=%b pitch=%.0f setback=%d elytra=%d spares=%d food=%d eating=%b",
+                onGround, flying, y, bps, Math.hypot(v.getX(), v.getZ()), v.getY(), wantSprint, pitch, setbackHoldTicks,
+                wornElytraDurability(), countSpareElytras(),
+                CACHE.getPlayerCache().getThePlayer().getFood(), MODULE.get(AutoEat.class).isEating()));
         }
-        bouncePrevY = y;
 
         if (cfg.hasTarget && horizDist(x, z, cfg.targetX, cfg.targetZ) <= cfg.arriveRadius) {
             phase = Phase.LAND;
@@ -1378,7 +1448,9 @@ public class ElytraPilot extends Module {
         }
         passTX = (int) Math.floor(tx);
         passTZ = (int) Math.floor(tz);
-        BARITONE.pathTo(new GoalNear(passTX, cfg.roadY, passTZ, 9));
+        // Tight goal radius so Baritone actually walks ONTO the centerline point (the old radius-9 let it stop up to 9
+        // blocks off — often right back on the guardrail). Getting the bot fully back to center is the whole point.
+        BARITONE.pathTo(new GoalNear(passTX, cfg.roadY, passTZ, 2));
         passPathing = true;
         passTicks = 0;
     }
@@ -1406,6 +1478,33 @@ public class ElytraPilot extends Module {
     private void tickSwap(double x, double y, double z) {
         var cfg = CONFIG.client.extra.elytraPilot;
         float yaw = desiredYaw(x, z);
+
+        // GROUND SWAP (e-bounce): no altitude needed — land on the road, swap the fresh elytra in, resume bouncing.
+        // 1) descend to the road (neutral input, gentle nose-down, NO jump so we don't re-launch); fall-flying clears
+        //    on the ground touch. 2) once grounded + nearly stopped, swap the best spare into the chestplate slot
+        //    (works from the hotbar OR main inventory). 3) back to BOUNCE — held-jump + in-tick redeploy relaunch the
+        //    FRESH elytra. swapSlots is atomic (worn<->fresh) so the chestplate is never empty mid-swap.
+        if (cfg.ebounce) {
+            boolean onGround = BOT.isOnGround();
+            double spd = haveLast ? Math.hypot(x - lastX, z - lastZ) * 20.0 : 0.0;
+            if (!onGround) {                                  // glide down to the road first
+                submitMove(false, false, false, false, yaw, 12f);
+                if (++swapTicks > SWAP_REDEPLOY_TIMEOUT_TICKS * 2) { phase = Phase.EMERGENCY; }
+                return;
+            }
+            submitMove(false, false, false, false, yaw, 0f); // grounded: hold still while swapping
+            if (spd > 2.0) return;                            // wait until settled so the inventory action is Grim-safe
+            if (equipFreshElytraProgress()) {
+                phase = Phase.BOUNCE;
+                bounceStallTicks = 0;
+                swapTicks = 0;
+                info("Elytra swapped on the road — resuming bounce");
+            } else if (++swapTicks > SWAP_EQUIP_TIMEOUT_TICKS) {
+                if (!hasSpareElytra()) { phase = Phase.EMERGENCY; return; }
+                swapTicks = 0;                                // keep retrying
+            }
+            return;
+        }
 
         if (!swapRedeploying) {
             boolean done = equipFreshElytraProgress();
@@ -1897,6 +1996,16 @@ public class ElytraPilot extends Module {
         if (wornDur <= 0) return false;                       // no elytra worn — lost-flight handles it
         if (hasSpareElytra()) {
             if (wornDur > cfg.elytraMinDurability) return false;  // still good; a spare is ready for when it isn't
+            // BOUNCE: prefer the SEAMLESS 0-tick swap — if a fresh spare is in the hotbar, atomically swap it into the
+            // chestplate (chestplate never empty -> fall-flying never breaks -> keep bouncing, no landing). Only if the
+            // spare is in the main inventory (no atomic path) do we land-and-swap. This was the MISSING path: the bounce
+            // sits ~1 block up, far below minSwapClearance, so the cruise swap below never fired and the bot kept
+            // bouncing a dying elytra until it broke (canGlide fails -> setback trap).
+            if (cfg.ebounce) {
+                if (tryZeroTickElytraSwap()) return false;   // seamless hotbar swap — keep bouncing this tick
+                enterSwap(); return true;                    // spare only in main inventory — land, swap, resume
+            }
+            // CRUISE: need altitude to drop flight and re-glide.
             if (heightAboveGround(x, y, z) >= cfg.minSwapClearance) { enterSwap(); return true; }
             boolean fire = heldIsFirework();                  // too low to drop flight for a swap: climb first
             if (!fire) ensureFireworkHeld(); else noteRocketFired();
@@ -1931,6 +2040,82 @@ public class ElytraPilot extends Module {
         info("Elytra worn out — swapping in the best spare");
     }
 
+    private void enterResupply() {
+        phase = Phase.RESUPPLY;
+        resupplyStarted = false;
+        resupplyTicks = 0;
+        info("Elytra spares low — resupplying from the ender-chest kit");
+        inGameAlertActivePlayer("<yellow>ElytraPilot: spares low — restocking elytras from the ender chest");
+    }
+
+    /**
+     * RESUPPLY: settle on the road, then hand off to {@link Regear} in elytra-only refill mode (pull fresh elytras
+     * from the kit shulker to the target count, dump spent ones back, NEVER touch the worn armor elytra), and resume
+     * bouncing when Regear completes. Mirrors {@link ElytraTrip}'s GEAR_UP handoff. Regear drives movement while it
+     * runs (place echest -> pull kit -> swap elytras -> break+return kit -> recover echest), so we submit NO input.
+     */
+    private void tickResupply(double x, double y, double z, double speed) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        var rg = MODULE.get(Regear.class);
+
+        if (!resupplyStarted) {
+            // Settle on the road first so Regear starts from a stable grounded state (it places an echest beside us).
+            submitMove(false, false, false, false, desiredYaw(x, z), 0f);
+            boolean settled = speed * 20.0 < 1.5 && BOT.isOnGround() && !BOT.isFallFlying();
+            if (!settled && ++resupplyTicks < cfg.passSettleTicks) return;
+            // Save Regear config, then set it for an ELYTRA-ONLY refill: no armor/gear equip (never touch the worn
+            // elytra), no self-kill relocate (stay on the highway), return the emptied kit, recover our echest.
+            savedRgEquipElytra = CONFIG.client.extra.regear.equipElytra;
+            savedRgEquipArmor = CONFIG.client.extra.regear.equipArmor;
+            savedRgOffhandTotem = CONFIG.client.extra.regear.offhandTotem;
+            savedRgSelfKillRelocate = CONFIG.client.extra.regear.selfKillRelocate;
+            CONFIG.client.extra.regear.equipElytra = false;
+            CONFIG.client.extra.regear.equipArmor = false;
+            CONFIG.client.extra.regear.offhandTotem = false;
+            CONFIG.client.extra.regear.selfKillRelocate = false;
+            CONFIG.client.extra.regear.returnShulker = true;
+            CONFIG.client.extra.regear.enabled = true;
+            rg.setElytraRefill(true, cfg.resupplyElytraCount);
+            rg.syncEnabledFromConfig();
+            resupplyStarted = true;
+            resupplyTicks = 0;
+            return;
+        }
+        if (rg.isPaused()) {                 // no echest spot / no kit shulker / no silk pick
+            restoreRegearConfig();
+            warn("Elytra resupply failed (Regear paused — check the carried ender chest, a kit shulker, and a silk pickaxe).");
+            enterEmergencyLanding();
+            return;
+        }
+        if (rg.isComplete()) {
+            restoreRegearConfig();
+            phase = Phase.BOUNCE;
+            bounceStallTicks = 0;
+            info("Elytra resupply complete — resuming bounce (spares=" + countSpareElytras() + ")");
+            return;
+        }
+        if (rg.isRelocating()) { resupplyTicks = 0; return; }   // (disabled here, but never time out a relocation)
+        if (++resupplyTicks > 6000) {        // ~5 min hard guard against a hung cycle
+            restoreRegearConfig();
+            warn("Elytra resupply timed out — falling back to emergency landing.");
+            enterEmergencyLanding();
+        }
+    }
+
+    /** Restore the Regear config the resupply temporarily overrode, clear the elytra-refill mode, and disable Regear. */
+    private void restoreRegearConfig() {
+        var rcfg = CONFIG.client.extra.regear;
+        rcfg.equipElytra = savedRgEquipElytra;
+        rcfg.equipArmor = savedRgEquipArmor;
+        rcfg.offhandTotem = savedRgOffhandTotem;
+        rcfg.selfKillRelocate = savedRgSelfKillRelocate;
+        var rg = MODULE.get(Regear.class);
+        rg.setElytraRefill(false, 0);
+        rcfg.enabled = false;
+        rg.syncEnabledFromConfig();
+        resupplyStarted = false;
+    }
+
     // --- elytra swap mechanics ---
 
     /**
@@ -1952,12 +2137,41 @@ public class ElytraPilot extends Module {
         return false;
     }
 
+    /**
+     * TRUE 0-tick elytra swap for the bounce: if a fresh spare is in the HOTBAR, atomically swap it into the chestplate
+     * with a single MOVE_TO_HOTBAR_SLOT packet (the hotbar-number-key swap). The chestplate is never empty for even one
+     * tick, so fall-flying never breaks and the bounce continues seamlessly — no landing. Only a HOTBAR swap is atomic;
+     * a main-inventory swap is 3 left-clicks that leave the chestplate empty mid-swap (drops the bot), so spares that
+     * are only in the main inventory take the land-and-swap path instead. Returns true if a fresh hotbar spare exists
+     * (caller keeps bouncing); the swap self-guards on an in-flight request and a non-empty cursor.
+     */
+    private boolean tryZeroTickElytraSwap() {
+        int h = findFreshElytraHotbar();             // 36-44 holding durability > freshElytraMinDurability
+        if (CONFIG.client.extra.elytraPilot.bounceDebug)
+            info("[swap] 0-tick check: hotbarSpare=" + h + " chestIsElytra=" + isElytra(chestplate()) + " invBusy=" + INVENTORY.hasActiveRequest());
+        if (h < 0) return false;
+        if (!isElytra(chestplate())) return false;   // need the worn elytra present to swap OUT (atomic exchange)
+        if (!INVENTORY.hasActiveRequest()) {
+            submitInvAction(new MoveToHotbarSlot(0, CHESTPLATE_SLOT, MoveToHotbarAction.from(h - 36)));
+            if (CONFIG.client.extra.elytraPilot.bounceDebug) info("[swap] 0-tick SUBMITTED MoveToHotbarSlot chest<->hotbar" + (h - 36));
+        }
+        return true;                                 // fresh hotbar spare available -> stay airborne, swap is seamless
+    }
+
     private boolean needsElytraSwap() {
         return wornElytraDurability() <= CONFIG.client.extra.elytraPilot.elytraMinDurability;
     }
 
     private boolean hasSpareElytra() {
         return findBestSpareElytraSlot() >= 0;
+    }
+
+    /** Count of usable spare elytras (slots 9-44, durability > freshElytraMinDurability) — for swap diagnostics. */
+    private int countSpareElytras() {
+        List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+        int n = 0;
+        for (int s = 9; s <= 44; s++) if (isFreshElytra(inv.get(s))) n++;
+        return n;
     }
 
     /** Inventory slot (9-44) of the HIGHEST-durability usable spare elytra (durability > freshElytraMinDurability),

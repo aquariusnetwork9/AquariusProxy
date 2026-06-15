@@ -4,6 +4,7 @@ import com.aquarius.feature.elytra.Route;
 import com.aquarius.module.impl.ElytraPilot;
 import com.aquarius.module.impl.ElytraTrip;
 import com.aquarius.util.config.Config.Client.Extra.ElytraPilot.HighwayDir;
+import com.aquarius.util.config.Config.Client.Extra.ElytraPilot.BounceKick;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 
 import java.util.ArrayList;
@@ -68,6 +69,11 @@ public class ElytraPilotCommand extends Command {
                 "bouncestall <ticks>   (ticks of near-zero bounce speed before giving up to a walk-past)",
                 "redeploy <ticks>      (min ticks between START_FALL_FLYING re-sends during e-bounce)",
                 "bouncedebug <on/off>  (log per-tick bounce telemetry: y / speeds / pitch / fall-flying, for tuning)",
+                "bouncekick <firework|sprint>  (how the bounce reaches speed: firework boost, or RUN-to-start then ramp)",
+                "bouncekickpitch <deg> (firework-kickstart dive pitch; shallow so the boost goes horizontal)",
+                "bounceinject <bpt>    (HOLD maintenance cap: max horizontal speed added per tick; steady need ~0.02)",
+                "bouncerunspeed <bps>  (sprint-start: ground speed to reach by running before deploying)",
+                "bouncerunramp <bps>   (sprint-start: how fast injected speed ramps up from the running start)",
                 "highway <dir>         (follow a 2b2t nether highway from 0,0: N/S/E/W/NE/SE/NW/SW; sets ebounce + y120)",
                 "pass <on/off>         (on obstacle: settle + Baritone past it along the axis, then resume bounce)",
                 "passahead <blocks>    (how far along the axis to aim the Baritone bypass)",
@@ -128,6 +134,15 @@ public class ElytraPilotCommand extends Command {
                 MODULE.get(ElytraPilot.class).syncEnabledFromConfig();
                 c.getSource().getEmbed()
                     .title("ElytraPilot " + toggleStrCaps(CONFIG.client.extra.elytraPilot.enabled));
+            }))
+            .then(literal("restart").executes(c -> {
+                // Clean re-arm in ONE command (== off then on): re-enables if needed, resets state, and re-enters the
+                // TAKEOFF/BOUNCE phase even if already enabled. Use after changing config while armed — `fly on` alone
+                // is a no-op when already enabled, so it would NOT pick up the change.
+                MODULE.get(ElytraPilot.class).beginFlight();
+                c.getSource().getEmbed()
+                    .title("ElytraPilot restarted")
+                    .description("Re-armed cleanly (off→on in one shot) — reset state + re-entered the phase. Picks up config changed while it was already enabled.");
             }))
             .then(literal("to")
                 .then(argument("x", integer())
@@ -239,6 +254,54 @@ public class ElytraPilotCommand extends Command {
                 c.getSource().getEmbed().title("ElytraPilot e-bounce pitch = " + CONFIG.client.extra.elytraPilot.bouncePitch + "°")
                     .description("Flat-road skim pitch. A real capture bounces at ~0°; +pitch noses down (was glidePitch +2, which popped the bot up).");
             })))
+            .then(literal("bouncedive").then(argument("degrees", doubleArg()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceDivePitch = (float) getDouble(c, "degrees");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce dive pitch = " + CONFIG.client.extra.elytraPilot.bounceDivePitch + "°")
+                    .description("Nose-down pitch applied only above roadY+1, to dive back to the road for the next bounce instead of floating into a hover. Higher = dives harder.");
+            })))
+            .then(literal("bouncestallspeed").then(argument("bps", doubleArg()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceStallSpeed = getDouble(c, "bps");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce stall speed = " + CONFIG.client.extra.elytraPilot.bounceStallSpeed + " b/s")
+                    .description("Below this forward speed a bounce tick counts as stalled; after bounceStallLimit such ticks the bot routes around the obstacle (Baritone) instead of bouncing into it.");
+            })))
+            .then(literal("bouncedivegain").then(argument("degPerBlock", doubleArg()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceDiveGain = getDouble(c, "degPerBlock");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce dive gain = " + CONFIG.client.extra.elytraPilot.bounceDiveGain + " deg/block")
+                    .description("Degrees of extra nose-down per block above the dive height (proportional, smooth ramp). Higher caps the apex tighter; too high gets abrupt enough to desync.");
+            })))
+            .then(literal("bounceredeployvy").then(argument("vy", doubleArg()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceRedeployMaxVy = getDouble(c, "vy");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce redeploy maxVy = " + CONFIG.client.extra.elytraPilot.bounceRedeployMaxVy)
+                    .description("Only re-deploy the elytra once vertical speed drops below this (deploy on the way DOWN). Keeps the rise ballistic = low apex (no ceiling hits). Raise toward 0.4 to deploy throughout the rise.");
+            })))
+            .then(literal("bounceclearground").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceClearOnGround = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce clear-ff-on-ground " + toggleStrCaps(CONFIG.client.extra.elytraPilot.bounceClearOnGround))
+                    .description("Clear fall-flying locally on the ground tick to match Grim's prediction (it clears ff when it sees onGround=true). Removes the 1-tick drag divergence that sets the bounce back at ~24 b/s.");
+            })))
+            .then(literal("resupply").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.resupplyFromEchest = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("ElytraPilot elytra resupply " + toggleStrCaps(CONFIG.client.extra.elytraPilot.resupplyFromEchest))
+                    .description("Restock fresh elytra spares from the carried ender-chest kit when they run low (needs a carried ender chest, a silk pickaxe, and a stocked kit shulker). Never touches the worn elytra.");
+            })))
+            .then(literal("resupplyspares").then(argument("n", integer(0)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.resupplySpareThreshold = getInteger(c, "n");
+                c.getSource().getEmbed().title("ElytraPilot resupply when fresh spares < " + CONFIG.client.extra.elytraPilot.resupplySpareThreshold);
+            })))
+            .then(literal("resupplycount").then(argument("n", integer(1)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.resupplyElytraCount = getInteger(c, "n");
+                c.getSource().getEmbed().title("ElytraPilot resupply target = " + CONFIG.client.extra.elytraPilot.resupplyElytraCount + " fresh elytras");
+            })))
+            .then(literal("bouncedeploy").then(argument("blocks", doubleArg()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceDeployHeight = getDouble(c, "blocks");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce deploy height = " + CONFIG.client.extra.elytraPilot.bounceDeployHeight + " above road")
+                    .description("Blocks above the road the bot must rise before re-deploying the elytra. Too low = server rejects + desync setback; too high = bleeds speed staying ballistic.");
+            })))
+            .then(literal("bouncediveheight").then(argument("blocks", doubleArg()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceDiveHeight = getDouble(c, "blocks");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce dive height = " + CONFIG.client.extra.elytraPilot.bounceDiveHeight + " above road")
+                    .description("Height above the road at which the nose-down dive kicks in. Lower = tighter, lower-apex bounce (less speed bled to altitude).");
+            })))
             .then(literal("bouncejump").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.bounceJump = getToggle(c, "toggle");
                 c.getSource().getEmbed().title("ElytraPilot e-bounce launch jump " + toggleStrCaps(CONFIG.client.extra.elytraPilot.bounceJump))
@@ -267,6 +330,81 @@ public class ElytraPilotCommand extends Command {
                 CONFIG.client.extra.elytraPilot.bounceDebug = getToggle(c, "toggle");
                 c.getSource().getEmbed().title("ElytraPilot e-bounce telemetry " + toggleStrCaps(CONFIG.client.extra.elytraPilot.bounceDebug))
                     .description("Logs per-tick y / vertical+horizontal speed / pitch / fall-flying while bouncing, for tuning. Spammy — turn off after.");
+            })))
+            .then(literal("bouncekick").then(argument("mode", word()).executes(c -> {
+                String m = getString(c, "mode").toLowerCase();
+                var cfg = CONFIG.client.extra.elytraPilot;
+                if (m.startsWith("f")) cfg.bounceKickStart = BounceKick.Firework;
+                else if (m.startsWith("sy")) cfg.bounceKickStart = BounceKick.Synth;
+                else if (m.startsWith("s")) cfg.bounceKickStart = BounceKick.Sprint;
+                else { c.getSource().getEmbed().title("Usage: fly bouncekick <firework|sprint|synth>"); return; }
+                String desc = switch (cfg.bounceKickStart) {
+                    case Firework -> "Boost to speed with real fireworks, then hold by injecting only the tiny drag top-up.";
+                    case Sprint -> "RUN on the ground to get moving first (no fireworks), then deploy + ramp the injected speed up from that moving state.";
+                    case Synth -> "Byte-for-byte: synthesize the exact MovePlayerPos stream (parabola + held fall-flying), bypassing physics, ramped 0->target. No fireworks.";
+                };
+                c.getSource().getEmbed().title("ElytraPilot e-bounce kickstart = " + cfg.bounceKickStart).description(desc);
+            })))
+            .then(literal("bouncekickpitch").then(argument("degrees", doubleArg()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceKickPitch = (float) getDouble(c, "degrees");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce kickstart pitch = " + CONFIG.client.extra.elytraPilot.bounceKickPitch + "°")
+                    .description("Firework-kickstart dive pitch: shallow so the boost goes horizontal down the road, not into the floor.");
+            })))
+            .then(literal("bounceinject").then(argument("bpt", doubleArg(0)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceMaxInjectPerTick = getDouble(c, "bpt");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce max inject = " + CONFIG.client.extra.elytraPilot.bounceMaxInjectPerTick + " b/tick")
+                    .description("HOLD maintenance cap: max horizontal speed added per tick (steady-state need ~0.02). Caps a glitch from snapping into a cold-start jump.");
+            })))
+            .then(literal("bouncerunspeed").then(argument("bps", doubleArg(0)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceRunStartSpeed = getDouble(c, "bps");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce run-start speed = " + CONFIG.client.extra.elytraPilot.bounceRunStartSpeed + " b/s")
+                    .description("Sprint-start: ground speed to reach by running before deploying + ramping (ground sprint tops out ~5.6 b/s).");
+            })))
+            .then(literal("bouncerunramp").then(argument("bps", doubleArg(0)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceRunRampPerSec = getDouble(c, "bps");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce run ramp = " + CONFIG.client.extra.elytraPilot.bounceRunRampPerSec + " b/s per s")
+                    .description("Sprint-start: how fast the injected speed ramps up from the running start. Lower = gentler, more likely within Grim's tolerance.");
+            })))
+            .then(literal("bouncespeed").then(argument("bps", doubleArg(0)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceSpeed = getDouble(c, "bps");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce target speed = " + CONFIG.client.extra.elytraPilot.bounceSpeed + " b/s")
+                    .description("Target the KICKSTART builds to and HOLD maintains. 2b2t's ceiling is ~40 — keep a margin.");
+            })))
+            .then(literal("bouncerestoreticks").then(argument("n", integer(1)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceRestoreTicks = getInteger(c, "n");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce restore ticks = " + CONFIG.client.extra.elytraPilot.bounceRestoreTicks)
+                    .description("HOLD bleed-and-restore: spread the per-cycle restore over this many ticks after liftoff (1=sharp, higher=gentler per-tick deviation).");
+            })))
+            .then(literal("bouncerestoremax").then(argument("bpt", doubleArg(0)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceRestoreMax = getDouble(c, "bpt");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce restore max = " + CONFIG.client.extra.elytraPilot.bounceRestoreMax + " b/tick")
+                    .description("HOLD bleed-and-restore: hard cap on the total per-cycle restore (a real cycle's drag loss is ~0.18).");
+            })))
+            .then(literal("bouncehover").then(argument("low", doubleArg()).then(argument("high", doubleArg()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceHoverLow = getDouble(c, "low");
+                CONFIG.client.extra.elytraPilot.bounceHoverHigh = getDouble(c, "high");
+                c.getSource().getEmbed().title("ElytraPilot airborne-glide hover band = roadY+" + CONFIG.client.extra.elytraPilot.bounceHoverLow + " .. roadY+" + CONFIG.client.extra.elytraPilot.bounceHoverHigh)
+                    .description("Vertical porpoise band above the road. The glide climbs when below the low edge, sinks when above the high edge; never touches ground.");
+            }))))
+            .then(literal("bounceclimbvel").then(argument("v", doubleArg(0)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceClimbVel = getDouble(c, "v");
+                c.getSource().getEmbed().title("ElytraPilot airborne-glide climb vel = " + CONFIG.client.extra.elytraPilot.bounceClimbVel)
+                    .description("Vertical velocity set during the climb phase (after gravity ~0.03 nets a gentle +0.01/tick climb).");
+            })))
+            .then(literal("bounceboost").then(argument("factor", doubleArg(0)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceBoostFactor = getDouble(c, "factor");
+                c.getSource().getEmbed().title("ElytraPilot airborne-glide boost factor = " + CONFIG.client.extra.elytraPilot.bounceBoostFactor)
+                    .description("Horizontal injection smoothing: v += (target-v)*factor each tick. Captured client uses ~0.5 (ramps 0->target over ~8 ticks).");
+            })))
+            .then(literal("bounceholdenter").then(argument("frac", doubleArg(0)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceHoldEnterFrac = getDouble(c, "frac");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce HOLD-enter = " + CONFIG.client.extra.elytraPilot.bounceHoldEnterFrac + " x target")
+                    .description("Hand off from firework KICKSTART to maintenance inject-HOLD once speed reaches this fraction of target.");
+            })))
+            .then(literal("bounceholdexit").then(argument("frac", doubleArg(0)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceHoldExitFrac = getDouble(c, "frac");
+                c.getSource().getEmbed().title("ElytraPilot e-bounce HOLD-exit = " + CONFIG.client.extra.elytraPilot.bounceHoldExitFrac + " x target")
+                    .description("Drop back to firework KICKSTART if HOLD speed falls below this fraction of target.");
             })))
             .then(literal("highway").then(argument("dir", word()).executes(c -> {
                 HighwayDir dir;
