@@ -9,14 +9,12 @@ import com.aquarius.feature.player.World;
 import com.aquarius.network.server.ServerSession;
 import com.aquarius.network.server.AquariusServerInfoBuilder;
 import com.aquarius.util.Wait;
-import com.aquarius.util.struct.Maps;
 import net.kyori.adventure.key.Key;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 import org.geysermc.mcprotocollib.protocol.data.game.ServerLink;
 import org.geysermc.mcprotocollib.protocol.data.game.ServerLinkType;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerSpawnInfo;
-import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundCustomReportDetailsPacket;
 import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundServerLinksPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundServerDataPacket;
@@ -122,11 +120,7 @@ public class ProxyServerLoginHandler {
             Proxy.getInstance().getServerIcon()
         ));
         connection.send(new ClientboundServerLinksPacket(asList(
-            new ServerLink(ServerLinkType.WEBSITE, null, "https://github.com/rfresh2/ZenithProxy"),
-            new ServerLink(ServerLinkType.SUPPORT, null, "https://discord.gg/nJZrSaRKtb")
-        )));
-        connection.send(new ClientboundCustomReportDetailsPacket(Maps.of(
-            "AquariusProxy Support", "https://discord.gg/nJZrSaRKtb"
+            new ServerLink(ServerLinkType.WEBSITE, null, "https://github.com/aquariusnetwork9/AquariusProxy")
         )));
         connection.setConfigured(true);
     }

@@ -32,7 +32,7 @@ Loading plugins after launch or hot reloading is not supported.
 
 ## Where to Find Plugins
 
-\#plugins channel in my discord server: https://discord.gg/nJZrSaRKtb
+Community plugins are distributed by their authors.
 
 ## Creating Plugins
 

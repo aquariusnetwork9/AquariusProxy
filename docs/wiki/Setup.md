@@ -142,7 +142,7 @@ See the [Linux Guide](Linux-Guide.md) for help copying files, creating folders, 
 1. Accounts currently connected per IP address
 2. In-game session time, excluding time in queue.
 
-Current limits are documented in [a discord channel](https://discord.com/channels/1127460556710883391/1200685719073599488) in my [server](https://discord.gg/nJZrSaRKtb)
+Current limits are set by the server host.
 
 ### DNS Setup
 

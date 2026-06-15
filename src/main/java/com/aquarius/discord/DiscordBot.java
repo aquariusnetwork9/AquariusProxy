@@ -348,10 +348,8 @@ public class DiscordBot {
             DISCORD.setBotDescription(
                 """
                 AquariusProxy %s
-                **Official Discord**:
-                  https://discord.gg/nJZrSaRKtb
                 **Github**:
-                  https://github.com/rfresh2/ZenithProxy
+                  https://github.com/aquariusnetwork9/AquariusProxy
                 """.formatted(VERSION));
     }
 
