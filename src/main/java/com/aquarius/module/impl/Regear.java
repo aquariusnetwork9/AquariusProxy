@@ -62,6 +62,8 @@ public class Regear extends AbstractFieldModule {
     private boolean complete;
     private boolean hazardPaused;
     private boolean flightRefill;   // set by ElytraTrip: pull ONLY items the flight checklist is missing
+    private boolean elytraRefill;   // set by ElytraPilot: refill ONLY elytras (fresh in, spent back to the kit)
+    private int elytraRefillTarget; // target count of fresh elytras to hold in the inventory after the refill
 
     private int gearArmorIdx;   // gear-up: which armour slot we're filling (0-3)
     private int relocateAttempts;  // self-kills spent looking for an open-sky spot with a reachable echest
@@ -71,6 +73,10 @@ public class Regear extends AbstractFieldModule {
 
     /** ElytraTrip's pre-flight gear-up: pull only the items {@link FlightGear} reports as missing, not the whole kit. */
     public void setFlightRefill(boolean b) { flightRefill = b; }
+
+    /** ElytraPilot's e-bounce resupply: refill ONLY elytras — pull FRESH ones from the kit until the inventory holds
+     *  {@code target}, dumping the SPENT ones back into the kit. The worn (armor) elytra is never touched. */
+    public void setElytraRefill(boolean b, int target) { elytraRefill = b; elytraRefillTarget = target; }
 
     @Override
     public boolean enabledSetting() { return CONFIG.client.extra.regear.enabled; }
@@ -105,6 +111,7 @@ public class Regear extends AbstractFieldModule {
         restoreBreaking();
         state = State.IDLE;
         flightRefill = false;
+        elytraRefill = false;
         echPos = null; shulkPos = null; pathGoal = null; kitShulkerItem = null; avoidSpot = null;
     }
 
@@ -121,6 +128,7 @@ public class Regear extends AbstractFieldModule {
         paused = true;
         state = State.IDLE;
         flightRefill = false;
+        elytraRefill = false;
         warn("Regear paused: {}. Toggle /regear off/on to retry.", reason);
         inGameAlertActivePlayer("<red>Regear paused: " + reason);
     }
@@ -130,6 +138,7 @@ public class Regear extends AbstractFieldModule {
         complete = true;
         state = State.IDLE;
         flightRefill = false;
+        elytraRefill = false;
         info("Regear complete - geared up.");
         inGameAlertActivePlayer("<green>Regear complete");
         if (CONFIG.client.extra.regear.disableWhenDone) {
@@ -396,6 +405,20 @@ public class Regear extends AbstractFieldModule {
         if (openContainerId() == 0) { go(State.CLOSE_KIT); return; }   // already empty/closed
         Container c = openContainer();
         if (c == null) { timer = cfg.actionDelayTicks; return; }
+        // E-bounce elytra refill: dump SPENT elytras from the inventory back into the kit, then pull FRESH elytras
+        // from the kit until the inventory holds the target count. Ignores all non-elytra kit items. The worn elytra
+        // (armor slot 6) is outside the 9-44 inventory range so it is never touched. One action per tick.
+        if (elytraRefill) {
+            if (inventoryBusy()) { timer = cfg.actionDelayTicks; return; }
+            int spent = findPlayerWindowSlot(c, this::isSpentElytra);     // worn-out spare -> back into the kit
+            if (spent != -1) { shiftClick(c, spent); timer = cfg.actionDelayTicks; return; }
+            if (countInInv(this::isFreshElytra) < elytraRefillTarget) {   // top up fresh spares to the target
+                int fresh = findContainerSlot(c, this::isFreshElytra);
+                if (fresh != -1 && findEmptyPlayerWindowSlot(c) != -1) { shiftClick(c, fresh); timer = cfg.actionDelayTicks; return; }
+            }
+            go(State.CLOSE_KIT);   // no spent left, and target met or kit out of fresh elytras / no room
+            return;
+        }
         // Flight refill: pull ONLY items the pre-flight checklist is still short on (re-evaluated per pull, so
         // each category stops once satisfied). Normal regear: empty the whole kit.
         int src = flightRefill
@@ -522,6 +545,7 @@ public class Regear extends AbstractFieldModule {
     private boolean isKitShulker(@Nullable ItemStack s) {
         if (!isShulkerBox(s)) return false;
         var cfg = CONFIG.client.extra.regear;
+        if (cfg.matchByElytraCount) return countElytrasIn(s) >= cfg.kitElytraCount;
         if (cfg.matchByContents) return kitContentsScore(s) >= 0;
         if (cfg.matchByColor && !cfg.kitShulkerColor.isBlank()) {
             String n = itemName(s);
@@ -566,6 +590,31 @@ public class Regear extends AbstractFieldModule {
             if (sc > bestScore) { bestScore = sc; best = i; }
         }
         return best;
+    }
+
+    // ---- elytra durability (for the e-bounce elytra refill) ----
+    private int remainingDurability(@Nullable ItemStack s) {
+        if (s == null || s == Container.EMPTY_STACK) return 0;
+        var data = ItemRegistry.REGISTRY.get(s.getId());
+        if (data == null) return 0;
+        Integer maxDamage = data.components().get(DataComponentTypes.MAX_DAMAGE);
+        if (maxDamage == null) return Integer.MAX_VALUE;
+        Integer damage = s.getDataComponentsOrEmpty().get(DataComponentTypes.DAMAGE);
+        return maxDamage - (damage == null ? 0 : damage);
+    }
+    /** A usable spare: an elytra with more durability than the fresh floor (shared with ElytraPilot's swap logic). */
+    private boolean isFreshElytra(@Nullable ItemStack s) {
+        return FlightGear.isElytra(s) && remainingDurability(s) > CONFIG.client.extra.elytraPilot.freshElytraMinDurability;
+    }
+    /** A worn-out elytra to dump back into the kit (an elytra at/below the fresh floor). */
+    private boolean isSpentElytra(@Nullable ItemStack s) {
+        return FlightGear.isElytra(s) && remainingDurability(s) <= CONFIG.client.extra.elytraPilot.freshElytraMinDurability;
+    }
+    /** Count of elytras inside a shulker (its CONTAINER component) — for matchByElytraCount kit identification. */
+    private int countElytrasIn(@Nullable ItemStack shulker) {
+        int n = 0;
+        for (ItemStack inner : containerContents(shulker)) if (FlightGear.isElytra(inner)) n++;
+        return n;
     }
 
     private int findSilkPick() {

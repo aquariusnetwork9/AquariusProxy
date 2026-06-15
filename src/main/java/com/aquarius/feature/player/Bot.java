@@ -116,6 +116,24 @@ public final class Bot extends ModuleUtils {
     private float jumpStrength = 0.42f;
     private float flyingSpeed = 0.05f;
     private boolean onGroundNoBlocks = false;
+    // e-bounce SYNTH: drive a byte-for-byte MovePlayerPos stream (vanilla jump parabola + smooth horizontal +
+    // continuously-held fall-flying), BYPASSING the physics engine, to match a real ElytraFly client's accepted
+    // packet pattern (the bot's own physics introduced onGround/velocity inconsistencies that Grim rubberbanded).
+    // E-bounce continuous re-deploy hook. ElytraPilot requests this each bounce tick; Bot.tick consumes it AFTER
+    // updateFallFlying() reads the server metadata but BEFORE physics, so the server's ground-clear echo (0x08) can't
+    // race in and leave the physics on air-drag for a tick — that 1-tick drag divergence from Grim's prediction was
+    // what set the bounce back at ~24 b/s. (Re-deploying from the module's earlier onTick lost that race.)
+    private boolean bounceRedeploy;
+    private double bounceRedeployMinY;
+
+    private boolean eBounceActive;
+    private float eBounceYaw;
+    private float eBouncePitch;
+    private double eBounceRoadY;
+    private double eBouncePerTick;   // target horizontal blocks/tick (the airborne-glide cruise speed)
+    private double eBounceVx;        // synthesized horizontal speed; smooth-ramps 0 -> target then holds (v += (target-v)*0.5)
+    private double eBounceVy;        // synthesized vertical velocity (jump arc, then gentle porpoise)
+    private int eBounceTick;         // ticks since the synth engaged (drives liftoff jump + deploy timing)
     @Getter Optional<BlockPos> supportingBlockPos = Optional.empty();
     @Getter private boolean horizontalCollision = false;
     private boolean horizontalCollisionMinor = false;
@@ -374,6 +392,20 @@ public final class Bot extends ModuleUtils {
         if (movementInput.jumping && !didUpdateFlyState && !wasJumpPressed && !onClimbable() && tryToStartFallFlying()) {
             sendClientPacketAsync(new ServerboundPlayerCommandPacket(CACHE.getPlayerCache().getEntityId(), PlayerState.START_ELYTRA_FLYING));
         }
+        // E-bounce continuous re-deploy: re-engage fall-flying here (after updateFallFlying read the metadata, before
+        // physics) so the inbound server ground-clear can't overwrite our optimistic deploy mid-tick and drop the
+        // physics to air-drag for a frame (the desync that capped the bounce at ~24). Consume-once: the module
+        // (ElytraPilot.tickBounce) re-requests it every airborne tick via requestBounceRedeploy().
+        if (bounceRedeploy) {
+            bounceRedeploy = false;
+            // Only re-deploy at/near the apex (vy below the threshold) so the RISE stays ballistic (full gravity -> low
+            // apex, never into the nether ceiling) and fall-flying glides only the descent — the real capture's profile.
+            if (!this.onGround && this.y > bounceRedeployMinY
+                    && this.velocity.getY() < CONFIG.client.extra.elytraPilot.bounceRedeployMaxVy
+                    && tryToStartFallFlying()) {
+                sendClientPacketAsync(new ServerboundPlayerCommandPacket(CACHE.getPlayerCache().getEntityId(), PlayerState.START_ELYTRA_FLYING));
+            }
+        }
         if (isFlying) {
             int verticalDirection = 0;
             if (this.movementInput.isSneaking()) {
@@ -412,6 +444,8 @@ public final class Bot extends ModuleUtils {
             //  ideally we'd check if isFlying = true
             //  but we don't cache or intercept where this would be set server side yet
             velocity.set(0, 0, 0);
+        } else if (eBounceActive) {
+            tickEBounce();   // synthesize the exact MovePlayerPos trajectory; skip the physics engine entirely
         } else {
             playerTravel(movementInputVec);
             tryCheckInsideBlocks();
@@ -1735,6 +1769,106 @@ public final class Bot extends ModuleUtils {
             bmd0.setValue((byte) (b & ~(0x80)));
         }
         updateFallFlying();
+    }
+
+    /**
+     * e-bounce: deploy the elytra now. Mirrors a vanilla client pressing jump in the air -- flips fall-flying TRUE
+     * LOCALLY (optimistic, so our physics glides this very tick instead of waiting on the server metadata round-trip)
+     * AND sends START_ELYTRA_FLYING to the server. Only deploys when airborne with a usable elytra (canGlide). Returns
+     * true if it deployed. Lets the e-bounce drive deploy by packet, with no jump input (which would emit a
+     * ServerboundPlayerInputPacket the real client never sends during a bounce).
+     */
+    /**
+     * E-bounce: request a fall-flying re-deploy for THIS tick, applied inside {@link #tick} after the server metadata
+     * is read but before physics (so the server's ground-clear echo can't race it onto air-drag for a frame). The
+     * module must call this every airborne bounce tick; it's consumed once. {@code minY} = the world Y above which the
+     * deploy is allowed (deploying too near the ground gets server-rejected).
+     */
+    public void requestBounceRedeploy(double minY) {
+        this.bounceRedeploy = true;
+        this.bounceRedeployMinY = minY;
+    }
+
+    public boolean deployElytra() {
+        if (tryToStartFallFlying()) {
+            sendClientPacketAsync(new ServerboundPlayerCommandPacket(
+                CACHE.getPlayerCache().getEntityId(), PlayerState.START_ELYTRA_FLYING));
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * e-bounce SYNTH (airborne glide): take over movement and emit a byte-for-byte copy of the real Rusherhack
+     * ElytraFly stream (decoded from a PacketLogger capture). Each tick {@link #tickEBounce()} synthesizes the
+     * position DIRECTLY (no physics sim, so the proxy's travelFallFlying can't re-transform it into something the
+     * server rejects) and emits ONE MovePlayerPos per tick. The caller updates yaw/roadY/pitch/target live.
+     */
+    public void startEBounce(float yaw, float pitch, double roadY, double perTick) {
+        if (!eBounceActive) {
+            eBounceActive = true;
+            eBounceTick = 0;
+            eBounceVx = 0.0;
+            eBounceVy = 0.0;
+        }
+        eBounceYaw = yaw;
+        eBouncePitch = pitch;
+        eBounceRoadY = roadY;
+        eBouncePerTick = perTick;
+    }
+
+    public void stopEBounce() { eBounceActive = false; }
+
+    public boolean isEBounceActive() { return eBounceActive; }
+
+    /**
+     * Synthesize one tick of the AIRBORNE GLIDE directly into position/rotation/onGround (decoded from the real
+     * capture, tools/rusher_ebounce_capture_decoded.txt): ONE vanilla jump to leave the road, deploy the elytra
+     * mid-rise, then a CONTINUOUS airborne fall-flying glide -- level pitch, onGround=false, fall-flying never
+     * toggled -- with a smooth horizontal ramp {@code v += (target-v)*0.5} (0 -> target over ~8 ticks then hold) and
+     * a gentle vertical porpoise above the road. Rotation held constant so the emitter sends MovePlayerPos (no Rot).
+     */
+    private void tickEBounce() {
+        eBounceTick++;
+        double yawRad = Math.toRadians(eBounceYaw);
+        double nx = -Math.sin(yawRad), nz = Math.cos(yawRad);
+
+        // LIFTOFF: one vanilla jump on the first tick IF on the ground (else we're already airborne -> just glide).
+        if (eBounceTick == 1 && this.onGround) eBounceVy = 0.42;
+
+        boolean airborne = this.y > eBounceRoadY + 0.05;
+        // DEPLOY once, clearly airborne and mid-rise (matches the capture: jump -> deploy -> ramp).
+        if (airborne && !isFallFlying) {
+            startFallFlying();
+            sendClientPacketAsync(new ServerboundPlayerCommandPacket(
+                CACHE.getPlayerCache().getEntityId(), PlayerState.START_ELYTRA_FLYING));
+        }
+
+        // VERTICAL: ride the jump arc (gravity) until past the apex, then a gentle porpoise band above the road.
+        if (eBounceVy > 0.02 || !isFallFlying) {
+            eBounceVy -= 0.08;                                // jump arc (rise + start of fall)
+        } else {
+            double lo = eBounceRoadY + 0.8, hi = eBounceRoadY + 1.4;
+            if (this.y <= lo) eBounceVy = 0.04;              // gentle climb (capture climbs ~+0.01/tick)
+            else if (this.y >= hi) eBounceVy = -0.04;        // gentle sink
+            // else: keep drifting at the current vy
+        }
+
+        // HORIZONTAL: ramp only once airborne + fall-flying + past the jump apex (jump -> deploy -> THEN inject, like
+        // the capture). Smooth boost v += (target - v)*0.5 reaches target in ~8 ticks then holds (the captured shape).
+        if (isFallFlying && eBounceVy <= 0.05) {
+            eBounceVx += (eBouncePerTick - eBounceVx) * 0.5;
+        }
+
+        // integrate position DIRECTLY (no physics sim)
+        this.x += nx * eBounceVx;
+        this.z += nz * eBounceVx;
+        this.y += eBounceVy;
+        this.onGround = this.y <= eBounceRoadY + 0.001;
+        this.yaw = this.requestedYaw = eBounceYaw;
+        this.pitch = this.requestedPitch = eBouncePitch;
+        this.velocity.set(nx * eBounceVx, eBounceVy, nz * eBounceVx);
+        CACHE.getPlayerCache().getThePlayer().setX(this.x).setY(this.y).setZ(this.z);
     }
 
     boolean canGlide() {

@@ -2112,6 +2112,16 @@ Needs an elytra worn + firework rockets in the hotbar. Short alias: .fly
 
   ```elytrapilot bouncedebug <on/off>  (log per-tick bounce telemetry: y / speeds / pitch / fall-flying, for tuning)```
 
+  ```elytrapilot bouncekick <firework|sprint>  (how the bounce reaches speed: firework boost, or RUN-to-start then ramp)```
+
+  ```elytrapilot bouncekickpitch <deg> (firework-kickstart dive pitch; shallow so the boost goes horizontal)```
+
+  ```elytrapilot bounceinject <bpt>    (HOLD maintenance cap: max horizontal speed added per tick; steady need ~0.02)```
+
+  ```elytrapilot bouncerunspeed <bps>  (sprint-start: ground speed to reach by running before deploying)```
+
+  ```elytrapilot bouncerunramp <bps>   (sprint-start: how fast injected speed ramps up from the running start)```
+
   ```elytrapilot highway <dir>         (follow a 2b2t nether highway from 0,0: N/S/E/W/NE/SE/NW/SW; sets ebounce + y120)```
 
   ```elytrapilot pass <on/off>         (on obstacle: settle + Baritone past it along the axis, then resume bounce)```

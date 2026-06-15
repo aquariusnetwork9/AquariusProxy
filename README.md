@@ -2,7 +2,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/MC-1.21.4-brightgreen.svg" alt="Minecraft"/>
-  <img src="https://img.shields.io/badge/version-3.0.0-blue.svg" alt="Version"/>
+  <img src="https://img.shields.io/badge/version-4.0.0-blue.svg" alt="Version"/>
   <img src="https://img.shields.io/badge/license-AGPL--3.0-orange.svg" alt="License"/>
 </p>
 
@@ -140,16 +140,14 @@ A one-shot resupply: place an ender chest, pull a named **kit shulker** out of i
 
 📖 [Regear wiki →](https://github.com/aquariusnetwork9/AquariusProxy/wiki/Regear)
 
-### ElytraPilot — autopilot elytra flight
+### ElytraPilot — autopilot elytra flight *(validated end-to-end in v4.0.0)*
 
-Autonomous elytra flight: deploys, steers, fires fireworks, avoids terrain, and lands — including 2b2t nether-highway travel and a trip planner that routes overworld↔nether for long hauls.
+Autonomous elytra flight: deploys, steers, fires fireworks, simulates its own physics to stay on course, routes through the nether, and lands itself — covering long-haul travel, the 2b2t nether-highway bounce, and a full overworld↔nether trip planner. The three headline capabilities are now flown-and-validated live on 2b2t, not first cuts.
 
-- **Point-to-point** with an efficient firework-climb / free-glide profile and terrain-aware descent + landing.
-- **Bounce-highway** mode (no fireworks) along a flat road or a 2b2t nether highway from 0,0.
-- **Trip planner**: overworld-direct near spawn, otherwise routes through the nether (open-nether 3D pathfinding or a highway e-bounce) and exits near the target.
-- Mid-flight elytra swap, a chunk-loading governor (won't outrun 2b2t's slow streaming), and a ~40 b/s speed cap.
-
-> ⚠️ The newest and most experimental module — flight basics + bounce-highways are validated; the nether trip planner is a first cut. Test over open ground first.
+- **No-firework nether-highway bounce** — a pure-input ground "bounce" along the 2b2t obsidian highways that **Grim accepts**: ~30–38 b/s sustained, **zero fireworks, zero setbacks**. Self-sustaining over long hauls via a seamless **0-tick elytra hot-swap** and an **ender-chest elytra resupply**, with obstacle stall→pass and centerline tracking.
+- **Baritone-style nether flight** — a per-tick **physics-simulation solver** flies the route the way a human "constantly corrects," and native [nether-pathfinder](https://github.com/babbaj/nether-pathfinder) routing plans a path through *unloaded* chunks in ~1s from seed terrain. `fly trip nether <x> <z>` has flown the full leg and **landed on target at full HP, no totems**; 700-block trips proven, plus lava recovery and totem-pop abort.
+- **Overworld flight from spawn** — `fly trip <x> <z>` gears up from nothing (no-line-of-sight container open + self-kill relocation + contents-match kit), then flies a distance-scaled **climb / free-glide** cruise and lands dead-on. A full naked-spawn → 25k → on-target landing is done.
+- A chunk-loading governor (won't outrun 2b2t's slow streaming), AutoEat fire/heal integration, and a ~40 b/s speed cap throughout.
 
 📖 [ElytraPilot wiki →](https://github.com/aquariusnetwork9/AquariusProxy/wiki/ElytraPilot)
 
