@@ -164,8 +164,6 @@ A symlink is like a shortcut to a folder. Meaning you can forward one folder to 
 
 So, you can symlink the map/waypoint folders used by each ZenithProxy IP to your main map/waypoint folders.
 
-More info in my discord: https://discord.com/channels/1127460556710883391/1127461243054202921/1272355246206619711
-
 ## Who are these unknown people pinging or trying to connect to my proxy?
 
 if you host something on your home PC, in most cases, it is _not_ exposed to the public internet by default
