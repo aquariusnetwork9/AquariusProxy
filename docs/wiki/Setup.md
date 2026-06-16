@@ -2,13 +2,14 @@
 
 ### System Requirements
 
-* Linux, Windows, or Mac computer.
-    * I recommend using a VPS (Virtual Private Server) from DigitalOcean (droplet)
-* Minimum System specs:
-    * `linux` release channel (Linux on x64 CPU):
-        * ~250MB RAM
-    * `java` release channel (Any OS and CPU):
-        * ~600MB RAM
+!!! warning "Java release channel only"
+
+    AquariusProxy is designed for and validated **only on the `java` release channel** (the `.jar`, run on **Java 21+**). The native **`linux`** (GraalVM) build and any other runtime are **NOT tested or validated** for AquariusProxy — always choose the **`java`** channel during setup. The `java` channel runs on every supported OS and CPU anyway.
+
+* Supported operating systems: **Windows, Ubuntu/Linux, or macOS**.
+    * A VPS (Virtual Private Server) works well — e.g. DigitalOcean.
+* Minimum system specs (`java` release channel):
+    * **At least 1 GB of RAM** (2 GB recommended). The JVM + ViaVersion need roughly **600 MB on top of the OS**, so a **512 MB VPS is not enough**.
 
 ???+ tip "Don't have enough RAM on your Linux VPS?"
 
@@ -79,16 +80,21 @@ Command Prefixes:
 
 [Full Commands Documentation](Commands.md){ .md-button .md-button--primary }
 
+[Movement & Transport](Movement-and-Transport.md){ .md-button .md-button--primary }
+
 [Frequently Asked Questions](FAQ.md){ .md-button .md-button--primary }
 
 ### Release Channels
 
-ZenithProxy releases for multiple MC versions and OS/hardware platforms, known as "release channels"
+AquariusProxy releases for multiple MC versions and OS/hardware platforms, known as "release channels"
 
 **Platforms**
 
-* (Default) `java` - Works on all systems. Supports [Plugins](Plugins.md).
-* (Recommended) `linux` - Linux native x64 executable. ~50% reduced memory usage and instant startup
+* (Default — and the only supported channel) `java` — the `.jar`, runs on **Windows, Ubuntu/Linux, or macOS** via **Java 21+**. Supports [Plugins](Plugins.md).
+
+!!! warning "Use the `java` channel"
+
+    AquariusProxy is validated **only** on the `java` channel. The `linux` native (GraalVM) channel exists upstream but is **NOT tested or validated for AquariusProxy** — its modules, pathfinder, and physics ports are only verified on the `java` jar. Always run `channel set java <version>`.
 
 **MC Versions**
 

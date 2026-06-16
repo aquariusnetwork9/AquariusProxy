@@ -52,6 +52,8 @@ Everything from upstream ZenithProxy (AntiAFK, AutoEat, KillAura, AutoTotem, Aut
 
 ## Quick start
 
+> ⚠️ **Java only — supported platforms & specs.** AquariusProxy is validated **only on the Java release channel** (the `.jar`, run on **Java 21+**) on **Windows, Ubuntu/Linux, and macOS**. The native GraalVM (`linux`) build and any other OS or runtime are **not tested or validated** — use the Java jar. The JVM + ViaVersion need roughly **600 MB on top of the OS**, so run it on a host with **at least 1 GB of RAM (2 GB recommended)**. A 512 MB VPS is **not** enough.
+
 AquariusProxy runs on **Java 21+**. Build it:
 
 ```bash

@@ -1,6 +1,10 @@
 # Hosting Providers
 
-ZenithProxy can run on any computer, including your own. But many choose to rent a computer in a datacenter (called a VPS or dedicated server)
+!!! warning "Pick a host that meets the minimum specs"
+
+    AquariusProxy runs on the **`java` release channel only** (Java 21+) on **Windows, Ubuntu/Linux, or macOS**, and needs **at least 1 GB of RAM** — the JVM + ViaVersion use roughly 600 MB on top of the OS, so a **512 MB instance is not enough**. The native `linux` build and other platforms are not tested or validated. See [Setup](Setup.md) for details.
+
+AquariusProxy can run on any computer, including your own. But many choose to rent a computer in a datacenter (called a VPS or dedicated server)
 
 These are some companies that offer hosting services (none are affiliated with ZenithProxy)
 

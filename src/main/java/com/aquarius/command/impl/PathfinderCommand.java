@@ -55,7 +55,8 @@ public class PathfinderCommand extends Command {
             .name("pathfinder")
             .category(CommandCategory.MODULE)
             .description("""
-            Baritone pathfinder
+            Baritone pathfinder. Routes the bot to goals on foot, and can ride bubble columns
+            (soul-sand up / magma down) as first-class moves when one lies on the path.
             """)
             .usageLines(
                 "goto <x> <z>",
@@ -77,7 +78,8 @@ public class PathfinderCommand extends Command {
                 "pickup <item>",
                 "clearArea <pos1> <pos2>",
                 "status",
-                "settings"
+                "settings",
+                "bubbledebug <x> <y> <z>  (dump the pathfinder's per-block view of a bubble-column shaft)"
             )
             .aliases(
                 "path",
