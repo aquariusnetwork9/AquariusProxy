@@ -14,7 +14,7 @@ if sys.version_info[1] < 10:
 
 from log import info, critical_error
 
-info("AquariusProxy Launcher Initializing...")
+info("Aquarius Launcher Initializing...")
 info(f"Python Version: {sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}")
 
 import certifi
