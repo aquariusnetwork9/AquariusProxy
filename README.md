@@ -2,7 +2,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/MC-1.21.4-brightgreen.svg" alt="Minecraft"/>
-  <img src="https://img.shields.io/badge/version-4.0.0-blue.svg" alt="Version"/>
+  <img src="https://img.shields.io/badge/version-4.1.0-blue.svg" alt="Version"/>
   <img src="https://img.shields.io/badge/license-AGPL--3.0-orange.svg" alt="License"/>
 </p>
 
@@ -71,6 +71,8 @@ Or download `AquariusProxy.jar` from the [Releases](https://github.com/aquariusn
 
 Each module below links to its wiki page for the setup guide and commands.
 
+> **Validation status (as of the v4.1.0 line):** every feature is live-validated on 2b2t **except** the three marked ⚠️ — **PearlDrop**, the **Enchanter**, and ElytraPilot's **multi-leg long-haul** trip planner — which are built and deployed but not yet fully run live.
+
 ### AquariusMiner — AFK quarry
 
 An autonomous single-block quarry. It clears a rectangular area top-down, layer by layer, mines with the right tool, eats, dodges hazards, banks the haul into shulkers via an ender chest, and self-heals the stalls that normally kill AFK miners on a laggy server.
@@ -111,7 +113,7 @@ Fully automatic villager trading baked in from the [ZenithProxyVillagerTrader 2.
 
 📖 [VillagerTrader wiki →](https://github.com/aquariusnetwork9/AquariusProxy/wiki/VillagerTrader)
 
-### PearlDrop — stasis pearl filler
+### PearlDrop — stasis pearl filler *(⚠️ not yet validated live)*
 
 The **deposit** counterpart to PearlPlus: instead of pulling a trapped pearl, PearlDrop **throws pearls into** stasis chambers to stock them. It walks to the rim, sneak-overhangs the column, aims at the soul-sand centre, throws a pearl in, and backs off.
 
@@ -121,13 +123,13 @@ The **deposit** counterpart to PearlPlus: instead of pulling a trapped pearl, Pe
 
 📖 [PearlDrop wiki →](https://github.com/aquariusnetwork9/AquariusProxy/wiki/PearlDrop)
 
-### KitMaker — kit shulker filler
+### KitMaker — kit shulker filler *(validated live on 2b2t)*
 
 Mass-produces filled "kit" shulkers from one example template shulker — same items, counts, and slots — over and over, until it runs out of shulkers or materials.
 
-- Reads a template shulker from a designated chest (exact item + count per slot).
-- Auto-discovers and classifies the floor-level containers around it (empty-shulker source, finished-kit deposit, item sources).
-- Configurable match strictness (item type / ignore cosmetics / exact components); never digs the floor.
+- Reads the template from a **placed example shulker box** (read in place — `.km template auto` auto-detects the nearest one) or from a shulker held in a designated chest.
+- Auto-discovers and classifies the floor-level containers around it (empty-shulker source, finished-kit deposit that may already hold kits, item sources) — handles any mix of single/double chests in any rotation.
+- Configurable match strictness (item type / ignore cosmetics / exact components); **partial kits** when sources run short; never digs the floor.
 
 📖 [KitMaker wiki →](https://github.com/aquariusnetwork9/AquariusProxy/wiki/KitMaker)
 
@@ -140,6 +142,17 @@ A one-shot resupply: place an ender chest, pull a named **kit shulker** out of i
 
 📖 [Regear wiki →](https://github.com/aquariusnetwork9/AquariusProxy/wiki/Regear)
 
+### Boat — open-water autopilot *(validated live on 2b2t)*
+
+Drives a boat the bot is seated in across open water to a coordinate. There is no real client in a proxy, so it **reimplements Minecraft's `AbstractBoat` physics server-side** — the bot becomes the boat's controlling client and reports its motion via `MoveVehicle`, exactly like a vanilla client rowing.
+
+- `.boat mount` seats the bot in the nearest empty boat; `.boat goto <x> <z>` steers to the target (turn-to-heading + thrust) and stops on arrival; manual `fwd / back / left / right` for hand control.
+- The simulated motion is accepted by 2b2t's vehicle anti-cheat — smooth travel, no rubber-banding.
+
+### Bubble-column transport *(validated live on 2b2t)*
+
+A Baritone pathfinder addition: the planner treats **bubble columns as a movement**, so it rides the bot **up a soul-sand column** (and down a magma column, with a magma-guard) as part of a normal path — `.pathfinder goto <x> <y> <z>` can take a water elevator to a higher floor and exit laterally. Works with **sign-held water columns** (the common no-flood build). Exit-timing is functional but not yet smoothed.
+
 ### ElytraPilot — autopilot elytra flight *(validated end-to-end in v4.0.0)*
 
 Autonomous elytra flight: deploys, steers, fires fireworks, simulates its own physics to stay on course, routes through the nether, and lands itself — covering long-haul travel, the 2b2t nether-highway bounce, and a full overworld↔nether trip planner. The three headline capabilities are now flown-and-validated live on 2b2t, not first cuts.
@@ -148,10 +161,11 @@ Autonomous elytra flight: deploys, steers, fires fireworks, simulates its own ph
 - **Baritone-style nether flight** — a per-tick **physics-simulation solver** flies the route the way a human "constantly corrects," and native [nether-pathfinder](https://github.com/babbaj/nether-pathfinder) routing plans a path through *unloaded* chunks in ~1s from seed terrain. `fly trip nether <x> <z>` has flown the full leg and **landed on target at full HP, no totems**; 700-block trips proven, plus lava recovery and totem-pop abort.
 - **Overworld flight from spawn** — `fly trip <x> <z>` gears up from nothing (no-line-of-sight container open + self-kill relocation + contents-match kit), then flies a distance-scaled **climb / free-glide** cruise and lands dead-on. A full naked-spawn → 25k → on-target landing is done.
 - A chunk-loading governor (won't outrun 2b2t's slow streaming), AutoEat fire/heal integration, and a ~40 b/s speed cap throughout.
+- ⚠️ *Not yet fully validated:* the **multi-leg saved-route long-haul** — chaining several flight/highway/portal legs across dimensions to a far destination. The individual legs above are flown-and-proven; a complete multi-leg long-haul run is still pending (a first attempt was cut short by a flight-time cap).
 
 📖 [ElytraPilot wiki →](https://github.com/aquariusnetwork9/AquariusProxy/wiki/ElytraPilot)
 
-### Enchanter — anvil auto-enchanting
+### Enchanter — anvil auto-enchanting *(⚠️ not yet validated live)*
 
 Auto-builds fully-enchanted "max template" gear in an anvil station: pulls un-enchanted gear and pre-made enchanted books from chests and turns them into god gear one piece at a time, in the **cheapest possible anvil order**, funding the XP itself from a chest of bottles.
 

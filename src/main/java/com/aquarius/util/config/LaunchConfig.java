@@ -15,7 +15,7 @@ public class LaunchConfig {
             return null;
         }
     }
-    public String version = "4.0.0+1.21.4";
+    public String version = "4.1.0+1.21.4.pre";
     public String local_version = "3.2.1";
     public String repo_owner = "aquariusnetwork9";
     public String repo_name = "AquariusProxy";

@@ -95,7 +95,7 @@ public abstract class Movement implements IMovement {
     public MovementStatus update() {
         currentState = updateState(currentState);
 
-        if (MovementHelper.isLiquid(ctx.playerFeet()) && BOT.getY() < dest.y() + 0.6) {
+        if (autoJumpInLiquid() && MovementHelper.isLiquid(ctx.playerFeet()) && BOT.getY() < dest.y() + 0.6) {
             LocalizedCollisionBox predictedCb = BOT
                 .getPlayerCollisionBox()
                 .move(dest.x() - src.x(), dest.y() - src.y(), dest.z() - src.z());
@@ -139,6 +139,16 @@ public abstract class Movement implements IMovement {
         }
 
         return currentState.getStatus();
+    }
+
+    /**
+     * Whether {@link #update()} may force a swim-up jump while the bot is in liquid and below the
+     * destination. On by default (it keeps water/pillar/traverse moves at the surface), but a
+     * descent through a downward bubble column overrides this to {@code false}: pressing jump there
+     * adds upward swim velocity that fights the column's downward pull and stalls the descent.
+     */
+    protected boolean autoJumpInLiquid() {
+        return true;
     }
 
     protected boolean prepared(MovementState state) {

@@ -10,6 +10,14 @@ public final class ActionCosts {
     public static final double WALK_ONE_OVER_SOUL_SAND_COST = WALK_ONE_BLOCK_COST * 2; // 0.4 in BlockSoulSand but effectively about half
     public static final double LADDER_UP_ONE_COST = 20 / 2.35; // 8.511
     public static final double LADDER_DOWN_ONE_COST = 20 / 3.0; // 6.667
+    /**
+     * Riding a bubble column is far faster than a ladder: the upward push accelerates toward a
+     * 0.7 b/t cap submerged (1.8 b/t at the surface), the downward pull toward 0.3 b/t (0.9 at the
+     * surface). These are deliberately cheaper than walking so the planner prefers a column when one
+     * reaches the goal, matching the real in-game speed.
+     */
+    public static final double BUBBLE_COLUMN_UP_ONE_COST = 20 / 7.0; // 2.857
+    public static final double BUBBLE_COLUMN_DOWN_ONE_COST = 20 / 4.0; // 5.0
     public static final double SNEAK_ONE_BLOCK_COST = 20 / 1.3; // 15.385
     public static final double SPRINT_ONE_BLOCK_COST = 20 / 5.612; // 3.564
     public static final double SPRINT_MULTIPLIER = SPRINT_ONE_BLOCK_COST / WALK_ONE_BLOCK_COST; // 0.769

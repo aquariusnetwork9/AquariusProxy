@@ -64,6 +64,7 @@ public class KitMaker extends AbstractFieldModule {
     private int fillIdx;                                          // which template slot during FILL
 
     // runtime
+    private @Nullable BlockPos templatePos;                       // resolved template block (explicit coords or auto-detected shulker)
     private @Nullable BlockPos placedShulker;
     private @Nullable BlockPos pendingPlace;
     private @Nullable BlockPos lastPlaceSpot;
@@ -90,7 +91,7 @@ public class KitMaker extends AbstractFieldModule {
         paused = false; complete = false; hazardPaused = false;
         cyclesDone = 0;
         template.clear(); shulkerSrc = null; itemSrcs.clear(); depositChest = null; scanQueue.clear();
-        placedShulker = null; pendingPlace = null; lastPlaceSpot = null;
+        placedShulker = null; pendingPlace = null; lastPlaceSpot = null; templatePos = null;
         setBreakingAllowed(false);                 // forbidden until a harvest phase
         go(State.SCAN_TEMPLATE);
         info("Kit Maker: reading the template + scanning the chest layout.");
@@ -170,41 +171,91 @@ public class KitMaker extends AbstractFieldModule {
 
     private void tickScanTemplate() {
         var cfg = CONFIG.client.extra.kitMaker;
-        BlockPos tpl = new BlockPos(cfg.templateChestX, cfg.templateChestY, cfg.templateChestZ);
         switch (step) {
             case 0 -> {
-                if (cfg.templateChestX == 0 && cfg.templateChestY == 0 && cfg.templateChestZ == 0) {
-                    abort("no template chest set - use .km template <x> <y> <z>"); return;
+                // Resolve the template block once: explicit coords if set, else auto-detect the nearest PLACED
+                // shulker box near the bot (so you can just plonk a shulker down instead of caching one in a chest).
+                if (templatePos == null) {
+                    if (cfg.templateChestX == 0 && cfg.templateChestY == 0 && cfg.templateChestZ == 0) {
+                        BlockPos pf = playerFeet();
+                        templatePos = nearestPlacedShulker(pf, cfg.scanRadius);
+                        if (templatePos == null) {
+                            abort("no template set and no placed shulker box found nearby - place an example shulker (or use .km template <x> <y> <z>)"); return;
+                        }
+                        info("Kit Maker: auto-detected template shulker @ {}.", templatePos);
+                    } else {
+                        templatePos = new BlockPos(cfg.templateChestX, cfg.templateChestY, cfg.templateChestZ);
+                    }
                 }
-                if (!arrivedAt(new GoalNear(tpl, REACH_RANGE_SQ))) { pathGoal = pathToNear(tpl); timer = cfg.actionDelayTicks; return; }
+                if (!arrivedAt(new GoalNear(templatePos, REACH_RANGE_SQ))) { pathGoal = pathToNear(templatePos); timer = cfg.actionDelayTicks; return; }
                 if (BARITONE.isActive()) BARITONE.stop();
-                open(tpl); timer = cfg.settleTicks; step = 1;
+                open(templatePos); timer = cfg.settleTicks; step = 1;
             }
             default -> {
                 if (openContainerId() == 0) {
-                    if (++attempts >= 6) { abort("template chest wouldn't open"); return; }
-                    open(tpl); timer = cfg.settleTicks; return;
+                    if (++attempts >= 6) { abort("template container wouldn't open"); return; }
+                    open(templatePos); timer = cfg.settleTicks; return;
                 }
                 Container c = openContainer();
-                int slot = c == null ? -1 : findContainerSlot(c, this::isFilledShulker);
-                if (slot == -1) { closeContainer(); abort("template chest holds no example (filled) kit shulker"); return; }
-                buildTemplate(c.getItemStack(slot));
+                if (c == null) { closeContainer(); abort("template container read failed"); return; }
+                // A PLACED shulker box is read in place (its 27 slots ARE the template). A chest/barrel must instead
+                // hold an example shulker ITEM, whose contents become the template.
+                boolean placedShulkerTemplate = com.aquarius.feature.player.World
+                    .getBlock(templatePos.x(), templatePos.y(), templatePos.z()).name().endsWith("shulker_box");
+                if (placedShulkerTemplate) {
+                    buildTemplateFromContainer(c);
+                } else {
+                    int slot = findContainerSlot(c, this::isFilledShulker);
+                    if (slot == -1) { closeContainer(); abort("template chest holds no example (filled) kit shulker"); return; }
+                    buildTemplate(c.getItemStack(slot));
+                }
                 closeContainer();
-                if (template.isEmpty()) { abort("the template shulker is empty"); return; }
-                info("Kit Maker: template = {} filled slots.", template.size());
+                if (template.isEmpty()) { abort("the template is empty"); return; }
+                info("Kit Maker: template = {} filled slots (from {}).", template.size(),
+                    placedShulkerTemplate ? "placed shulker" : "chest example");
                 go(State.SCAN_LAYOUT);
             }
         }
     }
 
-    /** Build the per-slot template from a shulker item's positional CONTAINER component (index = slot). */
+    /** Build the template directly from an OPEN container's chest slots (a placed shulker box read in place). */
+    private void buildTemplateFromContainer(Container c) {
+        template.clear();
+        int chestSlots = Math.max(0, c.getSize() - 36);
+        for (int i = 0; i < chestSlots; i++) {
+            ItemStack s = c.getItemStack(i);
+            if (isRealItem(s)) template.add(new KitSlot(i, s));
+        }
+    }
+
+    /** Nearest placed shulker-box block to {@code from} within {@code radius} (±3 Y), or null. */
+    private @Nullable BlockPos nearestPlacedShulker(BlockPos from, int radius) {
+        BlockPos best = null;
+        long bestD = Long.MAX_VALUE;
+        for (BlockPos b : findBlocks(radius, from.y() - 3, from.y() + 3, n -> n.endsWith("shulker_box"))) {
+            long dx = b.x() - from.x(), dy = b.y() - from.y(), dz = b.z() - from.z();
+            long d = dx * dx + dy * dy + dz * dz;
+            if (d < bestD) { bestD = d; best = b; }
+        }
+        return best;
+    }
+
+    /** Build the per-slot template from a shulker item's positional CONTAINER component (index = slot).
+     *  Empty slots come through as air stacks (NOT the null EMPTY_STACK sentinel), so they must be filtered by
+     *  air-id / zero-count — otherwise a 16-item kit yields a 27-slot template with 11 phantom "air" needs that no
+     *  source can ever satisfy, and every run dies with "not enough items for a full kit". */
     private void buildTemplate(@Nullable ItemStack shulker) {
         template.clear();
         List<ItemStack> contents = containerContents(shulker);
         for (int i = 0; i < contents.size(); i++) {
             ItemStack s = contents.get(i);
-            if (s != Container.EMPTY_STACK) template.add(new KitSlot(i, s));
+            if (isRealItem(s)) template.add(new KitSlot(i, s));
         }
+    }
+
+    /** A genuine, non-empty item (not the null sentinel, not air, positive count). */
+    private boolean isRealItem(@Nullable ItemStack s) {
+        return s != Container.EMPTY_STACK && s.getAmount() > 0 && s.getId() != ItemRegistry.AIR.id();
     }
 
     private void tickScanLayout() {
@@ -212,12 +263,14 @@ public class KitMaker extends AbstractFieldModule {
         switch (step) {
             case 0 -> {                                   // discover floor-level container blocks once
                 BlockPos pf = playerFeet();
-                BlockPos tpl = new BlockPos(cfg.templateChestX, cfg.templateChestY, cfg.templateChestZ);
                 List<BlockPos> raw = findBlocks(cfg.scanRadius, pf.y() - cfg.floorBandDown, pf.y() + cfg.floorBandUp, this::isContainerBlockName);
                 scanQueue.clear();
                 for (BlockPos b : raw) {
-                    if (b.equals(tpl)) continue;          // never consume the template chest
-                    if (isDoubleHalfAlreadyQueued(b)) continue;
+                    if (b.equals(templatePos)) continue;  // never consume the template container
+                    // Deliberately NO double-chest dedup: visiting both halves of a double is harmless (they share
+                    // one inventory — the second open just finds it already drained / a second pickup chance), while
+                    // any adjacency dedup silently drops the MIDDLE container in a row of singles (or same-facing
+                    // doubles). With mixed singles/doubles + random rotation, "classify everything" is the only safe rule.
                     scanQueue.add(b);
                 }
                 if (scanQueue.isEmpty()) { abort("no floor-level containers found within " + cfg.scanRadius + " blocks"); return; }
@@ -248,18 +301,20 @@ public class KitMaker extends AbstractFieldModule {
 
     /** Classify a container by its contents: empty-shulker store, finished-kit deposit, or item source. */
     private void classify(BlockPos pos, Container c) {
-        boolean anyItem = false, anyEmptyShulker = false, anyNonShulker = false;
+        boolean anyEmptyShulker = false, anyNonShulker = false;
         int chestSlots = Math.max(0, c.getSize() - 36);
         for (int i = 0; i < chestSlots; i++) {
             ItemStack s = c.getItemStack(i);
             if (s == Container.EMPTY_STACK) continue;
-            anyItem = true;
             if (isEmptyShulker(s)) anyEmptyShulker = true;
-            else if (!isShulkerBox(s)) anyNonShulker = true;
+            else if (!isShulkerBox(s)) anyNonShulker = true;   // a real material (filled kit shulkers are neither)
         }
-        if (anyEmptyShulker && shulkerSrc == null) { shulkerSrc = pos; info("Kit Maker:  shulker source @ {}", pos); return; }
-        if (!anyItem && depositChest == null)     { depositChest = pos; info("Kit Maker:  kit deposit @ {}", pos); return; }
-        if (anyNonShulker)                          { itemSrcs.add(pos); info("Kit Maker:  item source @ {}", pos); }
+        // Priority: a chest with real materials is an item source; one with empty shulkers is the shulker supply;
+        // anything else (empty, OR holding only FINISHED kit shulkers) is the deposit — the deposit naturally fills
+        // with kits across runs, so it must NOT be required to be empty (that broke every re-run).
+        if (anyNonShulker)                          { itemSrcs.add(pos); info("Kit Maker:  item source @ {}", pos); return; }
+        if (anyEmptyShulker) { if (shulkerSrc == null) { shulkerSrc = pos; info("Kit Maker:  shulker source @ {}", pos); } return; }
+        if (depositChest == null)                   { depositChest = pos; info("Kit Maker:  kit deposit @ {}", pos); }
     }
 
     private void finishLayout() {
@@ -268,18 +323,6 @@ public class KitMaker extends AbstractFieldModule {
         if (itemSrcs.isEmpty()) { abort("no item-source chests found"); return; }
         info("Kit Maker: layout OK - {} item sources. Making kits.", itemSrcs.size());
         go(State.ENSURE_SHULKER);
-    }
-
-    /** True if a horizontally-adjacent same-name container is already queued (dedupe double-chest halves). */
-    private boolean isDoubleHalfAlreadyQueued(BlockPos b) {
-        String name = com.aquarius.feature.player.World.getBlock(b.x(), b.y(), b.z()).name();
-        for (BlockPos q : scanQueue) {
-            if (q.y() != b.y()) continue;
-            if ((Math.abs(q.x() - b.x()) == 1 && q.z() == b.z()) || (Math.abs(q.z() - b.z()) == 1 && q.x() == b.x())) {
-                if (com.aquarius.feature.player.World.getBlock(q.x(), q.y(), q.z()).name().equals(name)) return true;
-            }
-        }
-        return false;
     }
 
     // ---------------------------------------------------------------- per-kit loop
@@ -319,7 +362,16 @@ public class KitMaker extends AbstractFieldModule {
         switch (step) {
             case 0 -> {
                 if (allNeedsMet()) { if (openContainerId() != 0) closeContainer(); goPlaceShulker(); return; }
-                if (srcIdx >= itemSrcs.size()) { if (openContainerId() != 0) closeContainer(); doneReason = "not enough items in the sources for a full kit"; go(State.DONE); return; }
+                if (srcIdx >= itemSrcs.size()) {
+                    if (openContainerId() != 0) closeContainer();
+                    // Sources exhausted without a full kit. Build a best-effort PARTIAL kit if allowed and we
+                    // gathered at least one template item (placing an empty shulker would loop forever); else stop.
+                    if (cfg.allowPartial && gatheredAnyTemplateItem()) {
+                        info("Kit Maker: sources short - building a partial kit with what was gathered.");
+                        goPlaceShulker(); return;
+                    }
+                    doneReason = "not enough items in the sources for a kit"; go(State.DONE); return;
+                }
                 BlockPos src = itemSrcs.get(srcIdx);
                 if (!arrivedAt(new GoalNear(src, REACH_RANGE_SQ))) { pathGoal = pathToNear(src); timer = cfg.actionDelayTicks; return; }
                 if (BARITONE.isActive()) BARITONE.stop();
@@ -426,7 +478,10 @@ public class KitMaker extends AbstractFieldModule {
         if (cursor == Container.EMPTY_STACK || !matches(cursor, want)) {
             if (cursor != Container.EMPTY_STACK) { stashCursor(c); timer = cfg.fillDelayTicks; return; }  // wrong item held
             int src = findPlayerWindowSlot(c, s -> matches(s, want));
-            if (src == -1) { doneReason = "ran out of " + itemName(want) + " while filling"; closeContainer(); go(State.DONE); return; }
+            if (src == -1) {
+                if (cfg.allowPartial) { fillIdx++; timer = cfg.fillDelayTicks; return; }   // partial kit: leave slot empty, next
+                doneReason = "ran out of " + itemName(want) + " while filling"; closeContainer(); go(State.DONE); return;
+            }
             leftClick(c, src);                                     // grab the whole player stack onto the cursor
             timer = cfg.fillDelayTicks; return;
         }
@@ -517,6 +572,12 @@ public class KitMaker extends AbstractFieldModule {
     private boolean allNeedsMet() {
         for (Need need : aggregateNeeds()) if (liveInvCount(need.stack()) < need.count()) return false;
         return true;
+    }
+
+    /** True if the inventory holds at least one item that any template slot wants (a partial kit is worth building). */
+    private boolean gatheredAnyTemplateItem() {
+        for (Need need : aggregateNeeds()) if (liveInvCount(need.stack()) > 0) return true;
+        return false;
     }
 
     private boolean satisfiesUnmetNeed(ItemStack candidate, List<Need> needs) {

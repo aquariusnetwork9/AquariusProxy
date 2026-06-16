@@ -118,6 +118,13 @@ public final class MovementHelper {
         if (block.isAir()) {
             return YES;
         }
+        // A bubble column is water — you move freely THROUGH it (the up/down push is applied by the core sim in
+        // Bot.tryCheckInsideBlocks, and the column climb/descend has dedicated moves). It must be walk-through, or
+        // every MovementBubbleAscend is COST_INF (its "block above must be passable" check sees the next column
+        // block as impassable) and the bot can never enter or ride a column.
+        if (block == BlockRegistry.BUBBLE_COLUMN) {
+            return YES;
+        }
         if (block == BlockRegistry.FIRE
             || block == BlockRegistry.SOUL_FIRE
             || block == BlockRegistry.TRIPWIRE
@@ -125,7 +132,6 @@ public final class MovementHelper {
             || block == BlockRegistry.END_PORTAL
             || block == BlockRegistry.COCOA
             || block.name().endsWith("_skull")
-            || block == BlockRegistry.BUBBLE_COLUMN
             || block.blockTags().contains(BlockTags.SHULKER_BOXES)
             || block.blockTags().contains(BlockTags.SLABS)
             || block.blockTags().contains(BlockTags.TRAPDOORS)
@@ -152,6 +158,11 @@ public final class MovementHelper {
             if (block == BlockRegistry.IRON_DOOR) {
                 return NO;
             }
+            return YES;
+        }
+        // Signs (standing/wall/hanging) have no collision — you walk straight through them. They're commonly used to
+        // hold back a water column (so it doesn't flood), so the bot MUST be able to path through a sign to enter/exit.
+        if (block.name().endsWith("_sign")) {
             return YES;
         }
         if (block.blockTags().contains(BlockTags.WOOL_CARPETS)) {
@@ -797,6 +808,30 @@ public final class MovementHelper {
 
     public static boolean isLiquid(Block block) {
         return World.isFluid(block);
+    }
+
+    public static boolean isBubbleColumn(int blockStateId) {
+        return BlockStateInterface.getBlock(blockStateId) == BlockRegistry.BUBBLE_COLUMN;
+    }
+
+    /**
+     * True if this is an upward bubble column ({@code drag=false}, formed over soul sand): it pushes
+     * entities up. The physics that actually drives the rise lives in {@code Bot.tryCheckInsideBlocks}.
+     */
+    public static boolean isBubbleColumnUp(int blockStateId) {
+        if (!isBubbleColumn(blockStateId)) return false;
+        Boolean drag = World.getBlockStateProperty(blockStateId, BlockStateProperties.DRAG);
+        return drag != null && !drag;
+    }
+
+    /**
+     * True if this is a downward bubble column ({@code drag=true}, formed over a magma block): it
+     * pulls entities down toward the (damaging) magma at its base.
+     */
+    public static boolean isBubbleColumnDown(int blockStateId) {
+        if (!isBubbleColumn(blockStateId)) return false;
+        Boolean drag = World.getBlockStateProperty(blockStateId, BlockStateProperties.DRAG);
+        return drag != null && drag;
     }
 
     public static boolean isPlayerTouchingWater() {

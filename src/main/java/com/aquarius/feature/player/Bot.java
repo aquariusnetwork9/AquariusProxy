@@ -44,6 +44,8 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.Clien
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundClientTickEndPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClosePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundAcceptTeleportationPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundMoveVehiclePacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundPaddleBoatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundPlayerInputPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.*;
 
@@ -134,6 +136,33 @@ public final class Bot extends ModuleUtils {
     private double eBounceVx;        // synthesized horizontal speed; smooth-ramps 0 -> target then holds (v += (target-v)*0.5)
     private double eBounceVy;        // synthesized vertical velocity (jump arc, then gentle porpoise)
     private int eBounceTick;         // ticks since the synth engaged (drives liftoff jump + deploy timing)
+
+    // --- Boat control: self-driven boat physics (a server-side port of Minecraft's AbstractBoat tick). When active
+    // and the bot is seated in a boat, Bot.tick simulates the boat from the per-tick input the Boat module submits
+    // and REPORTS the result via ServerboundMoveVehiclePacket (boats are client-authoritative — the controlling
+    // passenger's client moves the boat and the server trusts it). The Boat module is the guidance layer on top
+    // (manual steering / go-to-coordinate), exactly like ElytraPilot drives the e-bounce synth above.
+    private enum BoatStatus { IN_WATER, UNDER_WATER, UNDER_FLOWING_WATER, ON_LAND, IN_AIR }
+    private static final double BOAT_WIDTH = 1.375;
+    private static final double BOAT_HEIGHT = 0.5625;
+    private static final double BOAT_HALF_W = BOAT_WIDTH / 2.0; // 0.6875
+    private boolean boatControlActive;        // module-driven: simulate + steer the ridden boat vs. ride it passively
+    private int boatVehicleId = -1;           // entity id the sim is currently seeded for; re-seed when it changes
+    private double boatX, boatY, boatZ;       // boat authoritative position (bottom-centre of the hull AABB)
+    private float boatYaw;                     // boat heading (independent of the player's look yaw)
+    private final MutableVec3d boatVel = new MutableVec3d(0, 0, 0);
+    private float boatDeltaRotation;           // accumulated turn rate, decayed by invFriction each tick
+    private double boatWaterLevel = -Double.MAX_VALUE;
+    private double boatLastYd;
+    private float boatLandFriction;
+    private float boatInvFriction;
+    private BoatStatus boatStatus = BoatStatus.IN_AIR;
+    private BoatStatus boatOldStatus = BoatStatus.IN_AIR;
+    private boolean boatOnGround;
+    private boolean boatLeftPaddleTurning, boatRightPaddleTurning;
+    private boolean boatInForward, boatInBack, boatInLeft, boatInRight; // this tick's input (set by submitBoatInput)
+    private boolean lastBoatInputForward, lastBoatInputBack, lastBoatInputLeft, lastBoatInputRight;
+
     @Getter Optional<BlockPos> supportingBlockPos = Optional.empty();
     @Getter private boolean horizontalCollision = false;
     private boolean horizontalCollisionMinor = false;
@@ -464,14 +493,16 @@ public final class Bot extends ModuleUtils {
             syncPlayerCollisionBox();
             updateAttributes();
 
-            sendClientPacketsAsync(
-                new ServerboundMovePlayerRotPacket(false, horizontalCollision, this.yaw, this.pitch),
-                // todo: pass in strafe/forward movement inputs from `getMovementInputVec()`
-                new ServerboundPlayerInputPacket(false, false, false, false, movementInput.jumping, movementInput.sneaking, false)
-            );
+            // If the Boat module is driving, simulate + report the boat ourselves (it sends MoveVehicle/Paddle/Input).
+            // Otherwise ride passively: just send a look-rotation and an empty input so the server keeps us seated.
+            boolean drove = boatControlActive && tickBoatControl();
+            if (!drove) {
+                sendClientPacketsAsync(
+                    new ServerboundMovePlayerRotPacket(false, horizontalCollision, this.yaw, this.pitch),
+                    new ServerboundPlayerInputPacket(false, false, false, false, movementInput.jumping, movementInput.sneaking, false)
+                );
+            }
             lastSentMovementInput = Input.builder().build();
-            // todo: handle vehicle move packets
-            //  need to determine if vehicle is a controllable type
         } else {
             // send movement packets based on position
             if (wasSneaking != isSneaking) {
@@ -1683,6 +1714,285 @@ public final class Bot extends ModuleUtils {
         y = vehicleAttachY - playerAttachY;
         z = vehicle.getZ();
         CACHE.getPlayerCache().getThePlayer().setX(x).setY(y).setZ(z);
+    }
+
+    // ============================== Boat control (AbstractBoat tick port) ==============================
+    // Engaged by the Boat module. While active and seated in a boat, the in-vehicle branch of tick() calls
+    // tickBoatControl(): we run Minecraft's boat physics locally, write the result onto the boat entity in the
+    // cache (so the existing rideTick() snaps the bot onto it), and report it to the server via MoveVehicle —
+    // the same packets a vanilla client sends while rowing.
+
+    public void startBoatControl() {
+        boatControlActive = true;
+        boatVehicleId = -1; // force a re-seed from the server transform on the next mounted tick
+    }
+
+    public void stopBoatControl() {
+        boatControlActive = false;
+        boatVehicleId = -1;
+        boatInForward = boatInBack = boatInLeft = boatInRight = false;
+    }
+
+    public boolean isBoatControlActive() { return boatControlActive; }
+    public double getBoatX() { return boatX; }
+    public double getBoatZ() { return boatZ; }
+    public float getBoatYaw() { return boatYaw; }
+
+    /** Submit this tick's steering input. Called by the Boat module's guidance loop before tick() runs. */
+    public void submitBoatInput(boolean forward, boolean back, boolean left, boolean right) {
+        boatInForward = forward;
+        boatInBack = back;
+        boatInLeft = left;
+        boatInRight = right;
+    }
+
+    /** @return true if we drove a boat this tick (simulated + sent vehicle packets); false to fall back to passive. */
+    private boolean tickBoatControl() {
+        var player = CACHE.getPlayerCache().getThePlayer();
+        var vehicle = CACHE.getEntityCache().get(player.getVehicleId());
+        if (vehicle == null || !World.isBoat(vehicle.getEntityType())) return false;
+
+        if (boatVehicleId != vehicle.getEntityId()) {
+            // (re)seed the local sim from the server's last known boat transform on (re)mount
+            boatVehicleId = vehicle.getEntityId();
+            boatX = vehicle.getX();
+            boatY = vehicle.getY();
+            boatZ = vehicle.getZ();
+            boatYaw = vehicle.getYaw();
+            boatVel.set(0, 0, 0);
+            boatDeltaRotation = 0f;
+            boatLastYd = 0;
+            boatWaterLevel = -Double.MAX_VALUE;
+            boatStatus = boatOldStatus = BoatStatus.IN_AIR;
+            boatLeftPaddleTurning = boatRightPaddleTurning = false;
+        }
+
+        tickBoatPhysics();
+
+        // Publish the new transform onto the boat entity so rideTick() positions the bot on the moved boat.
+        vehicle.setX(boatX).setY(boatY).setZ(boatZ).setYaw(boatYaw).setPitch(0f);
+        this.yaw = boatYaw; // face the bot along the boat heading
+
+        boolean inputChanged = boatInForward != lastBoatInputForward || boatInBack != lastBoatInputBack
+            || boatInLeft != lastBoatInputLeft || boatInRight != lastBoatInputRight;
+        if (inputChanged) {
+            sendClientPacketAsync(new ServerboundPlayerInputPacket(
+                boatInForward, boatInBack, boatInLeft, boatInRight, false, false, false));
+            lastBoatInputForward = boatInForward;
+            lastBoatInputBack = boatInBack;
+            lastBoatInputLeft = boatInLeft;
+            lastBoatInputRight = boatInRight;
+        }
+        sendClientPacketsAsync(
+            new ServerboundMovePlayerRotPacket(false, false, boatYaw, 0f),
+            new ServerboundMoveVehiclePacket(boatX, boatY, boatZ, boatYaw, 0f, boatOnGround),
+            new ServerboundPaddleBoatPacket(boatRightPaddleTurning, boatLeftPaddleTurning)
+        );
+        return true;
+    }
+
+    private void tickBoatPhysics() {
+        boatOldStatus = boatStatus;
+        boatStatus = boatGetStatus();
+        boatFloat();
+        boatControl();
+        boatMove();
+    }
+
+    private LocalizedCollisionBox boatBox() {
+        return new LocalizedCollisionBox(
+            new CollisionBox(-BOAT_HALF_W, BOAT_HALF_W, 0.0, BOAT_HEIGHT, -BOAT_HALF_W, BOAT_HALF_W),
+            boatX, boatY, boatZ);
+    }
+
+    private BoatStatus boatGetStatus() {
+        BoatStatus under = boatUnderwaterStatus();
+        if (under != null) {
+            boatWaterLevel = boatBox().maxY();
+            return under;
+        }
+        if (boatCheckInWater()) return BoatStatus.IN_WATER;
+        float friction = boatGroundFriction();
+        if (friction > 0.0f) {
+            boatLandFriction = friction;
+            return BoatStatus.ON_LAND;
+        }
+        return BoatStatus.IN_AIR;
+    }
+
+    /** Scan the hull footprint for water it sits in; records the highest water surface in boatWaterLevel. */
+    private boolean boatCheckInWater() {
+        var box = boatBox();
+        int i = MathHelper.floorI(box.minX());
+        int j = MathHelper.ceilI(box.maxX());
+        int k = MathHelper.floorI(box.minY());
+        int l = MathHelper.ceilI(box.minY() + 0.001);
+        int i1 = MathHelper.floorI(box.minZ());
+        int j1 = MathHelper.ceilI(box.maxZ());
+        boolean inWater = false;
+        boatWaterLevel = -Double.MAX_VALUE;
+        for (int x = i; x < j; x++) {
+            for (int z = i1; z < j1; z++) {
+                for (int y = k; y < l; y++) {
+                    var fluidState = World.getFluidState(x, y, z);
+                    if (fluidState != null && fluidState.water()) {
+                        float surface = y + World.getFluidHeight(fluidState, x, y, z);
+                        boatWaterLevel = Math.max(boatWaterLevel, surface);
+                        inWater |= box.minY() < surface;
+                    }
+                }
+            }
+        }
+        return inWater;
+    }
+
+    /** @return UNDER_WATER / UNDER_FLOWING_WATER if the hull top is submerged, else null. */
+    private BoatStatus boatUnderwaterStatus() {
+        var box = boatBox();
+        double top = box.maxY() + 0.001;
+        int i = MathHelper.floorI(box.minX());
+        int j = MathHelper.ceilI(box.maxX());
+        int k = MathHelper.floorI(box.maxY());
+        int l = MathHelper.ceilI(top);
+        int i1 = MathHelper.floorI(box.minZ());
+        int j1 = MathHelper.ceilI(box.maxZ());
+        boolean under = false;
+        for (int x = i; x < j; x++) {
+            for (int z = i1; z < j1; z++) {
+                for (int y = k; y < l; y++) {
+                    var fluidState = World.getFluidState(x, y, z);
+                    if (fluidState != null && fluidState.water() && top < y + World.getFluidHeight(fluidState, x, y, z)) {
+                        if (!fluidState.source()) return BoatStatus.UNDER_FLOWING_WATER;
+                        under = true;
+                    }
+                }
+            }
+        }
+        return under ? BoatStatus.UNDER_WATER : null;
+    }
+
+    /** Average block friction of the surface directly under the hull (0 if nothing supports it → IN_AIR). */
+    private float boatGroundFriction() {
+        var box = boatBox();
+        var slab = new LocalizedCollisionBox(
+            box.minX(), box.maxX(), box.minY() - 0.001, box.minY(), box.minZ(), box.maxZ(),
+            boatX, boatY, boatZ);
+        var states = World.getCollidingBlockStatesInside(slab);
+        if (states.isEmpty()) return 0.0f;
+        float sum = 0f;
+        int n = 0;
+        for (var bs : states) {
+            sum += bs.block().friction();
+            n++;
+        }
+        return n == 0 ? 0.0f : sum / n;
+    }
+
+    /** Find the water surface height above the hull — used on the IN_AIR -> IN_WATER landing transition. */
+    private double boatWaterLevelAbove() {
+        var box = boatBox();
+        int i = MathHelper.floorI(box.minX());
+        int j = MathHelper.ceilI(box.maxX());
+        int k = MathHelper.floorI(box.maxY());
+        int l = MathHelper.ceilI(box.maxY() - boatLastYd);
+        int i1 = MathHelper.floorI(box.minZ());
+        int j1 = MathHelper.ceilI(box.maxZ());
+        for (int y = k; y < l; y++) {
+            float f = 0.0f;
+            for (int x = i; x < j; x++) {
+                for (int z = i1; z < j1; z++) {
+                    var fluidState = World.getFluidState(x, y, z);
+                    if (fluidState != null && fluidState.water()) {
+                        f = Math.max(f, World.getFluidHeight(fluidState, x, y, z));
+                    }
+                    if (f >= 1.0f) break;
+                }
+                if (f >= 1.0f) break;
+            }
+            if (f < 1.0f) return y + f;
+        }
+        return l + 1;
+    }
+
+    /** Vertical buoyancy / gravity + horizontal drag per boat status (AbstractBoat.floatBoat). */
+    private void boatFloat() {
+        double gravity = -0.04;
+        double buoyancy = 0.0;
+        boatInvFriction = 0.05f;
+        if (boatOldStatus == BoatStatus.IN_AIR
+            && boatStatus != BoatStatus.IN_AIR && boatStatus != BoatStatus.ON_LAND) {
+            // just splashed down: snap to the surface and kill vertical momentum
+            boatWaterLevel = boatBox().maxY();
+            boatY = boatWaterLevelAbove() - BOAT_HEIGHT + 0.101;
+            boatVel.set(boatVel.getX(), 0.0, boatVel.getZ());
+            boatLastYd = 0.0;
+            boatStatus = BoatStatus.IN_WATER;
+        } else {
+            switch (boatStatus) {
+                case IN_WATER -> {
+                    buoyancy = (boatWaterLevel - boatY) / BOAT_HEIGHT;
+                    boatInvFriction = 0.9f;
+                }
+                case UNDER_FLOWING_WATER -> {
+                    gravity = -7.0E-4;
+                    boatInvFriction = 0.9f;
+                }
+                case UNDER_WATER -> {
+                    buoyancy = 0.01;
+                    boatInvFriction = 0.45f;
+                }
+                case IN_AIR -> boatInvFriction = 0.9f;
+                case ON_LAND -> {
+                    boatInvFriction = boatLandFriction;
+                    boatLandFriction /= 2.0f; // controlling passenger is a player
+                }
+            }
+            boatVel.set(boatVel.getX() * boatInvFriction, boatVel.getY() + gravity, boatVel.getZ() * boatInvFriction);
+            boatDeltaRotation *= boatInvFriction;
+            if (buoyancy > 0.0) {
+                boatVel.set(boatVel.getX(), (boatVel.getY() + buoyancy * 0.06153846016296973) * 0.75, boatVel.getZ());
+            }
+        }
+    }
+
+    /** Apply steering input: turn, thrust along the heading, set paddle animation (AbstractBoat.controlBoat). */
+    private void boatControl() {
+        float thrust = 0.0f;
+        if (boatInLeft) boatDeltaRotation -= 1.0f;
+        if (boatInRight) boatDeltaRotation += 1.0f;
+        if (boatInRight != boatInLeft && !boatInForward && !boatInBack) {
+            thrust += 0.005f; // turning in place creeps forward slightly
+        }
+        boatYaw += boatDeltaRotation;
+        if (boatInForward) thrust += 0.04f;
+        if (boatInBack) thrust -= 0.005f;
+        boatVel.add(
+            Math.sin(-boatYaw * (Math.PI / 180.0)) * thrust,
+            0.0,
+            Math.cos(boatYaw * (Math.PI / 180.0)) * thrust
+        );
+        boatRightPaddleTurning = boatInForward || boatInLeft;
+        boatLeftPaddleTurning = boatInForward || boatInRight;
+    }
+
+    /** Swept-AABB move of the hull against the world, zeroing blocked velocity components. */
+    private void boatMove() {
+        var box = boatBox();
+        MutableVec3d movement = new MutableVec3d(boatVel);
+        var colliders = World.getIntersectingCollisionBoxes(
+            box.stretch(movement.getX(), movement.getY(), movement.getZ()));
+        MutableVec3d adjusted = collidePlayerBoundingBox(movement, box, colliders);
+        boolean xAdjusted = !MathHelper.equal(adjusted.getX(), movement.getX());
+        boolean yAdjusted = !MathHelper.equal(adjusted.getY(), movement.getY());
+        boolean zAdjusted = !MathHelper.equal(adjusted.getZ(), movement.getZ());
+        boatOnGround = yAdjusted && movement.getY() < 0.0;
+        boatX += adjusted.getX();
+        boatY += adjusted.getY();
+        boatZ += adjusted.getZ();
+        if (xAdjusted) boatVel.setX(0.0);
+        if (zAdjusted) boatVel.setZ(0.0);
+        if (yAdjusted) boatVel.setY(0.0);
+        boatLastYd = boatVel.getY();
     }
 
     public void onUpdateAbilities() {
