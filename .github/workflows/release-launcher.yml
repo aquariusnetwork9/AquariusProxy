@@ -289,6 +289,6 @@ jobs:
           replacesArtifacts: true
           omitBodyDuringUpdate: true
           removeArtifacts: true
-          makeLatest: false
+          makeLatest: true
           prerelease: false
           artifactErrorsFailBuild: true
