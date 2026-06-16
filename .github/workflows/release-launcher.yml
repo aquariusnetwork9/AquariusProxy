@@ -66,24 +66,24 @@ jobs:
 
       - name: Create zip
         run: |
-          zip -j dist/ZenithProxy-${{ matrix.artifact-name }}.zip dist/launch
+          zip -j dist/AquariusProxy-${{ matrix.artifact-name }}.zip dist/launch
 
       - name: Upload Binary
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact-name }}
-          path: dist/ZenithProxy-${{ matrix.artifact-name }}.zip
+          path: dist/AquariusProxy-${{ matrix.artifact-name }}.zip
           if-no-files-found: error
           archive: false
 
       - name: Get Binary Hash
-        run: ${{ matrix.sha1-command }} > ZenithProxy-${{ matrix.artifact-name }}.sha1
+        run: ${{ matrix.sha1-command }} > AquariusProxy-${{ matrix.artifact-name }}.sha1
 
       - name: Upload Launcher Hash Version
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact-name }}.sha1
-          path: ZenithProxy-${{ matrix.artifact-name }}.sha1
+          path: AquariusProxy-${{ matrix.artifact-name }}.sha1
           if-no-files-found: error
           archive: false
 
@@ -156,24 +156,24 @@ jobs:
 
       - name: Create zip
         run: |
-          zip -j dist/ZenithProxy-${{ matrix.artifact-name }}.zip dist/launch
+          zip -j dist/AquariusProxy-${{ matrix.artifact-name }}.zip dist/launch
 
       - name: Upload Binary
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact-name }}
-          path: dist/ZenithProxy-${{ matrix.artifact-name }}.zip
+          path: dist/AquariusProxy-${{ matrix.artifact-name }}.zip
           if-no-files-found: error
           archive: false
 
       - name: Get Binary Hash
-        run: ${{ matrix.sha1-command }} > ZenithProxy-${{ matrix.artifact-name }}.sha1
+        run: ${{ matrix.sha1-command }} > AquariusProxy-${{ matrix.artifact-name }}.sha1
 
       - name: Upload Launcher Hash Version
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact-name }}.sha1
-          path: ZenithProxy-${{ matrix.artifact-name }}.sha1
+          path: AquariusProxy-${{ matrix.artifact-name }}.sha1
           if-no-files-found: error
           archive: false
 
@@ -264,6 +264,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           merge-multiple: true
+          skip-decompress: true
           path: artifacts/
 
       - name: Compile Hashes
