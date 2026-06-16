@@ -2,6 +2,9 @@ name: Release Launcher
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - launcher-setup
 
 env:
   UV_PYTHON: '3.12.8'
