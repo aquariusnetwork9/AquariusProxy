@@ -2,9 +2,6 @@ name: Release Launcher
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - launcher-setup
 
 permissions:
   contents: write
