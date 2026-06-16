@@ -1361,6 +1361,33 @@ Example: If your coordinates are [500, 800], rangeFactor=10 will cancel if the c
   ```antiLeak rangeFactor <number>```
 
 
+### boat
+
+Drive a boat the bot is already seated in (a controlling player must mount it first).
+
+Simulates Minecraft boat physics server-side and reports it via MoveVehicle.
+
+**Usage**
+
+  ```boat mount               (right-click the nearest empty boat to seat the bot, then arm control)```
+
+  ```boat on/off              (enable/disable boat control)```
+
+  ```boat goto <x> <z>        (autopilot: steer to open-water coords, then stop)```
+
+  ```boat fwd                 (manual: hold forward)```
+
+  ```boat back                (manual: hold reverse)```
+
+  ```boat left                (manual: hold turn left)```
+
+  ```boat right               (manual: hold turn right)```
+
+  ```boat fwdleft / fwdright  (manual: forward while turning)```
+
+  ```boat stop                (release manual input / cancel goto; stays enabled)```
+
+
 ### aquariusminer
 
 AFK quarry miner. Clears one chunk at a time within a Y band, spiralling
@@ -1509,7 +1536,9 @@ example kit, auto-classifies nearby ground containers, then fills + deposits kit
 
   ```kitmaker on/off```
 
-  ```kitmaker template <x> <y> <z>  (chest holding the example kit shulker)```
+  ```kitmaker template <x> <y> <z>  (a PLACED shulker box read in place, OR a chest holding an example shulker)```
+
+  ```kitmaker template auto  (no coords: auto-detect the nearest placed shulker box near the bot as the template)```
 
   ```kitmaker scanradius <n>  (container discovery radius, default 20)```
 
@@ -1520,6 +1549,8 @@ example kit, auto-classifies nearby ground containers, then fills + deposits kit
   ```kitmaker enchantlevels on/off  (smart match: ignore enchant levels)```
 
   ```kitmaker maxkits <n>  (0 = until shulkers/materials run out)```
+
+  ```kitmaker partial on/off  (build a kit even if sources can't fully fill it; missing slots left empty)```
 
   ```kitmaker pauseplayer on/off```
 
@@ -2388,7 +2419,9 @@ Example: `multi friend add rfresh2,,say hello,,pearlLoader load rfresh2`
 
 ### pathfinder
 
-Baritone pathfinder
+Baritone pathfinder. Routes the bot to goals on foot, and can ride bubble columns
+
+(soul-sand up / magma down) as first-class moves when one lies on the path.
 
 **Aliases:** `path` / `b`
 
@@ -2433,6 +2466,8 @@ Baritone pathfinder
   ```pathfinder status```
 
   ```pathfinder settings```
+
+  ```pathfinder bubbledebug <x> <y> <z>  (dump the pathfinder's per-block view of a bubble-column shaft)```
 
 
 ### pearlLoader
