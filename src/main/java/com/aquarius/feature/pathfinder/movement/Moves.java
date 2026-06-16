@@ -30,6 +30,30 @@ public enum Moves {
         }
     },
 
+    BUBBLE_UP(0, +1, 0) {
+        @Override
+        public Movement apply0(CalculationContext context, BlockPos src) {
+            return new MovementBubbleAscend(src, src.above());
+        }
+
+        @Override
+        public double cost(CalculationContext context, int x, int y, int z) {
+            return MovementBubbleAscend.cost(context, x, y, z);
+        }
+    },
+
+    BUBBLE_DOWN(0, -1, 0) {
+        @Override
+        public Movement apply0(CalculationContext context, BlockPos src) {
+            return new MovementBubbleDescend(src, src.below());
+        }
+
+        @Override
+        public double cost(CalculationContext context, int x, int y, int z) {
+            return MovementBubbleDescend.cost(context, x, y, z);
+        }
+    },
+
     TRAVERSE_NORTH(0, 0, -1) {
         @Override
         public Movement apply0(CalculationContext context, BlockPos src) {

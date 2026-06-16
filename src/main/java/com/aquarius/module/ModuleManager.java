@@ -20,6 +20,7 @@ public class ModuleManager {
             new AntiAFK(),
             new AntiKick(),
             new AntiLeak(),
+            new Boat(),
             new AquariusMiner(),
             new Regear(),
             new KitMaker(),

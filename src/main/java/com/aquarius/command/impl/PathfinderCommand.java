@@ -10,7 +10,9 @@ import com.aquarius.command.api.CommandContext;
 import com.aquarius.command.api.CommandUsage;
 import com.aquarius.discord.Embed;
 import com.aquarius.feature.inventory.util.InventoryUtil;
+import com.aquarius.feature.pathfinder.BlockStateInterface;
 import com.aquarius.feature.pathfinder.goals.GoalNear;
+import com.aquarius.feature.pathfinder.movement.MovementHelper;
 import com.aquarius.feature.player.World;
 import com.aquarius.mc.block.Block;
 import com.aquarius.mc.block.BlockPos;
@@ -87,6 +89,22 @@ public class PathfinderCommand extends Command {
     @Override
     public LiteralArgumentBuilder<CommandContext> register() {
         return command("pathfinder")
+            .then(literal("bubbledebug")
+                .then(argument("xyz", blockPos()).executes(c -> {
+                    var pos = getBlockPos(c, "xyz");
+                    int x = pos.x(), y = pos.y(), z = pos.z();
+                    MODULE_LOG.info("[bubbledebug] column base ({}, {}, {}) — flags: wT=canWalkThrough path=isPathfindable bUp=isBubbleColumnUp wOn=canWalkOn(this block as floor)", x, y, z);
+                    for (int dy = -1; dy <= 13; dy++) {
+                        int yy = y + dy;
+                        MODULE_LOG.info("[bubbledebug] y={} C={} | N(z-1)={} | E(x+1)={} | S(z+1)={} | W(x-1)={}",
+                            yy, bubbleDesc(x, yy, z), bubbleDesc(x, yy, z - 1), bubbleDesc(x + 1, yy, z),
+                            bubbleDesc(x, yy, z + 1), bubbleDesc(x - 1, yy, z));
+                    }
+                    MODULE_LOG.info("[bubbledebug] --- end ---");
+                    c.getSource().getEmbed().title("Bubble debug dumped")
+                        .description("Dumped the pathfinder's view of the column @ (" + x + ", " + y + ", " + z + ") to the console log (grep `[bubbledebug]`).");
+                    return OK;
+                })))
             .then(literal("goto")
                 .then(argument("xz", vec2()).executes(c -> {
                     if (!verifyAbleToPathfind(c.getSource().getEmbed())) return ERROR;
@@ -1033,5 +1051,16 @@ public class PathfinderCommand extends Command {
             .title("Error")
             .description("Unable to pathfind while not logged in or while a player is controlling");
         return false;
+    }
+
+    /** One block's pathfinder view: name + the flags that decide column entry/climb/exit. */
+    private static String bubbleDesc(int x, int y, int z) {
+        int id = World.getBlockStateId(x, y, z);
+        String name = World.getBlock(x, y, z).name();
+        return name
+            + "[wT=" + (MovementHelper.canWalkThrough(x, y, z) ? 1 : 0)
+            + " path=" + (BlockStateInterface.isPathfindable(id) ? 1 : 0)
+            + " bUp=" + (MovementHelper.isBubbleColumnUp(id) ? 1 : 0)
+            + " wOn=" + (MovementHelper.canWalkOn(x, y, z) ? 1 : 0) + "]";
     }
 }

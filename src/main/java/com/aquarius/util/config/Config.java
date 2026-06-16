@@ -1628,6 +1628,12 @@ public final class Config {
                 /** Stop after this many kits. 0 = run until empty shulkers or materials run out. */
                 public int maxKits = 0;
 
+                /** Build best-effort PARTIAL kits: if the sources can't fully satisfy the template, place + fill
+                 *  whatever items are available (missing items leave their slots empty) and deposit the partial kit,
+                 *  instead of aborting the whole run. Lets a 16-item template with under-stocked sources still produce
+                 *  kits, and lets the final kit complete when a source runs dry. */
+                public boolean allowPartial = true;
+
                 /** Disconnect from the server when the run completes (clean AFK finish). */
                 public boolean autoDisconnect = false;
 

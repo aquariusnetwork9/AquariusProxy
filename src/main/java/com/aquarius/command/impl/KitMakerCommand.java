@@ -31,12 +31,14 @@ public class KitMakerCommand extends Command {
                 """)
             .usageLines(
                 "on/off",
-                "template <x> <y> <z>  (chest holding the example kit shulker)",
+                "template <x> <y> <z>  (a PLACED shulker box read in place, OR a chest holding an example shulker)",
+                "template auto  (no coords: auto-detect the nearest placed shulker box near the bot as the template)",
                 "scanradius <n>  (container discovery radius, default 20)",
                 "floorband <down> <up>  (accept containers feetY-down .. feetY+up; under-floor excluded)",
                 "match loose/smart/exact",
                 "enchantlevels on/off  (smart match: ignore enchant levels)",
                 "maxkits <n>  (0 = until shulkers/materials run out)",
+                "partial on/off  (build a kit even if sources can't fully fill it; missing slots left empty)",
                 "pauseplayer on/off",
                 "autodc on/off  (disconnect when done)",
                 "status  (print the discovered layout)",
@@ -54,6 +56,13 @@ public class KitMakerCommand extends Command {
                 c.getSource().getEmbed().title("Kit Maker " + toggleStrCaps(CONFIG.client.extra.kitMaker.enabled));
             }))
             .then(literal("template")
+                .then(literal("auto").executes(c -> {
+                    CONFIG.client.extra.kitMaker.templateChestX = 0;
+                    CONFIG.client.extra.kitMaker.templateChestY = 0;
+                    CONFIG.client.extra.kitMaker.templateChestZ = 0;
+                    c.getSource().getEmbed().title("Template: auto-detect")
+                        .description("On run, the nearest placed shulker box near the bot is read in place as the kit template.");
+                }))
                 .then(argument("x", integer()).then(argument("y", integer()).then(argument("z", integer()).executes(c -> {
                     CONFIG.client.extra.kitMaker.templateChestX = getInteger(c, "x");
                     CONFIG.client.extra.kitMaker.templateChestY = getInteger(c, "y");
@@ -87,6 +96,13 @@ public class KitMakerCommand extends Command {
                 CONFIG.client.extra.kitMaker.maxKits = getInteger(c, "n");
                 c.getSource().getEmbed().title("Max kits: " + (getInteger(c, "n") == 0 ? "unlimited" : getInteger(c, "n")));
             })))
+            .then(literal("partial").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.kitMaker.allowPartial = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("Partial kits " + toggleStrCaps(CONFIG.client.extra.kitMaker.allowPartial))
+                    .description(CONFIG.client.extra.kitMaker.allowPartial
+                        ? "Under-stocked sources still build a kit with whatever items are available (missing slots left empty)."
+                        : "A kit must be fully filled or the run aborts.");
+            })))
             .then(literal("pauseplayer").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.kitMaker.pauseOnPlayer = getToggle(c, "toggle");
                 c.getSource().getEmbed().title("Pause on player " + toggleStrCaps(CONFIG.client.extra.kitMaker.pauseOnPlayer));
@@ -117,10 +133,13 @@ public class KitMakerCommand extends Command {
             .primaryColor()
             .addField("Enabled", toggleStr(cfg.enabled))
             .addField("State", module.statusLine())
-            .addField("Template chest", "(" + cfg.templateChestX + ", " + cfg.templateChestY + ", " + cfg.templateChestZ + ")")
+            .addField("Template", (cfg.templateChestX == 0 && cfg.templateChestY == 0 && cfg.templateChestZ == 0)
+                ? "auto-detect nearest placed shulker"
+                : "(" + cfg.templateChestX + ", " + cfg.templateChestY + ", " + cfg.templateChestZ + ")")
             .addField("Scan", "radius " + cfg.scanRadius + ", floor -" + cfg.floorBandDown + "/+" + cfg.floorBandUp)
             .addField("Match", cfg.matchMode + (cfg.matchMode == MatchMode.Smart && cfg.ignoreEnchantLevels ? " (ignore enchant levels)" : ""))
             .addField("Max kits", cfg.maxKits == 0 ? "unlimited" : String.valueOf(cfg.maxKits))
+            .addField("Partial kits", toggleStr(cfg.allowPartial))
             .addField("Safety", "player-pause " + toggleStr(cfg.pauseOnPlayer) + " (" + (int) cfg.playerPauseRange + "b)")
             .addField("Auto-dc", toggleStr(cfg.autoDisconnect));
     }
