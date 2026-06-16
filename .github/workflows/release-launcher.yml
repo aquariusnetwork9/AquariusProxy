@@ -2,40 +2,24 @@ name: Release Launcher
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - launcher-setup
+
+permissions:
+  contents: write
 
 env:
   UV_PYTHON: '3.12.8'
   pyinstaller_version: "6.11.1"
 
 jobs:
-  backup-existing:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download current launcher files
-        uses: robinraju/release-downloader@v1
-        with:
-          repository: ${{ github.repository }}
-          tag: launcher-v3
-          fileName: "*"
-          out-file-path: launcher-assets
-
-      - name: Zip launcher assets
-        run: zip -j -r launcher-assets.zip launcher-assets/
-
-      - name: Upload assets
-        uses: actions/upload-artifact@v7
-        with:
-          name: existing-launcher-assets
-          path: launcher-assets.zip
-          if-no-files-found: error
-          archive: false
-
   build-pyinstaller:
     runs-on: ${{ matrix.os }}
     container:
       image: ${{ matrix.image || '' }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         os: [ 'ubuntu-latest', 'ubuntu-24.04-arm', 'macos-15-intel', 'macos-15' ]
         include:
@@ -82,24 +66,24 @@ jobs:
 
       - name: Create zip
         run: |
-          zip -j dist/ZenithProxy-${{ matrix.artifact-name }}.zip dist/launch
+          zip -j dist/AquariusProxy-${{ matrix.artifact-name }}.zip dist/launch
 
       - name: Upload Binary
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact-name }}
-          path: dist/ZenithProxy-${{ matrix.artifact-name }}.zip
+          path: dist/AquariusProxy-${{ matrix.artifact-name }}.zip
           if-no-files-found: error
           archive: false
 
       - name: Get Binary Hash
-        run: ${{ matrix.sha1-command }} > ZenithProxy-${{ matrix.artifact-name }}.sha1
+        run: ${{ matrix.sha1-command }} > AquariusProxy-${{ matrix.artifact-name }}.sha1
 
       - name: Upload Launcher Hash Version
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact-name }}.sha1
-          path: ZenithProxy-${{ matrix.artifact-name }}.sha1
+          path: AquariusProxy-${{ matrix.artifact-name }}.sha1
           if-no-files-found: error
           archive: false
 
@@ -111,7 +95,7 @@ jobs:
     container:
       image: ${{ matrix.image || '' }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         os: [ 'ubuntu-latest', 'ubuntu-24.04-arm']
         include:
@@ -172,24 +156,24 @@ jobs:
 
       - name: Create zip
         run: |
-          zip -j dist/ZenithProxy-${{ matrix.artifact-name }}.zip dist/launch
+          zip -j dist/AquariusProxy-${{ matrix.artifact-name }}.zip dist/launch
 
       - name: Upload Binary
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact-name }}
-          path: dist/ZenithProxy-${{ matrix.artifact-name }}.zip
+          path: dist/AquariusProxy-${{ matrix.artifact-name }}.zip
           if-no-files-found: error
           archive: false
 
       - name: Get Binary Hash
-        run: ${{ matrix.sha1-command }} > ZenithProxy-${{ matrix.artifact-name }}.sha1
+        run: ${{ matrix.sha1-command }} > AquariusProxy-${{ matrix.artifact-name }}.sha1
 
       - name: Upload Launcher Hash Version
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact-name }}.sha1
-          path: ZenithProxy-${{ matrix.artifact-name }}.sha1
+          path: AquariusProxy-${{ matrix.artifact-name }}.sha1
           if-no-files-found: error
           archive: false
 
@@ -210,24 +194,24 @@ jobs:
           chmod +x src/launcher/launch.sh
 
       - name: Create release zip
-        run: zip -j ZenithProxy-launcher-python.zip launcher-py.zip src/launcher/requirements.txt src/launcher/launch.sh src/launcher/launch.bat
+        run: zip -j AquariusProxy-launcher-python.zip launcher-py.zip src/launcher/requirements.txt src/launcher/launch.sh src/launcher/launch.bat
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v7
         with:
           name: launcher-python
-          path: ZenithProxy-launcher-python.zip
+          path: AquariusProxy-launcher-python.zip
           if-no-files-found: error
           archive: false
 
       - name: Get Binary Hash
-        run: sha1sum -b launcher-py.zip | cut -d" " -f 1 > ZenithProxy-launcher-python.sha1
+        run: sha1sum -b launcher-py.zip | cut -d" " -f 1 > AquariusProxy-launcher-python.sha1
 
       - name: Upload Launcher Hash Version
         uses: actions/upload-artifact@v7
         with:
           name: launcher-python.sha1
-          path: ZenithProxy-launcher-python.sha1
+          path: AquariusProxy-launcher-python.sha1
           if-no-files-found: error
           archive: false
 
@@ -247,24 +231,24 @@ jobs:
         run: cp src/launcher/launch_windows.bat launch.bat
 
       - name: Create release zip
-        run: zip -j ZenithProxy-launcher-windows-python-amd64.zip launcher-py.zip src/launcher/requirements.txt launch.bat scripts/windows_help.txt
+        run: zip -j AquariusProxy-launcher-windows-python-amd64.zip launcher-py.zip src/launcher/requirements.txt launch.bat scripts/windows_help.txt
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v7
         with:
           name: launcher-windows-python-amd64
-          path: ZenithProxy-launcher-windows-python-amd64.zip
+          path: AquariusProxy-launcher-windows-python-amd64.zip
           if-no-files-found: error
           archive: false
 
       - name: Get Binary Hash
-        run: sha1sum -b launcher-py.zip | cut -d" " -f 1 > ZenithProxy-launcher-windows-python-amd64.sha1
+        run: sha1sum -b launcher-py.zip | cut -d" " -f 1 > AquariusProxy-launcher-windows-python-amd64.sha1
 
       - name: Upload Launcher Hash Version
         uses: actions/upload-artifact@v7
         with:
           name: launcher-windows-python-amd64.sha1
-          path: ZenithProxy-launcher-windows-python-amd64.sha1
+          path: AquariusProxy-launcher-windows-python-amd64.sha1
           if-no-files-found: error
           archive: false
 
@@ -280,10 +264,8 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           merge-multiple: true
+          skip-decompress: true
           path: artifacts/
-
-      - name: Remove old launcher assets
-        run: rm artifacts/launcher-assets.zip
 
       - name: Compile Hashes
         run: |
@@ -302,17 +284,11 @@ jobs:
         with:
           tag: "launcher-v3"
           artifacts: "artifacts/*.zip,hashes.txt"
-          name: "Launcher V3"
+          name: "Aquarius Launcher"
           allowUpdates: true
           replacesArtifacts: true
           omitBodyDuringUpdate: true
           removeArtifacts: true
           makeLatest: true
+          prerelease: false
           artifactErrorsFailBuild: true
-
-      - name: Docker Update
-        uses: peter-evans/repository-dispatch@v4
-        with:
-          token: ${{ secrets.DOCKER_REPO_TOKEN }}
-          repository: rfresh2/ZenithProxyDocker
-          event-type: launcher-release
