@@ -29,9 +29,15 @@ API (and therefore the ProxyBridge whisper-intercept / mute-bypass and remote pe
   - `action.move`, `action.chat`, `action.interact`, `action.respawn` — in-world actions (enforced via ActionLimiter)
   - `connect.spectate` — may join as a spectator; `connect.control` — may take the controlling-player slot
   - `pearl.pull` — load your own registered pearl; `pearl.manage` — add/remove/admin pearls
+  - `group.<name>` — a **capability preset** (see below) that expands to many of the above (e.g. `group.combat`)
   - `*` — everything
-- A subject's effective permission set = `role.permissions ∪ subject.grants \ subject.denies`. Checks support
-  wildcards (`module.*` grants `module.killaura`); explicit `denies` win over grants.
+- **Capability presets (groups)** sit between roles and raw permissions so admins assign intent, not internals:
+  `group.combat`, `group.crafting`, `group.movement`, `group.travel`, `group.automation`, … Each group is a
+  config-defined bundle of `module.*`/`command.*`/`action.*` perms. Roles and per-user `grants` reference groups by
+  name; the resolver expands them. There are ~45 modules with different triggers — groups keep assignment sane.
+- A subject's effective permission set = `expand(role.permissions ∪ subject.grants) \ subject.denies`, where
+  `expand` recursively resolves `group.<name>`. Checks support wildcards (`module.*` grants `module.killaura`);
+  explicit `denies` always win.
 
 ### Default roles (all overridable in config)
 
@@ -39,8 +45,8 @@ API (and therefore the ProxyBridge whisper-intercept / mute-bypass and remote pe
 |----------|--------|
 | admin    | `*` (unrestricted) |
 | operator | `connect.control`, `command.info`, `command.module`, `module.*`, `action.*`, `pearl.*`, plus selected `command.manage` items |
-| user     | `connect.control`, `pearl.pull`, `action.move`, `action.chat`, and an assigned set of `module.<name>` / `command.<name>` |
-| guest    | `connect.spectate`, `pearl.pull` |
+| user     | `connect.control`, `pearl.pull`, `action.move`, `action.chat`, plus assigned `group.<name>` / `module.<name>` |
+| guest    | `pearl.pull` only — **API/pearl access, no in-game presence** (no spectate by default) |
 | none     | **nothing — no connection, no interaction** (see below) |
 
 The proxy's own MC account is **always** ADMIN and can never be locked out (fail-safe).
@@ -60,18 +66,25 @@ Replace the whitelist config with a `permissions` block (proposed `CONFIG.server
   "enabled": true,
   "defaultRole": "none",          // unknown subject => deny everything (the chosen posture). Not configurable to "guest".
   "minConnectRole": "guest",      // must resolve to >= guest (i.e. be explicitly assigned) to connect at all
-  "roles": {                      // role -> permission list (defaults shipped, user-editable)
+  "groups": {                     // capability presets -> permission list (config-defined, granular)
+    "combat":     ["module.killaura","module.autototem","module.autoeat","module.automend","module.autoarmor"],
+    "crafting":   ["module.kitmaker","module.enchanter","module.villagertrader","module.regear"],
+    "movement":   ["action.move","action.interact"],
+    "travel":     ["module.elytrapilot","module.elytratrip","module.boat","command.pathfinder"],
+    "automation": ["module.aquariusminer","module.autofish","module.pearldrop","module.stashscanner","module.antiafk"]
+  },
+  "roles": {                      // role -> permission list (defaults shipped, user-editable; may reference groups)
     "admin":    ["*"],
-    "operator": ["command.info","command.module","module.*","action.*","pearl.*"],
-    "user":     ["pearl.pull","action.move","action.chat"],
+    "operator": ["connect.control","command.info","command.module","module.*","action.*","pearl.*"],
+    "user":     ["connect.control","pearl.pull","action.move","action.chat"],
     "guest":    ["pearl.pull"]
   },
   "users": {                      // UUID -> assignment
     "<uuid>": {
       "name": "Player",
       "role": "user",
-      "grants": ["module.autoeat","command.pearldrop"],   // per-user additions
-      "denies": [],
+      "grants": ["group.combat","group.travel"],          // assign presets, not internals
+      "denies": ["module.spammer"],                       // deny always wins
       "tokens": ["<sha256 of token>"],                    // hashed; plaintext shown once on issue
       "pearlScope": "self"                                // self | none — whose pearls this token may pull
     }
@@ -123,6 +136,36 @@ Tokens are stored **hashed** (SHA-256); the plaintext is shown once at issue tim
   lacks the permission.
 - Reuses the bot list + WebAPI client already shipped (`/pb bots`, `/pb pull`).
 
+## Admin panels (so you don't need the CLI)
+
+Managing users/roles/groups/tokens by hand-editing config or typing commands is fine for power users but a barrier
+for everyone else. Two front-ends over the same admin API, the proxy staying the single source of truth:
+
+**Admin API** — a small authenticated surface on the HTTP server (admin role required), beyond `/command`:
+
+- `GET /perms` — snapshot: roles, groups, users (names + roles, **never** token plaintext/hashes), API bind info.
+- `POST /perms/users` — add / assign role / set grants+denies / **bulk** assign-unassign (accepts a list).
+- `DELETE /perms/users/<uuid>` — remove.
+- `POST /perms/tokens` — issue a token for a user (returns plaintext **once**); `DELETE /perms/tokens/<id>` — revoke.
+- `GET /perms/groups`, `POST /perms/groups` — view/edit preset bundles.
+
+(Mutations could also just be `perms …` commands through `/command`; the structured GET endpoints exist so a panel
+can *list* current state. Either way the panel never holds config — it round-trips the bot.)
+
+**ProxyBridge mod GUI (primary, fuller panel)** — an in-game `Screen` (e.g. `/pb admin` or a button on the bot
+list). Talks to the selected bot's admin API with your admin token. Shows a user table (name · role · groups) with:
+add by username (resolves UUID), assign/unassign a role, toggle capability presets per user (checkboxes for
+combat/crafting/movement/travel/automation/…), multi-select **bulk** assign/unassign, issue/revoke tokens, and an
+"API info" tab (bind address, your role, endpoint list, per-bot token entry). Minecraft's GUI toolkit handles the
+tables/checkboxes the CLI can't.
+
+**Discord panel (simpler, constrained)** — reuses the existing `Panels` + button/modal/select-menu infra
+(cf. `DISCORD.openPanel(Panels.PEARLDROP)`). Discord can't do rich tables, so: a user **select menu** → role
+**select menu** + preset **multi-select**, an "Add user" modal (username), and "Issue token" (DMs the plaintext).
+Bulk ops via multi-select where Discord allows. Same admin API underneath.
+
+Both panels are admin-gated by the same permission system — only `command.manage`/admin subjects can open them.
+
 ## Migration & safety
 
 - **Owner is always admin** — resolved before config; a broken/empty `permissions` block leaves only the owner
@@ -137,16 +180,18 @@ Tokens are stored **hashed** (SHA-256); the plaintext is shown once at issue tim
 
 ## Phased implementation
 
-1. **Core model** — `Permission`, `Role`, `Subject`, `Permissions` resolver + config schema + unit tests
-   (resolution, wildcards, deny-over-grant, owner-always-admin). No behavior change yet.
+1. **Core model** — `Permission`, `Role`, `Group`, `Subject`, `Permissions` resolver (with group expansion) +
+   config schema + unit tests (resolution, group expansion, wildcards, deny-over-grant, owner-always-admin). No
+   behavior change yet.
 2. **Command auth** — route `validateAccountOwner`/category checks through `Permissions`; add `requiredPermission()`
    to `Command`; keep legacy mode.
 3. **Login + module + action gating** — replace `kickNonWhitelistedPlayers`; gate module toggles; map roles →
    ActionLimiter.
-4. **HTTP command API** — netty server + `ApiCommandSource` + token issue/revoke commands (`/perms token …`),
-   localhost-bound, audited.
-5. **ProxyBridge whisper-intercept** — client reroute over the API.
-6. **Whitelist migration + removal** — importer, then delete the old fields.
+4. **HTTP API** — netty server + `ApiCommandSource` + `/command` + the `/perms` admin surface + token issue/revoke
+   (`/perms token …`), localhost-bound, audited.
+5. **Admin panels** — Discord panel first (reuses existing infra), then the ProxyBridge mod GUI screen.
+6. **ProxyBridge whisper-intercept** — client reroute over the API.
+7. **Whitelist migration + removal** — importer, then delete the old fields.
 
 ## Decisions (locked)
 
@@ -165,8 +210,17 @@ Tokens are stored **hashed** (SHA-256); the plaintext is shown once at issue tim
   `pearl.manage` (operator+) can pull/manage on behalf of others.
 - **Tokens** — `Authorization` header; hashed at rest; multiple per user; optional TTL/expiry field (off by default).
 
+## More decisions (from review)
+
+- **Guest = pearl/API only**, no in-game presence (no `connect.spectate` by default).
+- **Capability presets** (`group.combat|crafting|movement|travel|automation|…`) abstract the ~45 modules; each is
+  granular in config, and per-user `grants` assign presets rather than individual modules.
+- **Admin panels** are first-class: a fuller **ProxyBridge mod GUI** + a simpler **Discord panel**, both over the
+  same admin API (add/delete/assign/unassign/bulk + token/API info).
+
 ## Still open
 
-- Exact module sets for a default **user** (probably empty until assigned) vs **operator** (`module.*` minus a few
-  dangerous ones like `coordobfuscation`/`spammer`?).
-- Whether **guest** should get `connect.spectate` at all, or be API/pearl-only with no in-game presence.
+- The exact module→preset mapping (the config block above is a first cut — e.g. where do `autofish`, `autodrop`,
+  `villagertrader` belong; should `travel` include `command.goto`/baritone explicitly).
+- Whether presets should be **hierarchical** (e.g. `travel` implies `movement`) or flat.
+- Operator's default `module.*` minus a dangerous-list (`coordobfuscation`, `spammer`, `replaymod`?).
