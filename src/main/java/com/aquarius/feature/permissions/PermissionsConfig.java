@@ -26,6 +26,17 @@ public class PermissionsConfig {
     /** Subject UUID -> assignment. Presence here (with a role) is what grants access; absence = NONE. */
     public Map<UUID, UserAssignment> users = new LinkedHashMap<>();
 
+    /** Token-authorized HTTP command API. Off + localhost-only by default. */
+    public final ApiConfig api = new ApiConfig();
+
+    public static class ApiConfig {
+        public boolean enabled = false;
+        /** Bind address — localhost-only by default; set to 0.0.0.0 to expose (do so deliberately). */
+        public String bindHost = "127.0.0.1";
+        public int port = 2480;
+        public int requestsPerMinutePerToken = 60;
+    }
+
     public PermissionsConfig() {
         seedDefaultGroups();
         seedDefaultRoles();
