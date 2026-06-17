@@ -27,6 +27,7 @@ API (and therefore the ProxyBridge whisper-intercept / mute-bypass and remote pe
   - `command.<name>` — one command by name (fine-grained grant/deny, e.g. `command.pearlplus`)
   - `module.<name>` / `module.*` — toggle/use a module
   - `action.move`, `action.chat`, `action.interact`, `action.respawn` — in-world actions (enforced via ActionLimiter)
+  - `connect.spectate` — may join as a spectator; `connect.control` — may take the controlling-player slot
   - `pearl.pull` — load your own registered pearl; `pearl.manage` — add/remove/admin pearls
   - `*` — everything
 - A subject's effective permission set = `role.permissions ∪ subject.grants \ subject.denies`. Checks support
@@ -37,12 +38,18 @@ API (and therefore the ProxyBridge whisper-intercept / mute-bypass and remote pe
 | Role     | Grants |
 |----------|--------|
 | admin    | `*` (unrestricted) |
-| operator | `command.info`, `command.module`, `module.*`, `action.*`, `pearl.*`, plus selected `command.manage` items |
-| user     | `pearl.pull`, `action.move`, `action.chat`, and an assigned set of `module.<name>` / `command.<name>` |
-| guest    | `pearl.pull` only |
-| none     | (nothing — connection denied unless `defaultRole` is set) |
+| operator | `connect.control`, `command.info`, `command.module`, `module.*`, `action.*`, `pearl.*`, plus selected `command.manage` items |
+| user     | `connect.control`, `pearl.pull`, `action.move`, `action.chat`, and an assigned set of `module.<name>` / `command.<name>` |
+| guest    | `connect.spectate`, `pearl.pull` |
+| none     | **nothing — no connection, no interaction** (see below) |
 
 The proxy's own MC account is **always** ADMIN and can never be locked out (fail-safe).
+
+**Default-deny is the whole posture.** A subject with no explicit assignment is `none`: it cannot connect (play or
+spectate) and cannot touch the API. There is no anonymous self-service — e.g. a random player who drops a pearl into
+a public chamber must be added (by an admin/operator) before they can pull it later. This is the intentional
+replacement for the old whitelist + spectator-whitelist, which were allow/deny-only and too coarse for modern
+multi-bot base operations.
 
 ## Data model / config
 
@@ -51,8 +58,8 @@ Replace the whitelist config with a `permissions` block (proposed `CONFIG.server
 ```jsonc
 "permissions": {
   "enabled": true,
-  "defaultRole": "none",          // role for a connecting player with no assignment; "none" = deny login
-  "minLoginRole": "guest",        // must resolve to >= this role to connect at all
+  "defaultRole": "none",          // unknown subject => deny everything (the chosen posture). Not configurable to "guest".
+  "minConnectRole": "guest",      // must resolve to >= guest (i.e. be explicitly assigned) to connect at all
   "roles": {                      // role -> permission list (defaults shipped, user-editable)
     "admin":    ["*"],
     "operator": ["command.info","command.module","module.*","action.*","pearl.*"],
@@ -87,8 +94,10 @@ Tokens are stored **hashed** (SHA-256); the plaintext is shown once at issue tim
    - A command's required permission derives from its `CommandUsage` category by default
      (`command.<category>`), with optional per-command override (`command.<name>`). `Command` gains an optional
      `requiredPermission()` (default = category-derived).
-2. **Login gating** — replace `kickNonWhitelistedPlayers()` with a role check: deny if the resolved role
-   `< minLoginRole`. The whitelist list/`whitelistEnabled` are superseded by `users` + `defaultRole`.
+2. **Login gating** — replace `kickNonWhitelistedPlayers()` with a permission check: deny the connection unless the
+   subject has `connect.spectate` (to spectate) or `connect.control` (to take the controlling slot). Unknown subjects
+   (`none`) are dropped at login. The whitelist, `whitelistEnabled`, and the **spectator whitelist** are all
+   superseded by `users` + per-role `connect.*`.
 3. **Module gating** — when a command enables/uses a module, check `module.<name>`. Centralize in the
    module-toggle path so every `/<module> on` is gated uniformly.
 4. **Movement / action gating** — drive **ActionLimiter** from the connected player's role:
@@ -139,16 +148,25 @@ Tokens are stored **hashed** (SHA-256); the plaintext is shown once at issue tim
 5. **ProxyBridge whisper-intercept** — client reroute over the API.
 6. **Whitelist migration + removal** — importer, then delete the old fields.
 
-## Open questions
+## Decisions (locked)
 
-- **Where does the config live** — `CONFIG.server.permissions` (server-scoped, replaces `server.extra.whitelist`)
-  vs a new top-level `CONFIG.permissions`? (Leaning server-scoped.)
-- **Default for unknown players** — deny login (`defaultRole: none`) vs auto-`guest` (anyone can connect but only
-  pull pearls)? Affects whether this is a private bot or a public pearl-pull service.
-- **Token transport** — `Authorization` header only, or also allow a per-bot token in the ProxyBridge config (yes,
-  already there). Any need for token expiry/TTL?
-- **Operator's "some config commands"** — define the exact `command.manage` subset operators get by default.
-- **Pearl scope** — is "pull only your own pearl" (per-token `pearlScope: self`) the right guest/user limit, or do
-  some users need to pull on behalf of others?
-- **Spectator vs play** — should role also pick spectator vs controlling connection (operator+ controls, user/guest
-  spectate)?
+- **Default-deny.** Unknown subject = `none` = no connection, no spectate, no API, no pearl pull. Explicit
+  assignment is required for *any* interaction. Not configurable to auto-guest. Private bot, not a public service.
+- **Replaces** the whitelist, `whitelistEnabled`, the spectator whitelist, and the PearlPlus whitelist outright.
+- **Connection** is itself a permission: `connect.control` (take the player) and `connect.spectate` (spectate).
+  Guest spectates; user/operator/admin control.
+
+## Proposed defaults (adjust before Phase 1)
+
+- **Config location** — `CONFIG.server.permissions` (server-scoped; replaces `server.extra.whitelist`).
+- **Operator's `command.manage` subset** — info/diagnostic + connection management, e.g. `command.reconnect`,
+  `command.kick`, `command.spectator`, `command.stats`; **not** account/auth/config-secret commands (admin-only).
+- **Pearl scope** — per-token `pearlScope: self` by default (you can only pull *your own* registered pearl);
+  `pearl.manage` (operator+) can pull/manage on behalf of others.
+- **Tokens** — `Authorization` header; hashed at rest; multiple per user; optional TTL/expiry field (off by default).
+
+## Still open
+
+- Exact module sets for a default **user** (probably empty until assigned) vs **operator** (`module.*` minus a few
+  dangerous ones like `coordobfuscation`/`spammer`?).
+- Whether **guest** should get `connect.spectate` at all, or be API/pearl-only with no in-game presence.
