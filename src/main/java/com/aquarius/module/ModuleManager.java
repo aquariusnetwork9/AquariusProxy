@@ -38,6 +38,7 @@ public class ModuleManager {
             new PearlDrop(),
             new Bridge(),
             new RbacGuard(),
+            new RbacApiServer(),
             new AutoMend(),
             new AutoOmen(),
             new AutoReconnect(),

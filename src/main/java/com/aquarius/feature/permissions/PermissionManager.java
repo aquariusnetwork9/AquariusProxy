@@ -136,7 +136,7 @@ public class PermissionManager {
         return out;
     }
 
-    static String sha256Hex(String s) {
+    public static String sha256Hex(String s) {
         try {
             byte[] d = MessageDigest.getInstance("SHA-256").digest(s.getBytes(StandardCharsets.UTF_8));
             StringBuilder sb = new StringBuilder(d.length * 2);
