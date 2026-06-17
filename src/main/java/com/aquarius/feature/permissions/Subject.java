@@ -19,6 +19,16 @@ public record Subject(
     String connectMode,
     boolean owner
 ) {
+    /** A fully-trusted subject (everything allowed) — for the console, Discord, and internal automation sources. */
+    public static Subject allPermissions(String name) {
+        return new Subject(null, name, Role.ADMIN, Set.of("*"), Set.of(), "self", "control", true);
+    }
+
+    /** A no-access subject (NONE) — e.g. a player command with no resolvable identity. */
+    public static Subject none(String name) {
+        return new Subject(null, name, Role.NONE, Set.of(), Set.of(), "none", "control", false);
+    }
+
     /** Does this subject hold {@code permission}? Owner always yes; otherwise a grant must imply it and no deny may. */
     public boolean allows(String permission) {
         if (owner) return true;
