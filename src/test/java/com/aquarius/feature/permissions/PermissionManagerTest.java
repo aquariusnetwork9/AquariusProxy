@@ -98,6 +98,26 @@ class PermissionManagerTest {
     }
 
     @Test
+    void rolesAreHierarchical() {
+        var cfg = new PermissionsConfig();
+        var op = user(cfg, "Op", "operator");
+        var mgr = mgr(cfg);
+        Subject s = mgr.resolve(uuidOf(cfg, op), "Op");
+        assertTrue(s.allows("pearl.pull"));        // inherited from guest
+        assertTrue(s.allows("action.move"));       // inherited from user
+        assertTrue(s.allows("connect.control"));   // inherited from user (operator no longer lists it directly)
+        assertTrue(s.allows("module.killaura"));   // operator's own (group.combat)
+
+        // user inherits guest but not operator
+        var u = user(cfg, "U", "user");
+        Subject us = mgr.resolve(uuidOf(cfg, u), "U");
+        assertTrue(us.allows("pearl.pull"));        // inherited from guest
+        assertTrue(us.allows("connect.control"));   // user's own
+        assertFalse(us.allows("module.killaura"));  // operator-level, not inherited downward
+        assertFalse(us.allows("command.info"));
+    }
+
+    @Test
     void adminWildcardImpliesEverything() {
         var cfg = new PermissionsConfig();
         var ua = user(cfg, "Boss", "admin");

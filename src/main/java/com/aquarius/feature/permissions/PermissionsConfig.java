@@ -47,12 +47,13 @@ public class PermissionsConfig {
     }
 
     private void seedDefaultRoles() {
-        roles.put("admin", list("*"));
-        roles.put("operator", list("connect.control", "command.info", "command.module", "action.*", "pearl.*",
+        // Roles are hierarchical: each lists only what it ADDS over the role below it (admin ⊇ operator ⊇ user ⊇ guest).
+        roles.put("guest", list("pearl.pull"));
+        roles.put("user", list("connect.control", "action.move", "action.chat"));            // + inherits guest
+        roles.put("operator", list("command.info", "command.module", "action.*", "pearl.*",  // + inherits user/guest
             "group.movement", "group.travel", "group.combat", "group.crafting", "group.automation",
             "group.chat", "group.utility", "group.system"));
-        roles.put("user", list("connect.control", "pearl.pull", "action.move", "action.chat"));
-        roles.put("guest", list("pearl.pull"));
+        roles.put("admin", list("*"));
     }
 
     private static List<String> list(String... items) {

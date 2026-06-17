@@ -101,8 +101,19 @@ public class PermissionManager {
         return new Subject(uuid, name != null ? name : "owner", Role.ADMIN, Set.of("*"), Set.of(), "self", "control", true);
     }
 
+    /**
+     * Roles are hierarchical: a role inherits every lower role's permissions
+     * ({@code ADMIN ⊇ OPERATOR ⊇ USER ⊇ GUEST}). So an operator automatically has everything users and guests can do.
+     */
     private List<String> rolePermissions(Role role) {
-        return config().roles.getOrDefault(role.configName(), List.of());
+        List<String> out = new ArrayList<>();
+        for (Role r : Role.values()) {
+            if (r == Role.NONE) continue;
+            if (r.ordinal() <= role.ordinal()) {
+                out.addAll(config().roles.getOrDefault(r.configName(), List.of()));
+            }
+        }
+        return out;
     }
 
     /** Expand a permission list: pass through plain perms, recursively inline {@code group.<name>} bundles. */

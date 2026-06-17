@@ -21,7 +21,9 @@ API (and therefore the ProxyBridge whisper-intercept / mute-bypass and remote pe
 - **Subject** — a thing making a request: a connected player (by UUID), or an API caller (by token). Resolves to a
   **role** plus optional per-subject permission overrides.
 - **Role** — a named bundle of permissions. Ordered by privilege: `ADMIN > OPERATOR > USER > GUEST`. Plus the
-  implicit `NONE` (unknown subject).
+  implicit `NONE` (unknown subject). Roles are **hierarchical**: a role inherits every lower role's permissions
+  (`admin ⊇ operator ⊇ user ⊇ guest`), so each role's config lists only what it <i>adds</i> over the one below.
+  (Note: only roles inherit; capability <b>groups</b> stay flat.)
 - **Permission** — a capability string, wildcard-aware. Namespaces:
   - `command.<category>` — a whole command category: `command.core`, `command.info`, `command.manage`, `command.module`
   - `command.<name>` — one command by name (fine-grained grant/deny, e.g. `command.pearlplus`)
@@ -79,13 +81,13 @@ Replace the whitelist config with a `permissions` block (proposed `CONFIG.server
                    "module.activehours","module.autoomen","module.requeue","module.queuewarning"],   // operator+
     "system":     ["module.bridge","module.autodetectmodule","module.autoloadmodule","module.autoreconnect"] // operator+
   },
-  "roles": {                      // role -> permission list (defaults shipped, user-editable; may reference groups)
-    "admin":    ["*"],
-    "operator": ["connect.control","command.info","command.module","action.*","pearl.*",
+  "roles": {                      // INCREMENTAL perms; each role inherits every lower role (admin>operator>user>guest)
+    "guest":    ["pearl.pull"],
+    "user":     ["connect.control","action.move","action.chat"],      // + inherits guest
+    "operator": ["command.info","command.module","action.*","pearl.*",
                  "group.movement","group.travel","group.combat","group.crafting","group.automation",
-                 "group.chat","group.utility","group.system"],
-    "user":     ["connect.control","pearl.pull","action.move","action.chat"],
-    "guest":    ["pearl.pull"]
+                 "group.chat","group.utility","group.system"],          // + inherits user/guest
+    "admin":    ["*"]
   },
   "users": {                      // UUID -> assignment
     "<uuid>": {
@@ -244,7 +246,9 @@ Both panels are admin-gated by the same permission system — only `command.mana
 
 ## Settled (this review)
 
-- **Flat presets** — `travel` does not auto-imply `movement`; grant both if you want both.
+- **Hierarchical roles** — `admin ⊇ operator ⊇ user ⊇ guest`; each role's config lists only its increment over the
+  role below (an operator automatically does everything users and guests can).
+- **Flat presets** — `travel` does not auto-imply `movement`; grant both if you want both. (Roles inherit; groups don't.)
 - **`chat`** preset (`autoreply`/`extrachat`/`chathistory`/`click`), **`utility`** (the safety/connection autos),
   and **`system`** (`bridge`/`autodetect`/`autoload`/`autoreconnect`) are all **operator-default** groups (granted to
   operator+; assignable to a user only by explicit grant). New ungrouped modules default to **admin-only** (safe).
