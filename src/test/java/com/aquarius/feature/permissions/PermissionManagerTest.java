@@ -163,6 +163,19 @@ class PermissionManagerTest {
     }
 
     @Test
+    void trustedSubjectAllowsEverythingAndNoneAllowsNothing() {
+        // console / Discord / internal sources resolve to a trusted subject
+        Subject trusted = Subject.allPermissions("console");
+        assertTrue(trusted.allows("command.manage"));
+        assertTrue(trusted.allows("module.coordobfuscation"));
+        assertTrue(trusted.allows("anything.at.all"));
+        // a player command with no resolvable identity
+        Subject none = Subject.none("ghost");
+        assertFalse(none.allows("pearl.pull"));
+        assertFalse(none.allows("command.info"));
+    }
+
+    @Test
     void connectModePreferenceIsCarried() {
         var cfg = new PermissionsConfig();
         var ua = user(cfg, "Spec", "operator");

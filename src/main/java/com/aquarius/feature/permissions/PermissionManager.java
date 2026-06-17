@@ -24,19 +24,35 @@ import java.util.function.Supplier;
  */
 public class PermissionManager {
 
-    private final PermissionsConfig config;
+    private final Supplier<PermissionsConfig> configSupplier;
     private final Supplier<UUID> ownerUuidSupplier;
 
+    /** Convenience for a fixed config (tests). */
     public PermissionManager(PermissionsConfig config, Supplier<UUID> ownerUuidSupplier) {
-        this.config = config;
+        this(() -> config, ownerUuidSupplier);
+    }
+
+    /** Reload-safe: {@code configSupplier} is read on each call so it survives config reloads. */
+    public PermissionManager(Supplier<PermissionsConfig> configSupplier, Supplier<UUID> ownerUuidSupplier) {
+        this.configSupplier = configSupplier;
         this.ownerUuidSupplier = ownerUuidSupplier != null ? ownerUuidSupplier : () -> null;
+    }
+
+    private PermissionsConfig config() {
+        return configSupplier.get();
+    }
+
+    /** Whether the RBAC system is active; while false the proxy keeps legacy whitelist/owner behavior. */
+    public boolean isEnabled() {
+        PermissionsConfig c = config();
+        return c != null && c.enabled;
     }
 
     /** Resolve a connected player by UUID. Unknown UUID => the configured {@code defaultRole} (NONE by default). */
     public Subject resolve(UUID uuid, String name) {
         if (isOwner(uuid)) return ownerSubject(uuid, name);
-        UserAssignment ua = uuid != null ? config.users.get(uuid) : null;
-        Role role = ua != null ? Role.fromString(ua.role) : Role.fromString(config.defaultRole);
+        UserAssignment ua = uuid != null ? config().users.get(uuid) : null;
+        Role role = ua != null ? Role.fromString(ua.role) : Role.fromString(config().defaultRole);
 
         List<String> grantInputs = new ArrayList<>(rolePermissions(role));
         if (ua != null) grantInputs.addAll(ua.grants);
@@ -54,7 +70,7 @@ public class PermissionManager {
     public Subject resolveToken(String plaintextToken) {
         if (plaintextToken == null || plaintextToken.isBlank()) return null;
         String hash = sha256Hex(plaintextToken);
-        for (var entry : config.users.entrySet()) {
+        for (var entry : config().users.entrySet()) {
             for (String t : entry.getValue().tokens) {
                 if (constantTimeEquals(t, hash)) {
                     return resolve(entry.getKey(), entry.getValue().name);
@@ -71,7 +87,7 @@ public class PermissionManager {
     public boolean canConnect(Subject subject) {
         if (subject == null) return false;
         if (subject.owner()) return true;
-        Role min = Role.fromString(config.minConnectRole);
+        Role min = Role.fromString(config().minConnectRole);
         if (!subject.role().atLeast(min)) return false;
         return subject.allows("connect.control") || subject.allows("connect.spectate");
     }
@@ -86,7 +102,7 @@ public class PermissionManager {
     }
 
     private List<String> rolePermissions(Role role) {
-        return config.roles.getOrDefault(role.configName(), List.of());
+        return config().roles.getOrDefault(role.configName(), List.of());
     }
 
     /** Expand a permission list: pass through plain perms, recursively inline {@code group.<name>} bundles. */
@@ -100,7 +116,7 @@ public class PermissionManager {
             if (p.startsWith("group.")) {
                 String g = p.substring("group.".length());
                 if (visitedGroups.add(g)) {
-                    stack.addAll(config.groups.getOrDefault(g, List.of()));
+                    stack.addAll(config().groups.getOrDefault(g, List.of()));
                 }
             } else {
                 out.add(p);
