@@ -61,6 +61,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ZenithProxy-java
-          path: build/libs/ZenithProxy.jar
+          path: build/libs/AquariusProxy.jar
           if-no-files-found: error
           archive: false
