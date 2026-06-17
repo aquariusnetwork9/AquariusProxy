@@ -5,6 +5,7 @@ import com.aquarius.command.api.CommandCategory;
 import com.aquarius.command.api.CommandContext;
 import com.aquarius.command.api.CommandUsage;
 import com.aquarius.discord.Embed;
+import com.aquarius.discord.Panels;
 import com.aquarius.feature.permissions.PermissionManager;
 import com.aquarius.feature.permissions.PermissionsConfig;
 import com.aquarius.feature.permissions.Role;
@@ -23,6 +24,7 @@ import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 import static com.mojang.brigadier.arguments.StringArgumentType.word;
 import static com.aquarius.Globals.CONFIG;
+import static com.aquarius.Globals.DISCORD;
 import static com.aquarius.Globals.MODULE;
 import static com.aquarius.command.brigadier.ToggleArgumentType.getToggle;
 import static com.aquarius.command.brigadier.ToggleArgumentType.toggle;
@@ -60,7 +62,8 @@ public class PermsCommand extends Command {
                 "token issue <name>         (prints the token once)",
                 "token revoke <name> <index>",
                 "role list",
-                "group list"
+                "group list",
+                "panel                      (post the interactive Discord control panel)"
             )
             .build();
     }
@@ -191,7 +194,16 @@ public class PermsCommand extends Command {
                 cfg().groups.forEach((g, perms) -> sb.append("- ").append(g).append(": ").append(perms).append("\n"));
                 c.getSource().getEmbed().title("Capability groups").description(sb.toString().trim()).primaryColor();
                 return OK;
-            })));
+            })))
+            .then(literal("panel").executes(c -> {
+                boolean posted = DISCORD.openPanel(Panels.PERMS);
+                c.getSource().getEmbed()
+                    .title(posted ? "RBAC panel posted to Discord" : "Discord bot not running")
+                    .description(posted
+                        ? "In Discord: toggle RBAC/API, add or bulk-assign users, set roles, toggle capability presets, issue/revoke tokens, set connect mode."
+                        : "Enable the Discord bot to use the interactive access-control panel.");
+                return OK;
+            }));
     }
 
     private int assignRole(final CommandContext source, final String name, final String role, final boolean create) {
