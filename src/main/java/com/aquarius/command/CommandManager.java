@@ -250,8 +250,13 @@ public class CommandManager {
         if (PERMISSIONS.isEnabled()) {
             final Command gated = commandByLiteral.get(commandNode.getLiteral().toLowerCase(Locale.ROOT));
             if (gated != null && gated.commandUsage().getCategory() == CommandCategory.MODULE) {
+                final List<String> path = parse.getContext().getNodes().stream()
+                    .map(ParsedCommandNode::getNode)
+                    .filter(n -> n instanceof CaseInsensitiveLiteralCommandNode)
+                    .map(n -> ((CaseInsensitiveLiteralCommandNode<CommandContext>) n).getLiteral().toLowerCase(Locale.ROOT))
+                    .toList();
                 final var subject = context.getSource().resolveSubject(context);
-                final String perm = gated.requiredPermission();
+                final String perm = gated.requiredPermission(path);
                 if (!PERMISSIONS.allows(subject, perm) && !PERMISSIONS.allows(subject, "command.module")) {
                     context.getEmbed()
                         .title("Not Authorized!")
