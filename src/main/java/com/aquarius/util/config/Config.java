@@ -181,6 +181,7 @@ public final class Config {
             public final Enchanter enchanter = new Enchanter();
             public final StashScanner stashScanner = new StashScanner();
             public final OrderFiller orderFiller = new OrderFiller();
+            public final Bridge bridge = new Bridge();
 
             /**
              * PearlDrop — the DEPOSIT side of pearl stasis (the counterpart to {@link PearlPlus}, which pulls).
@@ -225,6 +226,27 @@ public final class Config {
                 public int approachTimeoutTicks = 120;
                 /** Timeout (ticks) for the retreat. */
                 public int retreatTimeoutTicks = 80;
+            }
+
+            /**
+             * Bridge — generic bidirectional link to the ProxyBridge client mod (a Meteor addon, MC 1.21.4) over the
+             * {@code proxybridge:main} plugin channel. Pushes feature data the mod can render (live waypoints) and
+             * routes allow-listed commands the mod sends back. Read everywhere via {@code CONFIG.client.extra.bridge.*}.
+             */
+            public static class Bridge {
+                /** Whether the module is enabled on startup. */
+                public boolean enabled = false;
+                /** Publish PearlDrop's empty stasis chambers to the mod as the {@code pearldrop.empties} waypoint group. */
+                public boolean autoPublishPearlDrop = true;
+                /** Strip {@code proxybridge:main} from the client's {@code minecraft:register} so the real server never sees it. */
+                public boolean stripRegisterChannel = true;
+                /** Also send waypoints to spectator connections (default: controlling player only). */
+                public boolean broadcastToSpectators = false;
+                /** Minimum ticks between waypoint-source polls/publishes (20 = ~1s). */
+                public int publishIntervalTicks = 20;
+                /** Command names the mod is allowed to invoke via {@code cmd/invoke} (first token, case-insensitive). */
+                public ArrayList<String> invokeAllowList =
+                    new ArrayList<>(java.util.List.of("pearldrop", "pd", "pearlplus", "swap"));
             }
 
             /**
