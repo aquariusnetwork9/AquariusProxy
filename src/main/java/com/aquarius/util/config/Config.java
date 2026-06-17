@@ -2293,6 +2293,8 @@ public final class Config {
                 public boolean exemptProxyAccount = false;
                 public boolean itemsBlacklistEnabled = false;
                 public final HashSet<String> itemsBlacklist = new HashSet<>();
+                /** Blacklisted items: true = disconnect on possession (legacy); false = allow holding but block using/placing them. */
+                public boolean blacklistedItemDisconnect = false;
             }
         }
 
