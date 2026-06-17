@@ -32,11 +32,12 @@ public class PermissionsConfig {
     }
 
     private void seedDefaultGroups() {
-        groups.put("movement", list("action.move", "action.interact", "command.goto", "command.pathfinder", "module.boat"));
-        groups.put("travel", list("module.elytrapilot", "module.elytratrip"));
+        // module.<name> uses the command's name (lowercased); baritone "goto" is the pathfinder command.
+        groups.put("movement", list("action.move", "action.interact", "module.pathfinder", "module.boat"));
+        groups.put("travel", list("module.elytrapilot")); // ElytraTrip has no separate command; elytrapilot covers it
         groups.put("combat", list("module.killaura", "module.autototem", "module.autoeat", "module.automend",
             "module.autoarmor", "module.autoomen", "module.spook", "module.autorespawn", "module.spawnpatrol", "module.basepatrol"));
-        groups.put("crafting", list("module.villagertrader", "module.pearldrop", "module.aquariusminer", "module.aquariussniffer",
+        groups.put("crafting", list("module.trader", "module.pearldrop", "module.aquariusminer",
             "module.kitmaker", "module.enchanter", "module.stashscanner", "module.orderfiller", "module.regear"));
         groups.put("automation", list("module.antiafk", "module.autofish", "module.autodrop", "module.tasks"));
         groups.put("chat", list("module.autoreply", "module.extrachat", "module.chathistory", "module.click"));
