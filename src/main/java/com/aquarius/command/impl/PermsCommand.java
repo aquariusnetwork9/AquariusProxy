@@ -10,6 +10,7 @@ import com.aquarius.feature.permissions.PermissionManager;
 import com.aquarius.feature.permissions.PermissionsConfig;
 import com.aquarius.feature.permissions.Role;
 import com.aquarius.feature.permissions.UserAssignment;
+import com.aquarius.feature.permissions.WhitelistMigration;
 import com.aquarius.feature.whitelist.PlayerListsManager;
 import com.aquarius.module.impl.RbacApiServer;
 import com.aquarius.module.impl.RbacGuard;
@@ -26,6 +27,7 @@ import static com.mojang.brigadier.arguments.StringArgumentType.word;
 import static com.aquarius.Globals.CONFIG;
 import static com.aquarius.Globals.DISCORD;
 import static com.aquarius.Globals.MODULE;
+import static com.aquarius.Globals.PLAYER_LISTS;
 import static com.aquarius.command.brigadier.ToggleArgumentType.getToggle;
 import static com.aquarius.command.brigadier.ToggleArgumentType.toggle;
 
@@ -63,6 +65,7 @@ public class PermsCommand extends Command {
                 "token revoke <name> <index>",
                 "role list",
                 "group list",
+                "migrate [apply]            (import the legacy whitelist + spectators; dry-run unless 'apply')",
                 "panel                      (post the interactive Discord control panel)"
             )
             .build();
@@ -195,6 +198,9 @@ public class PermsCommand extends Command {
                 c.getSource().getEmbed().title("Capability groups").description(sb.toString().trim()).primaryColor();
                 return OK;
             })))
+            .then(literal("migrate")
+                .executes(c -> { return migrate(c.getSource(), false); })
+                .then(literal("apply").executes(c -> { return migrate(c.getSource(), true); })))
             .then(literal("panel").executes(c -> {
                 boolean posted = DISCORD.openPanel(Panels.PERMS);
                 c.getSource().getEmbed()
@@ -226,6 +232,31 @@ public class PermsCommand extends Command {
         }
         ua.role = role.toLowerCase();
         source.getEmbed().title(ua.name + " is now " + ua.role).successColor();
+        return OK;
+    }
+
+    private int migrate(final CommandContext source, final boolean apply) {
+        var result = WhitelistMigration.run(PLAYER_LISTS, cfg(), apply);
+        if (result.total() == 0) {
+            source.getEmbed().title("Whitelist migration: nothing to import")
+                .description("No whitelist/spectator entries left to import (" + result.skipped() + " already assigned).")
+                .primaryColor();
+            return OK;
+        }
+        StringBuilder sb = new StringBuilder();
+        int shown = 0;
+        for (String d : result.details()) {
+            if (++shown > 25) { sb.append("…and ").append(result.details().size() - 25).append(" more\n"); break; }
+            sb.append("- ").append(d).append('\n');
+        }
+        source.getEmbed()
+            .title(apply ? "Whitelist migrated into RBAC" : "Whitelist migration preview (dry run)")
+            .description(sb.toString().trim())
+            .addField("Control (user)", String.valueOf(result.controlAdded()), true)
+            .addField("Spectate (guest)", String.valueOf(result.spectateAdded()), true)
+            .addField("Skipped (already assigned)", String.valueOf(result.skipped()), true)
+            .addField("Next", apply ? "Done — review with `perms user list`." : "Run `perms migrate apply` to write these.", false)
+            .successColor();
         return OK;
     }
 
