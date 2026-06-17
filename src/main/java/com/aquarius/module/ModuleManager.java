@@ -36,6 +36,7 @@ public class ModuleManager {
             new AutoDetectModule(),
             new AutoLoadModule(),
             new PearlDrop(),
+            new Bridge(),
             new AutoMend(),
             new AutoOmen(),
             new AutoReconnect(),

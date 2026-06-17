@@ -87,6 +87,7 @@ public class CommandManager {
         new PearlLoader(),
         new PearlDropCommand(),
         new PearlPlusCommand(),
+        new BridgeCommand(),
         new PlaytimeCommand(),
         new PluginsCommand(),
         new PrioCommand(),
