@@ -721,6 +721,7 @@ public final class Bot extends ModuleUtils {
 
     private void travelInFluid(MutableVec3d movementInputVec) {
         double beforeMoveY = getY();
+        double effectiveGravity = getEffectiveGravity();
         if (isTouchingWater) {
             boolean falling = velocity.getY() <= 0.0;
             float waterSlowdown = isSprinting ? 0.9f : 0.8f;
@@ -741,10 +742,10 @@ public final class Bot extends ModuleUtils {
             }
             velocity.multiply(waterSlowdown, 0.8f, waterSlowdown);
             double fluidFallingAdjustedY;
-            if (falling && Math.abs(velocity.getY() - 0.005) >= 0.003 && Math.abs(velocity.getY() - gravity / 16.0) < 0.003) {
+            if (falling && Math.abs(velocity.getY() - 0.005) >= 0.003 && Math.abs(velocity.getY() - effectiveGravity / 16.0) < 0.003) {
                 fluidFallingAdjustedY = -0.003;
             } else {
-                fluidFallingAdjustedY = velocity.getY() - gravity / 16.0;
+                fluidFallingAdjustedY = velocity.getY() - effectiveGravity / 16.0;
             }
             velocity.setY(fluidFallingAdjustedY);
         } else { // lava
@@ -754,17 +755,17 @@ public final class Bot extends ModuleUtils {
                 velocity.multiply(0.5, 0.8, 0.5);
                 double fluidFallingAdjustedY;
                 boolean falling = velocity.getY() <= 0.0;
-                if (falling && Math.abs(velocity.getY() - 0.005) >= 0.003 && Math.abs(velocity.getY() - gravity / 16.0) < 0.003) {
+                if (falling && Math.abs(velocity.getY() - 0.005) >= 0.003 && Math.abs(velocity.getY() - effectiveGravity / 16.0) < 0.003) {
                     fluidFallingAdjustedY = -0.003;
                 } else {
-                    fluidFallingAdjustedY = velocity.getY() - gravity / 16.0;
+                    fluidFallingAdjustedY = velocity.getY() - effectiveGravity / 16.0;
                 }
                 velocity.setY(fluidFallingAdjustedY);
             } else {
                 velocity.multiply(0.5);
             }
-            if (gravity != 0.0) {
-                velocity.add(0, -gravity / 4.0, 0);
+            if (effectiveGravity != 0.0) {
+                velocity.add(0, -effectiveGravity / 4.0, 0);
             }
         }
         // todo: autojump when near shore block. need more checks for water level collisions
@@ -777,10 +778,22 @@ public final class Bot extends ModuleUtils {
         return World.getCollidingBlockStatesInside(cb).isEmpty() && !World.containsLiquid(cb);
     }
 
+    /**
+     * Vanilla {@code LivingEntity.getEffectiveGravity()}: while descending under Slow Falling, gravity is clamped to
+     * {@code min(gravity, 0.01)}. Mirrors mineflayer's {@code gravityMultiplier}/{@code slowFalling}. Used by the
+     * travel paths so vertical-velocity prediction (glide, free-fall, fluids) matches the server.
+     */
+    private double getEffectiveGravity() {
+        boolean falling = velocity.getY() <= 0.0;
+        boolean slowFalling = CACHE.getPlayerCache().getThePlayer().getPotionEffectMap().containsKey(Effect.SLOW_FALLING);
+        return falling && slowFalling ? Math.min(gravity, 0.01) : gravity;
+    }
+
     private void travelFallFlying(MutableVec3d movementInputVec) {
         if (velocity.getY() > -0.5 && fallDistance < 1) {
             fallDistance = 1;
         }
+        double effectiveGravity = getEffectiveGravity();
         var lookVec = MathHelper.calculateViewVector(yaw, pitch);
         float pitchRad = pitch * (float) (Math.PI / 180.0);
         double hLookVec = Math.sqrt(lookVec.getX() * lookVec.getX() + lookVec.getZ() * lookVec.getZ());
@@ -788,7 +801,7 @@ public final class Bot extends ModuleUtils {
         double lookVecLen = lookVec.length();
         double cosPitch = Math.cos(pitchRad);
         cosPitch = cosPitch * cosPitch * Math.min(1.0, lookVecLen / 0.4);
-        velocity.add(0, gravity * (-1.0 + cosPitch * 0.75), 0);
+        velocity.add(0, effectiveGravity * (-1.0 + cosPitch * 0.75), 0);
         if (velocity.getY() < 0 && hLookVec > 0) {
             double m = velocity.getY() * -0.1 * cosPitch;
             velocity.add(lookVec.getX() * m / hLookVec, m, lookVec.getZ() * m / hLookVec);
@@ -809,7 +822,7 @@ public final class Bot extends ModuleUtils {
         float floorSlipperiness = floorBlock.friction();
         float friction = this.onGround ? floorSlipperiness * 0.91f : 0.91F;
         applyMovementInput(movementInputVec, floorSlipperiness);
-        if (!isFlying) velocity.setY(velocity.getY() - gravity);
+        if (!isFlying) velocity.setY(velocity.getY() - getEffectiveGravity());
         velocity.multiply(friction, 0.9800000190734863, friction);
     }
 
