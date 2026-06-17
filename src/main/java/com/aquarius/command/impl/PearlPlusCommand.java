@@ -11,11 +11,13 @@ import com.aquarius.module.impl.AutoLoadModule;
 import com.aquarius.module.impl.AutoDetectModule;
 import com.aquarius.module.impl.PearlManager;
 
+import java.util.List;
 import java.util.UUID;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.aquarius.Globals.MODULE;
+import static com.aquarius.Globals.PERMISSIONS;
 import static com.aquarius.command.brigadier.CustomStringArgumentType.getString;
 import static com.aquarius.command.brigadier.CustomStringArgumentType.wordWithChars;
 import static com.aquarius.command.brigadier.ToggleArgumentType.getToggle;
@@ -24,6 +26,20 @@ import static com.aquarius.Globals.CONFIG;
 import static com.aquarius.Globals.MODULE_LOG;
 
 public class PearlPlusCommand extends Command {
+    /** {@code load} is a pull (pearl.pull); everything else manages pearls/settings (pearl.manage). */
+    @Override
+    public String requiredPermission(final List<String> commandPath) {
+        return commandPath.contains("load") ? "pearl.pull" : "pearl.manage";
+    }
+
+    /** A pearl.pull-only subject may only load their OWN pearl; pearl.manage may load anyone's. */
+    private static boolean mayLoadFor(final CommandContext ctx, final String targetName) {
+        if (!PERMISSIONS.isEnabled()) return true;
+        final var subject = ctx.getSource().resolveSubject(ctx);
+        if (PERMISSIONS.allows(subject, "pearl.manage")) return true;
+        return subject.name() != null && subject.name().equalsIgnoreCase(targetName);
+    }
+
     @Override
     public CommandUsage commandUsage() {
         return CommandUsage.builder()
@@ -151,6 +167,11 @@ public class PearlPlusCommand extends Command {
                         .then(argument("pearlId", wordWithChars()).executes(c -> {
                             String name = getString(c, "playerName");
                             String pearlId = getString(c, "pearlId");
+                            if (!mayLoadFor(c.getSource(), name)) {
+                                c.getSource().getEmbed().title("Not Authorized!")
+                                    .addField("Error", "You may only pull your own pearl.", false).errorColor();
+                                return 0;
+                            }
                             UUID uuid = resolveUuidByUsername(name);
                             if (uuid == null) {
                                 c.getSource().getEmbed().title("Invalid username: " + name);

@@ -129,6 +129,15 @@ public abstract class Command {
     }
 
     /**
+     * Path-aware variant: the central gate passes the parsed literal path (root + subcommands, lowercased) so a
+     * command can vary the required permission per subcommand (e.g. {@code pearlplus load} = {@code pearl.pull}
+     * but its management subcommands = {@code pearl.manage}). Default ignores the path.
+     */
+    public String requiredPermission(java.util.List<String> commandPath) {
+        return requiredPermission();
+    }
+
+    /**
      * Required. Register a {@link #command}
      */
     public abstract LiteralArgumentBuilder<CommandContext> register();
