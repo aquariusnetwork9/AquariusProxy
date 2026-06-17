@@ -44,7 +44,7 @@ API (and therefore the ProxyBridge whisper-intercept / mute-bypass and remote pe
 | Role     | Grants |
 |----------|--------|
 | admin    | `*` (unrestricted) |
-| operator | `connect.control`, `command.info`, `command.module`, `module.*`, `action.*`, `pearl.*`, plus selected `command.manage` items |
+| operator | `connect.control`, `command.info`, `command.module`, `action.*`, `pearl.*`, and **all preset groups** (every non-admin module) — i.e. `module.*` minus the admin-exclusive set |
 | user     | `connect.control`, `pearl.pull`, `action.move`, `action.chat`, plus assigned `group.<name>` / `module.<name>` |
 | guest    | `pearl.pull` only — **API/pearl access, no in-game presence** (no spectate by default) |
 | none     | **nothing — no connection, no interaction** (see below) |
@@ -67,15 +67,18 @@ Replace the whitelist config with a `permissions` block (proposed `CONFIG.server
   "defaultRole": "none",          // unknown subject => deny everything (the chosen posture). Not configurable to "guest".
   "minConnectRole": "guest",      // must resolve to >= guest (i.e. be explicitly assigned) to connect at all
   "groups": {                     // capability presets -> permission list (config-defined, granular)
-    "combat":     ["module.killaura","module.autototem","module.autoeat","module.automend","module.autoarmor"],
-    "crafting":   ["module.kitmaker","module.enchanter","module.villagertrader","module.regear"],
-    "movement":   ["action.move","action.interact"],
-    "travel":     ["module.elytrapilot","module.elytratrip","module.boat","command.pathfinder"],
-    "automation": ["module.aquariusminer","module.autofish","module.pearldrop","module.stashscanner","module.antiafk"]
+    "movement":   ["action.move","action.interact","command.goto","command.pathfinder","module.boat"],
+    "travel":     ["module.elytrapilot","module.elytratrip"],          // ebounce + nether flight (long-haul)
+    "combat":     ["module.killaura","module.autototem","module.autoeat","module.automend","module.autoarmor",
+                   "module.autoomen","module.spook","module.autorespawn","module.spawnpatrol","module.basepatrol"],
+    "crafting":   ["module.villagertrader","module.pearldrop","module.aquariusminer","module.aquariussniffer",
+                   "module.kitmaker","module.enchanter","module.stashscanner","module.orderfiller","module.regear"],
+    "automation": ["module.antiafk","module.autofish","module.autodrop","module.tasks"]
   },
   "roles": {                      // role -> permission list (defaults shipped, user-editable; may reference groups)
     "admin":    ["*"],
-    "operator": ["connect.control","command.info","command.module","module.*","action.*","pearl.*"],
+    "operator": ["connect.control","command.info","command.module","action.*","pearl.*",
+                 "group.movement","group.travel","group.combat","group.crafting","group.automation"],
     "user":     ["connect.control","pearl.pull","action.move","action.chat"],
     "guest":    ["pearl.pull"]
   },
@@ -94,6 +97,13 @@ Replace the whitelist config with a `permissions` block (proposed `CONFIG.server
 
 Tokens are stored **hashed** (SHA-256); the plaintext is shown once at issue time. A user may hold several tokens
 (rotate/revoke individually).
+
+**Admin-exclusive (never in a preset, admin role only):** the sensitive/owner surface — `coordobfuscation`,
+`spammer`, `replaymod`, `visualrange`, all **ActionLimiter** restriction controls, all **config-changing /
+`command.manage`** commands, and the **permission system itself** (user/role/group/key assignment, the `/perms`
+API + panels). These require `*`/admin and are excluded from `module.*` for `operator`. (Mapped from the
+ZenithProxy wiki's sensitive-feature set.) `combat` includes a future **`basepatrol`** module (placeholder until it
+ships).
 
 ## Enforcement points (where it wires in)
 
@@ -220,7 +230,10 @@ Both panels are admin-gated by the same permission system — only `command.mana
 
 ## Still open
 
-- The exact module→preset mapping (the config block above is a first cut — e.g. where do `autofish`, `autodrop`,
-  `villagertrader` belong; should `travel` include `command.goto`/baritone explicitly).
-- Whether presets should be **hierarchical** (e.g. `travel` implies `movement`) or flat.
-- Operator's default `module.*` minus a dangerous-list (`coordobfuscation`, `spammer`, `replaymod`?).
+- Presets **flat vs hierarchical** — recommend **flat** (e.g. `travel` doesn't auto-imply `movement`; grant both if
+  you want both). Simpler resolver, no surprises. Easy to revisit.
+- A handful of **leftover modules** not yet bucketed: chat/social (`autoreply`, `extrachat`, `chathistory`,
+  `click`) and safety/connection autos (`antikick`, `antileak`, `autodisconnect`, `sessiontimelimit`, `activehours`,
+  `autoomen`, `requeue`, `queuewarning`). Proposed: a `chat` preset for the first group; the second group is
+  operator-managed (`command.manage`) rather than user-assignable.
+- System/internal modules (`bridge`, `autodetect`, `autoload`, `autoreconnect`) are never user-assignable.
