@@ -2380,6 +2380,8 @@ public final class Config {
         public int compressionLevel = -1;
         public boolean enabled = true;
         public final Extra extra = new Extra();
+        // RBAC (v5.0.0) — role/permission system that will replace the whitelist. Ships disabled; see docs/RBAC_DESIGN.md.
+        public final com.aquarius.feature.permissions.PermissionsConfig permissions = new com.aquarius.feature.permissions.PermissionsConfig();
         public final Ping ping = new Ping();
         public final ServerViaVersion viaversion = new ServerViaVersion();
         public boolean verifyUsers = true;
