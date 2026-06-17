@@ -73,12 +73,17 @@ Replace the whitelist config with a `permissions` block (proposed `CONFIG.server
                    "module.autoomen","module.spook","module.autorespawn","module.spawnpatrol","module.basepatrol"],
     "crafting":   ["module.villagertrader","module.pearldrop","module.aquariusminer","module.aquariussniffer",
                    "module.kitmaker","module.enchanter","module.stashscanner","module.orderfiller","module.regear"],
-    "automation": ["module.antiafk","module.autofish","module.autodrop","module.tasks"]
+    "automation": ["module.antiafk","module.autofish","module.autodrop","module.tasks"],
+    "chat":       ["module.autoreply","module.extrachat","module.chathistory","module.click"],
+    "utility":    ["module.antikick","module.antileak","module.autodisconnect","module.sessiontimelimit",
+                   "module.activehours","module.autoomen","module.requeue","module.queuewarning"],   // operator+
+    "system":     ["module.bridge","module.autodetectmodule","module.autoloadmodule","module.autoreconnect"] // operator+
   },
   "roles": {                      // role -> permission list (defaults shipped, user-editable; may reference groups)
     "admin":    ["*"],
     "operator": ["connect.control","command.info","command.module","action.*","pearl.*",
-                 "group.movement","group.travel","group.combat","group.crafting","group.automation"],
+                 "group.movement","group.travel","group.combat","group.crafting","group.automation",
+                 "group.chat","group.utility","group.system"],
     "user":     ["connect.control","pearl.pull","action.move","action.chat"],
     "guest":    ["pearl.pull"]
   },
@@ -89,7 +94,8 @@ Replace the whitelist config with a `permissions` block (proposed `CONFIG.server
       "grants": ["group.combat","group.travel"],          // assign presets, not internals
       "denies": ["module.spammer"],                       // deny always wins
       "tokens": ["<sha256 of token>"],                    // hashed; plaintext shown once on issue
-      "pearlScope": "self"                                // self | none — whose pearls this token may pull
+      "pearlScope": "self",                               // self | none — whose pearls this token may pull
+      "connectMode": "control"                            // control | spectate — how this user joins (see Join-as-spectator)
     }
   }
 }
@@ -145,6 +151,14 @@ ships).
   role logic lives on the client — the **server** enforces; the client just gets "denied" if the token's role
   lacks the permission.
 - Reuses the bot list + WebAPI client already shipped (`/pb bots`, `/pb pull`).
+- **Join as spectator (no bot interruption)** — normally connecting takes the controlling-player slot and interrupts
+  whatever the bot is doing; you then `/swap` to spectator. For subjects with `connect.spectate`, ProxyBridge adds a
+  **"Join as spectator" button** on the multiplayer server-list entry for a known proxy (the same mixin hook the base
+  ZenithProxyMod uses for its join sprite). It sets the user's `connectMode = spectate` on the bot via the HTTP API
+  (your token) *before* connecting, so the proxy drops the connection straight into spectator mode and the bot keeps
+  running. A matching "Join as controller" clears it (requires `connect.control`). The proxy honors
+  `users.<uuid>.connectMode` at login; guests (spectate-only) always land in spectator regardless. This replaces the
+  interrupt-then-`/swap` dance.
 
 ## Admin panels (so you don't need the CLI)
 
@@ -228,12 +242,15 @@ Both panels are admin-gated by the same permission system — only `command.mana
 - **Admin panels** are first-class: a fuller **ProxyBridge mod GUI** + a simpler **Discord panel**, both over the
   same admin API (add/delete/assign/unassign/bulk + token/API info).
 
-## Still open
+## Settled (this review)
 
-- Presets **flat vs hierarchical** — recommend **flat** (e.g. `travel` doesn't auto-imply `movement`; grant both if
-  you want both). Simpler resolver, no surprises. Easy to revisit.
-- A handful of **leftover modules** not yet bucketed: chat/social (`autoreply`, `extrachat`, `chathistory`,
-  `click`) and safety/connection autos (`antikick`, `antileak`, `autodisconnect`, `sessiontimelimit`, `activehours`,
-  `autoomen`, `requeue`, `queuewarning`). Proposed: a `chat` preset for the first group; the second group is
-  operator-managed (`command.manage`) rather than user-assignable.
-- System/internal modules (`bridge`, `autodetect`, `autoload`, `autoreconnect`) are never user-assignable.
+- **Flat presets** — `travel` does not auto-imply `movement`; grant both if you want both.
+- **`chat`** preset (`autoreply`/`extrachat`/`chathistory`/`click`), **`utility`** (the safety/connection autos),
+  and **`system`** (`bridge`/`autodetect`/`autoload`/`autoreconnect`) are all **operator-default** groups (granted to
+  operator+; assignable to a user only by explicit grant). New ungrouped modules default to **admin-only** (safe).
+- **Join-as-spectator** button is in scope (`connect.spectate`, `connectMode` preference) — see Client side.
+
+## Branches
+
+- **AquariusProxy** side lives on the **`v5.0.0-dev`** branch (this is a major release — it replaces the whitelist).
+- **ProxyBridge** (the mod) lives on `main` in its own repo.
