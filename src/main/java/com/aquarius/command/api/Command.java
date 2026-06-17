@@ -120,7 +120,12 @@ public abstract class Command {
      * enforcement is via the {@link #validateAccountOwner} chokepoint that owner-level commands already call.
      */
     public String requiredPermission() {
-        return "command." + commandUsage().getCategory().name().toLowerCase(java.util.Locale.ROOT);
+        var category = commandUsage().getCategory();
+        if (category == CommandCategory.MODULE) {
+            // module commands gate on the specific module so a user can be granted just the modules they need
+            return "module." + commandUsage().getName().toLowerCase(java.util.Locale.ROOT);
+        }
+        return "command." + category.name().toLowerCase(java.util.Locale.ROOT);
     }
 
     /**

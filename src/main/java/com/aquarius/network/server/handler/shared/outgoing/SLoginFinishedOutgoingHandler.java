@@ -65,6 +65,25 @@ public class SLoginFinishedOutgoingHandler implements PacketHandler<ClientboundL
             }
 
             final AuthorizationState authState;
+            if (CONFIG.server.permissions.enabled) {
+                // RBAC replaces the whitelist: only assigned subjects connect, gated by connect.control/spectate.
+                final AuthorizationState rbac = resolveRbacAuth(clientGameProfile, requestedAuthState);
+                if (rbac == null) {
+                    authFailDisconnect(session, clientGameProfile);
+                    return null;
+                }
+                authState = rbac;
+                SERVER_LOG.info("Username: {} UUID: {} MC: {} [{}] passed the RBAC check with auth: {}", clientGameProfile.getName(), clientGameProfile.getIdAsString(), session.getMCVersion(), session.getRemoteAddress(), authState.name());
+                session.setWhitelistChecked(true);
+                EXECUTOR.execute(() -> {
+                    try {
+                        finishLogin(session, clientGameProfile, authState);
+                    } catch (final Throwable e) {
+                        session.disconnect("Login Failed", e);
+                    }
+                });
+                return null;
+            }
             switch (requestedAuthState) {
                 case SPECTATOR -> {
                     if (!CONFIG.server.spectator.allowSpectator) {
@@ -128,6 +147,28 @@ public class SLoginFinishedOutgoingHandler implements PacketHandler<ClientboundL
         session.disconnect(CONFIG.server.extra.whitelist.kickmsg);
         SERVER_LOG.warn("Username: {} UUID: {} [{}] MC: {} tried to connect!", clientGameProfile.getName(), clientGameProfile.getIdAsString(), session.getMCVersion(), session.getRemoteAddress());
         EVENT_BUS.postAsync(new NonWhitelistedPlayerConnectedEvent(clientGameProfile, session.getRemoteAddress()));
+    }
+
+    /**
+     * RBAC auth decision (used when {@code permissions.enabled}). Returns the granted {@link AuthorizationState},
+     * or {@code null} to deny the connection. Honors the subject's {@code connectMode} spectate preference and the
+     * transfer-cookie request, gated by {@code connect.control}/{@code connect.spectate}.
+     */
+    private AuthorizationState resolveRbacAuth(final GameProfile profile, final AuthorizationState requested) {
+        final var subject = PERMISSIONS.resolve(profile.getId(), profile.getName());
+        if (!PERMISSIONS.canConnect(subject)) return null;
+        final boolean canControl = subject.allows("connect.control");
+        final boolean canSpectate = subject.allows("connect.spectate");
+        return switch (requested) {
+            case CONTROLLER -> canControl ? AuthorizationState.CONTROLLER : null;
+            case SPECTATOR -> canSpectate ? AuthorizationState.SPECTATOR : null;
+            case CONTROLLER_OR_SPECTATOR -> {
+                if (subject.wantsSpectate() && canSpectate) yield AuthorizationState.SPECTATOR;
+                if (canControl) yield AuthorizationState.CONTROLLER_OR_SPECTATOR;
+                if (canSpectate) yield AuthorizationState.SPECTATOR;
+                yield null;
+            }
+        };
     }
 
     private void finishLogin(ServerSession session, GameProfile clientGameProfile, final AuthorizationState authState) {

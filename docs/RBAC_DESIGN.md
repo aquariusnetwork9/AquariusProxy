@@ -212,7 +212,9 @@ Both panels are admin-gated by the same permission system — only `command.mana
 2. **Command auth** — route `validateAccountOwner`/category checks through `Permissions`; add `requiredPermission()`
    to `Command`; keep legacy mode.
 3. **Login + module + action gating** — replace `kickNonWhitelistedPlayers`; gate module toggles; map roles →
-   ActionLimiter.
+   ActionLimiter. _(Done: RBAC login gating in `SLoginFinishedOutgoingHandler` honoring `connect.*` + `connectMode`;
+   central MODULE-command gate in `CommandManager` = `module.<name>` or `command.module`. Remaining: the role →
+   ActionLimiter movement/chat mapping.)_
 4. **HTTP API** — netty server + `ApiCommandSource` + `/command` + the `/perms` admin surface + token issue/revoke
    (`/perms token …`), localhost-bound, audited.
 5. **Admin panels** — Discord panel first (reuses existing infra), then the ProxyBridge mod GUI screen.

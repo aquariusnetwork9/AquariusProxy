@@ -118,6 +118,21 @@ class PermissionManagerTest {
     }
 
     @Test
+    void presetGroupsUseRealCommandNames() {
+        // The module gate checks "module.<commandName lowercased>", so groups must use real command names.
+        var cfg = new PermissionsConfig();
+        var u = user(cfg, "Crafter", "user");
+        u.grants.add("group.crafting");
+        u.grants.add("group.movement");
+        var mgr = mgr(cfg);
+        Subject s = mgr.resolve(uuidOf(cfg, u), "Crafter");
+        assertTrue(s.allows("module.trader"));      // VillagerTrader's command is "trader", not "villagertrader"
+        assertTrue(s.allows("module.pathfinder"));  // baritone goto is the "pathfinder" command
+        assertTrue(s.allows("module.pearldrop"));
+        assertFalse(s.allows("module.killaura"));   // combat not granted
+    }
+
+    @Test
     void adminWildcardImpliesEverything() {
         var cfg = new PermissionsConfig();
         var ua = user(cfg, "Boss", "admin");

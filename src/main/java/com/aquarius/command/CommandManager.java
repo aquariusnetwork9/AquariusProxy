@@ -19,7 +19,10 @@ import lombok.Locked;
 import org.geysermc.mcprotocollib.protocol.data.game.command.CommandNode;
 import org.jspecify.annotations.NonNull;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -135,6 +138,8 @@ public class CommandManager {
         new WhitelistCommand()
     );
     private final CommandDispatcher<CommandContext> dispatcher;
+    /** root literal/alias (lowercased) -> Command, for the RBAC permission gate. */
+    private final Map<String, Command> commandByLiteral = new HashMap<>();
     private @NonNull CommandNode[] mcplCommandNodes = new CommandNode[0];
     private AtomicBoolean mcplCommandNodesStale = new AtomicBoolean(true);
 
@@ -175,6 +180,8 @@ public class CommandManager {
         }
         final LiteralCommandNode<CommandContext> node = dispatcher.register(cmdBuilder);
         command.commandUsage().getAliases().forEach(alias -> dispatcher.register(command.redirect(alias, node)));
+        commandByLiteral.put(cmdBuilder.getLiteral().toLowerCase(Locale.ROOT), command);
+        command.commandUsage().getAliases().forEach(alias -> commandByLiteral.put(alias.toLowerCase(Locale.ROOT), command));
     }
 
     @Locked
@@ -236,6 +243,25 @@ public class CommandManager {
             .map(node -> ((CaseInsensitiveLiteralCommandNode<CommandContext>) node));
         if (commandNodeOptional.isEmpty()) return;
         var commandNode = commandNodeOptional.get();
+
+        // RBAC: gate MODULE commands on the specific module permission (or command.module for operators+).
+        // Other categories keep their existing behavior (MANAGE via validateAccountOwner; INFO/CORE open).
+        // Inert while permissions.enabled == false; trusted sources (console/Discord/internal) resolve to admin.
+        if (PERMISSIONS.isEnabled()) {
+            final Command gated = commandByLiteral.get(commandNode.getLiteral().toLowerCase(Locale.ROOT));
+            if (gated != null && gated.commandUsage().getCategory() == CommandCategory.MODULE) {
+                final var subject = context.getSource().resolveSubject(context);
+                final String perm = gated.requiredPermission();
+                if (!PERMISSIONS.allows(subject, perm) && !PERMISSIONS.allows(subject, "command.module")) {
+                    context.getEmbed()
+                        .title("Not Authorized!")
+                        .addField("Error", "You lack permission `" + perm + "` to use that module.", false)
+                        .errorColor();
+                    return;
+                }
+            }
+        }
+
         var errorHandler = commandNode.getErrorHandler();
         var successHandler = commandNode.getSuccessHandler();
         var executionErrorHandler = commandNode.getExecutionErrorHandler();
