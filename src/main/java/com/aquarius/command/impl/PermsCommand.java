@@ -64,7 +64,9 @@ public class PermsCommand extends Command {
                 "user role <name> <role>",
                 "user remove <name>",
                 "user grant <name> <perm>   (e.g. group.combat, module.killaura)",
+                "user ungrant <name> <perm>",
                 "user deny <name> <perm>",
+                "user undeny <name> <perm>",
                 "user info <name>",
                 "token issue <name>         (prints the token once)",
                 "token revoke <name> <index>",
@@ -145,12 +147,28 @@ public class PermsCommand extends Command {
                     c.getSource().getEmbed().title(ua.name + " grants += " + perm).description("grants: " + ua.grants);
                     return OK;
                 }))))
+                .then(literal("ungrant").then(argument("name", word()).then(argument("perm", greedyString()).executes(c -> {
+                    UserAssignment ua = findByName(getString(c, "name"));
+                    if (ua == null) return notFound(c.getSource(), getString(c, "name"));
+                    String perm = getString(c, "perm").trim();
+                    boolean removed = ua.grants.remove(perm);
+                    c.getSource().getEmbed().title(ua.name + (removed ? " grants -= " : " had no grant ") + perm).description("grants: " + ua.grants);
+                    return OK;
+                }))))
                 .then(literal("deny").then(argument("name", word()).then(argument("perm", greedyString()).executes(c -> {
                     UserAssignment ua = findByName(getString(c, "name"));
                     if (ua == null) return notFound(c.getSource(), getString(c, "name"));
                     String perm = getString(c, "perm").trim();
                     if (!ua.denies.contains(perm)) ua.denies.add(perm);
                     c.getSource().getEmbed().title(ua.name + " denies += " + perm).description("denies: " + ua.denies);
+                    return OK;
+                }))))
+                .then(literal("undeny").then(argument("name", word()).then(argument("perm", greedyString()).executes(c -> {
+                    UserAssignment ua = findByName(getString(c, "name"));
+                    if (ua == null) return notFound(c.getSource(), getString(c, "name"));
+                    String perm = getString(c, "perm").trim();
+                    boolean removed = ua.denies.remove(perm);
+                    c.getSource().getEmbed().title(ua.name + (removed ? " denies -= " : " had no deny ") + perm).description("denies: " + ua.denies);
                     return OK;
                 }))))
                 .then(literal("info").then(argument("name", word()).executes(c -> {
