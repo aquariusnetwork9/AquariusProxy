@@ -485,6 +485,76 @@ public class PlayerInteractionManager {
             seqId));
     }
 
+    /**
+     * AirPlace: place a block at an arbitrary position with NO line-of-sight / adjacency check, using the
+     * "offhand-swap" technique decoded from a working client (Rusherhack capture, see AIRPLACE_LOG.md). The
+     * block to place must be held in the MAIN hand. This swaps it to the offhand, places from {@code OFF_HAND}
+     * with {@code insideBlock=true} and a randomized cursor hit-vec (the signals that make Grim/2b2t skip the
+     * reach/LOS check), then swaps back — net-zero hand state.
+     *
+     * <p>AutoTotem coexistence: a totem pops from EITHER hand, and all three packets are emitted ATOMICALLY
+     * within one tick, so {@link com.aquarius.module.impl.AutoTotem} (which runs on tick boundaries and owns the
+     * offhand) never observes the half-swapped state and the offhand totem is always restored before the next
+     * tick. As belt-and-suspenders we also YIELD the placement on any tick AutoTotem would act (low HP), so
+     * totem restoration wins the offhand during combat building.
+     *
+     * @return true if the placement was emitted; false if suppressed (disabled, or yielded to AutoTotem).
+     */
+    public boolean airPlaceOn(int x, int y, int z, Direction face) {
+        if (!CONFIG.client.extra.airPlace.enabled) return false;
+        return emitAirPlace(x, y, z, face);
+    }
+
+    /**
+     * Emit one offhand-swap airplace, BYPASSING the {@code airPlace.enabled} master switch — for authorized internal
+     * consumers (e.g. {@link com.aquarius.module.impl.AutoPortal}) that own their own enable gate. Still honors the
+     * AutoTotem yield and {@code randomizeCursor}. Prefer {@link #airPlaceOn} for anything user-facing.
+     *
+     * @return true if emitted; false if yielded to AutoTotem this tick.
+     */
+    public boolean emitAirPlace(int x, int y, int z, Direction face) {
+        if (yieldToAutoTotemThisTick()) return false;
+        var client = Proxy.getInstance().getClient();
+        // swap the held block into the offhand
+        client.send(swapOffhandPacket());
+        // place from the offhand with the airplace signals; the prediction handler supplies the sequence id
+        final float cx, cy, cz;
+        if (CONFIG.client.extra.airPlace.randomizeCursor) {
+            var r = java.util.concurrent.ThreadLocalRandom.current();
+            cx = r.nextFloat(); cy = r.nextFloat(); cz = r.nextFloat();
+        } else {
+            cx = 0.5f; cy = 0.5f; cz = 0.5f;
+        }
+        startPrediction(seqId -> new ServerboundUseItemOnPacket(
+            x, y, z,
+            face.mcpl(),
+            Hand.OFF_HAND,
+            cx, cy, cz,
+            true,   // insideBlock — claims head-inside-block so the server skips reach/LOS (Grim-accepted)
+            false,  // hitWorldBorder
+            seqId));
+        // swap back — net-zero hand state; the totem (if any) returns to the offhand
+        client.send(swapOffhandPacket());
+        return true;
+    }
+
+    private static ServerboundPlayerActionPacket swapOffhandPacket() {
+        return new ServerboundPlayerActionPacket(
+            PlayerAction.SWAP_ITEM_WITH_OFFHAND,
+            0, 0, 0,
+            Direction.DOWN.mcpl(),
+            0);
+    }
+
+    /** True if AirPlace should defer this tick because AutoTotem is (or is about to be) restoring the offhand totem. */
+    private boolean yieldToAutoTotemThisTick() {
+        if (!CONFIG.client.extra.airPlace.yieldToAutoTotem) return false;
+        if (!CONFIG.client.extra.autoTotem.enabled) return false;
+        var player = CACHE.getPlayerCache().getThePlayer();
+        return player != null && player.isAlive()
+            && player.getHealth() <= CONFIG.client.extra.autoTotem.healthThreshold;
+    }
+
     // todo: is this allowed if we are not holding a usable item? or any item at all?
     protected InteractionResult useItem(Hand hand) {
         startPrediction(seqId -> {

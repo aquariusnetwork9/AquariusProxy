@@ -12,7 +12,8 @@ import static com.aquarius.Globals.MODULE;
 public class ALSetCursorItemHandler implements PacketHandler<ClientboundSetCursorItemPacket, ServerSession> {
     @Override
     public ClientboundSetCursorItemPacket apply(final ClientboundSetCursorItemPacket packet, final ServerSession session) {
-        if (!CONFIG.client.extra.actionLimiter.itemsBlacklistEnabled) return packet;
+        if (!CONFIG.client.extra.actionLimiter.itemsBlacklistEnabled
+            || !CONFIG.client.extra.actionLimiter.blacklistedItemDisconnect) return packet;
         var al = MODULE.get(ActionLimiter.class);
         if (al.isBlacklistedItem(packet.getContents())) {
             var itemName = ItemRegistry.REGISTRY.get(packet.getContents().getId()).name();

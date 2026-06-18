@@ -74,6 +74,7 @@ public class Globals {
     public static final SimpleEventBus EVENT_BUS;
     public static final ScheduledExecutorService EXECUTOR;
     public static final PlayerListsManager PLAYER_LISTS;
+    public static final com.aquarius.feature.permissions.PermissionManager PERMISSIONS;
     public static final BlockDataManager BLOCK_DATA;
     public static final EntityDataManager ENTITY_DATA;
     public static final MapBlockColorManager MAP_BLOCK_COLOR;
@@ -239,6 +240,12 @@ public class Globals {
             VIA_INITIALIZER = new AquariusViaInitializer();
             TranslationRegistryInitializer.registerAllTranslations();
             CONFIG = loadConfig();
+            PERMISSIONS = new com.aquarius.feature.permissions.PermissionManager(
+                () -> CONFIG.server.permissions,
+                () -> {
+                    var p = CACHE.getProfileCache().getProfile();
+                    return p != null ? p.getId() : null;
+                });
             LAUNCH_CONFIG = loadLaunchConfig();
             VERSION = getVersion();
             PLUGIN_MANAGER = new PluginManager();
