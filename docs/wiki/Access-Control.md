@@ -1,5 +1,11 @@
 # Access Control (RBAC)
 
+!!! warning "Beta — new in 5.1.0"
+
+    Access control is **fully built but not yet live-tested end-to-end on 2b2t**. It ships **off**, so leaving it
+    disabled keeps the proxy on its proven whitelist behavior. Try it on a test setup before relying on it, and
+    please report issues. The account owner is always admin, so you can't lock yourself out.
+
 Access control replaces the old whitelist with **roles** and **per-user permissions**: each player gets a role
 (`guest` / `user` / `operator` / `admin`), and roles unlock movement, modules, pearl pulls, and a remote API. You can
 also grant individual players extra abilities or take some away.
