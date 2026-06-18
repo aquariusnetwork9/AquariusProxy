@@ -1,0 +1,81 @@
+name: Rebuild Release (GitHub-native)
+
+# Build any past ref GitHub-native and publish/replace its AquariusProxy.jar on a release.
+# Runs the workflow from the default branch (clean) but checks out the chosen ref's code.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref (tag/branch/sha) to build, e.g. 4.1.0+1.21.4.pre'
+        required: true
+      release_tag:
+        description: 'Release tag to publish/update, e.g. 4.1.0+1.21.4'
+        required: true
+      release_name:
+        description: 'Release title'
+        required: false
+        default: ''
+      prerelease:
+        description: 'Mark as a prerelease'
+        type: boolean
+        default: false
+      make_latest:
+        description: 'Mark as the repo Latest'
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write
+  contents: write
+  attestations: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the target ref
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.ref }}
+          persist-credentials: false
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+
+      - name: Elevate wrapper permissions
+        run: chmod +x ./gradlew
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Build shadow jar
+        env:
+          # Older refs read ZENITH_RELEASE_TAG; current refs read AQUARIUS_RELEASE_TAG. Set both.
+          RELEASE_TAG: ${{ github.event.inputs.release_tag }}
+          ZENITH_RELEASE_TAG: ${{ github.event.inputs.release_tag }}
+          AQUARIUS_RELEASE_TAG: ${{ github.event.inputs.release_tag }}
+        run: ./gradlew shadowJar
+
+      - name: Attest build provenance
+        uses: actions/attest@v4
+        continue-on-error: true
+        with:
+          subject-path: 'build/libs/AquariusProxy.jar'
+
+      - name: Publish / update release (AquariusProxy.jar only)
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.event.inputs.release_tag }}
+          name: ${{ github.event.inputs.release_name }}
+          artifacts: "build/libs/AquariusProxy.jar"
+          allowUpdates: true
+          replacesArtifacts: true
+          removeArtifacts: true
+          omitNameDuringUpdate: true
+          omitBodyDuringUpdate: true
+          prerelease: ${{ github.event.inputs.prerelease }}
+          makeLatest: ${{ github.event.inputs.make_latest }}
+          artifactErrorsFailBuild: true
