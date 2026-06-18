@@ -60,9 +60,25 @@ def setup_execute(config: LaunchConfig):
 
     minecraft_version = "1.21.4"
 
+    # stable vs beta: a ".pre" channel suffix opts the auto-updater into prereleases.
+    pre_suffix = ""
+    while True:
+        info("Select a release channel: (1/2)")
+        info("1. stable (Recommended)")
+        info("2. beta (prereleases — newest features, may be unstable)")
+        i1 = input("> ")
+        if i1 == "1":
+            break
+        elif i1 == "2":
+            pre_suffix = ".pre"
+            break
+        else:
+            error("Invalid input. Enter 1 or 2")
+    info("")
+
     config.auto_update = True
     config.auto_update_launcher = True
-    config.release_channel = release_channel + "." + minecraft_version
+    config.release_channel = release_channel + "." + minecraft_version + pre_suffix
     config.version = "0.0.0"
     config.local_version = "0.0.0"
     config.repo_owner = "rfresh2"
