@@ -63,6 +63,7 @@ public class PermsCommand extends Command {
                 "user add <name> <role>     (resolve + assign a role)",
                 "user role <name> <role>",
                 "user remove <name>",
+                "user mode <name> <control|spectate>",
                 "user grant <name> <perm>   (e.g. group.combat, module.killaura)",
                 "user ungrant <name> <perm>",
                 "user deny <name> <perm>",
@@ -169,6 +170,18 @@ public class PermsCommand extends Command {
                     String perm = getString(c, "perm").trim();
                     boolean removed = ua.denies.remove(perm);
                     c.getSource().getEmbed().title(ua.name + (removed ? " denies -= " : " had no deny ") + perm).description("denies: " + ua.denies);
+                    return OK;
+                }))))
+                .then(literal("mode").then(argument("name", word()).then(argument("mode", word()).executes(c -> {
+                    UserAssignment ua = findByName(getString(c, "name"));
+                    if (ua == null) return notFound(c.getSource(), getString(c, "name"));
+                    String m = getString(c, "mode").trim().toLowerCase();
+                    if (!m.equals("control") && !m.equals("spectate")) {
+                        c.getSource().getEmbed().title("Mode must be 'control' or 'spectate'").errorColor();
+                        return ERROR;
+                    }
+                    ua.connectMode = m;
+                    c.getSource().getEmbed().title(ua.name + " connect mode = " + m);
                     return OK;
                 }))))
                 .then(literal("info").then(argument("name", word()).executes(c -> {
