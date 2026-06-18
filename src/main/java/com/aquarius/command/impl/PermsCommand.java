@@ -8,12 +8,15 @@ import com.aquarius.discord.Embed;
 import com.aquarius.discord.Panels;
 import com.aquarius.feature.permissions.PermissionManager;
 import com.aquarius.feature.permissions.PermissionsConfig;
+import com.aquarius.feature.permissions.PermissionsSnapshot;
 import com.aquarius.feature.permissions.Role;
 import com.aquarius.feature.permissions.UserAssignment;
 import com.aquarius.feature.permissions.WhitelistMigration;
 import com.aquarius.feature.whitelist.PlayerListsManager;
 import com.aquarius.module.impl.RbacApiServer;
 import com.aquarius.module.impl.RbacGuard;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 
 import java.security.SecureRandom;
@@ -38,6 +41,8 @@ import static com.aquarius.command.brigadier.ToggleArgumentType.toggle;
  */
 public class PermsCommand extends Command {
     private static final SecureRandom RANDOM = new SecureRandom();
+    /** Compact (no HTML-escaping, no pretty-print) so {@code perms export} emits single-line JSON for the mod GUI. */
+    private static final Gson EXPORT_GSON = new GsonBuilder().disableHtmlEscaping().create();
 
     private static PermissionsConfig cfg() {
         return CONFIG.server.permissions;
@@ -66,6 +71,7 @@ public class PermsCommand extends Command {
                 "role list",
                 "group list",
                 "migrate [apply]            (import the legacy whitelist + spectators; dry-run unless 'apply')",
+                "export                     (JSON snapshot for the mod GUI; token counts only, no hashes)",
                 "panel                      (post the interactive Discord control panel)"
             )
             .build();
@@ -201,6 +207,16 @@ public class PermsCommand extends Command {
             .then(literal("migrate")
                 .executes(c -> { return migrate(c.getSource(), false); })
                 .then(literal("apply").executes(c -> { return migrate(c.getSource(), true); })))
+            .then(literal("export").executes(c -> {
+                // Structured JSON snapshot for the ProxyBridge mod GUI (read via the HTTP /command API). Token
+                // counts only, never the hashes. Emitted as the embed description so the API flattens it to one line.
+                c.getSource().setSensitiveInput(true);
+                c.getSource().getEmbed()
+                    .title("perms-export")
+                    .description(EXPORT_GSON.toJson(PermissionsSnapshot.of(cfg())))
+                    .primaryColor();
+                return OK;
+            }))
             .then(literal("panel").executes(c -> {
                 boolean posted = DISCORD.openPanel(Panels.PERMS);
                 c.getSource().getEmbed()
