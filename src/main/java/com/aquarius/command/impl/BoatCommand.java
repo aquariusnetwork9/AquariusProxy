@@ -9,6 +9,8 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 
 import static com.mojang.brigadier.arguments.DoubleArgumentType.doubleArg;
 import static com.mojang.brigadier.arguments.DoubleArgumentType.getDouble;
+import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
+import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 import static com.aquarius.Globals.MODULE;
 
 /**
@@ -29,7 +31,9 @@ public class BoatCommand extends Command {
             .usageLines(
                 "mount               (right-click the nearest empty boat to seat the bot, then arm control)",
                 "on/off              (enable/disable boat control)",
-                "goto <x> <z>        (autopilot: steer to open-water coords, then stop)",
+                "goto <x> <z>        (autopilot: route around land to the coords, then stop)",
+                "avoid <on|off>      (route around land vs. steer straight at the target; default on)",
+                "radius <8-256>      (A* search window half-size in blocks; default 64)",
                 "fwd                 (manual: hold forward)",
                 "back                (manual: hold reverse)",
                 "left                (manual: hold turn left)",
@@ -68,8 +72,27 @@ public class BoatCommand extends Command {
                         boat.enable();
                         boat.goTo(x, z);
                         c.getSource().getEmbed().title("Boat goto")
-                            .description("Steering to " + (int) x + ", " + (int) z);
+                            .description((boat.isAvoid() ? "Routing around land to " : "Steering straight to ")
+                                + (int) x + ", " + (int) z);
                     }))))
+            .then(literal("avoid")
+                .then(literal("on").executes(c -> {
+                    MODULE.get(Boat.class).setAvoid(true);
+                    c.getSource().getEmbed().title("Boat avoidance ON")
+                        .description("Routing around land (blocks breaching the water surface).");
+                }))
+                .then(literal("off").executes(c -> {
+                    MODULE.get(Boat.class).setAvoid(false);
+                    c.getSource().getEmbed().title("Boat avoidance OFF")
+                        .description("Steering straight at the target — no obstacle avoidance.");
+                })))
+            .then(literal("radius")
+                .then(argument("blocks", integer(8, 256)).executes(c -> {
+                    Boat boat = MODULE.get(Boat.class);
+                    boat.setPlanRadius(getInteger(c, "blocks"));
+                    c.getSource().getEmbed().title("Boat search radius")
+                        .description("A* window half-size set to " + boat.getPlanRadius() + " blocks.");
+                })))
             .then(literal("fwd").executes(c -> { manual(c.getSource(), true, false, false, false, "forward"); }))
             .then(literal("back").executes(c -> { manual(c.getSource(), false, true, false, false, "reverse"); }))
             .then(literal("left").executes(c -> { manual(c.getSource(), false, false, true, false, "turning left"); }))
