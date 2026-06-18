@@ -1,168 +1,102 @@
-name: 1.21.4 PreRelease Build and Release
+name: PreRelease Build and Release
 
 on:
   push:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+\+1.21.4.pre'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Proxy version to cut, e.g. 5.0.0 (the +1.21.4.pre / +java.1.21.4 tags are derived from it)'
+        required: true
+        default: '5.0.0'
+
+permissions:
+  id-token: write
+  contents: write
+  attestations: write
 
 jobs:
-  build-java-and-linux-amd64:
-    # 32gb memory needed for instrumenting
-    runs-on: ubicloud-standard-8
-    container:
-      image: catthehacker/ubuntu:act-22.04
+  build-and-prerelease:
+    runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
-      - name: Setup GraalVM
-        uses: graalvm/setup-graalvm@v1
+      - name: Setup JDK
+        uses: actions/setup-java@v5
         with:
           java-version: '25'
-          distribution: 'graalvm'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Echo Versions and Paths
-        run: |
-          echo "GRAALVM_HOME: $GRAALVM_HOME"
-          echo "JAVA_HOME: $JAVA_HOME"
-          java --version
-          native-image --version
+          distribution: 'corretto'
 
       - name: Elevate wrapper permissions
         run: chmod +x ./gradlew
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
-        with:
-          dependency-graph: generate-and-submit
-          cache-read-only: ${{ github.event_name == 'pull_request' }}
 
-      - name: Get Release Tags
+      - name: Derive release tags
         env:
-          TAG_NAME: ${{ github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          j_tag="$(sed 's/\+/\+java./' <<< $TAG_NAME)"
-          echo "JAVA_TAG=$j_tag" >> "$GITHUB_ENV"
-          l_tag="$(sed 's/\+/\+linux./' <<< $TAG_NAME)"
-          echo "LINUX_TAG=$l_tag" >> "$GITHUB_ENV"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            pre_tag="${INPUT_VERSION}+1.21.4.pre"
+          else
+            pre_tag="$REF_NAME"
+          fi
+          # .pre source tag, e.g. 5.0.0+1.21.4.pre
+          echo "PRE_TAG=$pre_tag" >> "$GITHUB_ENV"
+          # Strip the .pre suffix, then mint the launcher's java channel tag:
+          #   5.0.0+1.21.4.pre -> 5.0.0+1.21.4 -> 5.0.0+java.1.21.4
+          base="${pre_tag%.pre}"
+          java_tag="${base/+/+java.}"
+          echo "JAVA_TAG=$java_tag" >> "$GITHUB_ENV"
+          # The in-app version string the jar reports (java channel).
+          echo "RELEASE_TAG=$java_tag" >> "$GITHUB_ENV"
         shell: bash
 
-      - name: Export Java Tag
+      - name: Build shadow jar
         env:
-          TAG_NAME: ${{ github.ref_name }}
+          # Embedded as the in-app version (zenith_release.txt) and the maven coords.
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
+          ZENITH_RELEASE_TAG: ${{ env.RELEASE_TAG }}
+        run: ./gradlew shadowJar
+
+      - name: Stage launcher assets
         run: |
-          echo "RELEASE_TAG=$JAVA_TAG" >> "$GITHUB_ENV"
+          mkdir -p artifacts
+          # The launcher's java channel pulls the AquariusProxy.jar asset; the
+          # ZenithProxy.jar copy keeps older/zenith-named launcher configs working.
+          cp build/libs/AquariusProxy.jar artifacts/AquariusProxy.jar
+          cp build/libs/AquariusProxy.jar artifacts/ZenithProxy.jar
 
-      - name: Build ZenithProxy Java
-        run: ./gradlew build -x test
-
-      - name: Upload Java Artifact
-        uses: actions/upload-artifact@v7
+      - name: Attest build provenance
+        uses: actions/attest@v4
         with:
-          name: ZenithProxy.jar
-          path: build/libs/ZenithProxy.jar
-          if-no-files-found: error
-          archive: false
+          subject-path: 'artifacts/AquariusProxy.jar'
 
-      - name: Download GraalVM Profile
-        run: |
-          wget https://cdn.2b2t.vc/profile.iprof
-          echo "GRAALVM_PGO_PATH=$(pwd)/profile.iprof" >> "$GITHUB_ENV"
-
-      - name: Enable GraalVM Build Report
-        run: echo "GRAALVM_BUILD_REPORT=true" >> "$GITHUB_ENV"
-
-#      - name: Enable GraalVM Profile Instrumenting
-#        run: |
-#          echo "GRAALVM_PGO_INSTRUMENT=true" >> "$GITHUB_ENV"
-
-      - name: Export Linux Tag
-        env:
-          TAG_NAME: ${{ github.ref_name }}
-        run: |
-          echo "RELEASE_TAG=$LINUX_TAG" >> "$GITHUB_ENV"
-
-      - name: Build ZenithProxy Linux Native
-        run: ./gradlew nativeCompile -x test
-
-      - name: Move GraalVM Build Report
-        run: mv build/native/nativeCompile/*build-report.html build/native/ZenithProxy-build-report.html
-
-      - name: Elevate binary permissions
-        run: chmod +x build/native/nativeCompile/*
-
-      - name: Zip Binary And Libs
-        run: zip -j ZenithProxy.zip build/native/nativeCompile/*
-
-      - name: Upload Linux Artifact
-        uses: actions/upload-artifact@v7
+      - name: Publish PreRelease (source tag)
+        uses: ncipollo/release-action@v1
         with:
-          name: ZenithProxy.zip
-          path: ZenithProxy.zip
-          if-no-files-found: error
-          archive: false
+          tag: ${{ env.PRE_TAG }}
+          artifacts: "artifacts/AquariusProxy.jar,artifacts/ZenithProxy.jar"
+          prerelease: true
+          allowUpdates: true
+          commit: ${{ github.sha }}
+          body: "Pre-release built by GitHub Actions. Not for manual download — **use the Aquarius Launcher:** https://github.com/aquariusnetwork9/AquariusProxy/releases/tag/launcher-v3\n\nBoth `AquariusProxy.jar` and `ZenithProxy.jar` assets are the same shadow jar."
+          artifactErrorsFailBuild: true
 
-      - name: Upload GraalVM Build Report
-        uses: actions/upload-artifact@v7
-        with:
-          name: GraalVM Build Report
-          path: build/native/ZenithProxy-build-report.html
-          if-no-files-found: error
-          archive: false
-
-      - name: Publish Maven Artifact Snapshot
-        env:
-          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
-        run: ./gradlew publishSnapshotPublicationToSnapshotsRepository
-
-  release-artifacts:
-    needs:
-      - build-java-and-linux-amd64
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download java artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: ZenithProxy.jar
-          merge-multiple: true
-          path: artifacts/
-
-      - name: Download linux artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: ZenithProxy.zip
-          merge-multiple: true
-          path: artifacts/
-          skip-decompress: true
-
-      - name: Get Release Tags
-        env:
-          TAG_NAME: ${{ github.ref_name }}
-        run: |
-          j_tag="$(sed 's/\+/\+java./' <<< $TAG_NAME)"
-          echo "JAVA_TAG=$j_tag" >> "$GITHUB_ENV"
-          l_tag="$(sed 's/\+/\+linux./' <<< $TAG_NAME)"
-          echo "LINUX_TAG=$l_tag" >> "$GITHUB_ENV"
-
-      - name: Publish Java Artifact
+      - name: Publish PreRelease (launcher java channel)
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ env.JAVA_TAG }}
-          artifacts: "artifacts/*.jar"
+          artifacts: "artifacts/AquariusProxy.jar,artifacts/ZenithProxy.jar"
           prerelease: true
-          body: "File upload not for users. **Use the Launcher:** https://github.com/aquariusnetwork9/AquariusProxy/releases/tag/launcher-v3"
+          allowUpdates: true
           commit: ${{ github.sha }}
-          artifactErrorsFailBuild: true
-
-      - name: Publish Linux Artifact
-        uses: ncipollo/release-action@v1
-        with:
-          tag: ${{ env.LINUX_TAG }}
-          artifacts: "artifacts/ZenithProxy.zip"
-          prerelease: true
-          body: "File upload not for users. **Use the Launcher:** https://github.com/aquariusnetwork9/AquariusProxy/releases/tag/launcher-v3"
-          commit: ${{ github.sha }}
+          body: "Pre-release built by GitHub Actions, published on the `java.1.21.4` channel tag so the Aquarius Launcher auto-discovers it. Not for manual download — **use the Aquarius Launcher:** https://github.com/aquariusnetwork9/AquariusProxy/releases/tag/launcher-v3\n\nBoth `AquariusProxy.jar` and `ZenithProxy.jar` assets are the same shadow jar."
           artifactErrorsFailBuild: true
