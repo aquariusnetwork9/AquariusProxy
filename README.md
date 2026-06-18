@@ -43,7 +43,7 @@ AquariusProxy is ZenithProxy with the following changes:
 | **+ Module** | **ElytraPilot** — autopilot elytra flight (climb/glide travel, 2b2t nether-highway bounce, overworld↔nether trip planner). |
 | **+ Module** | **Enchanter** — auto-builds max-template gear in an anvil station via the **cheapest anvil combine order**. |
 | **+ Stash system** | **StashScanner** + **OrderFiller** + native **Order System** — a Postgres/Redis-backed stash census, payment-gated order picker, and Discord order intake/manifest. Reuses the proxy's existing database + Discord layers. See the [Order System wiki](https://github.com/aquariusnetwork9/AquariusProxy/wiki/OrderSystem). |
-| **+ Access control (RBAC)** | Per-user **roles + tokens** that replace the whitelist — gating login, commands, movement, and a localhost HTTP API — with a Discord panel and an in-game mod GUI. Ships **off** (zero behavior change until enabled). See the [Access Control wiki](https://github.com/aquariusnetwork9/AquariusProxy/wiki/Access-Control). |
+| **+ Access control (RBAC)** _(beta, new in 5.1.0)_ | Per-user **roles + tokens** that replace the whitelist — gating login, commands, movement, and a localhost HTTP API — with a Discord panel and an in-game mod GUI. Ships **off** (zero behavior change until enabled). See the [Access Control wiki](https://github.com/aquariusnetwork9/AquariusProxy/wiki/Access-Control). |
 
 These modules are **native built-ins**: no plugin jars, no separate config files. They all default to **off** and add no overhead until enabled. Every setting lives in the main `config.json` under `client.extra.<module>` and is configured entirely through commands ([full reference on the wiki](https://github.com/aquariusnetwork9/AquariusProxy/wiki/Command-Reference)).
 
