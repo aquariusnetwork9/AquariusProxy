@@ -6,6 +6,7 @@ import com.aquarius.event.client.ClientBotTick;
 import com.aquarius.feature.bridge.BridgeProtocol;
 import com.aquarius.feature.bridge.BridgeWaypoint;
 import com.aquarius.feature.litematica.BuildPlan;
+import com.aquarius.feature.litematica.BuildPlan.Placement;
 import com.aquarius.feature.litematica.Schematic;
 import com.aquarius.feature.litematica.SchematicFormat;
 import com.aquarius.feature.pathfinder.goals.GoalNear;
@@ -65,7 +66,7 @@ public class LitematicaBuilder extends AbstractFieldModule {
     private boolean placingPushed = false;
 
     // build sub-state
-    private @Nullable BuildPlan.Placement current;
+    private @Nullable Placement current;
     private int actionTicks = 0;
     private int retries = 0;
 
@@ -246,7 +247,7 @@ public class LitematicaBuilder extends AbstractFieldModule {
     }
 
     private void issuePlace() {
-        BuildPlan.Placement c = current;
+        Placement c = current;
         if (c == null) return;
         place(new BlockPos(c.x(), c.y(), c.z()), c.entry().placeItem());
         actionTicks = 0;
@@ -256,7 +257,7 @@ public class LitematicaBuilder extends AbstractFieldModule {
         retries++;
         actionTicks = 0;
         if (retries > cfg.maxPlaceRetries) {
-            BuildPlan.Placement c = current;
+            Placement c = current;
             if (c != null) {
                 warn("Skipping unplaceable block {} at {} {} {} after {} attempts.",
                     c.entry().blockName(), c.x(), c.y(), c.z(), retries - 1);
@@ -269,7 +270,7 @@ public class LitematicaBuilder extends AbstractFieldModule {
         }
     }
 
-    private boolean satisfiedNow(BuildPlan.Placement p) {
+    private boolean satisfiedNow(Placement p) {
         return World.getBlock(p.x(), p.y(), p.z()).name().equals(p.entry().blockName());
     }
 
@@ -395,7 +396,7 @@ public class LitematicaBuilder extends AbstractFieldModule {
         List<BridgeWaypoint> out = new ArrayList<>();
         out.add(new BridgeWaypoint("lite_origin", "Build Origin", dim,
             cfg.originX, cfg.originY, cfg.originZ, BridgeWaypoint.COLOR_GREEN, 0));
-        for (BuildPlan.Placement pl : p.upcoming(MAX_WAYPOINTS)) {
+        for (Placement pl : p.upcoming(MAX_WAYPOINTS)) {
             out.add(new BridgeWaypoint("lite_" + pl.x() + "_" + pl.y() + "_" + pl.z(), "Block", dim,
                 pl.x(), pl.y(), pl.z(), BridgeWaypoint.COLOR_AQUA, 0));
         }
