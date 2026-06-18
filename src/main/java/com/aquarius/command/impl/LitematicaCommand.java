@@ -121,7 +121,7 @@ public class LitematicaCommand extends Command {
                 module().stop();
                 c.getSource().getEmbed().title("Build stopped");
             }))
-            .then(literal("status").executes(c -> statusEmbed(c.getSource().getEmbed())))
+            .then(literal("status").executes(c -> { statusEmbed(c.getSource().getEmbed()); }))
             .then(literal("restock")
                 .then(literal("chests").then(argument("toggle", toggle()).executes(c -> {
                     CONFIG.client.extra.litematica.restockFromChests = getToggle(c, "toggle");
