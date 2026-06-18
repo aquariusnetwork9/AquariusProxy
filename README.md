@@ -65,6 +65,12 @@ java -jar build/libs/AquariusProxy.jar
 
 Or download `AquariusProxy.jar` from the [Releases](https://github.com/aquariusnetwork9/AquariusProxy/releases) page and `java -jar AquariusProxy.jar`. On first start it opens a server on `localhost:25565`; use the `connect` command to log the bot into the destination server.
 
+Release jars are published with a signed [build-provenance attestation](https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations). Verify a downloaded jar against this repo with the [GitHub CLI](https://cli.github.com/):
+
+```bash
+gh attestation verify AquariusProxy.jar --repo aquariusnetwork9/AquariusProxy
+```
+
 ➡️ **Full install, hosting, the ZenithProxy launcher, and the control surfaces (terminal / Discord / in-game) are on the [Installation wiki page](https://github.com/aquariusnetwork9/AquariusProxy/wiki/Installation).**
 
 ---
