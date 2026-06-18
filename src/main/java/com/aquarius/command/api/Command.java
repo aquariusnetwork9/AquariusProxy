@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.function.Predicate;
 
 import static com.aquarius.Globals.DEFAULT_LOG;
+import static com.aquarius.Globals.PERMISSIONS;
 import static com.aquarius.Globals.TERMINAL_LOG;
 
 public abstract class Command {
@@ -28,6 +29,19 @@ public abstract class Command {
 
     public static boolean validateAccountOwner(final CommandContext context) {
         try {
+            // When RBAC is enabled, the legacy owner-gate maps to the management permission (operator/admin).
+            // When disabled, fall back to the original owner-or-whitelisted check (zero behavior change).
+            if (PERMISSIONS.isEnabled()) {
+                var subject = context.getSource().resolveSubject(context);
+                boolean allowed = PERMISSIONS.allows(subject, "command.manage");
+                if (!allowed) {
+                    context.getEmbed()
+                        .title("Not Authorized!")
+                        .addField("Error", "You lack permission `command.manage` (requires operator or admin).", false)
+                        .errorColor();
+                }
+                return allowed;
+            }
             var allowed = context.getSource().validateAccountOwner(context);
             if (!allowed) {
                 context.getEmbed()
@@ -99,6 +113,29 @@ public abstract class Command {
      * Required. Registers {@link CommandUsage}
      */
     public abstract CommandUsage commandUsage();
+
+    /**
+     * The RBAC permission this command requires. Defaults to its category ({@code command.core|info|manage|module});
+     * override for a finer per-command permission. Used by the central command gate (a later phase); today
+     * enforcement is via the {@link #validateAccountOwner} chokepoint that owner-level commands already call.
+     */
+    public String requiredPermission() {
+        var category = commandUsage().getCategory();
+        if (category == CommandCategory.MODULE) {
+            // module commands gate on the specific module so a user can be granted just the modules they need
+            return "module." + commandUsage().getName().toLowerCase(java.util.Locale.ROOT);
+        }
+        return "command." + category.name().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    /**
+     * Path-aware variant: the central gate passes the parsed literal path (root + subcommands, lowercased) so a
+     * command can vary the required permission per subcommand (e.g. {@code pearlplus load} = {@code pearl.pull}
+     * but its management subcommands = {@code pearl.manage}). Default ignores the path.
+     */
+    public String requiredPermission(java.util.List<String> commandPath) {
+        return requiredPermission();
+    }
 
     /**
      * Required. Register a {@link #command}

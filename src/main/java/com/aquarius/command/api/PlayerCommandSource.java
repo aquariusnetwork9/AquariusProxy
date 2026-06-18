@@ -56,6 +56,15 @@ public class PlayerCommandSource implements CommandSource {
     }
 
     @Override
+    public com.aquarius.feature.permissions.Subject resolveSubject(final CommandContext context) {
+        final ServerSession session = context.getInGamePlayerInfo() != null ? context.getInGamePlayerInfo().session() : null;
+        if (session == null) return com.aquarius.feature.permissions.Subject.none(name);
+        final GameProfile profile = session.getProfileCache().getProfile();
+        if (profile == null || profile.getId() == null) return com.aquarius.feature.permissions.Subject.none(name);
+        return PERMISSIONS.resolve(profile.getId(), profile.getName());
+    }
+
+    @Override
     public void logEmbed(final CommandContext ctx, final Embed embed) {
         CommandOutputHelper.logEmbedOutputToTerminal(embed);
         CommandOutputHelper.logEmbedOutputToInGame(embed, ctx.getInGamePlayerInfo().session());
