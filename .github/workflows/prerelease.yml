@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+\+1.21.4.pre'
+  workflow_dispatch:
 
 jobs:
   build-java-and-linux-amd64:
@@ -60,6 +61,7 @@ jobs:
       - name: Upload Java Artifact
         uses: actions/upload-artifact@v7
         with:
+          name: ZenithProxy.jar
           path: build/libs/ZenithProxy.jar
           if-no-files-found: error
           archive: false
@@ -97,6 +99,7 @@ jobs:
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@v7
         with:
+          name: ZenithProxy.zip
           path: ZenithProxy.zip
           if-no-files-found: error
           archive: false
@@ -150,7 +153,7 @@ jobs:
           tag: ${{ env.JAVA_TAG }}
           artifacts: "artifacts/*.jar"
           prerelease: true
-          body: "File upload not for users. **Use the Launcher:** https://github.com/rfresh2/ZenithProxy/releases/tag/launcher-v3"
+          body: "File upload not for users. **Use the Launcher:** https://github.com/aquariusnetwork9/AquariusProxy/releases/tag/launcher-v3"
           commit: ${{ github.sha }}
           artifactErrorsFailBuild: true
 
@@ -160,6 +163,6 @@ jobs:
           tag: ${{ env.LINUX_TAG }}
           artifacts: "artifacts/ZenithProxy.zip"
           prerelease: true
-          body: "File upload not for users. **Use the Launcher:** https://github.com/rfresh2/ZenithProxy/releases/tag/launcher-v3"
+          body: "File upload not for users. **Use the Launcher:** https://github.com/aquariusnetwork9/AquariusProxy/releases/tag/launcher-v3"
           commit: ${{ github.sha }}
           artifactErrorsFailBuild: true
