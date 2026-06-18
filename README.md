@@ -43,6 +43,7 @@ AquariusProxy is ZenithProxy with the following changes:
 | **+ Module** | **ElytraPilot** — autopilot elytra flight (climb/glide travel, 2b2t nether-highway bounce, overworld↔nether trip planner). |
 | **+ Module** | **Enchanter** — auto-builds max-template gear in an anvil station via the **cheapest anvil combine order**. |
 | **+ Stash system** | **StashScanner** + **OrderFiller** + native **Order System** — a Postgres/Redis-backed stash census, payment-gated order picker, and Discord order intake/manifest. Reuses the proxy's existing database + Discord layers. See the [Order System wiki](https://github.com/aquariusnetwork9/AquariusProxy/wiki/OrderSystem). |
+| **+ Access control (RBAC)** | Per-user **roles + tokens** that replace the whitelist — gating login, commands, movement, and a localhost HTTP API — with a Discord panel and an in-game mod GUI. Ships **off** (zero behavior change until enabled). See the [Access Control wiki](https://github.com/aquariusnetwork9/AquariusProxy/wiki/Access-Control). |
 
 These modules are **native built-ins**: no plugin jars, no separate config files. They all default to **off** and add no overhead until enabled. Every setting lives in the main `config.json` under `client.extra.<module>` and is configured entirely through commands ([full reference on the wiki](https://github.com/aquariusnetwork9/AquariusProxy/wiki/Command-Reference)).
 
@@ -196,6 +197,18 @@ A stash-organisation bot + payment-gated order picker, built on the proxy's exis
 Enable with `database stash on` + `database on`. Tables self-provision on start.
 
 📖 [Order System wiki →](https://github.com/aquariusnetwork9/AquariusProxy/wiki/OrderSystem)
+
+### Access control (RBAC)
+
+A role-based access-control system that **replaces the whitelist** with per-user roles and permissions — so a public
+pearl bot, a shared base bot, and an admin can all share one proxy with the right access each.
+
+- **Roles** (`guest` / `user` / `operator` / `admin`, hierarchical) gate connecting, commands, movement, modules, and pearl pulls; **capability presets** (`combat`, `crafting`, `movement`, …) grant abilities in one go.
+- **Tokens + a localhost HTTP command API** drive remote control — used by the Discord panel (`perms panel`) and the [ProxyBridge](https://github.com/aquariusnetwork9/ProxyBridge) mod's in-game admin GUI (`/pb admin`) and muted-whisper bypass.
+- **Default-deny** (unassigned = no access), a one-command whitelist importer (`perms migrate`), and the owner is always admin (no token, can't be locked out).
+- Ships **off** (`permissions.enabled=false`) — zero behavior change until you enable it.
+
+📖 [Access Control wiki →](https://github.com/aquariusnetwork9/AquariusProxy/wiki/Access-Control)
 
 ---
 
