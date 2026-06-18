@@ -54,13 +54,28 @@ class GitHubAPI:
         except Exception as e:
             raise Exception(f"Request to {url} failed with exception {e}")
 
+    @staticmethod
+    def _channel_version(tag_name):
+        # "5.1.0+java.1.21.4" -> (5, 1, 0); non-numeric parts sort low
+        ver = tag_name.split("+", 1)[0]
+        return tuple(int(p) if p.isdigit() else 0 for p in ver.split("."))
+
     def get_latest_release_and_ver(self, channel) -> Optional[Tuple[int, str]]:
         try:
             response = self._send_request(self._get_base_url(), self._get_headers(), params={"per_page": 100})
             releases = response.json()
+            # A ".pre" channel (e.g. "java.1.21.4.pre") opts into prereleases/betas; the plain stable
+            # channel ("java.1.21.4") serves full (non-prerelease) releases only. Both match the same
+            # "+java.1.21.4" channel tag. Pick the highest semantic version (not newest publish time, so
+            # re-publishing an older version can't masquerade as the latest).
+            include_prereleases = channel.endswith(".pre")
+            match_channel = channel[:-4] if include_prereleases else channel
             latest_release = max(
-                (r for r in releases if not r["draft"] and r["tag_name"].endswith("+" + channel)),
-                key=lambda r: r["published_at"],
+                (r for r in releases
+                 if not r["draft"]
+                 and r["tag_name"].endswith("+" + match_channel)
+                 and (include_prereleases or not r["prerelease"])),
+                key=lambda r: self._channel_version(r["tag_name"]),
                 default=None,
             )
             return (latest_release["id"], latest_release["tag_name"]) if latest_release else None

@@ -31,17 +31,45 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
 
+      - name: Derive launcher java-channel tag
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          # 4.1.0+1.21.4 -> 4.1.0+java.1.21.4 (the launcher's stable java channel tag)
+          echo "JAVA_TAG=${REF_NAME/+/+java.}" >> "$GITHUB_ENV"
+        shell: bash
+
       - name: Build shadow jar
+        env:
+          # In-app version + maven coords; the stable build reports the java-channel tag.
+          RELEASE_TAG: ${{ env.JAVA_TAG }}
+          AQUARIUS_RELEASE_TAG: ${{ env.JAVA_TAG }}
+          ZENITH_RELEASE_TAG: ${{ env.JAVA_TAG }}
         run: ./gradlew shadowJar
 
       - name: Attest build provenance
         uses: actions/attest@v4
         with:
-          subject-path: 'build/libs/*.jar'
+          subject-path: 'build/libs/AquariusProxy.jar'
 
-      - name: Publish Release
+      - name: Publish Release (source tag)
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ github.ref_name }}
-          artifacts: "build/libs/*.jar"
+          artifacts: "build/libs/AquariusProxy.jar"
+          allowUpdates: true
+          replacesArtifacts: true
+          prerelease: false
+          makeLatest: false   # the Aquarius Launcher (launcher-v3) stays the repo's Latest
+          artifactErrorsFailBuild: true
+
+      - name: Publish Release (launcher java channel)
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ env.JAVA_TAG }}
+          artifacts: "build/libs/AquariusProxy.jar"
+          allowUpdates: true
+          replacesArtifacts: true
+          prerelease: false
+          makeLatest: false
           artifactErrorsFailBuild: true
