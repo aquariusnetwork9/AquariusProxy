@@ -45,6 +45,7 @@ public class ModuleManager {
             new AutoReply(),
             new AutoRespawn(),
             new AutoTotem(),
+            new AutoPortal(),
             new ChatHistory(),
             new Click(),
             new CoordObfuscation(),
