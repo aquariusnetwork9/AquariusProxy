@@ -12,7 +12,8 @@ import static com.aquarius.Globals.MODULE;
 public class ALContainerSetContentHandler implements PacketHandler<ClientboundContainerSetContentPacket, ServerSession> {
     @Override
     public ClientboundContainerSetContentPacket apply(final ClientboundContainerSetContentPacket packet, final ServerSession session) {
-        if (!CONFIG.client.extra.actionLimiter.itemsBlacklistEnabled) return packet;
+        if (!CONFIG.client.extra.actionLimiter.itemsBlacklistEnabled
+            || !CONFIG.client.extra.actionLimiter.blacklistedItemDisconnect) return packet;
         var al = MODULE.get(ActionLimiter.class);
         for (var item : packet.getItems()) {
             if (al.isBlacklistedItem(item)) {

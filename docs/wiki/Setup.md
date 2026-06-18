@@ -84,6 +84,8 @@ Command Prefixes:
 
 [Frequently Asked Questions](FAQ.md){ .md-button .md-button--primary }
 
+[Access Control (RBAC)](Access-Control.md){ .md-button .md-button--primary }
+
 ### Release Channels
 
 AquariusProxy releases for multiple MC versions and OS/hardware platforms, known as "release channels"
