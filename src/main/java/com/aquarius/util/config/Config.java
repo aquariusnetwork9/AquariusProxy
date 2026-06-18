@@ -143,6 +143,8 @@ public final class Config {
             public final AutoFish autoFish = new AutoFish();
             public final KillAura killAura = new KillAura();
             public final AutoTotem autoTotem = new AutoTotem();
+            public final AirPlace airPlace = new AirPlace();
+            public final AutoPortal autoPortal = new AutoPortal();
             public final AntiLeak antiLeak = new AntiLeak();
             public final Chat chat = new Chat();
             public final AntiKick antiKick = new AntiKick();
@@ -2011,6 +2013,31 @@ public final class Config {
                 public boolean noTotemsAlertMention = false;
                 public boolean totemPopAlert = false;
                 public boolean totemPopAlertMention = false;
+            }
+
+            public static final class AirPlace {
+                // Master switch: allows the offhand-swap airplace primitive
+                // (PlayerInteractionManager#airPlaceOn) to fire. Default off for safety.
+                public boolean enabled = false;
+                // Randomize the cursor hit-vec in [0,1] on each placement (matches the captured client;
+                // a static cursor would be an easy fingerprint). See AIRPLACE_LOG.md.
+                public boolean randomizeCursor = true;
+                // Skip a placement on any tick AutoTotem would act (health <= its threshold) so totem
+                // restoration wins the offhand. The swap-sandwich is self-restoring and atomic within a
+                // tick, so this is belt-and-suspenders for the low-HP combat-building edge case.
+                public boolean yieldToAutoTotem = true;
+            }
+
+            public static final class AutoPortal {
+                // Command-driven (.portal build); not auto-enabled on startup.
+                // Blocks between the bot and the portal plane (built in front, facing-derived axis).
+                public int buildDistance = 2;
+                // Ticks between successive frame-block placements (let the world/prediction settle).
+                public int placeIntervalTicks = 3;
+                // Light with a fire charge instead of flint & steel (fire charge is consumed per use).
+                public boolean useFireCharge = false;
+                // Abort the build if it runs longer than this many ticks (stuck / out of materials).
+                public int timeoutTicks = 200;
             }
 
             public static final class AntiLeak {
