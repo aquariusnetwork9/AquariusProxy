@@ -18,8 +18,9 @@ public final class Panels {
     public static final PearlDropPanel PEARLDROP = new PearlDropPanel();
     public static final VillagerTraderPanel TRADER = new VillagerTraderPanel();
     public static final SnifferPanel SNIFFER = new SnifferPanel();
+    public static final PermsPanel PERMS = new PermsPanel();
 
     /** All panels, in registration order. */
     public static final List<DiscordPanel> ALL =
-        List.of(TRIP, REGEAR, MINER, ENCHANTER, KITMAKER, PEARLDROP, TRADER, SNIFFER);
+        List.of(TRIP, REGEAR, MINER, ENCHANTER, KITMAKER, PEARLDROP, TRADER, SNIFFER, PERMS);
 }

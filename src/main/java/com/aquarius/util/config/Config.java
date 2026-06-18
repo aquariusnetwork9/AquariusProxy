@@ -143,6 +143,8 @@ public final class Config {
             public final AutoFish autoFish = new AutoFish();
             public final KillAura killAura = new KillAura();
             public final AutoTotem autoTotem = new AutoTotem();
+            public final AirPlace airPlace = new AirPlace();
+            public final AutoPortal autoPortal = new AutoPortal();
             public final AntiLeak antiLeak = new AntiLeak();
             public final Chat chat = new Chat();
             public final AntiKick antiKick = new AntiKick();
@@ -181,6 +183,7 @@ public final class Config {
             public final Enchanter enchanter = new Enchanter();
             public final StashScanner stashScanner = new StashScanner();
             public final OrderFiller orderFiller = new OrderFiller();
+            public final Bridge bridge = new Bridge();
 
             /**
              * PearlDrop — the DEPOSIT side of pearl stasis (the counterpart to {@link PearlPlus}, which pulls).
@@ -225,6 +228,27 @@ public final class Config {
                 public int approachTimeoutTicks = 120;
                 /** Timeout (ticks) for the retreat. */
                 public int retreatTimeoutTicks = 80;
+            }
+
+            /**
+             * Bridge — generic bidirectional link to the ProxyBridge client mod (a Meteor addon, MC 1.21.4) over the
+             * {@code proxybridge:main} plugin channel. Pushes feature data the mod can render (live waypoints) and
+             * routes allow-listed commands the mod sends back. Read everywhere via {@code CONFIG.client.extra.bridge.*}.
+             */
+            public static class Bridge {
+                /** Whether the module is enabled on startup. */
+                public boolean enabled = false;
+                /** Publish PearlDrop's empty stasis chambers to the mod as the {@code pearldrop.empties} waypoint group. */
+                public boolean autoPublishPearlDrop = true;
+                /** Strip {@code proxybridge:main} from the client's {@code minecraft:register} so the real server never sees it. */
+                public boolean stripRegisterChannel = true;
+                /** Also send waypoints to spectator connections (default: controlling player only). */
+                public boolean broadcastToSpectators = false;
+                /** Minimum ticks between waypoint-source polls/publishes (20 = ~1s). */
+                public int publishIntervalTicks = 20;
+                /** Command names the mod is allowed to invoke via {@code cmd/invoke} (first token, case-insensitive). */
+                public ArrayList<String> invokeAllowList =
+                    new ArrayList<>(java.util.List.of("pearldrop", "pd", "pearlplus", "swap"));
             }
 
             /**
@@ -1991,6 +2015,31 @@ public final class Config {
                 public boolean totemPopAlertMention = false;
             }
 
+            public static final class AirPlace {
+                // Master switch: allows the offhand-swap airplace primitive
+                // (PlayerInteractionManager#airPlaceOn) to fire. Default off for safety.
+                public boolean enabled = false;
+                // Randomize the cursor hit-vec in [0,1] on each placement (matches the captured client;
+                // a static cursor would be an easy fingerprint). See AIRPLACE_LOG.md.
+                public boolean randomizeCursor = true;
+                // Skip a placement on any tick AutoTotem would act (health <= its threshold) so totem
+                // restoration wins the offhand. The swap-sandwich is self-restoring and atomic within a
+                // tick, so this is belt-and-suspenders for the low-HP combat-building edge case.
+                public boolean yieldToAutoTotem = true;
+            }
+
+            public static final class AutoPortal {
+                // Command-driven (.portal build); not auto-enabled on startup.
+                // Blocks between the bot and the portal plane (built in front, facing-derived axis).
+                public int buildDistance = 2;
+                // Ticks between successive frame-block placements (let the world/prediction settle).
+                public int placeIntervalTicks = 3;
+                // Light with a fire charge instead of flint & steel (fire charge is consumed per use).
+                public boolean useFireCharge = false;
+                // Abort the build if it runs longer than this many ticks (stuck / out of materials).
+                public int timeoutTicks = 200;
+            }
+
             public static final class AntiLeak {
                 public boolean enabled = true;
                 // checks if numbers in chat are within a range from your coords
@@ -2271,6 +2320,8 @@ public final class Config {
                 public boolean exemptProxyAccount = false;
                 public boolean itemsBlacklistEnabled = false;
                 public final HashSet<String> itemsBlacklist = new HashSet<>();
+                /** Blacklisted items: true = disconnect on possession (legacy); false = allow holding but block using/placing them. */
+                public boolean blacklistedItemDisconnect = false;
             }
         }
 
@@ -2358,6 +2409,8 @@ public final class Config {
         public int compressionLevel = -1;
         public boolean enabled = true;
         public final Extra extra = new Extra();
+        // RBAC (v5.0.0) — role/permission system that will replace the whitelist. Ships disabled; see docs/RBAC_DESIGN.md.
+        public final com.aquarius.feature.permissions.PermissionsConfig permissions = new com.aquarius.feature.permissions.PermissionsConfig();
         public final Ping ping = new Ping();
         public final ServerViaVersion viaversion = new ServerViaVersion();
         public boolean verifyUsers = true;
