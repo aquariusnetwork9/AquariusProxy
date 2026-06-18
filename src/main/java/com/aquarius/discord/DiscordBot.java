@@ -189,9 +189,33 @@ public class DiscordBot {
             return;
         }
         if (!event.getMessage().getChannelId().equals(CONFIG.discord.channelId)) return;
+        if (!event.getMessage().getAttachments().isEmpty()) handleSchematicUploads(event);
         final String message = event.getMessage().getContentRaw();
         if (!message.startsWith(CONFIG.discord.prefix)) return;
         EVENT_BUS.postAsync(new DiscordMainChannelCommandReceivedEvent(event));
+    }
+
+    /** Save any {@code .litematic} / {@code .nbt} attachments to the Litematica schematics dir for the builder. */
+    private void handleSchematicUploads(final MessageReceivedEvent event) {
+        final java.io.File dir = new java.io.File(CONFIG.client.extra.litematica.schematicsDir);
+        for (final var att : event.getMessage().getAttachments()) {
+            final String fileName = att.getFileName();
+            final String lower = fileName.toLowerCase(java.util.Locale.ROOT);
+            if (!lower.endsWith(".litematic") && !lower.endsWith(".nbt")) continue;
+            try {
+                dir.mkdirs();
+                final java.io.File out = new java.io.File(dir, fileName);
+                att.getProxy().downloadToFile(out)
+                    .thenAccept(f -> mainChannel.sendMessage("📥 Saved schematic `" + fileName + "`. Load it with `"
+                        + CONFIG.discord.prefix + "litematica load " + fileName + "`").queue())
+                    .exceptionally(ex -> {
+                        mainChannel.sendMessage("⚠ Failed to save `" + fileName + "`: " + ex.getMessage()).queue();
+                        return null;
+                    });
+            } catch (final Exception e) {
+                DISCORD_LOG.warn("Failed handling schematic upload {}: {}", fileName, e.getMessage());
+            }
+        }
     }
 
     private void executeDiscordCommand(final DiscordMainChannelCommandReceivedEvent event) {

@@ -49,7 +49,8 @@ public class PermissionsConfig {
         groups.put("combat", list("module.killaura", "module.autototem", "module.autoeat", "module.automend",
             "module.autoarmor", "module.autoomen", "module.spook", "module.autorespawn", "module.spawnpatrol", "module.basepatrol"));
         groups.put("crafting", list("module.trader", "module.pearldrop", "module.aquariusminer",
-            "module.kitmaker", "module.enchanter", "module.stashscanner", "module.orderfiller", "module.regear"));
+            "module.kitmaker", "module.enchanter", "module.stashscanner", "module.orderfiller", "module.regear",
+            "module.litematica"));
         groups.put("automation", list("module.antiafk", "module.autofish", "module.autodrop", "module.tasks"));
         groups.put("chat", list("module.autoreply", "module.extrachat", "module.chathistory", "module.click"));
         // operator-default groups

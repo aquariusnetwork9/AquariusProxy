@@ -19,8 +19,9 @@ public final class Panels {
     public static final VillagerTraderPanel TRADER = new VillagerTraderPanel();
     public static final SnifferPanel SNIFFER = new SnifferPanel();
     public static final PermsPanel PERMS = new PermsPanel();
+    public static final LitematicaPanel LITEMATICA = new LitematicaPanel();
 
     /** All panels, in registration order. */
     public static final List<DiscordPanel> ALL =
-        List.of(TRIP, REGEAR, MINER, ENCHANTER, KITMAKER, PEARLDROP, TRADER, SNIFFER, PERMS);
+        List.of(TRIP, REGEAR, MINER, ENCHANTER, KITMAKER, PEARLDROP, TRADER, SNIFFER, PERMS, LITEMATICA);
 }

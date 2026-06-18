@@ -184,6 +184,7 @@ public final class Config {
             public final StashScanner stashScanner = new StashScanner();
             public final OrderFiller orderFiller = new OrderFiller();
             public final Bridge bridge = new Bridge();
+            public final Litematica litematica = new Litematica();
 
             /**
              * PearlDrop — the DEPOSIT side of pearl stasis (the counterpart to {@link PearlPlus}, which pulls).
@@ -249,6 +250,41 @@ public final class Config {
                 /** Command names the mod is allowed to invoke via {@code cmd/invoke} (first token, case-insensitive). */
                 public ArrayList<String> invokeAllowList =
                     new ArrayList<>(java.util.List.of("pearldrop", "pd", "pearlplus", "swap"));
+            }
+
+            /**
+             * Litematica auto-builder — loads a {@code .litematic} / {@code .nbt} schematic and rebuilds it in the
+             * world via Baritone, restocking materials from nearby chests and placed shulker boxes. Read everywhere
+             * via {@code CONFIG.client.extra.litematica.*}; the Discord panel and commands mutate it directly.
+             */
+            public static class Litematica {
+                /** Whether the module is enabled (armed) on startup. */
+                public boolean enabled = false;
+                /** Directory schematic files are loaded from / uploaded into. */
+                public String schematicsDir = "run/schematics";
+                /** The currently loaded schematic file name (within {@link #schematicsDir}). */
+                public String schematicFile = "";
+                /** World origin the schematic's minimum corner is built at. */
+                public int originX = 0;
+                public int originY = 0;
+                public int originZ = 0;
+                /** Whether an origin has been set (a build won't start until it has). */
+                public boolean originSet = false;
+                /** Restock from chests / barrels. */
+                public boolean restockFromChests = true;
+                /** Restock from placed shulker boxes (opened like a chest). */
+                public boolean restockFromShulkers = true;
+                /** Horizontal radius (blocks) to search for restock containers. */
+                public int restockRadius = 16;
+                /** Vertical band (± blocks from the bot's feet) to search for restock containers. */
+                public int restockVerticalRange = 8;
+                /** Ticks to wait for a place to settle before retrying / skipping (lag rejects places silently). */
+                public int settleTicks = 8;
+                /** Attempts at a single placement before it is skipped (floating / repeatedly rejected). */
+                public int maxPlaceRetries = 3;
+                /** Soft-pause the build while a non-self player is within {@link #playerPauseRange} blocks. */
+                public boolean pauseOnPlayer = false;
+                public double playerPauseRange = 48.0;
             }
 
             /**
