@@ -50,7 +50,8 @@ public class PermissionsConfig {
             "module.autoarmor", "module.autoomen", "module.spook", "module.autorespawn", "module.spawnpatrol", "module.basepatrol",
             "module.whispercontrol")); // whisper-command handler; verbs also need their own perm (pathfinder/aquariusminer/etc.)
         groups.put("crafting", list("module.trader", "module.pearldrop", "module.aquariusminer",
-            "module.kitmaker", "module.enchanter", "module.stashscanner", "module.orderfiller", "module.regear"));
+            "module.kitmaker", "module.enchanter", "module.stashscanner", "module.orderfiller", "module.regear",
+            "module.litematica"));
         groups.put("automation", list("module.antiafk", "module.autofish", "module.autodrop", "module.tasks"));
         groups.put("chat", list("module.autoreply", "module.extrachat", "module.chathistory", "module.click"));
         // operator-default groups

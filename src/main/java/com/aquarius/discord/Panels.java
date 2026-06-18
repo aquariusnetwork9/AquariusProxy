@@ -21,8 +21,9 @@ public final class Panels {
     public static final PermsPanel PERMS = new PermsPanel();
     public static final MembersPanel MEMBERS = new MembersPanel();
     public static final WhisperControlPanel WHISPER = new WhisperControlPanel();
+    public static final LitematicaPanel LITEMATICA = new LitematicaPanel();
 
     /** All panels, in registration order. */
     public static final List<DiscordPanel> ALL =
-        List.of(TRIP, REGEAR, MINER, ENCHANTER, KITMAKER, PEARLDROP, TRADER, SNIFFER, PERMS, MEMBERS, WHISPER);
+        List.of(TRIP, REGEAR, MINER, ENCHANTER, KITMAKER, PEARLDROP, TRADER, SNIFFER, PERMS, MEMBERS, WHISPER, LITEMATICA);
 }

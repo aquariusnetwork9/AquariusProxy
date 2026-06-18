@@ -37,6 +37,7 @@ public class ModuleManager {
             new AutoLoadModule(),
             new PearlDrop(),
             new Bridge(),
+            new LitematicaBuilder(),
             new RbacGuard(),
             new RbacApiServer(),
             new AutoMend(),
