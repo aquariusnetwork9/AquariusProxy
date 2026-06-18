@@ -104,7 +104,7 @@ def git_read_version(config: LaunchConfig):
         exception("Error reading local git version")
 
 
-def update_zenith_exec(config, api):
+def update_aquarius_exec(config, api):
     try:
         if config.auto_update:
             info("Checking for AquariusProxy update...")

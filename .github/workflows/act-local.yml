@@ -60,11 +60,11 @@ jobs:
         run: chmod +x build/native/nativeCompile/*
 
       - name: Zip Binary And Libs
-        run: zip -j ZenithProxy.zip build/native/nativeCompile/*
+        run: zip -j AquariusProxy.zip build/native/nativeCompile/*
 
       - name: Upload Binary
         uses: actions/upload-artifact@v4
         with:
           name: linux-native
-          path: ZenithProxy.zip
+          path: AquariusProxy.zip
           if-no-files-found: error
