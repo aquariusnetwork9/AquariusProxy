@@ -113,15 +113,15 @@ public class Globals {
     }
 
     public static @Nullable String getExecutableCommit() {
-        return readResourceTxt("zenith_commit.txt");
+        return readResourceTxt("aquarius_commit.txt");
     }
 
     public static @Nullable String getExecutableReleaseVersion() {
-        return readResourceTxt("zenith_release.txt");
+        return readResourceTxt("aquarius_release.txt");
     }
 
     public static @Nullable String getMCVersionFile() {
-        return readResourceTxt("zenith_mc_version.txt");
+        return readResourceTxt("aquarius_mc_version.txt");
     }
 
     private static @Nullable String readResourceTxt(final String name) {

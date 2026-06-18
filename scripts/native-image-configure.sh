@@ -8,4 +8,4 @@ java -Xmx300m \
 -Djava.util.concurrent.ForkJoinPool.common.parallelism=2 -Dio.netty.allocator.maxOrder=9 \
 -Dio.netty.leakDetection.level=disabled \
 -agentlib:native-image-agent=config-merge-dir=src/main/resources/META-INF/native-image,access-filter-file=src/main/resources/META-INF/native-image/agent-access-filter.json \
--jar build/libs/ZenithProxy.jar
+-jar build/libs/AquariusProxy.jar

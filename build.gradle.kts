@@ -119,15 +119,15 @@ tasks {
         maxParallelForks = Runtime.getRuntime().availableProcessors()
     }
     val commitHashTask = register<CommitHashTask>("writeCommitHash") {
-        outputFile = project.layout.buildDirectory.file("resources/main/zenith_commit.txt")
+        outputFile = project.layout.buildDirectory.file("resources/main/aquarius_commit.txt")
     }
     val releaseTagTask = register<WriteMetadataTxtTask>("releaseTag") {
         metadataValue = providers.environmentVariable("RELEASE_TAG").orElse("")
-        outputFile = project.layout.buildDirectory.file("resources/main/zenith_release.txt")
+        outputFile = project.layout.buildDirectory.file("resources/main/aquarius_release.txt")
     }
     val mcVersionTask = register<WriteMetadataTxtTask>("mcVersion") {
         metadataValue = version.toString()
-        outputFile = project.layout.buildDirectory.file("resources/main/zenith_mc_version.txt")
+        outputFile = project.layout.buildDirectory.file("resources/main/aquarius_mc_version.txt")
     }
     val runGroup = "run"
     register("run", JavaExec::class.java) {
@@ -348,7 +348,7 @@ publishing {
         create<MavenPublication>("release") {
             groupId = "com.aquarius"
             artifactId = "AquariusProxy"
-            version = providers.environmentVariable("ZENITH_RELEASE_TAG").orElse("0.0.0+${project.version}").get()
+            version = providers.environmentVariable("AQUARIUS_RELEASE_TAG").orElse("0.0.0+${project.version}").get()
             from(components["java"])
         }
     }

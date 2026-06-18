@@ -31,7 +31,7 @@ jobs:
           dependency-graph: generate-and-submit
           cache-read-only: ${{ github.event_name == 'pull_request' }}
 
-      - name: Build ZenithProxy
+      - name: Build AquariusProxy
         run: ./gradlew build
 
       - name: Setup Plugin Load Test
@@ -60,7 +60,7 @@ jobs:
       - name: Upload Java Artifact
         uses: actions/upload-artifact@v7
         with:
-          name: ZenithProxy-java
-          path: build/libs/ZenithProxy.jar
+          name: AquariusProxy-java
+          path: build/libs/AquariusProxy.jar
           if-no-files-found: error
           archive: false
