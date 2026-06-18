@@ -1,4 +1,4 @@
-name: ZenithProxy Build
+name: AquariusProxy Build
 
 on:
   pull_request:
@@ -30,7 +30,7 @@ jobs:
           dependency-graph: generate-and-submit
           cache-read-only: ${{ github.event_name == 'pull_request' }}
 
-      - name: Build ZenithProxy
+      - name: Build AquariusProxy
         run: ./gradlew build
 
       - name: Upload Test Results
