@@ -153,6 +153,27 @@ public class Embed {
         return new Embed();
     }
 
+    /**
+     * Shallow-but-safe copy: a fresh {@link #fields} list (the {@link Field} records are immutable, so sharing
+     * their references is fine) with every scalar copied. Used to produce a scrubbed mirror of an embed without
+     * mutating the original that is concurrently being sent to another channel (see {@link MembersFeed}).
+     */
+    public Embed copy() {
+        Embed c = new Embed();
+        c.title = title;
+        c.description = description;
+        c.url = url;
+        c.timestamp = timestamp;
+        c.color = color;
+        c.image = image;
+        c.thumbnail = thumbnail;
+        c.footer = footer;
+        c.author = author;
+        c.fields = new ArrayList<>(fields);
+        c.fileAttachment = fileAttachment;
+        return c;
+    }
+
     public static boolean validateEmbed(Embed embed) {
         int charCount = 0;
         if (embed.isTitlePresent()) {

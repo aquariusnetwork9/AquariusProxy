@@ -76,6 +76,7 @@ public class Bridge extends Module {
     public Bridge() {
         registerInboundHandler(BridgeProtocol.TOPIC_HELLO, this::onHello);
         registerInboundHandler(BridgeProtocol.TOPIC_CMD_INVOKE, this::onCmdInvoke);
+        registerInboundHandler(BridgeProtocol.TOPIC_PEARL_PULL, this::onPearlPull);
     }
 
     @Override
@@ -214,6 +215,24 @@ public class Bridge extends Module {
         executeCommand(full, true);
     }
 
+    /**
+     * Instant pearl pull over the bridge. Self-scoped and RBAC-gated inside {@link AutoLoadModule#requestPull}: the
+     * requester is the connected session, so it resolves THEIR own pearl (gated by {@code pearl.pull} when RBAC is on,
+     * else the PearlPlus whitelist). No token needed — the session is already authenticated. Feedback goes back as a
+     * toast. This is the connected-through-the-proxy counterpart to the HTTP-API {@code pearlpull} command.
+     */
+    private void onPearlPull(ServerSession session, BridgeProtocol.Reader r) {
+        String pearlId = r.hasRemaining() ? r.readString() : "";
+        AutoLoadModule autoLoad = MODULE.get(AutoLoadModule.class);
+        if (autoLoad == null) {
+            send(session, BridgeProtocol.encodeToast("Pearl loading is unavailable."));
+            return;
+        }
+        var result = autoLoad.requestPull(session.getUUID(), session.getName(), pearlId);
+        info("Bridge pearl pull from {} (id='{}') -> {}", session.getName(), pearlId, result.message());
+        send(session, BridgeProtocol.encodeToast(result.message()));
+    }
+
     private boolean isCommandAllowed(String name) {
         if (name == null || name.isBlank()) return false;
         String first = name.trim().split("\\s+")[0];
@@ -262,6 +281,7 @@ public class Bridge extends Module {
     private void sendHello(ServerSession session) {
         List<String> features = new ArrayList<>(waypointSources.keySet());
         features.add(BridgeProtocol.TOPIC_CMD_INVOKE);
+        features.add(BridgeProtocol.TOPIC_PEARL_PULL);
         send(session, BridgeProtocol.encodeHello(SIDE, VERSION, features));
     }
 

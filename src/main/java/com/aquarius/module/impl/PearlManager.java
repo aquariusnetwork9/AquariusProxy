@@ -2,6 +2,7 @@ package com.aquarius.module.impl;
 
 import com.aquarius.Proxy;
 import com.aquarius.discord.Embed;
+import com.aquarius.discord.MembersFeed;
 import com.aquarius.mc.block.BlockPos;
 import com.aquarius.mc.item.ItemRegistry;
 import com.aquarius.mc.item.ItemData;
@@ -198,7 +199,8 @@ public class PearlManager {
                         builder.addField("Requested By", requesterName, false);
                     }
                     notifier.discordAndIngameNotification(builder);
-                    
+                    MembersFeed.mirror(MembersFeed.Notice.PEARL_PULL, builder);
+
                      // Drop a pearl when loaded.
                     if (CONFIG.client.extra.pearlPlus.autoLoad.dropPearlAfterLoad == true) {
                         handlePearlDropAfterLoad(requesterName);
