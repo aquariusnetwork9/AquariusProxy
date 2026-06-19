@@ -66,6 +66,8 @@ public class Bridge extends Module {
     private final Map<String, Supplier<List<BridgeWaypoint>>> waypointSources = new ConcurrentHashMap<>();
     /** UUIDs of connections known to have the mod. */
     private final java.util.Set<UUID> modPresent = ConcurrentHashMap.newKeySet();
+    /** UUIDs we've already announced the channel to (clientbound minecraft:register), once per connection. */
+    private final java.util.Set<UUID> channelRegistered = ConcurrentHashMap.newKeySet();
     /** Last-published contents per group, for change detection (broadcast only on change). */
     private final Map<String, List<BridgeWaypoint>> lastPublished = new ConcurrentHashMap<>();
 
@@ -110,6 +112,7 @@ public class Bridge extends Module {
     @Override
     public void onDisable() {
         modPresent.clear();
+        channelRegistered.clear();
         lastPublished.clear();
         tickCounter = 0;
     }
@@ -169,9 +172,23 @@ public class Bridge extends Module {
     public void markModPresent(ServerSession session) {
         if (modPresent.add(session.getUUID())) {
             info("ProxyBridge detected on connection {}", session.getName());
+            sendChannelRegister(session);
             sendHello(session);
             republishAllTo(session);
         }
+    }
+
+    /**
+     * Announce {@code proxybridge:main} to the client via a clientbound {@code minecraft:register}. Without this the
+     * mod's {@code ClientPlayNetworking.canSend(...)} stays false — so it reports "channel not ready" and its send
+     * path (swap / pull / cmd) silently no-ops. The mod only ever announces the channel <i>to</i> us; the proxy has
+     * to announce it back. Sent once on mod detection, when the connection is already in PLAY. Vanilla clients
+     * ignore an unknown channel here, so it's harmless to non-modded connections.
+     */
+    private void sendChannelRegister(ServerSession session) {
+        session.sendAsync(new ClientboundCustomPayloadPacket(
+            Key.key("minecraft", "register"),
+            BridgeProtocol.CHANNEL_ID.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
     }
 
     private void onHello(ServerSession session, BridgeProtocol.Reader r) {
@@ -209,6 +226,11 @@ public class Bridge extends Module {
     // ---- publishing ----------------------------------------------------------------------------
 
     private void onTick(ClientBotTick event) {
+        // Proactively announce our channel to every active connection (once each) so the mod's canSend flips true
+        // even if we never catch its minecraft:register. Vanilla clients ignore an unknown register channel.
+        for (ServerSession con : Proxy.getInstance().getActiveConnections().getArray()) {
+            if (channelRegistered.add(con.getUUID())) sendChannelRegister(con);
+        }
         if (waypointSources.isEmpty() || modPresent.isEmpty()) return;
         int interval = Math.max(1, CONFIG.client.extra.bridge.publishIntervalTicks);
         if (++tickCounter < interval) return;
@@ -231,7 +253,10 @@ public class Bridge extends Module {
 
     private void onConnectionRemoved(PlayerConnectionRemovedEvent event) {
         ServerSession session = event.serverConnection();
-        if (session != null) modPresent.remove(session.getUUID());
+        if (session != null) {
+            modPresent.remove(session.getUUID());
+            channelRegistered.remove(session.getUUID());
+        }
     }
 
     private void sendHello(ServerSession session) {
