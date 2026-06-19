@@ -27,4 +27,13 @@ public class RbacApiServer extends Module {
     public void onDisable() {
         server.stop();
     }
+
+    /** Re-bind the listener to the current host/port. Call after changing {@code bindHost}/{@code port} at runtime;
+     *  no-op when the API isn't currently running (the new values take effect when it's next enabled). */
+    public void rebind() {
+        if (!isEnabled()) return;
+        final var api = CONFIG.server.permissions.api;
+        server.stop();
+        server.start(api.bindHost, api.port);
+    }
 }

@@ -48,6 +48,10 @@ public class PermsCommand extends Command {
         return CONFIG.server.permissions;
     }
 
+    static boolean isLocalhostBind(String host) {
+        return host != null && (host.equals("127.0.0.1") || host.equalsIgnoreCase("localhost") || host.equals("::1"));
+    }
+
     @Override
     public CommandUsage commandUsage() {
         return CommandUsage.builder()
@@ -57,6 +61,9 @@ public class PermsCommand extends Command {
             .usageLines(
                 "enable <on/off>            (turn RBAC on/off; replaces the whitelist while on)",
                 "api <on/off>               (token-authorized HTTP command API)",
+                "api host <ip>              (bind address; 0.0.0.0 to expose — firewall it)",
+                "api port <n>",
+                "api rpm <n>                (rate limit per token; 0 = unlimited)",
                 "status",
                 "reload                     (re-sync RBAC modules from config)",
                 "user list",
@@ -91,13 +98,37 @@ public class PermsCommand extends Command {
                     + (cfg().enabled ? " — now replacing the whitelist" : ""));
                 return OK;
             })))
-            .then(literal("api").then(argument("toggle", toggle()).executes(c -> {
-                cfg().api.enabled = getToggle(c, "toggle");
-                MODULE.get(RbacApiServer.class).syncEnabledFromConfig();
-                c.getSource().getEmbed().title("RBAC HTTP API " + toggleStrCaps(cfg().api.enabled))
-                    .description(cfg().api.bindHost + ":" + cfg().api.port);
-                return OK;
-            })))
+            .then(literal("api")
+                .then(argument("toggle", toggle()).executes(c -> {
+                    cfg().api.enabled = getToggle(c, "toggle");
+                    MODULE.get(RbacApiServer.class).syncEnabledFromConfig();
+                    c.getSource().getEmbed().title("RBAC HTTP API " + toggleStrCaps(cfg().api.enabled))
+                        .description(cfg().api.bindHost + ":" + cfg().api.port);
+                    return OK;
+                }))
+                .then(literal("host").then(argument("ip", word()).executes(c -> {
+                    cfg().api.bindHost = getString(c, "ip").trim();
+                    MODULE.get(RbacApiServer.class).rebind();
+                    c.getSource().getEmbed()
+                        .title("API bind host = " + cfg().api.bindHost + ":" + cfg().api.port)
+                        .description(isLocalhostBind(cfg().api.bindHost)
+                            ? "Localhost-only (default — reachable only from this machine)."
+                            : "⚠ Exposed beyond localhost. The API is token-gated, but firewall/VPN the port (" + cfg().api.port + ").")
+                        .primaryColor();
+                    return OK;
+                })))
+                .then(literal("port").then(argument("n", integer(1, 65535)).executes(c -> {
+                    cfg().api.port = getInteger(c, "n");
+                    MODULE.get(RbacApiServer.class).rebind();
+                    c.getSource().getEmbed().title("API address = " + cfg().api.bindHost + ":" + cfg().api.port).primaryColor();
+                    return OK;
+                })))
+                .then(literal("rpm").then(argument("n", integer(0)).executes(c -> {
+                    cfg().api.requestsPerMinutePerToken = getInteger(c, "n");
+                    c.getSource().getEmbed().title("API rate limit = " + (cfg().api.requestsPerMinutePerToken <= 0
+                        ? "unlimited" : cfg().api.requestsPerMinutePerToken + " req/min per token")).primaryColor();
+                    return OK;
+                }))))
             .then(literal("status").executes(c -> {
                 c.getSource().getEmbed()
                     .title("RBAC status")
