@@ -44,7 +44,8 @@ public final class PermsPanel extends DiscordPanel {
         ADD = "perms:add", ISSUE = "perms:issue", REVOKE = "perms:revoke", MODE = "perms:mode",
         REMOVE = "perms:remove", CLEAR = "perms:clear",
         USERSEL = "perms:usersel", ROLESEL = "perms:rolesel", PRESETSEL = "perms:presetsel",
-        ADDMODAL = "perms:addmodal";
+        APICFG = "perms:apicfg",
+        ADDMODAL = "perms:addmodal", APIMODAL = "perms:apimodal";
 
     private static final String[] ROLE_NAMES = {"guest", "user", "operator", "admin"};
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -97,6 +98,7 @@ public final class PermsPanel extends DiscordPanel {
         rows.add(ActionRow.of(
             cfg.enabled ? Button.success(ENABLE, "RBAC: ON") : Button.secondary(ENABLE, "RBAC: off"),
             cfg.api.enabled ? Button.success(API, "API: ON") : Button.secondary(API, "API: off"),
+            Button.secondary(APICFG, "⚙ API addr"),
             Button.secondary(RELOAD, "🔄 Reload"),
             Button.primary(ADD, "➕ Add users")
         ));
@@ -150,6 +152,19 @@ public final class PermsPanel extends DiscordPanel {
             .build();
     }
 
+    private Modal apiModal() {
+        var api = cfg().api;
+        TextInput host = TextInput.create("perms:apihost", TextInputStyle.SHORT).setRequired(true)
+            .setValue(api.bindHost).setPlaceholder("127.0.0.1 (localhost) or 0.0.0.0 to expose").build();
+        TextInput port = TextInput.create("perms:apiport", TextInputStyle.SHORT).setRequired(true)
+            .setValue(String.valueOf(api.port)).setPlaceholder("1-65535").build();
+        TextInput rpm = TextInput.create("perms:apirpm", TextInputStyle.SHORT).setRequired(true)
+            .setValue(String.valueOf(api.requestsPerMinutePerToken)).setPlaceholder("requests/min per token (0 = unlimited)").build();
+        return Modal.create(APIMODAL, "HTTP API address")
+            .addComponents(Label.of("Bind host", host), Label.of("Port", port), Label.of("Rate limit / token", rpm))
+            .build();
+    }
+
     // ---------------------------------------------------------------- interaction handlers
 
     @Override
@@ -174,6 +189,7 @@ public final class PermsPanel extends DiscordPanel {
                 e.getChannel().sendMessage("RBAC modules re-synced from config.").queue();
             }
             case ADD -> { e.replyModal(addModal()).queue(); return false; }
+            case APICFG -> { e.replyModal(apiModal()).queue(); return false; }
             case ISSUE -> {
                 UserAssignment ua = selectedUser();
                 if (ua == null) { e.reply("Select a user first.").setEphemeral(true).queue(); return false; }
@@ -237,6 +253,7 @@ public final class PermsPanel extends DiscordPanel {
 
     @Override
     protected boolean onModal(ModalInteractionEvent e) {
+        if (APIMODAL.equals(e.getModalId())) return onApiModal(e);
         if (!ADDMODAL.equals(e.getModalId())) return false;
         String role = e.getValue("perms:role").getAsString().trim().toLowerCase();
         if (Role.fromString(role) == Role.NONE) {
@@ -262,6 +279,30 @@ public final class PermsPanel extends DiscordPanel {
         StringBuilder msg = new StringBuilder("Assigned " + added + " user(s) as " + role + ".");
         if (!failed.isEmpty()) msg.append(" Could not resolve: ").append(String.join(", ", failed)).append('.');
         e.getChannel().sendMessage(msg.toString()).queue();
+        return true;
+    }
+
+    private boolean onApiModal(ModalInteractionEvent e) {
+        var api = cfg().api;
+        String host = e.getValue("perms:apihost").getAsString().trim();
+        int port, rpm;
+        try {
+            port = Integer.parseInt(e.getValue("perms:apiport").getAsString().trim());
+            if (port < 1 || port > 65535) throw new NumberFormatException();
+            rpm = Math.max(0, Integer.parseInt(e.getValue("perms:apirpm").getAsString().trim()));
+        } catch (Exception ex) {
+            e.reply("Port must be 1-65535 and the rate limit a whole number ≥ 0.").setEphemeral(true).queue();
+            return false;
+        }
+        if (host.isEmpty()) { e.reply("Bind host is required.").setEphemeral(true).queue(); return false; }
+        api.bindHost = host;
+        api.port = port;
+        api.requestsPerMinutePerToken = rpm;
+        MODULE.get(RbacApiServer.class).rebind();
+        boolean local = host.equals("127.0.0.1") || host.equalsIgnoreCase("localhost") || host.equals("::1");
+        e.getChannel().sendMessage("HTTP API address set to **" + host + ":" + port + "**, "
+            + (rpm <= 0 ? "unlimited" : rpm + "/min per token") + ". "
+            + (local ? "Localhost-only." : "⚠ Exposed beyond localhost — firewall/VPN the port.")).queue();
         return true;
     }
 

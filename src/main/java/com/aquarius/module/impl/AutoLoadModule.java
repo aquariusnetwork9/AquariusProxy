@@ -37,14 +37,6 @@ public class AutoLoadModule extends Module {
         String name = sender.getName();
         UUID uuid = sender.getProfileId();
 
-        // Check whitelist for load commands
-        if (msg.startsWith("load")) {
-            if (CONFIG.client.extra.pearlPlus.autoLoad.whitelistEnabled && !CONFIG.client.extra.pearlPlus.whitelist.containsKey(uuid)) {
-                // Non-whitelisted player trying to load - ignore silently
-                return;
-            }
-        }
-
         if (msg.equals("pearls")) {
             var playerEntry = CONFIG.client.extra.pearlPlus.players.get(uuid);
             if (playerEntry != null && !playerEntry.pearls.isEmpty()) {
@@ -107,69 +99,79 @@ public class AutoLoadModule extends Module {
 
         if (!msg.startsWith("load")) return;
 
+        // Chat-specific arg-count guard (reject extra words after the pearl id); the shared core handles the rest.
+        if (!CONFIG.client.extra.pearlPlus.autoLoad.allowNoiseAfterPearl) {
+            if (lowerParts.length > 2) { info("Extra arguments not allowed for " + name); return; }
+        } else if (lowerParts.length > 3) {
+            info("Too many arguments from " + name); return;
+        }
+
+        String pearlArg = lowerParts.length == 1 ? null : parts[1];
+        PullResult result = requestPull(uuid, name, pearlArg);
+        if (result.notifyChat() && result.message() != null) {
+            sendClientPacketAsync(ChatUtil.getWhisperChatPacket(name, result.message()));
+        }
+    }
+
+    /** Outcome of a pearl-pull request. {@code message} is a human-readable line for the requester; {@code notifyChat}
+     *  is false for outcomes the in-game whisper path intentionally keeps silent (so an unauthorized stranger learns
+     *  nothing) — other transports (the ProxyBridge channel / HTTP API) relay {@code message} unconditionally. */
+    public record PullResult(boolean started, boolean notifyChat, String message) {}
+
+    /**
+     * Core pearl-pull logic shared by the in-game whisper path, the {@code pearlpull} command (HTTP API / terminal /
+     * in-game) and the ProxyBridge plugin channel. Always <b>self-scoped</b>: it only ever loads a pearl stored under
+     * {@code uuid} (the requester's own). Permission is gated by RBAC ({@code pearl.pull}) when RBAC is enabled
+     * (default-deny), otherwise by the legacy PearlPlus whitelist. {@code pearlArg} null/blank loads the default pearl.
+     */
+    public PullResult requestPull(UUID uuid, String name, String pearlArg) {
+        if (!CONFIG.client.extra.pearlPlus.autoLoad.enabled)
+            return new PullResult(false, false, "Pearl loading is disabled.");
+
+        if (PERMISSIONS.isEnabled()) {
+            if (!PERMISSIONS.allows(PERMISSIONS.resolve(uuid, name), "pearl.pull")) {
+                info("Denied pearl pull for {} (lacks pearl.pull)", name);
+                return new PullResult(false, false, "You are not authorized to pull pearls.");
+            }
+        } else if (CONFIG.client.extra.pearlPlus.autoLoad.whitelistEnabled
+                && !CONFIG.client.extra.pearlPlus.whitelist.containsKey(uuid)) {
+            return new PullResult(false, false, "You are not whitelisted to pull pearls.");
+        }
+
         var playerEntry = CONFIG.client.extra.pearlPlus.players.get(uuid);
         if (playerEntry == null || playerEntry.pearls.isEmpty()) {
             info("No pearls assigned to " + name);
-            return;
+            return new PullResult(false, false, "You have no pearls assigned.");
         }
 
         String requestedPearl;
-
-        if (!CONFIG.client.extra.pearlPlus.autoLoad.allowNoiseAfterPearl) {
-            if (lowerParts.length > 2) {
-                info("Extra arguments not allowed for " + name);
-                return;
-            }
-        } else if (lowerParts.length > 3) {
-            info("Too many arguments from " + name);
-            return;
-        }
-
-        if (lowerParts.length == 1) {
+        if (pearlArg == null || pearlArg.isBlank()) {
             requestedPearl = pearlManager.defaultPearlId(uuid);
         } else {
-            String candidate = parts[1];
-            String resolved = pearlManager.resolvePearlId(uuid, candidate);
-            if (resolved != null) {
-                requestedPearl = resolved;
-            } else if (CONFIG.client.extra.pearlPlus.autoLoad.allowNoiseAfterPearl) {
-                requestedPearl = pearlManager.defaultPearlId(uuid);
-            } else {
-                requestedPearl = null;
-            }
+            String resolved = pearlManager.resolvePearlId(uuid, pearlArg.trim());
+            requestedPearl = resolved != null ? resolved
+                : (CONFIG.client.extra.pearlPlus.autoLoad.allowNoiseAfterPearl ? pearlManager.defaultPearlId(uuid) : null);
         }
-
         if (requestedPearl == null || !playerEntry.pearls.containsKey(requestedPearl)) {
-            info("Unauthorized load from " + name + " with arg: " + rawMessage);
-            sendClientPacketAsync(ChatUtil.getWhisperChatPacket(name, "No authorized pearls found."));
-            return;
+            info("Unauthorized/unknown pearl from " + name + " (arg='" + pearlArg + "')");
+            return new PullResult(false, true, "No authorized pearls found.");
         }
 
         var pearl = playerEntry.pearls.get(requestedPearl);
+        int pearlsLeft = pearlManager.countPresentPearls(uuid) - 1;
+        String feedback = pearlsLeft == 1
+            ? "Loading pearl " + requestedPearl + "... Don't forget to drop a new pearl, this is your last one!"
+            : "Loading pearl " + requestedPearl + "... You have " + pearlsLeft + " pearls left.";
+        if (!pearlManager.isPearlPresent(pearl)) {
+            feedback = "No pearl detected. Attempting to load " + requestedPearl + " anyways.";
+        }
 
         discordAndIngameNotification(com.aquarius.discord.Embed.builder()
-                .title("Recieved Whisper")
-                .addField("Sender", name)
-                .addField("Pearl", requestedPearl)
-        );
-
-        // Check the amount of pearls left for the user. Subtract one since the pearl will be pulled after.
-        int PearlsLeft = pearlManager.countPresentPearls(uuid)-1;
-
-        // Set the default sentence to send.
-        String pearlFeedback = "You have " + PearlsLeft + " pearls left.";
-
-        if(PearlsLeft == 1){
-            pearlFeedback = "Don't forget to drop down a new pearl, this is your last one!";
-        }
-
-        if (!pearlManager.isPearlPresent(pearl)) {
-            sendClientPacketAsync(ChatUtil.getWhisperChatPacket(name, "No pearl detected. Attempting to load anyways."));
-        }else{
-            sendClientPacketAsync(ChatUtil.getWhisperChatPacket(name, "Loading pearl " + requestedPearl + "... "+pearlFeedback));
-        }
+            .title("Pearl Pull Request")
+            .addField("Player", name)
+            .addField("Pearl", requestedPearl));
 
         pearlManager.loadPearl(pearl, name);
-        
+        return new PullResult(true, true, feedback);
     }
 }

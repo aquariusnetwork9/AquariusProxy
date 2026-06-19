@@ -2607,6 +2607,7 @@ public final class Config {
         public boolean showNonWhitelistLoginIP = true;
         public boolean isUpdating = false; // internal use for update command state persistence
         public final ChatRelay chatRelay = new ChatRelay();
+        public final MembersChannel membersChannel = new MembersChannel();
 
         public static class ChatRelay {
             public boolean enable = false;
@@ -2622,6 +2623,38 @@ public final class Config {
             public boolean sendMessages = true;
             public String channelId = "";
             public ArrayList<String> ignoreRegex = new ArrayList<>();
+        }
+
+        /**
+         * A second, <b>read-only</b> Discord channel that mirrors a curated, coord-scrubbed subset of
+         * notifications for non-admin "members". RBAC-gated: each notice and each sensitive detail carries a
+         * minimum role, the channel carries an audience role, and a notice shows iff the audience role is at
+         * least the notice's min role (sensitive fields are stripped below their threshold). It only borrows the
+         * RBAC {@code Role} lattice for classification — it works whether or not {@code permissions.enabled} is on.
+         * Ships off; commands are never accepted here (that stays the admin channel).
+         */
+        public static class MembersChannel {
+            public boolean enable = false;
+            public String channelId = "";
+            /** Privilege tier of whoever you let view this channel in Discord. A notice/field shows iff its min role &le; this. */
+            public String audienceRole = "guest";
+            // Per-notice minimum role to mirror (blank or "off" disables that notice entirely).
+            public String onlineRole = "guest";
+            public String offlineRole = "guest";
+            public String queueRole = "guest";
+            public String prioRole = "user";
+            public String pearlPullRole = "guest";
+            public String visualRangeRole = "user";
+            // Sensitive-detail scrub thresholds: the field is stripped unless the audience role is at least this.
+            public String coordsRole = "operator";
+            public String proxyIpRole = "admin";
+            /**
+             * VisualRange coordinates in the members channel: when {@code false} (default) the coordinates are always
+             * stripped from mirrored visual-range alerts, regardless of {@link #coordsRole}; when {@code true} they
+             * follow the normal {@link #coordsRole} threshold like every other notice. A hard off-switch for the one
+             * notice that exposes the bot's own location relative to nearby players.
+             */
+            public boolean visualRangeCoords = false;
         }
     }
 

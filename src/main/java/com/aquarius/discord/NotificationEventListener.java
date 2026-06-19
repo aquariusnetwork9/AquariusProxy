@@ -177,6 +177,7 @@ public class NotificationEventListener {
         } else {
             sendEmbedMessage(embedBuilder);
         }
+        MembersFeed.mirror(MembersFeed.Notice.ONLINE, embedBuilder);
     }
 
     private void handleClientConfigurationEnteringEvent(ClientConfigurationEvent.Entering event) {
@@ -246,14 +247,17 @@ public class NotificationEventListener {
         } else {
             sendEmbedMessage(embed);
         }
+        MembersFeed.mirror(MembersFeed.Notice.OFFLINE, embed);
         EXECUTOR.execute(this::updatePresence);
     }
 
     private void handleQueueWarning(QueueWarningEvent event) {
-        sendEmbedMessage((event.mention() ? notificationMention() : ""), Embed.builder()
+        var embed = Embed.builder()
             .title("Queue Warning")
             .addField("Queue Position", "[" + Queue.queuePositionStr() + "]", false)
-            .inQueueColor());
+            .inQueueColor();
+        sendEmbedMessage((event.mention() ? notificationMention() : ""), embed);
+        MembersFeed.mirror(MembersFeed.Notice.QUEUE, embed);
     }
 
     public void handleQueuePositionUpdateEvent(QueuePositionUpdateEvent event) {
@@ -292,6 +296,7 @@ public class NotificationEventListener {
         } else {
             sendEmbedMessage(embed);
         }
+        MembersFeed.mirror(MembersFeed.Notice.QUEUE, embed);
         updatePresence();
     }
 
@@ -472,6 +477,7 @@ public class NotificationEventListener {
             sendEmbedMessageWithButtons(embedCreateSpec, buttons, mapper, Duration.ofHours(1));
         else
             sendEmbedMessage(embedCreateSpec);
+        MembersFeed.mirror(MembersFeed.Notice.VISUAL_RANGE, embedCreateSpec);
     }
 
     public void handleVisualRangeLeaveEvent(final VisualRangeLeaveEvent event) {
@@ -490,6 +496,7 @@ public class NotificationEventListener {
                 + "]||", false);
         }
         sendEmbedMessage(embedCreateSpec);
+        MembersFeed.mirror(MembersFeed.Notice.VISUAL_RANGE, embedCreateSpec);
     }
 
     public void handleVisualRangeLogoutEvent(final VisualRangeLogoutEvent event) {
@@ -508,6 +515,7 @@ public class NotificationEventListener {
                 + "]||", false);
         }
         sendEmbedMessage(embedCreateSpec);
+        MembersFeed.mirror(MembersFeed.Notice.VISUAL_RANGE, embedCreateSpec);
     }
 
     public void handleNonWhitelistedPlayerConnectedEvent(NonWhitelistedPlayerConnectedEvent event) {
@@ -726,6 +734,7 @@ public class NotificationEventListener {
         } else {
             sendEmbedMessage(embed);
         }
+        MembersFeed.mirror(MembersFeed.Notice.PRIO, embed);
     }
 
     public void handleAutoReconnectEvent(final AutoReconnectEvent event) {

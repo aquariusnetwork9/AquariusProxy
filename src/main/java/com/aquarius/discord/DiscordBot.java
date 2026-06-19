@@ -415,6 +415,17 @@ public class DiscordBot {
         sendEmbedMessage(embed);
     }
 
+    /**
+     * Post an embed to a specific channel id with <b>no</b> main-channel fallback: if the id is unset or can't be
+     * resolved the message is silently dropped. Used by the members-channel mirror, where a misconfigured id must
+     * never echo a (scrubbed) copy back into the admin channel.
+     */
+    public void sendEmbedMessageToChannelIdOrDrop(@Nullable String channelId, Embed embed) {
+        if (channelId == null || channelId.isBlank() || jda == null) return;
+        var channel = jda.getTextChannelById(channelId);
+        if (channel != null) sendEmbedMessageTo(channel, null, embed);
+    }
+
     public void sendRelayEmbedMessage(Embed embed) {
         sendRelayEmbedMessage(null, embed);
     }
