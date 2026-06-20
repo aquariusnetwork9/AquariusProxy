@@ -20,8 +20,9 @@ public final class Panels {
     public static final SnifferPanel SNIFFER = new SnifferPanel();
     public static final PermsPanel PERMS = new PermsPanel();
     public static final MembersPanel MEMBERS = new MembersPanel();
+    public static final WhisperControlPanel WHISPER = new WhisperControlPanel();
 
     /** All panels, in registration order. */
     public static final List<DiscordPanel> ALL =
-        List.of(TRIP, REGEAR, MINER, ENCHANTER, KITMAKER, PEARLDROP, TRADER, SNIFFER, PERMS, MEMBERS);
+        List.of(TRIP, REGEAR, MINER, ENCHANTER, KITMAKER, PEARLDROP, TRADER, SNIFFER, PERMS, MEMBERS, WHISPER);
 }
