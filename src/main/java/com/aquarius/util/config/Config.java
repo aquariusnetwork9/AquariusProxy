@@ -1995,6 +1995,12 @@ public final class Config {
                 public int minRange = 4;
                 /** Don't try to shoot past this (blocks); arrows past ~30b are slow and easy to dodge. */
                 public int maxRange = 32;
+                /** Ignore targets more than this many blocks above/below the bot — stops locking onto cave mobs through the floor. */
+                public int maxVerticalDistance = 6;
+                /** How close (degrees) the aim must be to the firing solution before releasing; looser = fires sooner. */
+                public double onTargetTolerance = 8.0;
+                /** Verbose state-machine logging to the console (target/charge/los/fire) for troubleshooting. */
+                public boolean debug = false;
                 /** Full-power bow draw time in ticks (vanilla = 20). TPS-scaled when {@link #tpsSync} is on. */
                 public int drawTicks = 20;
                 /** Crossbow charge time in ticks (vanilla standard = 25; quick-charge lowers it). TPS-scaled too. */
