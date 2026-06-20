@@ -22,6 +22,8 @@ public class ReflectionFeature implements Feature {
         "com.aquarius.database.dto",
         "com.aquarius.event",
         "com.aquarius.feature.api",
+        "com.aquarius.feature.elytra",
+        "com.aquarius.feature.permissions",
         "com.aquarius.feature.queue.mcping",
         "com.aquarius.terminal",
         "com.aquarius.util.config",
