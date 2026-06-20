@@ -28,6 +28,18 @@ final class FlightGear {
         return CONFIG.client.extra.elytraPilot;
     }
 
+    /**
+     * Horizontal distance from the bot to the (overworld) trip target — the length of a direct overworld leg.
+     * The overworld-direct vs nether-routing decision keys off THIS (how far the bot is from the destination),
+     * not the target's distance from spawn: a bot already parked out at a deep base must fly the short hop in,
+     * not route millions of blocks back through the nether from 0,0.
+     */
+    static double directLegDistance() {
+        var c = cfg();
+        var p = CACHE.getPlayerCache();
+        return Math.hypot(c.tripTargetX - p.getX(), c.tripTargetZ - p.getZ());
+    }
+
     // ---------------------------------------------------------------- item predicates
 
     static boolean isElytra(ItemStack s)   { return is(s, "elytra"); }
@@ -107,7 +119,7 @@ final class FlightGear {
         var c = cfg();
         int base = c.preflightMinFireworks;
         if (!c.tripEstimateFireworks || !c.tripActive || c.tripTargetIsNether) return base;
-        double dist = Math.hypot(c.tripTargetX, c.tripTargetZ);
+        double dist = directLegDistance();
         if (dist > c.spawnRegionRadius) return base;   // nether-routed transit: not modeled here
         double perRocket = Math.max(1.0, c.climbAltPerRocket * c.cruiseGlideRatio);
         int est = (int) Math.ceil(dist / perRocket * c.fireworkSafetyMargin);
@@ -124,7 +136,7 @@ final class FlightGear {
         var c = cfg();
         int base = Math.max(1, c.preflightMinElytras);
         if (!c.tripEstimateFireworks || !c.tripActive || c.tripTargetIsNether) return base;
-        double dist = Math.hypot(c.tripTargetX, c.tripTargetZ);
+        double dist = directLegDistance();
         if (dist > c.spawnRegionRadius) return base;
         int est = (int) Math.ceil(dist / Math.max(1.0, c.elytraBlocksPerElytra) * c.fireworkSafetyMargin);
         return Math.max(base, est);
