@@ -2,7 +2,8 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/MC-1.21.4-brightgreen.svg" alt="Minecraft"/>
-  <img src="https://img.shields.io/badge/version-4.1.0-blue.svg" alt="Version"/>
+  <img src="https://img.shields.io/badge/version-5.0.0-blue.svg" alt="Version"/>
+  <img src="https://img.shields.io/badge/release-pre--release%20%2F%20beta-yellow.svg" alt="Pre-release / beta"/>
   <img src="https://img.shields.io/badge/license-AGPL--3.0-orange.svg" alt="License"/>
 </p>
 
@@ -18,10 +19,30 @@ It keeps everything ZenithProxy does — an always-online account you can also l
 
 ## Contents
 
+- [What's new in 5.0 (beta)](#whats-new-in-50-beta)
 - [What's different from ZenithProxy](#whats-different-from-zenithproxy)
 - [Quick start](#quick-start)
 - [Built-in modules](#built-in-modules)
 - [Credits & license](#credits--license)
+
+---
+
+## What's new in 5.0 (beta)
+
+> ⚠️ **5.0 is a pre-release (beta).** The jars are built by GitHub Actions with a signed [build-provenance attestation](https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations) and published on the Aquarius Launcher's `java.1.21.4` channel, but 5.0 has **not been promoted to a stable tag** yet. Expect rough edges on the items flagged ⚠️ below. Full notes live on the wiki: **[What's New in 5.0 →](https://github.com/aquariusnetwork9/AquariusProxy/wiki/Whats-New)**.
+
+The 5.0 line rolls up everything since the 4.0.0 stable plus upstream stability fixes:
+
+| Feature | Status |
+| --- | --- |
+| **Boat autopilot** — a server-side port of Minecraft's `AbstractBoat` physics; `.boat goto <x> <z>` drives a boat across open water to a coordinate. | ✅ live-validated on 2b2t |
+| **Bubble-column traversal** — the pathfinder rides soul-sand columns up / magma columns down as first-class moves. | ✅ live-validated *(exit-timing polish pending)* |
+| **KitMaker** — mass-produces filled kit shulkers from a template + supply chests, with partial-kit support. | ✅ live-validated on 2b2t |
+| **Backported ZenithProxy stability fixes** — disconnect-deadlock re-dispatch, cookie-request 2b2t kick, MCProfile username/UUID lookup replacing the dead Minetools API. | ✅ |
+| **GitHub-built pre-releases** — the `+1.21.4.pre` source jar and the `+java.1.21.4` launcher-channel jar are now built and published by CI, with provenance attestation. | ✅ |
+| **PearlDrop** — throws ender pearls *into* stasis chambers to stock them (the deposit counterpart to PearlPlus). | ⚠️ beta — built & deployed, not yet fully run live |
+| **Enchanter** (`/enc`) — cheapest-anvil-order auto-enchanting of god gear. | ⚠️ beta — built & deployed, not yet fully run live |
+| **ElytraPilot multi-leg long-haul** — chaining several flight / highway / portal legs to a far destination. | ⚠️ beta *(single-leg flight + the no-firework highway bounce are validated)* |
 
 ---
 
@@ -81,7 +102,7 @@ gh attestation verify AquariusProxy.jar --repo aquariusnetwork9/AquariusProxy
 
 Each module below links to its wiki page for the setup guide and commands.
 
-> **Validation status (as of the v4.1.0 line):** every feature is live-validated on 2b2t **except** the three marked ⚠️ — **PearlDrop**, the **Enchanter**, and ElytraPilot's **multi-leg long-haul** trip planner — which are built and deployed but not yet fully run live.
+> **Validation status (as of the v5.0 beta line):** every feature is live-validated on 2b2t **except** the three marked ⚠️ — **PearlDrop**, the **Enchanter**, and ElytraPilot's **multi-leg long-haul** trip planner — which are built and deployed but not yet fully run live.
 
 ### AquariusMiner — AFK quarry
 

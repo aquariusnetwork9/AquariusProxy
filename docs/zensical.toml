@@ -50,6 +50,7 @@ edit_uri = "edit/1.21.4/docs/wiki"
 # Read more: https://zensical.org/docs/setup/navigation/
  nav = [
      { "Home" = "index.md" },
+     { "What's New (5.0 beta)" = "Whats-New.md" },
      { "Setup" = "Setup.md" },
      { "DigitalOcean Setup Guide" = "DigitalOcean-Setup-Guide.md" },
      { "Hosting Providers" = "Hosting-Providers.md" },
