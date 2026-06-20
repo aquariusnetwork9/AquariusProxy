@@ -117,6 +117,7 @@ public class CommandManager {
         new SkinCommand(),
         new SpammerCommand(),
         new SpawnPatrolCommand(),
+        new WhisperControlCommand(),
         new SpectatorCommand(),
         new SpectatorEntityCommand(),
         new SpectatorEntityToggleCommand(),

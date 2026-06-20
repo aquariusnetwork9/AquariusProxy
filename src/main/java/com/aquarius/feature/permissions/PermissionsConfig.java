@@ -47,7 +47,8 @@ public class PermissionsConfig {
         groups.put("movement", list("action.move", "action.interact", "module.pathfinder", "module.boat"));
         groups.put("travel", list("module.elytrapilot")); // ElytraTrip has no separate command; elytrapilot covers it
         groups.put("combat", list("module.killaura", "module.autototem", "module.autoeat", "module.automend",
-            "module.autoarmor", "module.autoomen", "module.spook", "module.autorespawn", "module.spawnpatrol", "module.basepatrol"));
+            "module.autoarmor", "module.autoomen", "module.spook", "module.autorespawn", "module.spawnpatrol", "module.basepatrol",
+            "module.whispercontrol")); // whisper-command handler; verbs also need their own perm (pathfinder/aquariusminer/etc.)
         groups.put("crafting", list("module.trader", "module.pearldrop", "module.aquariusminer",
             "module.kitmaker", "module.enchanter", "module.stashscanner", "module.orderfiller", "module.regear"));
         groups.put("automation", list("module.antiafk", "module.autofish", "module.autodrop", "module.tasks"));

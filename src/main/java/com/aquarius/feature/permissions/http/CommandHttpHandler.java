@@ -2,6 +2,7 @@ package com.aquarius.feature.permissions.http;
 
 import com.aquarius.command.api.ApiCommandSource;
 import com.aquarius.command.api.CommandContext;
+import com.aquarius.feature.location.PlayerLocations;
 import com.aquarius.feature.permissions.PermissionManager;
 import com.aquarius.feature.permissions.Subject;
 import com.google.gson.Gson;
@@ -44,7 +45,9 @@ public class CommandHttpHandler extends SimpleChannelInboundHandler<FullHttpRequ
     @Override
     protected void channelRead0(final ChannelHandlerContext nettyCtx, final FullHttpRequest req) {
         final String path = req.uri().split("\\?", 2)[0];
-        if (req.method() != HttpMethod.POST || !path.equals("/command")) {
+        final boolean isCommand = path.equals("/command");
+        final boolean isPosition = path.equals("/position");
+        if (req.method() != HttpMethod.POST || (!isCommand && !isPosition)) {
             respond(nettyCtx, HttpResponseStatus.NOT_FOUND, "{}");
             return;
         }
@@ -54,11 +57,34 @@ public class CommandHttpHandler extends SimpleChannelInboundHandler<FullHttpRequ
             respond(nettyCtx, HttpResponseStatus.FORBIDDEN, "{}");
             return;
         }
+        final String body = req.content().toString(StandardCharsets.UTF_8);
+
+        if (isPosition) {
+            // Position telemetry: own (higher) rate budget so it never starves the command budget; attributed to the
+            // caller's UUID; not audit-logged (high frequency). The mod reporting this is what lets come/follow target
+            // a commander on a separate session the bot can't see.
+            if (!allowRate(PermissionManager.sha256Hex(token) + ":pos",
+                    Math.max(120, CONFIG.server.permissions.api.requestsPerMinutePerToken))) {
+                respond(nettyCtx, HttpResponseStatus.TOO_MANY_REQUESTS, "{}");
+                return;
+            }
+            try {
+                final PositionRequest pos = GSON.fromJson(body, PositionRequest.class);
+                if (pos == null || subject.uuid() == null) { respond(nettyCtx, HttpResponseStatus.BAD_REQUEST, "{}"); return; }
+                PlayerLocations.report(subject.uuid(), pos.x(), pos.y(), pos.z(), pos.dimension());
+            } catch (final Exception e) {
+                respond(nettyCtx, HttpResponseStatus.BAD_REQUEST, "{}");
+                return;
+            }
+            respond(nettyCtx, HttpResponseStatus.OK, "{\"ok\":true}");
+            return;
+        }
+
+        // /command
         if (!allowRate(PermissionManager.sha256Hex(token), CONFIG.server.permissions.api.requestsPerMinutePerToken)) {
             respond(nettyCtx, HttpResponseStatus.TOO_MANY_REQUESTS, "{}");
             return;
         }
-        final String body = req.content().toString(StandardCharsets.UTF_8);
         String parsed;
         try {
             parsed = GSON.fromJson(body, CommandRequest.class).command();
