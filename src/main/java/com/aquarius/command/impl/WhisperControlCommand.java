@@ -35,8 +35,12 @@ public class WhisperControlCommand extends Command {
             .usageLines(
                 "on/off",
                 "followradius <blocks>          (`protect` leash + hostile-scan radius; default 32)",
+                "engageradius <blocks>          (`protect` how close it chases a mob — ≤ melee reach; default 2)",
+                "wander <on/off>                (`protect` roams the perimeter when no mob is near; default on)",
+                "wanderradius <blocks>          (`protect` how far it roams while wandering; default 12)",
                 "comethreshold <blocks>         (`come`/`goto` walk within this, fly beyond it; default 200)",
                 "killaura <on/off>              (`protect` also turns on KillAura)",
+                "bow <on/off>                   (`protect` also turns on AutoBow — shoots ranged threats, stays mobile)",
                 "chestplateswap <on/off>        (`protect` trades a worn elytra for a chestplate in combat range)",
                 "goto <x> <y> <z>               (send the bot to coords; used by the mod's off-chat /pb goto)",
                 "patrol <x> <y> <z> <range>     (set the `patrol` preset area)",
@@ -58,6 +62,21 @@ public class WhisperControlCommand extends Command {
                 CONFIG.client.extra.whisperControl.followRadius = getInteger(c, "blocks");
                 c.getSource().getEmbed().title("Whisper control follow radius = " + CONFIG.client.extra.whisperControl.followRadius + "b");
             })))
+            .then(literal("engageradius").then(argument("blocks", integer(1)).executes(c -> {
+                CONFIG.client.extra.whisperControl.protectEngageRadius = getInteger(c, "blocks");
+                c.getSource().getEmbed().title("Whisper control engage radius = " + CONFIG.client.extra.whisperControl.protectEngageRadius + "b")
+                    .description("How close `protect` chases a mob. Keep it ≤ KillAura's melee reach (~3) or the bot stops short and never lands a hit.");
+            })))
+            .then(literal("wander").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.whisperControl.protectWander = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("Whisper control protect-wander " + toggleStrCaps(CONFIG.client.extra.whisperControl.protectWander))
+                    .description("When on, `protect` roams the perimeter around you when no mob is near, so mobs are intercepted before they reach you.");
+            })))
+            .then(literal("wanderradius").then(argument("blocks", integer(1)).executes(c -> {
+                CONFIG.client.extra.whisperControl.protectWanderRadius = getInteger(c, "blocks");
+                c.getSource().getEmbed().title("Whisper control wander radius = " + CONFIG.client.extra.whisperControl.protectWanderRadius + "b")
+                    .description("How far `protect` roams from you while wandering (kept inside the follow radius).");
+            })))
             .then(literal("comethreshold").then(argument("blocks", integer(0)).executes(c -> {
                 CONFIG.client.extra.whisperControl.comeFlyThreshold = getInteger(c, "blocks");
                 c.getSource().getEmbed().title("Whisper control come fly-threshold = " + CONFIG.client.extra.whisperControl.comeFlyThreshold + "b")
@@ -66,6 +85,11 @@ public class WhisperControlCommand extends Command {
             .then(literal("killaura").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.whisperControl.followEnablesKillAura = getToggle(c, "toggle");
                 c.getSource().getEmbed().title("Whisper control protect-killaura " + toggleStrCaps(CONFIG.client.extra.whisperControl.followEnablesKillAura));
+            })))
+            .then(literal("bow").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.whisperControl.protectUseBow = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("Whisper control protect-bow " + toggleStrCaps(CONFIG.client.extra.whisperControl.protectUseBow))
+                    .description("`protect` enables AutoBow so the bot shoots ranged threats (skeletons) and stays mobile instead of charging them.");
             })))
             .then(literal("chestplateswap").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.whisperControl.protectSwapToChestplate = getToggle(c, "toggle");

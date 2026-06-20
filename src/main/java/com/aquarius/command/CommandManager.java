@@ -82,6 +82,7 @@ public class CommandManager {
         new JvmArgsCommand(),
         new KickCommand(),
         new KillAuraCommand(),
+        new AutoBowCommand(),
         new LicenseCommand(),
         new MapCommand(),
         new MembersChannelCommand(),
