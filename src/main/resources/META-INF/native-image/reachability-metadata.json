@@ -2266,6 +2266,32 @@
       ]
     },
     {
+      "type": "com.aquarius.mc.block.BlockPos",
+      "allDeclaredFields": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "int",
+            "int"
+          ]
+        },
+        {
+          "name": "x",
+          "parameterTypes": []
+        },
+        {
+          "name": "y",
+          "parameterTypes": []
+        },
+        {
+          "name": "z",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "com.aquarius.mc.block.BlockOffsetType"
     },
     {
