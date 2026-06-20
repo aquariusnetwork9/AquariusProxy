@@ -662,7 +662,7 @@ public final class Config {
                 public int tripTargetY = 64;
                 public int tripTargetZ = 0;
 
-                /** Targets within this radius of (0,0) fly overworld-direct; beyond it route via the nether (8:1 scale). */
+                /** Targets within this distance OF THE BOT fly overworld-direct; beyond it route via the nether (8:1 scale). */
                 public int spawnRegionRadius = 100000;
 
                 /** In the nether, stop bouncing and seek an exit portal within this many (nether) blocks of the target's nether coords. */

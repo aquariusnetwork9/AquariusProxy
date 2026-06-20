@@ -23,9 +23,9 @@ import static com.aquarius.Globals.MODULE;
  * ElytraTrip — high-level "trip planner" that drives {@link ElytraPilot} (and Baritone) across multiple legs and
  * dimensions to reach a far destination.
  *
- * <p>Routing decision, from the destination's distance to spawn (0,0):
+ * <p>Routing decision, from the destination's distance to the BOT (not to spawn):
  * <ul>
- *   <li><b>Within {@code spawnRegionRadius}</b> (default 100k): fly the overworld straight to the target.</li>
+ *   <li><b>Within {@code spawnRegionRadius}</b> of the bot (default 100k): fly the overworld straight to the target.</li>
  *   <li><b>Beyond it</b>: hop to the nether (8:1 scale makes the distance 8× cheaper), ride the nearest 2b2t
  *       nether highway toward the target's nether coords, exit through a portal near there, and fly the final
  *       overworld leg to the exact target.</li>
@@ -183,15 +183,19 @@ public class ElytraTrip extends Module {
                 inNether() ? "flying there" : "entering the nearest portal first");
             return;
         }
-        double dist = Math.hypot(cfg.tripTargetX, cfg.tripTargetZ);
-        if (dist <= cfg.spawnRegionRadius) {
+        // Overworld-direct vs nether routing keys off how far the BOT is from the target — NOT the target's
+        // distance from spawn. A bot already parked out at a deep base must fly the short hop to a nearby target,
+        // not route millions of blocks back through the nether from 0,0. Only an overworld leg flies direct, so a
+        // bot already in the nether always routes via the nether.
+        double dist = FlightGear.directLegDistance();          // bot→target, overworld blocks
+        if (inOverworld() && dist <= cfg.spawnRegionRadius) {
             phase = Phase.OW_DIRECT;
-            info("Trip: {}, {} is within the spawn region ({}b) — flying overworld-direct.",
-                cfg.tripTargetX, cfg.tripTargetZ, cfg.spawnRegionRadius);
+            info("Trip: {}, {} is {}b from the bot (within the {}b direct radius) — flying overworld-direct.",
+                cfg.tripTargetX, cfg.tripTargetZ, (long) dist, cfg.spawnRegionRadius);
         } else {
             phase = Phase.ENTER_NETHER;
-            info("Trip: {}, {} is {}b out — routing via the nether (nether target {}, {}).",
-                cfg.tripTargetX, cfg.tripTargetZ, (long) dist,
+            info("Trip: {}, {} — routing via the nether (nether target {}, {}).",
+                cfg.tripTargetX, cfg.tripTargetZ,
                 Math.round(cfg.tripTargetX / NETHER_SCALE), Math.round(cfg.tripTargetZ / NETHER_SCALE));
         }
     }

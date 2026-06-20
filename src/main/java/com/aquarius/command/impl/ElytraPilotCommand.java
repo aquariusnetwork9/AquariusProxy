@@ -21,6 +21,7 @@ import static com.mojang.brigadier.arguments.LongArgumentType.getLong;
 import static com.mojang.brigadier.arguments.LongArgumentType.longArg;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.word;
+import static com.aquarius.Globals.CACHE;
 import static com.aquarius.Globals.CONFIG;
 import static com.aquarius.Globals.DISCORD;
 import static com.aquarius.Globals.MODULE;
@@ -100,7 +101,7 @@ public class ElytraPilotCommand extends Command {
                 "trip <x> <z> [y]      (plan a journey to OVERWORLD coords: direct if within ~100k of spawn, else via the nether)",
                 "trip nether <x> <z>   (destination IS in the nether: enter a portal, fly to the exact coords, land there)",
                 "trip highways <on/off>(nether transit leg: e-bounce a highway vs fly open-nether straight to the target)",
-                "trip radius <blocks>  (overworld-direct cutoff: targets within this of 0,0 fly direct, beyond it route via the nether)",
+                "trip radius <blocks>  (overworld-direct cutoff: targets within this distance OF THE BOT fly direct, beyond it route via the nether)",
                 "trip acquire <blocks> (within this perpendicular distance of the chosen highway, Baritone walks onto the road instead of nether-flying)",
                 "trip route new <name> ow <x> <y> <z> | nether   (create a saved multi-leg route; ends overworld at x,y,z or in the nether)",
                 "trip route leg <name> <ride|fly> coord <nx> <nz> [roadY]   (append a leg to a nether endpoint; ride=e-bounce a road, fly=open-nether)",
@@ -621,7 +622,7 @@ public class ElytraPilotCommand extends Command {
                 .then(literal("radius").then(argument("blocks", integer(0)).executes(c -> {
                     CONFIG.client.extra.elytraPilot.spawnRegionRadius = getInteger(c, "blocks");
                     c.getSource().getEmbed().title("ElytraPilot trip overworld-direct radius = " + CONFIG.client.extra.elytraPilot.spawnRegionRadius + "b")
-                        .description("Destinations within this radius of 0,0 fly overworld-direct; beyond it the trip routes via the nether (8:1 scale).");
+                        .description("Destinations within this distance of the BOT fly overworld-direct; beyond it the trip routes via the nether (8:1 scale). Set this huge (e.g. 60000000) to force overworld-direct at any distance.");
                 })))
                 .then(literal("acquire").then(argument("blocks", integer(0)).executes(c -> {
                     CONFIG.client.extra.elytraPilot.highwayAcquireRadius = getInteger(c, "blocks");
@@ -675,13 +676,14 @@ public class ElytraPilotCommand extends Command {
         cfg.tripActiveRoute = "";          // a plain coord trip, not a saved route
         cfg.tripActive = true;
         MODULE.get(ElytraTrip.class).syncEnabledFromConfig();
-        double dist = Math.hypot(x, z);
+        double px = CACHE.getPlayerCache().getX(), pz = CACHE.getPlayerCache().getZ();
+        double dist = Math.hypot(x - px, z - pz);   // bot→target, not spawn→target
         ctx.getEmbed()
             .title("ElytraPilot trip started")
-            .description("Destination " + x + ", " + y + ", " + z
+            .description("Destination " + x + ", " + y + ", " + z + " — " + (long) dist + "b from the bot"
                 + (dist <= cfg.spawnRegionRadius
-                    ? " — overworld-direct (within the spawn region)."
-                    : " — via the nether highways (" + (long) dist + "b out)."));
+                    ? " — overworld-direct (within the direct radius)."
+                    : " — via the nether highways."));
         return OK;
     }
 

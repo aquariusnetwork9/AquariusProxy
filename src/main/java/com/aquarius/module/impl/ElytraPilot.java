@@ -475,8 +475,12 @@ public class ElytraPilot extends Module {
             return;
         }
         // Deploy + rocket, persistently, until we are flying — the same launch the lost-flight recovery uses.
+        // Deploy OPTIMISTICALLY: flip fall-flying TRUE locally this very tick (not just send the packet) so the
+        // rocket below fires INSIDE the brief airborne arc, instead of waiting on the server metadata round-trip.
+        // Under 2b2t latency that round-trip lands after the bot is already back on the ground, so the old
+        // sendStartFallFlying() (no local flip) made flat-ground takeoff miss the window and just re-hop.
         if (!onGround && !BOT.isFallFlying() && redeployCooldown <= 0) {
-            sendStartFallFlying();
+            BOT.deployElytra();
             redeployCooldown = cfg.bounceRedeployTicks;
         }
         boolean fire = BOT.isFallFlying() && heldIsFirework() && ticksSinceFire >= cfg.bounceRedeployTicks && setbackHoldTicks <= 0;
@@ -1965,9 +1969,10 @@ public class ElytraPilot extends Module {
         }
 
         // OUT OF THE LAVA (on land, or airborne above the surface): now deploy the instant we're airborne and
-        // fire rockets to climb/slide clear before we fall back in.
+        // fire rockets to climb/slide clear before we fall back in. Optimistic local deploy (same as takeoff) so the
+        // rocket fires this tick rather than after the server metadata round-trip — otherwise we sink back in first.
         if (!onGround && !BOT.isFallFlying() && redeployCooldown <= 0) {
-            sendStartFallFlying();
+            BOT.deployElytra();
             redeployCooldown = cfg.bounceRedeployTicks;
         }
         boolean fire = BOT.isFallFlying() && heldIsFirework() && ticksSinceFire >= cfg.bounceRedeployTicks && setbackHoldTicks <= 0;
