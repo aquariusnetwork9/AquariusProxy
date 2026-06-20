@@ -26,7 +26,7 @@ See the [Commands reference](Commands.md#pathfinder) for the complete list (clic
 
 ## Bubble-column traversal
 
-!!! note "New in AquariusProxy"
+!!! note "New in AquariusProxy 5.0 — ✅ live-validated (exit-timing polish pending)"
 
     The pathfinder can now **enter, ride, and exit bubble columns** as first-class movements — both **soul-sand columns (up)** and **magma columns (down)**. This is automatic: when a bubble column lies on the route, the planner uses it like any other move; no special command is required, just `b goto`/`b mine`/etc. as usual.
 
@@ -47,7 +47,7 @@ How it works:
 
 Command: `boat`. (Discord `.boat`, in-game `/boat` or `!boat`.)
 
-!!! note "New in AquariusProxy"
+!!! note "New in AquariusProxy 5.0 — ✅ live-validated"
 
     AquariusProxy reimplements Minecraft's `AbstractBoat` physics server-side, so the bot can **drive a boat across open water to a coordinate**. The bot becomes the controlling client and reports its motion via the MoveVehicle packet.
 
