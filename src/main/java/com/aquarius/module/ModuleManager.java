@@ -53,6 +53,7 @@ public class ModuleManager {
             new ElytraTrip(),
             new ExtraChat(),
             new KillAura(),
+            new AutoBow(),
             new QueueWarning(),
             new ReplayMod(),
             new Requeue(),
