@@ -142,6 +142,7 @@ public final class Config {
             public final AutoEat autoEat = new AutoEat();
             public final AutoFish autoFish = new AutoFish();
             public final KillAura killAura = new KillAura();
+            public final AutoBow autoBow = new AutoBow();
             public final AutoTotem autoTotem = new AutoTotem();
             public final AirPlace airPlace = new AirPlace();
             public final AutoPortal autoPortal = new AutoPortal();
@@ -1950,12 +1951,20 @@ public final class Config {
             public static class WhisperControl {
                 /** Master switch for the whisper-command handler. */
                 public boolean enabled = false;
-                /** Block radius for {@code protect}: the bot leashes within this of you AND scans this sphere for hostile mobs to kill. */
+                /** Block radius for {@code protect}: the bot scans this sphere around you for hostile mobs to chase, and leashes within it. */
                 public int followRadius = 32;
+                /** {@code protect}: how close the bot paths to a hostile it's chasing — must be ≤ KillAura's melee reach (~3) or it never lands a hit. */
+                public int protectEngageRadius = 2;
+                /** {@code protect}: roam around you (perimeter patrol) when no hostile is near, so mobs are intercepted before they reach you, instead of standing on you. */
+                public boolean protectWander = true;
+                /** {@code protect}: how far from you the bot roams while wandering (kept well inside {@link #followRadius}). */
+                public int protectWanderRadius = 12;
                 /** {@code come} switches from walking to flying when you are farther than this (blocks). */
                 public int comeFlyThreshold = 200;
                 /** {@code protect} also enables KillAura so the bot fights what's near you. */
                 public boolean followEnablesKillAura = true;
+                /** {@code protect} also enables AutoBow so the bot shoots ranged threats (skeletons) instead of only meleeing. */
+                public boolean protectUseBow = true;
                 /** {@code protect} swaps a worn elytra for the best inventory chestplate when it enters combat range (restored on stop). */
                 public boolean protectSwapToChestplate = true;
                 /** Use out-of-band reported positions (POST /position) for come/follow when you're out of render range. */
@@ -1976,6 +1985,40 @@ public final class Config {
                 public int mineCorner2Z = 0;
                 public int mineMinY = -59;
                 public int mineMaxY = -50;
+            }
+
+            public static class AutoBow {
+                /** Master switch. When on, the bot draws+fires a bow/crossbow at hostiles in the ranged band. */
+                public boolean enabled = false;
+                public @Nullable Integer priority = null;          // input priority; defaults below KillAura so melee wins
+                /** Only engage targets at least this far away (blocks) — leaves anything closer to KillAura's melee. */
+                public int minRange = 4;
+                /** Don't try to shoot past this (blocks); arrows past ~30b are slow and easy to dodge. */
+                public int maxRange = 32;
+                /** Full-power bow draw time in ticks (vanilla = 20). TPS-scaled when {@link #tpsSync} is on. */
+                public int drawTicks = 20;
+                /** Crossbow charge time in ticks (vanilla standard = 25; quick-charge lowers it). TPS-scaled too. */
+                public int crossbowChargeTicks = 25;
+                /** Scale charge times by server TPS, like KillAura — at 10 TPS a 20-tick draw really takes ~40 wall ticks. */
+                public boolean tpsSync = true;
+                /** Lead moving targets using their estimated velocity × arrow flight time (skeletons strafe). */
+                public boolean leadTargets = true;
+                /** Aim point as a fraction of the target's height (0=feet, 1=top); ~0.6 = upper body. */
+                public double aimHeightFraction = 0.6;
+                /** Require line-of-sight to the aim point before releasing (don't fire into walls). */
+                public boolean requireLineOfSight = true;
+                /** Fire at hostile mobs (the KillAura hostile table). */
+                public boolean targetHostileMobs = true;
+                /** Also fire at players (off by default; friends/whitelist are always spared). */
+                public boolean targetPlayers = false;
+                /** Ticks to wait after a shot before drawing again. */
+                public int postShotCooldownTicks = 10;
+                /** Prefer a crossbow over a bow when both are present (instant follow-up once loaded). */
+                public boolean preferCrossbow = false;
+                /** Stay mobile while drawing — strafe/kite (combined with the aim) instead of standing still. */
+                public boolean mobileWhileEngaging = true;
+                /** Actively sidestep incoming arrows (biases the strafe toward leaving the arrow's path). */
+                public boolean dodgeArrows = true;
             }
 
             public static final class QueueWarning {

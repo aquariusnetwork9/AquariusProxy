@@ -63,6 +63,10 @@ public class WhisperControl extends Module {
     private int[] lastRemoteTarget = null;  // last reported-position we pathed to while the player was out of render
     private boolean swapAttempted = false;  // chestplate swap tried this session (do it once on entering range)
     private boolean elytraTradedOut = false;// an elytra was swapped out for a chestplate (restore it on stop)
+    private int[] wanderTarget = null;      // current roam point (x,y,z) while wandering the perimeter, null = none
+    private int wanderHold = 0;             // protect-cycles to keep the current wander point before re-rolling
+    private int savedPathfinderRadius = -1; // global pathfinder.followRadius before protect mutated it (restored on stop)
+    private final java.util.Random rng = new java.util.Random();
 
     @Override
     public List<EventConsumer<?>> registerEvents() {
@@ -122,19 +126,29 @@ public class WhisperControl extends Module {
         var wc = CONFIG.client.extra.whisperControl;
         boolean loaded = CACHE.getEntityCache().get(uuid) instanceof EntityPlayer;
         if (!loaded && reportedPos(uuid, name) == null) return;   // not in view + no fresh reported position (replied)
+        if (savedPathfinderRadius < 0) savedPathfinderRadius = CONFIG.client.extra.pathfinder.followRadius; // restore on stop
         CONFIG.client.extra.pathfinder.followRadius = wc.followRadius;  // leash distance for the native follow
         if (wc.followEnablesKillAura) {
             CONFIG.client.extra.killAura.targetHostileMobs = true;     // protect = clear hostiles around you
             CONFIG.client.extra.killAura.enabled = true;
             MODULE.get(KillAura.class).syncEnabledFromConfig();
         }
+        if (wc.protectUseBow) {                                        // shoot ranged threats instead of only meleeing
+            CONFIG.client.extra.autoBow.targetHostileMobs = true;
+            CONFIG.client.extra.autoBow.enabled = true;
+            MODULE.get(AutoBow.class).syncEnabledFromConfig();
+        }
         protectUuid = uuid;
         lastFollowId = -1;
         lastRemoteTarget = null;
         swapAttempted = false;
         elytraTradedOut = false;
+        wanderTarget = null;
+        wanderHold = 0;
         String aura = wc.followEnablesKillAura ? ", killaura on" : "";
-        reply(name, (loaded ? "protecting you" : "coming to protect you") + " (radius " + wc.followRadius + aura + ")");
+        String bow = wc.protectUseBow ? ", bow" : "";
+        String roam = wc.protectWander ? ", roaming" : "";
+        reply(name, (loaded ? "protecting you" : "coming to protect you") + " (radius " + wc.followRadius + aura + bow + roam + ")");
     }
 
     private void doCome(UUID uuid, String name, String[] tok) {
@@ -237,6 +251,12 @@ public class WhisperControl extends Module {
         lastFollowId = -1;
         lastRemoteTarget = null;
         swapAttempted = false;
+        wanderTarget = null;
+        wanderHold = 0;
+        if (savedPathfinderRadius >= 0) {                   // undo the leash/engage radius mutation
+            CONFIG.client.extra.pathfinder.followRadius = savedPathfinderRadius;
+            savedPathfinderRadius = -1;
+        }
         if (elytraTradedOut) {                              // we swapped an elytra out for combat — put it back on
             MODULE.get(AutoArmor.class).equipElytraFromInventory();
             elytraTradedOut = false;
@@ -252,6 +272,10 @@ public class WhisperControl extends Module {
             CONFIG.client.extra.killAura.enabled = false;
             MODULE.get(KillAura.class).syncEnabledFromConfig();
         }
+        if (CONFIG.client.extra.whisperControl.protectUseBow) {
+            CONFIG.client.extra.autoBow.enabled = false;
+            MODULE.get(AutoBow.class).syncEnabledFromConfig();
+        }
         reply(name, "stopped");
     }
 
@@ -261,11 +285,17 @@ public class WhisperControl extends Module {
      * Protect loop (~2 Hz). While guarding someone:
      * <ul>
      *   <li>in render range — swap a worn elytra for a chestplate once (combat prep), scan a {@code followRadius} sphere
-     *       around the player for hostile mobs, and Baritone-follow the nearest (KillAura kills it on contact); when the
-     *       sphere is clear, leash back to the player;</li>
+     *       around the player for hostile mobs, and chase the nearest <b>into melee range</b> ({@code protectEngageRadius},
+     *       so KillAura actually lands the hit — it is melee-only); when the sphere is clear, either roam the perimeter
+     *       ({@code protectWander}, intercepting mobs before they reach the player) or leash back to the player;</li>
      *   <li>out of render range — re-path toward their latest reported position (~once it moves), keeping the elytra on
      *       so the bot can still travel; combat resumes the moment they come into view.</li>
      * </ul>
+     *
+     * <p>The chase radius is the crux: {@code BARITONE.follow(mob)} paths only to within the <i>global</i>
+     * {@code pathfinder.followRadius} of its target, so we shrink that to {@code protectEngageRadius} while chasing a
+     * mob (else the bot stops a leash-radius short and never reaches a skeleton's square to hit it) and restore the
+     * larger radius for leashing/catching up to the player.
      */
     private void onTick(ClientBotTick event) {
         if (protectUuid == null) return;
@@ -280,17 +310,42 @@ public class WhisperControl extends Module {
             }
             double px = target.getX(), py = target.getY(), pz = target.getZ();
             EntityLiving hostile = nearestHostile(px, py, pz, wc.followRadius);
-            EntityLiving leashTarget = hostile != null ? hostile : target;
-            int desiredId = leashTarget.getEntityId();
-            if (desiredId != lastFollowId || !BARITONE.getFollowProcess().isActive()) {
-                BARITONE.follow(leashTarget);              // chase the mob, or leash back to the player when clear
-                lastFollowId = desiredId;
+
+            if (hostile != null) {
+                // With AutoBow on, don't run ranged threats down — stay mobile around the player and shoot them from
+                // distance (charging a skeleton just trades arrows for nothing). Only melee what's already close.
+                boolean bowActive = wc.protectUseBow && MODULE.get(AutoBow.class).isEnabled();
+                double minR = CONFIG.client.extra.autoBow.minRange;
+                boolean rangedThreat = bowActive && CACHE.getPlayerCache().distanceSqToSelf(hostile) > minR * minR;
+                if (rangedThreat) {
+                    CONFIG.client.extra.pathfinder.followRadius = wc.followRadius;
+                    if (wc.protectWander) wanderNear(px, py, pz, wc.protectWanderRadius);
+                    else followEntity(target.getEntityId(), target);   // hold near the player; AutoBow does the shooting
+                    return;
+                }
+                // melee: chase the mob right up to range so KillAura connects
+                CONFIG.client.extra.pathfinder.followRadius = Math.max(1, wc.protectEngageRadius);
+                followEntity(hostile.getEntityId(), hostile);
+                wanderTarget = null;                        // resume roaming only after the threat is dealt with
+                return;
+            }
+
+            // sphere clear: roam the perimeter so mobs die before reaching the player, or leash back to them
+            double distToPlayerSq = CACHE.getPlayerCache().distanceSqToSelf(target);
+            if (wc.protectWander && distToPlayerSq <= (double) wc.followRadius * wc.followRadius) {
+                wanderNear(px, py, pz, wc.protectWanderRadius);
+            } else {
+                // wander off (too far) or wandering disabled: leash back to the player
+                CONFIG.client.extra.pathfinder.followRadius = wc.followRadius;
+                wanderTarget = null;
+                followEntity(target.getEntityId(), target);
             }
             return;
         }
 
         // out of render: re-path toward the player's reported position (keep the elytra, no combat possible here)
         lastFollowId = -1;
+        wanderTarget = null;
         if (!wc.useReportedPositions) return;
         var rp = PlayerLocations.get(protectUuid, wc.reportedPosMaxAgeSeconds * 1000L);
         if (rp.isEmpty()) return;                           // stale — hold position, don't thrash
@@ -302,6 +357,40 @@ public class WhisperControl extends Module {
             && Math.abs(lastRemoteTarget[0] - x) + Math.abs(lastRemoteTarget[2] - z) < moveThresh) return; // not moved enough
         lastRemoteTarget = new int[]{x, y, z};
         BARITONE.pathTo(new GoalNear(x, y, z, Math.max(1, wc.followRadius * wc.followRadius)));
+    }
+
+    /** Follow an entity, re-issuing only when the target changed or the follow process went idle. */
+    private void followEntity(int entityId, EntityLiving entity) {
+        if (entityId != lastFollowId || !BARITONE.getFollowProcess().isActive()) {
+            BARITONE.getCustomGoalProcess().onLostControl();   // drop any stale wander goal so it can't fight the follow
+            BARITONE.follow(entity);
+            lastFollowId = entityId;
+        }
+    }
+
+    /**
+     * Roam the perimeter around (px,py,pz): path to a point ~{@code radius} blocks out, re-rolling it once reached or
+     * after a short hold, so the bot circles the player and meets mobs before they close in. Uses the custom-goal
+     * pathing process, so the follow process is cancelled first to avoid two active goals fighting.
+     */
+    private void wanderNear(double px, double py, double pz, int radius) {
+        if (lastFollowId != -1) { BARITONE.getFollowProcess().cancel(); lastFollowId = -1; }
+        int r = Math.max(2, radius);
+        boolean reached = false;
+        if (wanderTarget != null) {
+            double bdx = CACHE.getPlayerCache().getX() - (wanderTarget[0] + 0.5);
+            double bdz = CACHE.getPlayerCache().getZ() - (wanderTarget[2] + 0.5);
+            reached = bdx * bdx + bdz * bdz <= 9.0;        // within ~3 blocks horizontally of the roam point
+        }
+        if (wanderTarget == null || reached || --wanderHold <= 0) {
+            double ang = rng.nextDouble() * Math.PI * 2.0;
+            double dist = r * (0.5 + 0.5 * rng.nextDouble());          // mid-to-outer ring, never right on top of the player
+            int wx = (int) Math.round(px + Math.cos(ang) * dist);
+            int wz = (int) Math.round(pz + Math.sin(ang) * dist);
+            wanderTarget = new int[]{wx, (int) Math.round(py), wz};
+            wanderHold = 12;                                           // ~6s at 2 Hz before forcing a new point
+            BARITONE.pathTo(new GoalNear(wx, (int) Math.round(py), wz, 4));
+        }
     }
 
     /** Nearest alive hostile mob within {@code radius} blocks of (x,y,z), or null. Uses KillAura's hostile table. */
