@@ -471,6 +471,11 @@ public class DiscordBot {
         return openPanel(Panels.TRIP);
     }
 
+    /** Post the interactive whisper-control panel (handler toggle + patrol/mine presets) to the main channel. */
+    public boolean openWhisperControlPanel() {
+        return openPanel(Panels.WHISPER);
+    }
+
     public void sendEmbedMessageWithButtonsTo(TextChannel channel, @Nullable String message, Embed embed, List<Button> buttons, Consumer<ButtonInteractionEvent> eventConsumer, Duration timeout) {
         defaultEmbedDecoration(embed);
         if (isRunning()) {
