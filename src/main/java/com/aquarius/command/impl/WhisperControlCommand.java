@@ -9,6 +9,8 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
+import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
+import static com.aquarius.command.brigadier.CustomStringArgumentType.getString;
 import static com.aquarius.Globals.CONFIG;
 import static com.aquarius.Globals.DISCORD;
 import static com.aquarius.Globals.MODULE;
@@ -43,6 +45,7 @@ public class WhisperControlCommand extends Command {
                 "bow <on/off>                   (`protect` also turns on AutoBow — shoots ranged threats, stays mobile)",
                 "chestplateswap <on/off>        (`protect` trades a worn elytra for a chestplate in combat range)",
                 "goto <x> <y> <z>               (send the bot to coords; used by the mod's off-chat /pb goto)",
+                "whisper <verb> [args]          (dispatch any verb via HTTP, bypassing 2b2t's chat spam filter)",
                 "patrol <x> <y> <z> <range>     (set the `patrol` preset area)",
                 "mine <x1> <z1> <x2> <z2> <minY> <maxY>  (set the `mine` preset box)",
                 "panel                          (post the interactive control panel to Discord)"
@@ -105,6 +108,19 @@ public class WhisperControlCommand extends Command {
                     // deliberately do NOT echo the coordinates back: this is the off-chat path the mod uses
                     c.getSource().getEmbed().title("Whisper control goto").description(status);
                 })))))
+            .then(literal("whisper")
+                .then(argument("message", greedyString()).executes(c -> {
+                    var ctx = c.getSource();
+                    var subject = ctx.getSource().resolveSubject(ctx);
+                    if (subject == null || subject.uuid() == null) {
+                        ctx.getEmbed().title("Whisper control").description("No caller identity — call via the HTTP API with a token");
+                        return;
+                    }
+                    String msg = getString(c, "message").trim();
+                    if (msg.isEmpty()) { ctx.getEmbed().title("Whisper control").description("Empty message"); return; }
+                    MODULE.get(WhisperControl.class).dispatchFrom(subject.uuid(), subject.name(), msg);
+                    ctx.getEmbed().title("Whisper control").description("dispatched: " + msg.split("\\s+")[0]);
+                })))
             .then(literal("patrol")
                 .then(argument("x", integer())
                 .then(argument("y", integer())

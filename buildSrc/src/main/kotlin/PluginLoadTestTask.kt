@@ -81,7 +81,7 @@ abstract class PluginLoadTestTask : DefaultTask() {
             throw GradleException("Failed to start process for PluginLoadTest", e)
         }
 
-        val startedMarker = "ZenithProxy started!"
+        val startedMarker = "AquariusProxy started!"
         val failureMarker = "Plugin Load Failure"
         val successMarker = "Plugin Loaded"
 

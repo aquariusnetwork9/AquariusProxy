@@ -10,6 +10,7 @@ import com.aquarius.feature.location.PlayerLocations;
 import com.aquarius.feature.pathfinder.goals.GoalNear;
 import com.aquarius.feature.permissions.Subject;
 import com.aquarius.feature.player.World;
+import com.aquarius.feature.player.raycast.RaycastHelper;
 import com.aquarius.mc.dimension.DimensionRegistry;
 import com.aquarius.module.api.Module;
 import com.aquarius.util.ChatUtil;
@@ -87,12 +88,20 @@ public class WhisperControl extends Module {
         final UUID uuid = event.sender().getProfileId();
         final String name = event.sender().getName();
         if (name != null && name.equalsIgnoreCase(CONFIG.authentication.username)) return; // ignore self
-
         final String msg = event.message() == null ? "" : event.message().trim();
         if (msg.isEmpty()) return;
+        dispatchFrom(uuid, name, msg);
+    }
+
+    /**
+     * Dispatch a whisper verb from an authorized caller identified by UUID/name.
+     * <p>Called by both the in-game {@link WhisperChatEvent} handler and the {@code wc whisper} console command,
+     * so the companion ProxyBridge mod can route any verb over the HTTP API instead of 2b2t chat — bypassing the
+     * server's message-spam filter (which blocks the same whisper for ~5 minutes).
+     */
+    public void dispatchFrom(final UUID uuid, final String name, final String msg) {
         final String[] tok = msg.split("\\s+");
         final String verb = tok[0].toLowerCase(Locale.ROOT);
-
         switch (verb) {
             case "protect" -> { if (authz(uuid, name, "module.killaura")) doProtect(uuid, name); else deny(name); }
             case "come"    -> { if (authz(uuid, name, "module.pathfinder")) doCome(uuid, name, tok); else deny(name); }
@@ -393,17 +402,25 @@ public class WhisperControl extends Module {
         }
     }
 
-    /** Nearest alive hostile mob within {@code radius} blocks of (x,y,z), or null. Uses KillAura's hostile table. */
+    /** Nearest alive hostile mob within {@code radius} blocks of (x,y,z), or null. Uses KillAura's hostile table.
+     *  Skips mobs separated from the player by solid terrain (underground, behind floors, etc.). */
     private EntityLiving nearestHostile(double x, double y, double z, int radius) {
         EntityLiving best = null;
         double bestSq = (double) radius * radius;
+        double playerEyeY = y + 1.62;
         for (var e : CACHE.getEntityCache().getEntities().values()) {
             if (!(e instanceof EntityStandard mob)) continue;
             if (!mob.isAlive()) continue;
             if (!KillAura.isHostile(mob.getEntityType())) continue;
             double dx = mob.getX() - x, dy = mob.getY() - y, dz = mob.getZ() - z;
             double dsq = dx * dx + dy * dy + dz * dz;
-            if (dsq <= bestSq) { bestSq = dsq; best = mob; }
+            if (dsq > bestSq) continue;
+            // skip mobs separated from the player by solid terrain
+            var dims = mob.dimensions();
+            double mobCenterY = mob.getY() + dims.getY() / 2.0;
+            if (RaycastHelper.blockRaycast(x, playerEyeY, z, mob.getX(), mobCenterY, mob.getZ(), false).hit()) continue;
+            bestSq = dsq;
+            best = mob;
         }
         return best;
     }
