@@ -22,7 +22,7 @@ import static com.aquarius.Globals.MODULE;
 public final class WhisperControlPanel extends DiscordPanel {
 
     private static final String PREFIX = "wc:";
-    private static final String TOGGLE = "wc:toggle", KILLAURA = "wc:killaura",
+    private static final String TOGGLE = "wc:toggle", KILLAURA = "wc:killaura", CHESTSWAP = "wc:chestswap",
         FOLLOWR = "wc:followr", COMET = "wc:comet", PATROL = "wc:patrol", MINE = "wc:mine",
         FRMODAL = "wc:frmodal", CTMODAL = "wc:ctmodal", PMODAL = "wc:pmodal", MMODAL = "wc:mmodal";
 
@@ -34,10 +34,11 @@ public final class WhisperControlPanel extends DiscordPanel {
         return new Embed()
             .primaryColor()
             .title("Whisper Control")
-            .description("Authorized players whisper the bot: `follow`, `come`, `patrol`, `mine`, `stop`.")
+            .description("Authorized players whisper the bot: `protect`, `come`, `goto`, `patrol`, `mine`, `stop`.")
             .addField("Handler", wc.enabled ? "🟢 ON" : "off", true)
-            .addField("Follow", "radius " + wc.followRadius + (wc.followEnablesKillAura ? " + killaura" : ""), true)
-            .addField("Come", "walk ≤ " + wc.comeFlyThreshold + "b, else fly", true)
+            .addField("Protect", "radius " + wc.followRadius + (wc.followEnablesKillAura ? " + killaura" : "")
+                + (wc.protectSwapToChestplate ? " + chestplate" : ""), true)
+            .addField("Come / Goto", "walk ≤ " + wc.comeFlyThreshold + "b, else fly", true)
             .addField("Patrol preset", wc.patrolConfigured
                 ? wc.patrolCenterX + ", " + wc.patrolCenterY + ", " + wc.patrolCenterZ + "  (range " + wc.patrolRange + ")"
                 : "⚠ not set", false)
@@ -52,9 +53,12 @@ public final class WhisperControlPanel extends DiscordPanel {
         return List.of(
             ActionRow.of(
                 Button.secondary(TOGGLE, "Handler: " + (wc.enabled ? "ON" : "off")),
-                Button.secondary(KILLAURA, "Follow killaura: " + (wc.followEnablesKillAura ? "ON" : "off")),
-                Button.secondary(FOLLOWR, "Follow radius"),
-                Button.secondary(COMET, "Come threshold")
+                Button.secondary(KILLAURA, "Protect killaura: " + (wc.followEnablesKillAura ? "ON" : "off")),
+                Button.secondary(CHESTSWAP, "Chestplate swap: " + (wc.protectSwapToChestplate ? "ON" : "off"))
+            ),
+            ActionRow.of(
+                Button.secondary(FOLLOWR, "Protect radius"),
+                Button.secondary(COMET, "Come/goto threshold")
             ),
             ActionRow.of(
                 Button.primary(PATROL, "🛡 Set patrol area"),
@@ -113,6 +117,7 @@ public final class WhisperControlPanel extends DiscordPanel {
                 MODULE.get(com.aquarius.module.impl.WhisperControl.class).syncEnabledFromConfig();
             }
             case KILLAURA -> wc.followEnablesKillAura = !wc.followEnablesKillAura;
+            case CHESTSWAP -> wc.protectSwapToChestplate = !wc.protectSwapToChestplate;
             case FOLLOWR -> { e.replyModal(followRadiusModal()).queue(); return false; }
             case COMET -> { e.replyModal(comeThresholdModal()).queue(); return false; }
             case PATROL -> { e.replyModal(patrolModal()).queue(); return false; }

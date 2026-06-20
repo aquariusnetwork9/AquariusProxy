@@ -67,6 +67,12 @@ public class KillAura extends AbstractInventoryModule {
         return CONFIG.client.extra.killAura.enabled && attackTarget.get() != null;
     }
 
+    /** Whether an entity type is one KillAura classifies as a hostile mob — exposed so other modules
+     *  (e.g. {@code WhisperControl}'s protect mode) can scan for the same set without duplicating the table. */
+    public static boolean isHostile(final EntityType type) {
+        return hostileEntities.contains(type);
+    }
+
     @Override
     public List<EventConsumer<?>> registerEvents() {
         return List.of(

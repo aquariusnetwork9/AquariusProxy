@@ -17,7 +17,8 @@ import static com.aquarius.command.brigadier.ToggleArgumentType.toggle;
 
 /**
  * Configures {@link WhisperControl} — the handler that lets authorized players whisper the bot verbs
- * (follow / come / patrol / mine / stop). Sets the toggles and the patrol/mine presets, and posts the Discord panel.
+ * (protect / come / goto / patrol / mine / stop). Sets the toggles and the patrol/mine presets, posts the Discord
+ * panel, and exposes {@code goto <x> <y> <z>} so the ProxyBridge mod can drive movement over the HTTP API (off-chat).
  */
 public class WhisperControlCommand extends Command {
 
@@ -28,14 +29,16 @@ public class WhisperControlCommand extends Command {
             .category(CommandCategory.MODULE)
             .aliases("wc")
             .description("""
-                Let authorized players whisper the bot commands: follow, come, patrol, mine, stop.
+                Let authorized players whisper the bot commands: protect, come, goto, patrol, mine, stop.
                 Authorization is RBAC when enabled (module.whispercontrol + the verb's perm), else owner-only.
                 """)
             .usageLines(
                 "on/off",
-                "followradius <blocks>          (leash radius for `follow`; default 32)",
-                "comethreshold <blocks>         (`come` walks within this, flies beyond it; default 200)",
-                "killaura <on/off>              (`follow` also turns on KillAura)",
+                "followradius <blocks>          (`protect` leash + hostile-scan radius; default 32)",
+                "comethreshold <blocks>         (`come`/`goto` walk within this, fly beyond it; default 200)",
+                "killaura <on/off>              (`protect` also turns on KillAura)",
+                "chestplateswap <on/off>        (`protect` trades a worn elytra for a chestplate in combat range)",
+                "goto <x> <y> <z>               (send the bot to coords; used by the mod's off-chat /pb goto)",
                 "patrol <x> <y> <z> <range>     (set the `patrol` preset area)",
                 "mine <x1> <z1> <x2> <z2> <minY> <maxY>  (set the `mine` preset box)",
                 "panel                          (post the interactive control panel to Discord)"
@@ -62,8 +65,22 @@ public class WhisperControlCommand extends Command {
             })))
             .then(literal("killaura").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.whisperControl.followEnablesKillAura = getToggle(c, "toggle");
-                c.getSource().getEmbed().title("Whisper control follow-killaura " + toggleStrCaps(CONFIG.client.extra.whisperControl.followEnablesKillAura));
+                c.getSource().getEmbed().title("Whisper control protect-killaura " + toggleStrCaps(CONFIG.client.extra.whisperControl.followEnablesKillAura));
             })))
+            .then(literal("chestplateswap").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.whisperControl.protectSwapToChestplate = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("Whisper control protect chestplate-swap " + toggleStrCaps(CONFIG.client.extra.whisperControl.protectSwapToChestplate))
+                    .description("`protect` swaps a worn elytra for the best inventory chestplate when it enters combat range (elytra restored on stop).");
+            })))
+            .then(literal("goto")
+                .then(argument("x", integer())
+                .then(argument("y", integer())
+                .then(argument("z", integer()).executes(c -> {
+                    int x = getInteger(c, "x"), y = getInteger(c, "y"), z = getInteger(c, "z");
+                    String status = MODULE.get(WhisperControl.class).goTo(x, y, z);
+                    // deliberately do NOT echo the coordinates back: this is the off-chat path the mod uses
+                    c.getSource().getEmbed().title("Whisper control goto").description(status);
+                })))))
             .then(literal("patrol")
                 .then(argument("x", integer())
                 .then(argument("y", integer())
