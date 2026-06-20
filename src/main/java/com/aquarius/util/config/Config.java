@@ -1945,17 +1945,19 @@ public final class Config {
                 public final ArrayList<PlayerEntry> ignoreList = new ArrayList<>();
             }
 
-            /** Whisper-command control: lets authorized players whisper the bot simple verbs (follow/come/patrol/mine).
+            /** Whisper-command control: lets authorized players whisper the bot simple verbs (protect/come/goto/patrol/mine).
              *  See {@code com.aquarius.module.impl.WhisperControl}. Authorization is RBAC when enabled, else owner-only. */
             public static class WhisperControl {
                 /** Master switch for the whisper-command handler. */
                 public boolean enabled = false;
-                /** Block leash radius for {@code follow} (how far the bot ranges from you while following + auras). */
+                /** Block radius for {@code protect}: the bot leashes within this of you AND scans this sphere for hostile mobs to kill. */
                 public int followRadius = 32;
                 /** {@code come} switches from walking to flying when you are farther than this (blocks). */
                 public int comeFlyThreshold = 200;
-                /** {@code follow} also enables KillAura so the bot fights what's near you. */
+                /** {@code protect} also enables KillAura so the bot fights what's near you. */
                 public boolean followEnablesKillAura = true;
+                /** {@code protect} swaps a worn elytra for the best inventory chestplate when it enters combat range (restored on stop). */
+                public boolean protectSwapToChestplate = true;
                 /** Use out-of-band reported positions (POST /position) for come/follow when you're out of render range. */
                 public boolean useReportedPositions = true;
                 /** A reported position older than this many seconds is ignored as stale. */

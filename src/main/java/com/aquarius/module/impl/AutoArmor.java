@@ -86,6 +86,55 @@ public class AutoArmor extends Module {
         delay = 50; // delay processing for a bit as its unlikely our inventory changed
     }
 
+    /**
+     * Combat-prep swap for {@code WhisperControl}'s protect mode: put the best chestplate from the inventory into the
+     * chest slot, <b>even over a worn elytra</b> (the one case the normal tick refuses). No-op if nothing chestplate is
+     * in the inventory or one is already worn that isn't beaten by a better one.
+     * @return true if a swap was submitted (so the caller knows an elytra was traded out and can restore it later).
+     */
+    public boolean equipChestplateOverElytra() {
+        final ItemStack worn = CACHE.getPlayerCache().getEquipment(EquipmentSlot.CHESTPLATE);
+        final boolean wearingElytra = worn != Container.EMPTY_STACK
+            && ItemRegistry.REGISTRY.get(worn.getId()) == ItemRegistry.ELYTRA;
+        final BestArmorData best = getBestArmorInInventory(EquipmentSlot.CHESTPLATE);
+        if (best == null) return false;                     // no chestplate to put on
+        if (!wearingElytra && worn != Container.EMPTY_STACK) {
+            // already wearing some chestplate; only upgrade if the inventory one is strictly better
+            final ArmorMaterial cur = getArmorMaterial(ItemRegistry.REGISTRY.get(worn.getId()));
+            if (cur != null && best.material().compareTo(cur) <= 0) return false;
+        }
+        INVENTORY.submit(InventoryActionRequest.builder()
+            .owner(this)
+            .actions(InventoryActionMacros.swapSlots(best.index(), CHEST_SLOT_ID))
+            .priority(getPriority())
+            .build());
+        return wearingElytra;
+    }
+
+    /** Restore flight after protect: swap a spare elytra from the inventory back onto the chest slot.
+     *  @return true if a swap was submitted (an elytra was found in the inventory). */
+    public boolean equipElytraFromInventory() {
+        final ItemStack worn = CACHE.getPlayerCache().getEquipment(EquipmentSlot.CHESTPLATE);
+        if (worn != Container.EMPTY_STACK && ItemRegistry.REGISTRY.get(worn.getId()) == ItemRegistry.ELYTRA) return false; // already flying
+        final List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+        for (int i = 9; i <= 44; i++) {
+            if (inv.size() <= i) break;
+            final ItemStack stack = inv.get(i);
+            if (stack == Container.EMPTY_STACK) continue;
+            if (ItemRegistry.REGISTRY.get(stack.getId()) != ItemRegistry.ELYTRA) continue;
+            INVENTORY.submit(InventoryActionRequest.builder()
+                .owner(this)
+                .actions(InventoryActionMacros.swapSlots(i, CHEST_SLOT_ID))
+                .priority(getPriority())
+                .build());
+            return true;
+        }
+        return false;
+    }
+
+    /** Inventory slot id of the chest armour slot (HELMET=5, CHESTPLATE=6, LEGGINGS=7, BOOTS=8). */
+    private static final int CHEST_SLOT_ID = ARMOR_SLOTS.indexOf(EquipmentSlot.CHESTPLATE) + 5;
+
     private record BestArmorData(ItemStack itemStack, int index, ItemData itemsData, ArmorMaterial material) {}
 
     private BestArmorData getBestArmorInInventory(final EquipmentSlot equipmentSlot) {
