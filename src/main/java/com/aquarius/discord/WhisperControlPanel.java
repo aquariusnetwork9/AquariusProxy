@@ -23,7 +23,7 @@ public final class WhisperControlPanel extends DiscordPanel {
 
     private static final String PREFIX = "wc:";
     private static final String TOGGLE = "wc:toggle", KILLAURA = "wc:killaura", CHESTSWAP = "wc:chestswap",
-        FOLLOWR = "wc:followr", COMET = "wc:comet", PATROL = "wc:patrol", MINE = "wc:mine",
+        WANDER = "wc:wander", BOW = "wc:bow", FOLLOWR = "wc:followr", COMET = "wc:comet", PATROL = "wc:patrol", MINE = "wc:mine",
         FRMODAL = "wc:frmodal", CTMODAL = "wc:ctmodal", PMODAL = "wc:pmodal", MMODAL = "wc:mmodal";
 
     @Override protected String prefix() { return PREFIX; }
@@ -36,7 +36,9 @@ public final class WhisperControlPanel extends DiscordPanel {
             .title("Whisper Control")
             .description("Authorized players whisper the bot: `protect`, `come`, `goto`, `patrol`, `mine`, `stop`.")
             .addField("Handler", wc.enabled ? "🟢 ON" : "off", true)
-            .addField("Protect", "radius " + wc.followRadius + (wc.followEnablesKillAura ? " + killaura" : "")
+            .addField("Protect", "radius " + wc.followRadius + ", engage " + wc.protectEngageRadius
+                + (wc.protectWander ? " + roam " + wc.protectWanderRadius : "")
+                + (wc.followEnablesKillAura ? " + killaura" : "")
                 + (wc.protectSwapToChestplate ? " + chestplate" : ""), true)
             .addField("Come / Goto", "walk ≤ " + wc.comeFlyThreshold + "b, else fly", true)
             .addField("Patrol preset", wc.patrolConfigured
@@ -54,7 +56,9 @@ public final class WhisperControlPanel extends DiscordPanel {
             ActionRow.of(
                 Button.secondary(TOGGLE, "Handler: " + (wc.enabled ? "ON" : "off")),
                 Button.secondary(KILLAURA, "Protect killaura: " + (wc.followEnablesKillAura ? "ON" : "off")),
-                Button.secondary(CHESTSWAP, "Chestplate swap: " + (wc.protectSwapToChestplate ? "ON" : "off"))
+                Button.secondary(CHESTSWAP, "Chestplate swap: " + (wc.protectSwapToChestplate ? "ON" : "off")),
+                Button.secondary(WANDER, "Roam perimeter: " + (wc.protectWander ? "ON" : "off")),
+                Button.secondary(BOW, "Use bow: " + (wc.protectUseBow ? "ON" : "off"))
             ),
             ActionRow.of(
                 Button.secondary(FOLLOWR, "Protect radius"),
@@ -118,6 +122,8 @@ public final class WhisperControlPanel extends DiscordPanel {
             }
             case KILLAURA -> wc.followEnablesKillAura = !wc.followEnablesKillAura;
             case CHESTSWAP -> wc.protectSwapToChestplate = !wc.protectSwapToChestplate;
+            case WANDER -> wc.protectWander = !wc.protectWander;
+            case BOW -> wc.protectUseBow = !wc.protectUseBow;
             case FOLLOWR -> { e.replyModal(followRadiusModal()).queue(); return false; }
             case COMET -> { e.replyModal(comeThresholdModal()).queue(); return false; }
             case PATROL -> { e.replyModal(patrolModal()).queue(); return false; }

@@ -328,10 +328,20 @@ public class KillAura extends AbstractInventoryModule {
     private boolean canPossiblyReach(final EntityLiving entity) {
         var rangeSq = Math.pow(BOT.getEntityInteractDistance(), 2) + 5;
         if (CACHE.getPlayerCache().distanceSqToSelf(entity) > rangeSq) return false;
+        if (isBlockedByTerrain(entity)) return false;
         var rotation = getRotationTo(entity);
         if (rotation == null) return false;
         var entityRaycastResult = RaycastHelper.playerEyeRaycastThroughToTarget(entity, rotation.getX(), rotation.getY());
         return entityRaycastResult.hit();
+    }
+
+    private boolean isBlockedByTerrain(final EntityLiving entity) {
+        var dims = entity.dimensions();
+        double entityCenterY = entity.getY() + dims.getY() / 2.0;
+        return RaycastHelper.blockRaycast(
+            BOT.getX(), BOT.getEyeY(), BOT.getZ(),
+            entity.getX(), entityCenterY, entity.getZ(),
+            false).hit();
     }
 
     public boolean switchToWeapon() {
