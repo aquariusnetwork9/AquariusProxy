@@ -26,7 +26,7 @@ jobs:
             sha1-command: 'sha1sum -b dist/launch | cut -d" " -f 1'
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -54,7 +54,7 @@ jobs:
           ${{ matrix.zip-command }}
 
       - name: Upload Binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact-name }}
           path: dist/ZenithProxy-${{ matrix.artifact-name }}.zip
@@ -64,7 +64,7 @@ jobs:
         run: ${{ matrix.sha1-command }} > ZenithProxy-${{ matrix.artifact-name }}.sha1
 
       - name: Upload Launcher Hash Version
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact-name }}.sha1
           path: ZenithProxy-${{ matrix.artifact-name }}.sha1
@@ -91,7 +91,7 @@ jobs:
         run: apk add zip bash build-base ca-certificates curl gcc git libc-dev libffi-dev libgcc make musl-dev openssl openssl-dev zlib-dev
 
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -121,7 +121,7 @@ jobs:
           zip -j dist/ZenithProxy-${{ matrix.artifact-name }}.zip dist/launch
 
       - name: Upload Binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact-name }}
           path: dist/ZenithProxy-${{ matrix.artifact-name }}.zip
@@ -131,7 +131,7 @@ jobs:
         run: ${{ matrix.sha1-command }} > ZenithProxy-${{ matrix.artifact-name }}.sha1
 
       - name: Upload Launcher Hash Version
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact-name }}.sha1
           path: ZenithProxy-${{ matrix.artifact-name }}.sha1
@@ -141,7 +141,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Create Python executable zip
         run: zip -j launcher-py.zip src/launcher/*.py
@@ -154,7 +154,7 @@ jobs:
         run: zip -j ZenithProxy-launcher-python.zip launcher-py.zip src/launcher/requirements.txt src/launcher/launch.sh src/launcher/launch.bat
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-python
           path: ZenithProxy-launcher-python.zip
@@ -164,7 +164,7 @@ jobs:
         run: sha1sum -b launcher-py.zip | cut -d" " -f 1 > ZenithProxy-launcher-python.sha1
 
       - name: Upload Launcher Hash Version
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-python.sha1
           path: ZenithProxy-launcher-python.sha1
@@ -175,7 +175,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Create Python executable zip
         run: zip -j launcher-py.zip src/launcher/*.py
@@ -187,7 +187,7 @@ jobs:
         run: zip -j ZenithProxy-launcher-windows-python-amd64.zip launcher-py.zip src/launcher/requirements.txt launch.bat scripts/windows_help.txt
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-windows-python-amd64
           path: ZenithProxy-launcher-windows-python-amd64.zip
@@ -197,7 +197,7 @@ jobs:
         run: sha1sum -b launcher-py.zip | cut -d" " -f 1 > ZenithProxy-launcher-windows-python-amd64.sha1
 
       - name: Upload Launcher Hash Version
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: launcher-windows-python-amd64.sha1
           path: ZenithProxy-launcher-windows-python-amd64.sha1
@@ -212,10 +212,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Download job artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           path: artifacts/
 
@@ -224,7 +224,7 @@ jobs:
           cat artifacts/**/*.sha1 > hashes.txt
 
       - name: Upload Hashes Version
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hashes.txt
           path: hashes.txt
