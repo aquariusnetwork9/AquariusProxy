@@ -23,6 +23,7 @@ It keeps everything ZenithProxy does — an always-online account you can also l
 - [What's different from ZenithProxy](#whats-different-from-zenithproxy)
 - [Quick start](#quick-start)
 - [Built-in modules](#built-in-modules)
+- [Plugins](#plugins)
 - [Credits & license](#credits--license)
 
 ---
@@ -231,6 +232,18 @@ pearl bot, a shared base bot, and an admin can all share one proxy with the righ
 - Ships **off** (`permissions.enabled=false`) — zero behavior change until you enable it.
 
 📖 [Access Control wiki →](https://github.com/aquariusnetwork9/AquariusProxy/wiki/Access-Control)
+
+---
+
+## Plugins
+
+The modules above are native built-ins, but AquariusProxy also keeps ZenithProxy's **plugin** system: drop-in jars that add your own modules and commands without rebuilding the proxy. Put plugin jars in the `plugins` folder next to the launcher and restart (supported on the **`java`** channel only — the native build can't load jars at runtime).
+
+Build your own from the **[AquariusProxy Plugin Template](https://github.com/aquariusnetwork9/aquariusproxy-plugin-template)** — the AquariusProxy counterpart to rfresh2's example plugin.
+
+> **Porting note:** a plugin compiled for ZenithProxy will **not** load as-is — AquariusProxy renamed the API package `com.zenith.*` → `com.aquarius.*` (and `ZenithProxyPlugin` → `AquariusProxyPlugin`). Recompiling against AquariusProxy is mechanical; the API shape is unchanged.
+
+📖 [Plugin Development wiki →](https://github.com/aquariusnetwork9/AquariusProxy/wiki/Plugin-Development)
 
 ---
 
