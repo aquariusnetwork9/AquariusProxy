@@ -86,6 +86,18 @@ public class RegearCommand extends Command {
                 c.getSource().getEmbed().title("Match kit by contents " + toggleStrCaps(CONFIG.client.extra.regear.matchByContents))
                     .description("Identifies the kit shulker by what's inside it (elytra + fireworks required), ignoring name/colour. Picks the most complete flight kit.");
             })))
+            .then(literal("profile")
+                .then(literal("off").executes(c -> {
+                    CONFIG.client.extra.regear.profile = "";
+                    c.getSource().getEmbed().title("Regear kit profile: off (legacy name/colour/contents fields)");
+                }))
+                .then(argument("name", word()).executes(c -> {
+                    String name = getString(c, "name");
+                    boolean known = CONFIG.client.extra.kitProfile(name) != null;
+                    CONFIG.client.extra.regear.profile = name;
+                    c.getSource().getEmbed().title("Regear kit profile: " + name + (known ? "" : "  (no such profile yet — add it with `kit add " + name + "`)"))
+                        .description("Spawn/combat regear pulls this kit profile (a name in `kit list`). Use `profile off` for the legacy fields.");
+                })))
             .then(literal("scanradius").then(argument("n", integer(1)).executes(c -> {
                 CONFIG.client.extra.regear.echestScanRadius = getInteger(c, "n");
                 c.getSource().getEmbed().title("Echest fallback scan radius: " + getInteger(c, "n") + " blocks");

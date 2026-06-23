@@ -487,7 +487,7 @@ public class PlayerInteractionManager {
 
     /**
      * AirPlace: place a block at an arbitrary position with NO line-of-sight / adjacency check, using the
-     * "offhand-swap" technique decoded from a working client (Rusherhack capture, see AIRPLACE_LOG.md). The
+     * "offhand-swap" technique decoded from a working client capture. The
      * block to place must be held in the MAIN hand. This swaps it to the offhand, places from {@code OFF_HAND}
      * with {@code insideBlock=true} and a randomized cursor hit-vec (the signals that make Grim/2b2t skip the
      * reach/LOS check), then swaps back — net-zero hand state.

@@ -78,6 +78,7 @@ public class ElytraTrip extends Module {
     private boolean legStarted;
     private boolean gearStarted;      // GEAR_UP: have we kicked off Regear yet
     private boolean savedEquipElytra; // GEAR_UP: prior regear.equipElytra, restored when gear-up ends
+    private boolean gearUsedProfile;  // GEAR_UP: drove Regear from a kit profile (pushProfile) vs the legacy override
     private HighwayDir chosenDir;     // nether transit: the highway picked (nearest line that heads toward the target)
 
     // --- multi-leg route execution ---
@@ -266,8 +267,17 @@ public class ElytraTrip extends Module {
             return;
         }
         if (!gearStarted) {                                // top up the deficits from the echest (refill mode)
-            savedEquipElytra = CONFIG.client.extra.regear.equipElytra;
-            CONFIG.client.extra.regear.equipElytra = true;
+            // Kit identity + equip come from the assigned flight profile when one is set, else the legacy
+            // equip-an-elytra override. Either way it's a refill (pull only the checklist deficits).
+            var flProfile = CONFIG.client.extra.kitProfile(CONFIG.client.extra.elytraPilot.flightKitProfile);
+            if (flProfile != null) {
+                gearUsedProfile = true;
+                rg.pushProfile(flProfile);
+            } else {
+                gearUsedProfile = false;
+                savedEquipElytra = CONFIG.client.extra.regear.equipElytra;
+                CONFIG.client.extra.regear.equipElytra = true;
+            }
             CONFIG.client.extra.regear.enabled = true;
             rg.setFlightRefill(true);                      // pull ONLY what the checklist is missing
             rg.syncEnabledFromConfig();
@@ -295,8 +305,11 @@ public class ElytraTrip extends Module {
     }
 
     private void restoreRegearConfig() {
-        CONFIG.client.extra.regear.equipElytra = savedEquipElytra;
-        MODULE.get(Regear.class).setFlightRefill(false);
+        var rg = MODULE.get(Regear.class);
+        rg.popProfile();                                   // profile path: restores identity + equip (idempotent otherwise)
+        if (!gearUsedProfile) CONFIG.client.extra.regear.equipElytra = savedEquipElytra;
+        rg.setFlightRefill(false);
+        gearUsedProfile = false;
     }
 
     private void tickOwDirect(int tx, int tz) {

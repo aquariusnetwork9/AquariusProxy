@@ -40,6 +40,7 @@ public class CommandManager {
         new BoatCommand(),
         new AquariusMinerCommand(),
         new RegearCommand(),
+        new KitCommand(),
         new KitMakerCommand(),
         new StashScannerCommand(),
         new OrderFillerCommand(),

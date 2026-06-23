@@ -109,6 +109,21 @@ final class FlightGear {
 
     // ---------------------------------------------------------------- gating + reporting
 
+    // Checklist minimums come from the assigned flight kit profile ({@code elytraPilot.flightKitProfile}) when one is
+    // set, else the legacy {@code preflight*} fields — so the flight "kit" (counts included) is editable in one place.
+    private static int minArmor()        { var p = flightProfile(); return p != null ? p.minArmor    : cfg().preflightMinArmor; }
+    private static int minElytrasBase()  { var p = flightProfile(); return p != null ? p.minElytras  : cfg().preflightMinElytras; }
+    private static int minTotems()       { var p = flightProfile(); return p != null ? p.minTotems   : cfg().preflightMinTotems; }
+    private static boolean reqOffhand()  { var p = flightProfile(); return p != null ? p.offhandTotemRequired : cfg().preflightOffhandTotem; }
+    private static int minFireworksBase(){ var p = flightProfile(); return p != null ? p.minFireworks : cfg().preflightMinFireworks; }
+    private static int minEgaps()        { var p = flightProfile(); return p != null ? p.minEgaps     : cfg().preflightMinEgaps; }
+    private static boolean reqPickaxe()  { var p = flightProfile(); return p != null ? p.requirePickaxe : cfg().preflightRequirePickaxe; }
+    private static boolean wantWeapon()  { var p = flightProfile(); return p != null ? p.wantWeapon   : cfg().preflightWantWeapon; }
+    private static int minEchests()      { var p = flightProfile(); return p != null ? p.minEchests   : cfg().preflightMinEchests; }
+    private static com.aquarius.util.config.Config.Client.Extra.KitProfile flightProfile() {
+        return CONFIG.client.extra.kitProfile(CONFIG.client.extra.elytraPilot.flightKitProfile);
+    }
+
     /**
      * Required firework count for the current trip. When {@code tripEstimateFireworks} is on and this is an
      * OVERWORLD-DIRECT trip (within the spawn region, not a nether destination), size it to the leg distance via
@@ -117,7 +132,7 @@ final class FlightGear {
      */
     static int requiredFireworks() {
         var c = cfg();
-        int base = c.preflightMinFireworks;
+        int base = minFireworksBase();
         if (!c.tripEstimateFireworks || !c.tripActive || c.tripTargetIsNether) return base;
         double dist = directLegDistance();
         if (dist > c.spawnRegionRadius) return base;   // nether-routed transit: not modeled here
@@ -134,7 +149,7 @@ final class FlightGear {
      */
     static int requiredElytras() {
         var c = cfg();
-        int base = Math.max(1, c.preflightMinElytras);
+        int base = Math.max(1, minElytrasBase());
         if (!c.tripEstimateFireworks || !c.tripActive || c.tripTargetIsNether) return base;
         double dist = directLegDistance();
         if (dist > c.spawnRegionRadius) return base;
@@ -147,13 +162,13 @@ final class FlightGear {
         var c = cfg();
         return elytraWorn()
             && elytraCount() >= requiredElytras()
-            && armorPiecesAnywhere() >= c.preflightMinArmor
-            && totemCount() >= c.preflightMinTotems
-            && (!c.preflightOffhandTotem || offhandTotem())
+            && armorPiecesAnywhere() >= minArmor()
+            && totemCount() >= minTotems()
+            && (!reqOffhand() || offhandTotem())
             && fireworkCount() >= requiredFireworks()
-            && egapCount() >= c.preflightMinEgaps
-            && (!c.preflightRequirePickaxe || hasPickaxe())
-            && echestCount() >= c.preflightMinEchests;
+            && egapCount() >= minEgaps()
+            && (!reqPickaxe() || hasPickaxe())
+            && echestCount() >= minEchests();
     }
 
     /** One-line-per-check status, for the pre-flight log. */
@@ -161,19 +176,19 @@ final class FlightGear {
         var c = cfg();
         StringBuilder b = new StringBuilder("Pre-flight check:\n");
         int needEl = requiredElytras();
-        mark(b, "elytra+armor", elytraWorn() && elytraCount() >= needEl && armorPiecesAnywhere() >= c.preflightMinArmor,
+        mark(b, "elytra+armor", elytraWorn() && elytraCount() >= needEl && armorPiecesAnywhere() >= minArmor(),
             (elytraWorn() ? elytraCount() + "/" + needEl + " elytra" : "NO elytra worn")
-                + (needEl > c.preflightMinElytras ? " (trip est.)" : "")
-                + " + " + armorPiecesAnywhere() + "/" + c.preflightMinArmor + " armor");
-        mark(b, "totems", totemCount() >= c.preflightMinTotems && (!c.preflightOffhandTotem || offhandTotem()),
-            totemCount() + "/" + c.preflightMinTotems + (offhandTotem() ? ", offhand ok" : ", offhand EMPTY"));
+                + (needEl > minElytrasBase() ? " (trip est.)" : "")
+                + " + " + armorPiecesAnywhere() + "/" + minArmor() + " armor");
+        mark(b, "totems", totemCount() >= minTotems() && (!reqOffhand() || offhandTotem()),
+            totemCount() + "/" + minTotems() + (offhandTotem() ? ", offhand ok" : ", offhand EMPTY"));
         int needFw = requiredFireworks();
         mark(b, "fireworks", fireworkCount() >= needFw, fireworkCount() + "/" + needFw
-            + (needFw > c.preflightMinFireworks ? " (trip estimate)" : ""));
-        mark(b, "egaps", egapCount() >= c.preflightMinEgaps, egapCount() + "/" + c.preflightMinEgaps);
-        mark(b, "pickaxe", !c.preflightRequirePickaxe || hasPickaxe(), hasPickaxe() ? "ok" : "missing");
+            + (needFw > minFireworksBase() ? " (trip estimate)" : ""));
+        mark(b, "egaps", egapCount() >= minEgaps(), egapCount() + "/" + minEgaps());
+        mark(b, "pickaxe", !reqPickaxe() || hasPickaxe(), hasPickaxe() ? "ok" : "missing");
         mark(b, "weapon (opt)", true, hasWeapon() ? "ok" : "MISSING (optional)");
-        mark(b, "echests", echestCount() >= c.preflightMinEchests, echestCount() + "/" + c.preflightMinEchests);
+        mark(b, "echests", echestCount() >= minEchests(), echestCount() + "/" + minEchests());
         return b.toString().stripTrailing();
     }
 
@@ -191,13 +206,13 @@ final class FlightGear {
     static boolean stillNeeds(ItemStack candidate) {
         var c = cfg();
         if (isElytra(candidate))   return elytraCount() < requiredElytras();
-        if (isOtherArmor(candidate)) return armorPiecesAnywhere() < c.preflightMinArmor;
-        if (isTotem(candidate))    return totemCount() < c.preflightMinTotems;
+        if (isOtherArmor(candidate)) return armorPiecesAnywhere() < minArmor();
+        if (isTotem(candidate))    return totemCount() < minTotems();
         if (isFirework(candidate)) return fireworkCount() < requiredFireworks();
-        if (isEgap(candidate))     return egapCount() < c.preflightMinEgaps;
-        if (isPickaxe(candidate))  return c.preflightRequirePickaxe && !hasPickaxe();
-        if (isWeapon(candidate))   return c.preflightWantWeapon && !hasWeapon();
-        if (isEchest(candidate))   return echestCount() < c.preflightMinEchests;
+        if (isEgap(candidate))     return egapCount() < minEgaps();
+        if (isPickaxe(candidate))  return reqPickaxe() && !hasPickaxe();
+        if (isWeapon(candidate))   return wantWeapon() && !hasWeapon();
+        if (isEchest(candidate))   return echestCount() < minEchests();
         return false;
     }
 }

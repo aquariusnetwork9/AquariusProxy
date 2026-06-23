@@ -79,6 +79,9 @@ public class ElytraPilot extends Module {
     private static final int OPEN_TARGET_TOLERANCE = 8;     // land at the target if its open surface is within this of approxGroundY
     private static final int LANDWALK_TIMEOUT_TICKS = 1200; // ~60s for Baritone to reach the target on the ground
     private static final int HOP_MIN_TICKS = 6;             // commit to a hop for at least this long so we clear the block
+    private static final int HC_PLAN_INTERVAL = 20;         // highway-cruise look-ahead: re-plan the coarse route every N ticks
+    private static final int HC_PLAN_NODES = 3000;          // highway-cruise look-ahead: A* node-expansion budget
+    private static final int HC_PLAN_RADIUS_CELLS = 24;     // highway-cruise look-ahead: search-box half-extent (cells of 4 blocks)
     private static final int EPISODE_DECAY_TICKS = 300;     // ~15s of healthy flight resets the lost-flight episode count
     private static final int PIN_WARN_TICKS = 100;           // ~5s of no cruise progress -> warn (likely pinned on terrain)
     private static final int PIN_ABORT_TICKS = 300;          // 2x this (~30s) frozen against terrain -> abort cleanly
@@ -105,9 +108,12 @@ public class ElytraPilot extends Module {
     private boolean swapRedeploying;
     private int redeployCooldown;
     private int bounceStallTicks;
+    private boolean passRecovery;               // PASS was entered to recover a fall off the road (vs route past an obstacle)
+    private int recoverEpisodes;                // consecutive fall-recoveries; decays after sustained healthy flight
     private boolean resupplyStarted;            // RESUPPLY: have we handed off to Regear yet (settle first)
     private int resupplyTicks;                  // RESUPPLY: settle / overall guard counter
     private boolean savedRgEquipElytra, savedRgEquipArmor, savedRgOffhandTotem, savedRgSelfKillRelocate; // restored after
+    private boolean resupplyUsedProfile;        // resupply drove Regear from a kit profile (pushProfile) vs the legacy overrides
     private double bouncePrevY = Double.NaN;   // last-tick Y, for the bounce telemetry readout
     private double bouncePrevX = Double.NaN;   // last-tick X, for the bounce telemetry's horizontal-delta readout
     private int bounceRamp;                     // e-bounce Sprint-start: ticks since the ground RUN ended, drives the injected-speed ramp goal; reset on any disturbance
@@ -138,6 +144,9 @@ public class ElytraPilot extends Module {
     private List<int[]> netherPath;   // current native full-route waypoints (block centers) in open nether
     private int pathIdx;
     private boolean netherPathIsNative;                              // netherPath came from the native router
+    private List<int[]> hcPath;       // highway-cruise coarse look-ahead route (ElytraPathfinder), separate from netherPath
+    private int hcPathIdx;
+    private int hcPlanCooldown;        // ticks until the highway-cruise look-ahead route is re-planned
     private java.util.concurrent.CompletableFuture<NetherRouter.Route> nativeFuture;
     private boolean nativeRouteFinished;
     private int nativeReqCooldown;
@@ -275,6 +284,8 @@ public class ElytraPilot extends Module {
         swapRedeploying = false;
         redeployCooldown = 0;
         bounceStallTicks = 0;
+        passRecovery = false;
+        recoverEpisodes = 0;
         resupplyStarted = false;
         resupplyTicks = 0;
         bounceRamp = 0;
@@ -301,6 +312,9 @@ public class ElytraPilot extends Module {
         netherPath = null;
         pathIdx = 0;
         netherPathIsNative = false;
+        hcPath = null;
+        hcPathIdx = 0;
+        hcPlanCooldown = 0;
         nativeFuture = null;          // abandoned futures complete harmlessly on the router thread
         nativeRouteFinished = false;
         nativeReqCooldown = 0;
@@ -401,9 +415,10 @@ public class ElytraPilot extends Module {
                 // Sustained healthy flight forgives past flight-loss episodes AND walk-out attempts: the caps
                 // should catch being stuck NOW, not tax every rough patch crossed over a long route (a successful
                 // walkout early in a leg used to leave no budget for trouble an hour of terrain later).
-                if ((lostEpisodes > 0 || walkoutAttempts > 0) && ++healthyTicks >= EPISODE_DECAY_TICKS) {
+                if ((lostEpisodes > 0 || walkoutAttempts > 0 || recoverEpisodes > 0) && ++healthyTicks >= EPISODE_DECAY_TICKS) {
                     lostEpisodes = 0;
                     walkoutAttempts = 0;
+                    recoverEpisodes = 0;
                     healthyTicks = 0;
                 }
             } else {
@@ -1237,9 +1252,11 @@ public class ElytraPilot extends Module {
         // off-center it gently steers back. The yaw-change packets are normal player rotation — Grim accepts them.
         float yaw = desiredYaw(x, z);
 
-        // Road sanity: bounce only works on a flat road. If we've sunk well below it, we hit a gap / fell off.
+        // Road sanity: bounce only works on a flat road. If we've sunk well below it, we hit a gap / fell off — recover
+        // back onto the highway (Baritone climbs us back up to roadY on the centerline) instead of aborting the flight.
         if (y < cfg.roadY - cfg.roadDropAbort) {
-            abort("dropped below the road (y " + (int) y + " < road " + cfg.roadY + ")");
+            if (cfg.recoverFromDrop && cfg.passObstacles) enterRecover("dropped to y" + (int) y);
+            else abort("dropped below the road (y " + (int) y + " < road " + cfg.roadY + ")");
             return;
         }
 
@@ -1254,6 +1271,12 @@ public class ElytraPilot extends Module {
             enterResupply();
             return;
         }
+
+        // HIGHWAY CRUISE: on DIAGONAL highways the ground bounce desyncs from Grim (onGround/ff-clear timing jitter as
+        // the bot crosses block boundaries in both x and z) and gets rubberbanded at the apex → ~4 b/s "bounce in
+        // place" (EBOUNCE_LOG.md #17). Fly a level firework-sustained glide instead — no ground touch, no jump, no
+        // clear-race. Requires fireworks; with none, fall through to the free ground bounce below.
+        if (cfg.highwayCruise && hasAnyFirework()) { tickHighwayCruise(x, y, z, speed); return; }
 
         // Don't outrun chunk loading: at the frontier, hold heading and wait for chunks to stream in.
         int slowDist = Math.round(cfg.netherFrontierSlow * HIGHWAY_FRONTIER_FACTOR);
@@ -1338,15 +1361,21 @@ public class ElytraPilot extends Module {
         double bps = speed * 20.0;
         boolean wantSprint = bps < cfg.bounceSpeed && !frontierCoast;
 
-        // PROPORTIONAL nose-down dive caps the apex so the bot never punches into the nether ceiling, WITHOUT abrupt
-        // pitch jumps (a binary 0->30 toggle spikes the velocity and Grim sets it back; a smooth ramp doesn't). Fly
-        // level near the road; above bounceDiveHeight, pitch ramps with height at bounceDiveGain deg/block up to the
-        // bounceDivePitch cap — so the higher it climbs the harder it noses down, and each tick's change stays small
-        // (height changes ~0.2/tick -> ~gain*0.2 deg/tick). The dive also converts the altitude back into speed.
+        // PITCH. DIAGONAL highways: hold a CONSTANT steep pitch (the musheor recipe). On a diagonal the bot crosses
+        // block boundaries in both x AND z every tick, so the onGround/fall-flying-clear timing jitters and the
+        // proportional dive's shallow start (reduced fall-flying gravity → over-climb to apex ~1.9) gets Grim-setback;
+        // a constant steep pitch keeps the rise near-ballistic → low apex ~1.1 → Grim-accepted, ~35 b/s (EBOUNCE_LOG #17).
+        // CARDINAL highways keep the proven PROPORTIONAL dive: caps the apex below the nether ceiling without abrupt
+        // pitch jumps (a binary toggle spikes velocity and gets set back; a smooth ramp doesn't).
         double aboveRoad = y - cfg.roadY;
-        float pitch = aboveRoad <= cfg.bounceDiveHeight
-            ? cfg.bouncePitch
-            : (float) Math.min(cfg.bounceDivePitch, (aboveRoad - cfg.bounceDiveHeight) * cfg.bounceDiveGain);
+        float pitch;
+        if (cfg.bounceConstantPitchOnDiagonal && isDiagonalHighway()) {
+            pitch = cfg.bounceDiagonalPitch;
+        } else {
+            pitch = aboveRoad <= cfg.bounceDiveHeight
+                ? cfg.bouncePitch
+                : (float) Math.min(cfg.bounceDivePitch, (aboveRoad - cfg.bounceDiveHeight) * cfg.bounceDiveGain);
+        }
         submitMove(true, true, wantSprint, false, yaw, pitch);
 
         if (cfg.bounceDebug) {
@@ -1364,6 +1393,111 @@ public class ElytraPilot extends Module {
         }
     }
 
+    /**
+     * HIGHWAY CRUISE — fly the highway as a level, firework-sustained glide instead of the ground bounce. The bounce
+     * is free and fast on the cardinal (N/S/E/W) highways, but on DIAGONAL highways the onGround / fall-flying-clear
+     * timing jitters (the bot crosses block boundaries in both x and z every tick), desyncing the proxy from Grim's
+     * prediction so it gets rubberbanded at the apex and crawls (~4 b/s; EBOUNCE_LOG.md #17). A continuous level glide
+     * never touches the road and never jumps, so there is no clear-race to desync — it is an ordinary elytra+firework
+     * flight Grim accepts. Costs fireworks; the caller falls back to the ground bounce when out of them.
+     */
+    private void tickHighwayCruise(double x, double y, double z, double speed) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (BOT.isEBounceActive()) BOT.stopEBounce();          // cruise is physics-driven flight, never the synth stream
+        float yaw = highwayCruiseYaw(x, y, z);                 // centerline pure-pursuit, optionally pathfinder-steered
+
+        // Road sanity: only valid over a flat road. If we've sunk well below it we hit a gap / fell off — recover.
+        if (y < cfg.roadY - cfg.roadDropAbort) {
+            if (cfg.recoverFromDrop && cfg.passObstacles) enterRecover("dropped to y" + (int) y);
+            else abort("dropped below the road (y " + (int) y + " < road " + cfg.roadY + ")");
+            return;
+        }
+
+        double cruiseAlt = cfg.roadY + cfg.highwayCruiseClearance;
+        double ceilY = cfg.roadY + cfg.highwayCruiseCeiling;
+        boolean overCap = speed * 20.0 >= cfg.maxSpeed;
+
+        // KEEP GLIDING: re-engage fall-flying if it dropped (knockback/desync). On the ground -> one launch jump to
+        // get airborne (Bot deploys the elytra on the jump input), then the firework cruise takes over next tick.
+        if (!BOT.isFallFlying()) {
+            if (BOT.isOnGround()) { submitMove(true, true, true, false, yaw, 0f); return; }
+            BOT.deployElytra();
+        }
+
+        // ALTITUDE-HOLD: climb to the band, coast down when above it, hold inside it with periodic firework boosts.
+        // Never nose up past the ceiling cap (the nether bedrock roof sits just above a y120 highway).
+        float pitch;
+        boolean wantFire;
+        if (y < cruiseAlt - 1.0) {
+            pitch = -Math.min(cfg.climbPitch, 18f); wantFire = !overCap;       // below band -> climb
+        } else if (y > cruiseAlt + 1.0) {
+            pitch = 8f; wantFire = false;                                       // above band -> coast down (free)
+        } else {
+            pitch = cfg.glidePitch;                                            // in band -> shallow best-glide
+            wantFire = !overCap && (speed < cfg.minBoostSpeed || ticksSinceFire >= cfg.maxBoostIntervalTicks);
+        }
+        if (y >= ceilY && pitch < 0f) pitch = cfg.glidePitch;                  // never climb into the roof
+
+        // OBSTACLE: a griefed/walled road section. With pathfinding off, hand to the Baritone obstacle pass (the
+        // bounce's handler too). With it on, highwayCruiseYaw already steered the aim around it.
+        if (!cfg.highwayCruisePathfind && cfg.passObstacles
+                && terrainBlockedAhead(x, y, z, yaw, Math.min(cfg.lookAheadBlocks, 12))) {
+            info("Highway cruise blocked ahead — routing around it");
+            enterPass();
+            return;
+        }
+
+        // FRONTIER: don't outrun chunk loading. Coast (no boost, drag bleeds speed) when loaded road ahead is short.
+        int slowDist = Math.round(cfg.netherFrontierSlow * HIGHWAY_FRONTIER_FACTOR);
+        if (loadedDistAhead(x, z, yaw, slowDist) < slowDist) wantFire = false;
+
+        boolean fire = wantFire && heldIsFirework();
+        if (wantFire && !fire) ensureFireworkHeld();
+        if (fire) ticksSinceFire = 0;
+        submitInput(false, fire, yaw, pitch);
+
+        if (cfg.bounceDebug) {
+            var v = BOT.getVelocity();
+            info(String.format("[hwcruise] y=%.2f (band %.0f) spd=%.1fb/s vx=%.3f vy=%.3f fire=%b pitch=%.0f food=%d",
+                y, cruiseAlt, speed * 20.0, Math.hypot(v.getX(), v.getZ()), v.getY(), fire, pitch,
+                CACHE.getPlayerCache().getThePlayer().getFood()));
+        }
+
+        if (cfg.hasTarget && horizDist(x, z, cfg.targetX, cfg.targetZ) <= cfg.arriveRadius) {
+            phase = Phase.LAND;
+            landTicks = 0;
+            info("Reached target - landing");
+        }
+    }
+
+    /**
+     * Highway-cruise steering yaw. Default = the road-centerline pure-pursuit ({@link #desiredYaw}, which already
+     * handles diagonals). With {@code highwayCruisePathfind} on, runs the coarse {@link ElytraPathfinder} 3D A* toward
+     * a point down the road and aims at the route so it threads around griefed/blocked sections instead of needing the
+     * Baritone obstacle pass; falls back to the plain centerline when no route is found.
+     */
+    private float highwayCruiseYaw(double x, double y, double z) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (!cfg.highwayCruisePathfind) return desiredYaw(x, z);
+        double[] d = roadDir();
+        int tx = (int) Math.round(x + d[0] * cfg.highwayLookahead);
+        int tz = (int) Math.round(z + d[1] * cfg.highwayLookahead);
+        int ty = (int) Math.round(cfg.roadY + cfg.highwayCruiseClearance);
+        if (hcPath == null || --hcPlanCooldown <= 0) {
+            hcPlanCooldown = HC_PLAN_INTERVAL;
+            hcPath = ElytraPathfinder.findPath(MathHelper.floorI(x), MathHelper.floorI(y), MathHelper.floorI(z),
+                tx, ty, tz, HC_PLAN_NODES, HC_PLAN_RADIUS_CELLS);
+            hcPathIdx = 0;
+        }
+        if (hcPath == null || hcPath.size() < 2) return desiredYaw(x, z);
+        while (hcPathIdx < hcPath.size() - 1) {                 // drop waypoints we've reached
+            int[] wp = hcPath.get(hcPathIdx);
+            if (horizDist(x, z, wp[0], wp[2]) < 4) hcPathIdx++; else break;
+        }
+        int[] w = hcPath.get(Math.min(hcPathIdx + 2, hcPath.size() - 1)); // aim a couple cells ahead
+        return (float) Math.toDegrees(Math.atan2(-(w[0] + 0.5 - x), w[2] + 0.5 - z));
+    }
+
     private void enterHop() {
         phase = Phase.HOP;
         hopTicks = 0;
@@ -1373,7 +1507,11 @@ public class ElytraPilot extends Module {
     /** Glide up and over a block/lava patch on the road, then drop back into the bounce. Falls back to PASS if it can't clear. */
     private void tickHop(double x, double y, double z, double speed) {
         var cfg = CONFIG.client.extra.elytraPilot;
-        if (y < cfg.roadY - cfg.roadDropAbort) { abort("fell off the road during a hop"); return; }
+        if (y < cfg.roadY - cfg.roadDropAbort) {
+            if (cfg.recoverFromDrop && cfg.passObstacles) enterRecover("fell off during a hop, y" + (int) y);
+            else abort("fell off the road during a hop");
+            return;
+        }
         float yaw = desiredYaw(x, z);                 // stay on the highway centerline; climb straight over
         boolean overCap = speed * 20.0 >= cfg.maxSpeed;
         if (!BOT.isFallFlying() && redeployCooldown <= 0) { sendStartFallFlying(); redeployCooldown = cfg.bounceRedeployTicks; }
@@ -1400,11 +1538,31 @@ public class ElytraPilot extends Module {
     private void enterPass() {
         phase = Phase.PASS;
         passPathing = false;
+        passRecovery = false;
         passTicks = 0;
         passAttempts = 0;
         bounceStallTicks = 0;
         BARITONE.stop();
         inGameAlertActivePlayer("<yellow>ElytraPilot: obstacle ahead — settling + pathing past it");
+    }
+
+    /**
+     * Fell off / below the highway — recover back ONTO it instead of aborting. Reuses the obstacle-pass machinery
+     * (settle, then Baritone to the road centerline at {@link Config...#roadY}, which both re-centers and climbs the
+     * bot back up from a low lane), then resumes bouncing. Bounded by {@code maxRecoverEpisodes} consecutive drops
+     * (decays after sustained healthy flight) — if it keeps falling off the same spot, it emergency-lands rather than
+     * looping forever.
+     */
+    private void enterRecover(String why) {
+        if (++recoverEpisodes > CONFIG.client.extra.elytraPilot.maxRecoverEpisodes) {
+            warn("Fell off the highway {} times — can't hold the road here, emergency landing", recoverEpisodes);
+            enterEmergencyLanding();
+            return;
+        }
+        enterPass();                 // reuse settle + Baritone-to-centerline@roadY (re-centers AND climbs back up)
+        passRecovery = true;         // set AFTER enterPass (which clears it) so failure/arrival log as recovery
+        info("Off the highway (" + why + ") — recovering back onto the road [attempt " + recoverEpisodes + "]");
+        inGameAlertActivePlayer("<yellow>ElytraPilot: off the road — recovering back onto the highway");
     }
 
     /**
@@ -1425,11 +1583,18 @@ public class ElytraPilot extends Module {
             BARITONE.stop();
             phase = Phase.BOUNCE;
             bounceStallTicks = 0;
-            info("Cleared obstacle — resuming bounce");
+            info(passRecovery ? "Back on the highway — resuming bounce" : "Cleared obstacle — resuming bounce");
+            passRecovery = false;
             return;
         }
         if (!BARITONE.isActive() || ++passTicks > cfg.passTimeoutTicks) {
-            if (passAttempts >= cfg.maxPassAttempts) { abort("could not path past the obstacle"); return; }
+            if (passAttempts >= cfg.maxPassAttempts) {
+                // Out of bypass attempts. Don't kill the flight — fall back to the graceful emergency landing.
+                warn(passRecovery ? "Could not get back onto the highway — emergency landing"
+                                  : "Could not path past the obstacle — emergency landing");
+                enterEmergencyLanding();
+                return;
+            }
             startPassPath(x, z); // re-path further along the axis
         }
     }
@@ -1465,6 +1630,17 @@ public class ElytraPilot extends Module {
         if (cfg.highway) return roadDir();
         double r = Math.toRadians(cfg.heading);
         return new double[]{ -Math.sin(r), Math.cos(r) };
+    }
+
+    /** True when following a DIAGONAL spawn highway (NE/SE/SW/NW) — the bounce holds a constant steep pitch there
+     *  (low apex, Grim-accepted on the two-axis path) instead of the cardinal proportional dive. See EBOUNCE_LOG #17. */
+    private boolean isDiagonalHighway() {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (!cfg.highway) return false;
+        return switch (cfg.highwayDir) {
+            case NE, SE, SW, NW -> true;
+            default -> false;
+        };
     }
 
     /** Unit direction of the current road: an explicit custom direction (roadDirX/Z) if set — for off-spawn roads —
@@ -2068,19 +2244,28 @@ public class ElytraPilot extends Module {
             submitMove(false, false, false, false, desiredYaw(x, z), 0f);
             boolean settled = speed * 20.0 < 1.5 && BOT.isOnGround() && !BOT.isFallFlying();
             if (!settled && ++resupplyTicks < cfg.passSettleTicks) return;
-            // Save Regear config, then set it for an ELYTRA-ONLY refill: no armor/gear equip (never touch the worn
-            // elytra), no self-kill relocate (stay on the highway), return the emptied kit, recover our echest.
-            savedRgEquipElytra = CONFIG.client.extra.regear.equipElytra;
-            savedRgEquipArmor = CONFIG.client.extra.regear.equipArmor;
-            savedRgOffhandTotem = CONFIG.client.extra.regear.offhandTotem;
+            // Drive Regear for an ELYTRA-ONLY refill. Self-kill relocate is always forced off here (stay on the
+            // highway) — it's not a kit attribute. The kit identity + equip flags come from the assigned ebounce
+            // profile (pushProfile) when one is set, else the legacy hard-coded elytra-only overrides.
             savedRgSelfKillRelocate = CONFIG.client.extra.regear.selfKillRelocate;
-            CONFIG.client.extra.regear.equipElytra = false;
-            CONFIG.client.extra.regear.equipArmor = false;
-            CONFIG.client.extra.regear.offhandTotem = false;
             CONFIG.client.extra.regear.selfKillRelocate = false;
-            CONFIG.client.extra.regear.returnShulker = true;
+            var ebProfile = CONFIG.client.extra.kitProfile(cfg.ebounceKitProfile);
+            if (ebProfile != null) {
+                resupplyUsedProfile = true;
+                rg.pushProfile(ebProfile);                    // shulker match + equipArmor/Elytra/offhandTotem/returnShulker
+                rg.setElytraRefill(ebProfile.elytraOnly, ebProfile.elytraTarget);
+            } else {
+                resupplyUsedProfile = false;                  // legacy: never touch the worn elytra, return the emptied kit
+                savedRgEquipElytra = CONFIG.client.extra.regear.equipElytra;
+                savedRgEquipArmor = CONFIG.client.extra.regear.equipArmor;
+                savedRgOffhandTotem = CONFIG.client.extra.regear.offhandTotem;
+                CONFIG.client.extra.regear.equipElytra = false;
+                CONFIG.client.extra.regear.equipArmor = false;
+                CONFIG.client.extra.regear.offhandTotem = false;
+                CONFIG.client.extra.regear.returnShulker = true;
+                rg.setElytraRefill(true, cfg.resupplyElytraCount);
+            }
             CONFIG.client.extra.regear.enabled = true;
-            rg.setElytraRefill(true, cfg.resupplyElytraCount);
             rg.syncEnabledFromConfig();
             resupplyStarted = true;
             resupplyTicks = 0;
@@ -2110,15 +2295,19 @@ public class ElytraPilot extends Module {
     /** Restore the Regear config the resupply temporarily overrode, clear the elytra-refill mode, and disable Regear. */
     private void restoreRegearConfig() {
         var rcfg = CONFIG.client.extra.regear;
-        rcfg.equipElytra = savedRgEquipElytra;
-        rcfg.equipArmor = savedRgEquipArmor;
-        rcfg.offhandTotem = savedRgOffhandTotem;
-        rcfg.selfKillRelocate = savedRgSelfKillRelocate;
         var rg = MODULE.get(Regear.class);
+        rg.popProfile();                              // profile path: restores identity + equip flags (idempotent no-op otherwise)
+        rcfg.selfKillRelocate = savedRgSelfKillRelocate;
+        if (!resupplyUsedProfile) {                   // legacy path: restore the equip flags it saved/overrode
+            rcfg.equipElytra = savedRgEquipElytra;
+            rcfg.equipArmor = savedRgEquipArmor;
+            rcfg.offhandTotem = savedRgOffhandTotem;
+        }
         rg.setElytraRefill(false, 0);
         rcfg.enabled = false;
         rg.syncEnabledFromConfig();
         resupplyStarted = false;
+        resupplyUsedProfile = false;
     }
 
     // --- elytra swap mechanics ---
