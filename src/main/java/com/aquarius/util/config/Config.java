@@ -178,6 +178,17 @@ public final class Config {
             public final AquariusMiner aquariusMiner = new AquariusMiner();
             public final Regear regear = new Regear();
             public final KitMaker kitMaker = new KitMaker();
+            /** Named kit profiles — one editable place for every "kit" the gear flows use (spawn regear, nether-flight
+             *  gear-up, e-bounce elytra resupply). Each module points at a profile by name; see {@link #kitProfile}.
+             *  Seeded to replicate the shipped per-flow behaviour, so nothing changes until a profile is edited. */
+            public final java.util.List<KitProfile> kits = KitProfile.defaults();
+
+            /** Resolve a kit profile by name (case-insensitive); {@code null} if none — callers fall back to legacy fields. */
+            public KitProfile kitProfile(String name) {
+                if (name == null || name.isBlank()) return null;
+                for (KitProfile k : kits) if (k.name.equalsIgnoreCase(name)) return k;
+                return null;
+            }
             public final ElytraPilot elytraPilot = new ElytraPilot();
             public final PearlPlus pearlPlus = new PearlPlus();
             public final VillagerTrader villagerTrader = new VillagerTrader();
@@ -447,6 +458,29 @@ public final class Config {
                 /** Highway-follow look-ahead (blocks) for the pure-pursuit aim point on the road centerline. */
                 public int highwayLookahead = 64;
 
+                /**
+                 * Highway CRUISE mode: fly the highway as a level firework-sustained glide (continuous fall-flying,
+                 * never touching the road) instead of the no-firework ground bounce ({@code tickBounce}). The ground
+                 * bounce is fast and free on the cardinal (N/S/E/W) highways, but on DIAGONAL highways the bot crosses
+                 * block boundaries in both x and z every tick, which jitters the onGround/fall-flying-clear timing and
+                 * desyncs the proxy from Grim's prediction → it gets rubberbanded at the apex and crawls (~4 b/s). A
+                 * level cruise has no ground touch and no jump, so there is no clear-race to desync — it is just a
+                 * normal elytra+firework flight Grim accepts. Costs fireworks. See EBOUNCE_LOG.md attempt #17.
+                 */
+                public boolean highwayCruise = false;
+
+                /** Highway cruise: blocks above {@link #roadY} to hold the level glide (the target altitude band). */
+                public int highwayCruiseClearance = 3;
+
+                /** Highway cruise: max blocks above {@link #roadY} the nose may climb — keep under the nether bedrock
+                 *  ceiling (road y120, bedrock bottom ~y127, so ~5 leaves head clearance). */
+                public int highwayCruiseCeiling = 5;
+
+                /** Highway cruise: use the coarse-grid {@link com.aquarius.module.impl.ElytraPathfinder} 3D look-ahead
+                 *  to steer the aim point around blocked/griefed road sections, instead of the binary block-ahead check
+                 *  that just hands off to the Baritone obstacle pass. Off = simpler centerline pursuit + obstacle pass. */
+                public boolean highwayCruisePathfind = false;
+
                 /** Fire another firework when horizontal speed (blocks/tick) drops below this. */
                 public double minBoostSpeed = 0.55;
 
@@ -621,6 +655,10 @@ public final class Config {
                  * (a naked bot just aborts with "no worn elytra").
                  */
                 public boolean tripGearUp = true;
+
+                /** Kit profile the nether-flight pre-flight gear-up pulls (a name in {@code CONFIG.client.extra.kits}).
+                 *  Blank = use the legacy {@code preflight*} minimums + {@code regear.*} fields (backward-compatible). */
+                public String flightKitProfile = "";
 
                 // --- pre-flight checklist minimums (audited before each trip; Regear refills only the deficits) ---
                 /** Minimum armour pieces worn besides the elytra (helmet/leggings/boots), any material. */
@@ -820,6 +858,10 @@ public final class Config {
                  *  + a stocked kit shulker. The worn (armor) elytra is never touched. */
                 public boolean resupplyFromEchest = true;
 
+                /** Kit profile the e-bounce elytra resupply pulls (a name in {@code CONFIG.client.extra.kits}).
+                 *  Blank = use the legacy {@code resupplyElytraCount} + {@code regear.matchByElytraCount} (backward-compatible). */
+                public String ebounceKitProfile = "";
+
                 /** E-bounce resupply trigger: run a resupply when the count of FRESH spare elytras (inv/hotbar, above
                  *  the fresh-durability floor) drops below this. */
                 public int resupplySpareThreshold = 2;
@@ -877,6 +919,19 @@ public final class Config {
                  *  min(bounceDivePitch, (height-above-road - bounceDiveHeight) * bounceDiveGain). Higher gain caps the
                  *  apex tighter; too high and the per-tick pitch change gets abrupt enough to desync. ~40. */
                 public double bounceDiveGain = 40.0;
+
+                /**
+                 * E-bounce: on a DIAGONAL spawn highway (NE/SE/SW/NW), hold a CONSTANT steep pitch instead of the
+                 * cardinal proportional dive. On a diagonal the bot crosses block boundaries in both x AND z every
+                 * tick, so the proportional dive's shallow start over-climbs (apex ~1.9) and Grim rubberbands it; a
+                 * constant steep pitch keeps the rise near-ballistic (apex ~1.1) and Grim accepts it (~35 b/s, 0
+                 * setbacks). Cardinal highways are unaffected (they keep the proportional dive). See EBOUNCE_LOG #17.
+                 */
+                public boolean bounceConstantPitchOnDiagonal = true;
+
+                /** E-bounce: the constant nose-down pitch (degrees) held on a diagonal highway when
+                 *  {@link #bounceConstantPitchOnDiagonal} is on. ~72 (the musheor value). */
+                public float bounceDiagonalPitch = 72.0f;
 
                 /** E-bounce: clear fall-flying LOCALLY the tick the bot is onGround, mirroring what Grim does the tick it
                  *  sees onGround=true in the move packet. Our Bot otherwise leaves ff=true until the server's metadata echo
@@ -1011,8 +1066,20 @@ public final class Config {
                 /** Per-attempt Baritone bypass timeout (ticks) before retrying further along the axis. */
                 public int passTimeoutTicks = 200;
 
-                /** Max Baritone bypass attempts before aborting the flight. */
-                public int maxPassAttempts = 5;
+                /** Max Baritone bypass attempts per obstacle/recovery before falling back to the emergency landing. */
+                public int maxPassAttempts = 8;
+
+                /**
+                 * Recover onto the highway when the bot falls below the road (instead of aborting the flight). On a
+                 * drop below {@link #roadY} - {@link #roadDropAbort}, settle, then Baritone-path back to the highway
+                 * centerline at {@link #roadY} (which re-centers AND climbs back up from a low lane) and resume
+                 * bouncing. Reuses the obstacle-pass machinery. Needs {@link #passObstacles}.
+                 */
+                public boolean recoverFromDrop = true;
+
+                /** Consecutive off-the-highway recoveries (drops) before giving up and emergency-landing — guards against
+                 *  an endless recover→re-drop loop at a spot the bot can't get past. Decays after sustained healthy flight. */
+                public int maxRecoverEpisodes = 6;
 
                 /** Ticks of near-zero forward speed while bouncing that count as "stuck on an obstacle". Generous so
                  *  the slow initial dive-bounce speed build-up isn't mistaken for a wall and aborted early. */
@@ -1511,9 +1578,90 @@ public final class Config {
              * empties it into the inventory, recovers the shulker back into the ender chest, then gears up
              * (armor + offhand totem). Read everywhere via {@code CONFIG.client.extra.regear.*}. See {@code .regear}.
              */
+            /**
+             * A named "kit" definition shared across the gear flows. Bundles (1) WHICH shulker in the ender chest to
+             * pull (name / colour / contents / elytra-count match), (2) what to EQUIP after pulling, (3) the pull MODE
+             * (full kit, missing-only top-up, or elytra-only), and (4) the pre-flight checklist MINIMUMS the gear-up
+             * audits and tops up. Each gear flow references one profile by name (e.g. {@code regear.profile},
+             * {@code elytraPilot.flightKitProfile}, {@code elytraPilot.ebounceKitProfile}). Edit them all in one place
+             * under {@code CONFIG.client.extra.kits}.
+             */
+            public static class KitProfile {
+                /** Profile id — referenced by the per-flow assignment fields (case-insensitive). */
+                public String name = "kit";
+
+                // --- which shulker to pull from the ender chest ---
+                /** Anvil-name contains-match for the kit shulker (case-insensitive). */
+                public String shulkerName = "regear";
+                /** Match by shulker COLOUR ({@link #shulkerColor}) instead of by name. */
+                public boolean matchByColor = false;
+                public String shulkerColor = "";
+                /** Match by CONTENTS (the shulker that looks most like a flight kit: has an elytra + fireworks). */
+                public boolean matchByContents = false;
+                /** Match the first shulker holding at least {@link #elytraCount} elytras (for the e-bounce resupply). */
+                public boolean matchByElytraCount = false;
+                public int elytraCount = 9;
+
+                // --- what to equip after emptying the kit ---
+                public boolean equipArmor = true;
+                /** Equip an ELYTRA into the chest slot (flight kits) instead of a chestplate. */
+                public boolean equipElytra = false;
+                public boolean offhandTotem = true;
+                /** Put the emptied shulker back into the ender chest (vs leaving it carried). */
+                public boolean returnShulker = true;
+
+                // --- pull mode ---
+                /** Elytra-only refill (e-bounce): pull FRESH elytras until the inventory holds {@link #elytraTarget},
+                 *  dump SPENT ones back; never touch worn armour. Takes precedence over the checklist below. */
+                public boolean elytraOnly = false;
+                public int elytraTarget = 9;
+
+                // --- pre-flight checklist minimums (nether-flight / spawn gear-up tops up only the deficits) ---
+                public int minArmor = 1;
+                public int minElytras = 2;
+                public int minTotems = 2;
+                public boolean offhandTotemRequired = true;
+                public int minFireworks = 64;
+                public int minEgaps = 64;
+                public boolean requirePickaxe = true;
+                public boolean wantWeapon = true;
+                public int minEchests = 8;
+
+                public KitProfile() {}
+                public KitProfile(String name) { this.name = name; }
+
+                /** The shipped defaults: one profile per gear flow, each matching today's hard-coded behaviour. */
+                static java.util.List<KitProfile> defaults() {
+                    var list = new java.util.ArrayList<KitProfile>();
+
+                    // Spawn / combat regear: pull the whole "regear" shulker, equip a chestplate + armour + offhand totem.
+                    var spawn = new KitProfile("spawn");
+                    list.add(spawn);
+
+                    // Nether-flight gear-up: same shulker, but equip an ELYTRA in the chest slot; audit the flight checklist.
+                    var flight = new KitProfile("flight");
+                    flight.equipElytra = true;
+                    list.add(flight);
+
+                    // E-bounce resupply: match by elytra count, elytra-only refill, never touch armour/totem.
+                    var ebounce = new KitProfile("ebounce");
+                    ebounce.matchByElytraCount = true;
+                    ebounce.elytraOnly = true;
+                    ebounce.equipArmor = false;
+                    ebounce.offhandTotem = false;
+                    list.add(ebounce);
+
+                    return list;
+                }
+            }
+
             public static class Regear {
                 /** Whether the module is enabled on startup. Regear is a one-shot: it runs a single cycle when enabled. */
                 public boolean enabled = false;
+
+                /** Kit profile this regear pulls (a name in {@code CONFIG.client.extra.kits}). Blank = use the legacy
+                 *  {@code kitShulkerName}/{@code matchBy*}/{@code equip*} fields below (backward-compatible). */
+                public String profile = "";
 
                 /** Custom (anvil) name identifying the kit shulker inside the ender chest. Case-insensitive contains-match. */
                 public String kitShulkerName = "regear";
@@ -2103,7 +2251,7 @@ public final class Config {
                 // (PlayerInteractionManager#airPlaceOn) to fire. Default off for safety.
                 public boolean enabled = false;
                 // Randomize the cursor hit-vec in [0,1] on each placement (matches the captured client;
-                // a static cursor would be an easy fingerprint). See AIRPLACE_LOG.md.
+                // a static cursor would be an easy fingerprint).
                 public boolean randomizeCursor = true;
                 // Skip a placement on any tick AutoTotem would act (health <= its threshold) so totem
                 // restoration wins the offhand. The swap-sandwich is self-restoring and atomic within a

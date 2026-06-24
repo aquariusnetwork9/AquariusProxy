@@ -270,6 +270,16 @@ public class ElytraPilotCommand extends Command {
                 c.getSource().getEmbed().title("ElytraPilot e-bounce dive gain = " + CONFIG.client.extra.elytraPilot.bounceDiveGain + " deg/block")
                     .description("Degrees of extra nose-down per block above the dive height (proportional, smooth ramp). Higher caps the apex tighter; too high gets abrupt enough to desync.");
             })))
+            .then(literal("bounceconstdiag").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceConstantPitchOnDiagonal = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("ElytraPilot constant-pitch on diagonals " + toggleStrCaps(CONFIG.client.extra.elytraPilot.bounceConstantPitchOnDiagonal))
+                    .description("On DIAGONAL highways, hold a constant steep pitch (low apex, Grim-accepted) instead of the cardinal proportional dive. Cardinals are unaffected. Fixes the diagonal over-climb/setback.");
+            })))
+            .then(literal("bouncediagpitch").then(argument("deg", doubleArg()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.bounceDiagonalPitch = (float) getDouble(c, "deg");
+                c.getSource().getEmbed().title("ElytraPilot diagonal bounce pitch = " + CONFIG.client.extra.elytraPilot.bounceDiagonalPitch + "°")
+                    .description("The constant nose-down pitch held on a diagonal highway (musheor uses ~72). Lower = higher apex; too high spikes the dive.");
+            })))
             .then(literal("bounceredeployvy").then(argument("vy", doubleArg()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.bounceRedeployMaxVy = getDouble(c, "vy");
                 c.getSource().getEmbed().title("ElytraPilot e-bounce redeploy maxVy = " + CONFIG.client.extra.elytraPilot.bounceRedeployMaxVy)
@@ -280,11 +290,55 @@ public class ElytraPilotCommand extends Command {
                 c.getSource().getEmbed().title("ElytraPilot e-bounce clear-ff-on-ground " + toggleStrCaps(CONFIG.client.extra.elytraPilot.bounceClearOnGround))
                     .description("Clear fall-flying locally on the ground tick to match Grim's prediction (it clears ff when it sees onGround=true). Removes the 1-tick drag divergence that sets the bounce back at ~24 b/s.");
             })))
+            .then(literal("highwaycruise").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.highwayCruise = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("ElytraPilot highway cruise " + toggleStrCaps(CONFIG.client.extra.elytraPilot.highwayCruise))
+                    .description("Fly highways as a level firework-sustained glide (no ground touch) instead of the ground bounce. Reliable on DIAGONAL highways where the bounce desyncs from Grim and crawls; costs fireworks. Cardinal highways still bounce fine for free.");
+            })))
+            .then(literal("highwaycruisealt").then(argument("blocks", integer(1)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.highwayCruiseClearance = getInteger(c, "blocks");
+                c.getSource().getEmbed().title("ElytraPilot highway cruise altitude = roadY + " + CONFIG.client.extra.elytraPilot.highwayCruiseClearance)
+                    .description("Blocks above the road to hold the level glide. Keep it under the ceiling cap so the bot never noses into the nether bedrock roof.");
+            })))
+            .then(literal("highwaycruiseceil").then(argument("blocks", integer(1)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.highwayCruiseCeiling = getInteger(c, "blocks");
+                c.getSource().getEmbed().title("ElytraPilot highway cruise ceiling = roadY + " + CONFIG.client.extra.elytraPilot.highwayCruiseCeiling)
+                    .description("Hard cap on how high the nose may climb above the road (stay under the bedrock roof: road y120, roof ~y127).");
+            })))
+            .then(literal("highwaycruisepathfind").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.highwayCruisePathfind = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("ElytraPilot highway cruise pathfinding " + toggleStrCaps(CONFIG.client.extra.elytraPilot.highwayCruisePathfind))
+                    .description("Use the coarse 3D A* look-ahead to steer around griefed road sections instead of handing off to the Baritone obstacle pass.");
+            })))
             .then(literal("resupply").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.resupplyFromEchest = getToggle(c, "toggle");
                 c.getSource().getEmbed().title("ElytraPilot elytra resupply " + toggleStrCaps(CONFIG.client.extra.elytraPilot.resupplyFromEchest))
                     .description("Restock fresh elytra spares from the carried ender-chest kit when they run low (needs a carried ender chest, a silk pickaxe, and a stocked kit shulker). Never touches the worn elytra.");
             })))
+            .then(literal("ebouncekit")
+                .then(literal("off").executes(c -> {
+                    CONFIG.client.extra.elytraPilot.ebounceKitProfile = "";
+                    c.getSource().getEmbed().title("E-bounce resupply kit: off (legacy resupplycount + regear fields)");
+                }))
+                .then(argument("name", word()).executes(c -> {
+                    String name = getString(c, "name");
+                    boolean known = CONFIG.client.extra.kitProfile(name) != null;
+                    CONFIG.client.extra.elytraPilot.ebounceKitProfile = name;
+                    c.getSource().getEmbed().title("E-bounce resupply kit: " + name + (known ? "" : "  (no such profile — `kit add " + name + "`)"))
+                        .description("The e-bounce elytra resupply pulls this kit profile (see `kit list`). `ebouncekit off` for the legacy fields.");
+                })))
+            .then(literal("flightkit")
+                .then(literal("off").executes(c -> {
+                    CONFIG.client.extra.elytraPilot.flightKitProfile = "";
+                    c.getSource().getEmbed().title("Nether-flight kit: off (legacy preflight* + regear fields)");
+                }))
+                .then(argument("name", word()).executes(c -> {
+                    String name = getString(c, "name");
+                    boolean known = CONFIG.client.extra.kitProfile(name) != null;
+                    CONFIG.client.extra.elytraPilot.flightKitProfile = name;
+                    c.getSource().getEmbed().title("Nether-flight kit: " + name + (known ? "" : "  (no such profile — `kit add " + name + "`)"))
+                        .description("The nether-flight pre-flight gear-up pulls this kit profile + uses its checklist minimums (see `kit list`). `flightkit off` for the legacy fields.");
+                })))
             .then(literal("resupplyspares").then(argument("n", integer(0)).executes(c -> {
                 CONFIG.client.extra.elytraPilot.resupplySpareThreshold = getInteger(c, "n");
                 c.getSource().getEmbed().title("ElytraPilot resupply when fresh spares < " + CONFIG.client.extra.elytraPilot.resupplySpareThreshold);
@@ -434,6 +488,21 @@ public class ElytraPilotCommand extends Command {
             .then(literal("passahead").then(argument("blocks", integer()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.passAheadBlocks = getInteger(c, "blocks");
                 c.getSource().getEmbed().title("ElytraPilot pass-ahead = " + CONFIG.client.extra.elytraPilot.passAheadBlocks);
+            })))
+            .then(literal("passattempts").then(argument("n", integer(1)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.maxPassAttempts = getInteger(c, "n");
+                c.getSource().getEmbed().title("ElytraPilot max bypass attempts = " + CONFIG.client.extra.elytraPilot.maxPassAttempts)
+                    .description("Baritone bypass/recovery attempts per obstacle or fall before the graceful emergency landing.");
+            })))
+            .then(literal("recover").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.recoverFromDrop = getToggle(c, "toggle");
+                c.getSource().getEmbed().title("ElytraPilot fall recovery " + toggleStrCaps(CONFIG.client.extra.elytraPilot.recoverFromDrop))
+                    .description("When the bot falls below the road, Baritone-path it back onto the highway centerline at roadY and resume bouncing, instead of aborting the flight. Off = abort on a drop (old behavior).");
+            })))
+            .then(literal("recoverepisodes").then(argument("n", integer(1)).executes(c -> {
+                CONFIG.client.extra.elytraPilot.maxRecoverEpisodes = getInteger(c, "n");
+                c.getSource().getEmbed().title("ElytraPilot max recover episodes = " + CONFIG.client.extra.elytraPilot.maxRecoverEpisodes)
+                    .description("Consecutive fall-recoveries before giving up and emergency-landing (guards against an endless recover→re-drop loop). Decays after sustained healthy flight.");
             })))
             .then(literal("reroute").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.reroute = getToggle(c, "toggle");

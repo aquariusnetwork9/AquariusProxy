@@ -18,6 +18,8 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
+import com.aquarius.util.config.Config.Client.Extra.KitProfile;
+
 import static com.github.rfresh2.EventConsumer.of;
 import static com.aquarius.Globals.BARITONE;
 import static com.aquarius.Globals.CACHE;
@@ -78,6 +80,38 @@ public class Regear extends AbstractFieldModule {
      *  {@code target}, dumping the SPENT ones back into the kit. The worn (armor) elytra is never touched. */
     public void setElytraRefill(boolean b, int target) { elytraRefill = b; elytraRefillTarget = target; }
 
+    // --- kit-profile override: temporarily source the shulker-match + equip flags from a named KitProfile ---
+    private record RegearSnapshot(String name, boolean matchColor, String color, boolean contents,
+                                  boolean elytraCt, int elytraN, boolean armor, boolean elytra, boolean totem, boolean ret) {}
+    private @Nullable RegearSnapshot savedProfile;
+
+    /**
+     * Drive this Regear cycle from a named kit profile (a flow points at one via its assignment field): snapshot the
+     * base {@code regear} config, then apply the profile's shulker-match + equip flags onto it. The validated state
+     * machine keeps reading the same {@code cfg.*} fields — it just sees the profile's values. {@link #popProfile()}
+     * (called on disable) restores the base config. No-op if {@code p} is null (→ legacy behaviour) or already pushed.
+     */
+    public void pushProfile(@Nullable KitProfile p) {
+        if (p == null || savedProfile != null) return;
+        var c = CONFIG.client.extra.regear;
+        savedProfile = new RegearSnapshot(c.kitShulkerName, c.matchByColor, c.kitShulkerColor, c.matchByContents,
+            c.matchByElytraCount, c.kitElytraCount, c.equipArmor, c.equipElytra, c.offhandTotem, c.returnShulker);
+        c.kitShulkerName = p.shulkerName; c.matchByColor = p.matchByColor; c.kitShulkerColor = p.shulkerColor;
+        c.matchByContents = p.matchByContents; c.matchByElytraCount = p.matchByElytraCount; c.kitElytraCount = p.elytraCount;
+        c.equipArmor = p.equipArmor; c.equipElytra = p.equipElytra; c.offhandTotem = p.offhandTotem; c.returnShulker = p.returnShulker;
+    }
+
+    /** Restore the base regear config snapshotted by {@link #pushProfile}. Safe to call when none is active. */
+    public void popProfile() {
+        if (savedProfile == null) return;
+        var c = CONFIG.client.extra.regear;
+        var s = savedProfile;
+        savedProfile = null;
+        c.kitShulkerName = s.name(); c.matchByColor = s.matchColor(); c.kitShulkerColor = s.color(); c.matchByContents = s.contents();
+        c.matchByElytraCount = s.elytraCt(); c.kitElytraCount = s.elytraN(); c.equipArmor = s.armor(); c.equipElytra = s.elytra();
+        c.offhandTotem = s.totem(); c.returnShulker = s.ret();
+    }
+
     @Override
     public boolean enabledSetting() { return CONFIG.client.extra.regear.enabled; }
 
@@ -91,6 +125,9 @@ public class Regear extends AbstractFieldModule {
 
     @Override
     public void onEnable() {
+        // Standalone (spawn) regear: apply the assigned kit profile. No-op if a flow (ebounce resupply / trip gear-up)
+        // already pushed its own profile, or if regear.profile is blank (→ legacy fields).
+        pushProfile(CONFIG.client.extra.kitProfile(CONFIG.client.extra.regear.profile));
         paused = false; complete = false; hazardPaused = false;
         gearArmorIdx = 0;
         relocateAttempts = 0;
@@ -109,6 +146,7 @@ public class Regear extends AbstractFieldModule {
     public void onDisable() {
         if (BARITONE.isActive()) BARITONE.stop();
         restoreBreaking();
+        popProfile();                 // restore the base regear config if a flow pushed a kit profile for this cycle
         state = State.IDLE;
         flightRefill = false;
         elytraRefill = false;
