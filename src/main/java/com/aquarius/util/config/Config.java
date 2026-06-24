@@ -1128,6 +1128,52 @@ public final class Config {
 
                 /** InputManager priority for flight control (high so it overrides other movement). */
                 public int inputPriority = 5000;
+
+                /**
+                 * Grief-hardening for nether-highway travel. All OFF behind {@link NetherHardening#enabled} — opt-in,
+                 * primitive-style, so the proven e-bounce is untouched until you turn it on. When enabled, the band
+                 * look-ahead probe classifies the highway corridor and the bot: power-flies across destroyed-but-open
+                 * sections (holes / craters / withers) instead of recovering or aborting; reroutes via the ring-road
+                 * graph around full-height blockages; tanks wither fire while it has god apples to heal back; and
+                 * records what it hits into a LOCAL grief map (no network).
+                 */
+                public NetherHardening netherHardening = new NetherHardening();
+
+                public static class NetherHardening {
+                    /** Master switch. OFF = the flight loop behaves exactly as before. */
+                    public boolean enabled = false;
+
+                    /** Road surface gone but the band still open -> power-fly across (level firework glide) rather than
+                     *  Baritone-recovering or aborting. Needs fireworks; falls back to the old behaviour without them. */
+                    public boolean flyThroughGaps = true;
+
+                    /** Full-height blockage (wall to the ceiling) -> reroute around it via the ring-road graph. */
+                    public boolean rerouteAroundWalls = true;
+
+                    /** Record encountered hazards into the bot's LOCAL grief map. No connection is opened and nothing is
+                     *  pushed anywhere; the only egress is an explicit, opt-in export pulled by something else. */
+                    public boolean recordGrief = true;
+
+                    /** Keep flying through wither fire (don't abort on totem pops) while at least this many enchanted
+                     *  golden apples remain to heal back. 0 disables the tolerance (normal totem-pop abort applies). */
+                    public int witherTankGodApples = 12;
+
+                    /** Look-ahead distance (blocks) for the band corridor probe. */
+                    public int probeLookAhead = 24;
+
+                    /** The probed band is [roadY - bandBelow, roadY + bandAbove]; defaults give 2b2t's y118-124 (roadY 120). */
+                    public int bandBelow = 2;
+                    public int bandAbove = 4;
+
+                    /** A ring-graph arc within this many blocks of a recorded hazard is treated as blocked when rerouting. */
+                    public double rerouteClearance = 24.0;
+
+                    /** Reroute waypoint arrival radius (blocks). */
+                    public int rerouteArriveRadius = 24;
+
+                    /** Abandon a ring reroute after this many ticks and fall back to a Baritone bypass. */
+                    public int rerouteTimeoutTicks = 1200;
+                }
             }
 
             /**

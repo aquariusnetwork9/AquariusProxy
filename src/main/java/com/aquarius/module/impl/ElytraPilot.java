@@ -8,6 +8,8 @@ import com.aquarius.event.client.ClientBotTick;
 import com.aquarius.event.client.ClientDeathEvent;
 import com.aquarius.event.client.PlayerSetbackEvent;
 import com.aquarius.event.module.TotemPopEvent;
+import com.aquarius.feature.highways.GriefMap;
+import com.aquarius.feature.highways.HighwayGraph;
 import com.aquarius.feature.inventory.InventoryActionRequest;
 import com.aquarius.feature.inventory.actions.ClickItem;
 import com.aquarius.feature.inventory.actions.InventoryAction;
@@ -68,7 +70,10 @@ import static com.aquarius.Globals.MODULE;
  */
 public class ElytraPilot extends Module {
 
-    private enum Phase { IDLE, TAKEOFF, CRUISE, BOUNCE, HOP, PASS, SWAP, RESUPPLY, DESCEND, LAND, LANDWALK, WALKOUT, EMERGENCY, DONE }
+    private enum Phase { IDLE, TAKEOFF, CRUISE, BOUNCE, HOP, PASS, REROUTE, SWAP, RESUPPLY, DESCEND, LAND, LANDWALK, WALKOUT, EMERGENCY, DONE }
+
+    /** Nether-hardening band-probe verdict: clear road / open gap to power-fly across / full-height wall to reroute. */
+    private enum Band { CLEAR, GAP, WALL }
 
     private static final int CHESTPLATE_SLOT = 6;          // container 0: 5=helm,6=chest,7=legs,8=boots
     private static final int TAKEOFF_TIMEOUT_TICKS = 200;  // ~10s to get airborne + deployed
@@ -123,6 +128,14 @@ public class ElytraPilot extends Module {
     private double synthPerTick;                // e-bounce Synth: current synthesized horizontal speed (b/tick), ramped 0 -> target so the packet stream has no cold-start jump
     private int bounceRestoreTicksLeft;         // e-bounce HOLD bleed-and-restore: ticks of restore injection remaining this cycle (re-armed to bounceRestoreTicks on each ground touch)
     private boolean bounceClimbing;             // airborne-glide e-bounce: vertical porpoise phase (true = climbing toward the band ceiling, false = sinking)
+
+    // --- nether grief-hardening (all gated behind cfg.netherHardening.enabled; default off) ---
+    private Band lastBand = Band.CLEAR;         // cached band-probe verdict (recomputed every PROBE_INTERVAL)
+    private GriefMap griefMap;                   // this bot's LOCAL hazard record; accumulates across flights, never reset
+    private List<int[]> ringPath;                // active ring-road reroute waypoints (nether XZ), or null
+    private int ringIdx;                         // index of the next reroute waypoint
+    private int ringTicks;                       // ticks in the current reroute (timeout watchdog)
+    private Float cruiseAimOverride;             // when set, highwayCruiseYaw aims here (used to steer the reroute) — set/cleared around each cruise call
     private boolean passPathing;
     private int passTicks;
     private int passAttempts;
@@ -286,6 +299,11 @@ public class ElytraPilot extends Module {
         bounceStallTicks = 0;
         passRecovery = false;
         recoverEpisodes = 0;
+        lastBand = Band.CLEAR;
+        ringPath = null;
+        ringIdx = 0;
+        ringTicks = 0;
+        cruiseAimOverride = null;        // griefMap is intentionally NOT reset — accumulated knowledge persists across flights
         resupplyStarted = false;
         resupplyTicks = 0;
         bounceRamp = 0;
@@ -435,6 +453,7 @@ public class ElytraPilot extends Module {
                     case BOUNCE    -> tickBounce(x, y, z, speed);
                     case HOP       -> tickHop(x, y, z, speed);
                     case PASS      -> tickPass(x, y, z, speed);
+                    case REROUTE   -> tickReroute(x, y, z, speed);
                     case SWAP      -> tickSwap(x, y, z);
                     case RESUPPLY  -> tickResupply(x, y, z, speed);
                     case DESCEND   -> tickDescend(x, y, z, speed);
@@ -1245,6 +1264,7 @@ public class ElytraPilot extends Module {
      */
     private void tickBounce(double x, double y, double z, double speed) {
         var cfg = CONFIG.client.extra.elytraPilot;
+        var nh = cfg.netherHardening;
         // CENTERLINE-following yaw (pure-pursuit, gentle at the 64-block lookahead): keeps the bounce ON the road
         // centerline instead of drifting into the edge GUARDRAIL blocks. Was locked to the raw road axis, which never
         // corrected lateral drift, so any off-center nudge (knockback/obstacle/lag) sent the bot straight into the
@@ -1252,9 +1272,35 @@ public class ElytraPilot extends Module {
         // off-center it gently steers back. The yaw-change packets are normal player rotation — Grim accepts them.
         float yaw = desiredYaw(x, z);
 
+        // NETHER GRIEF-HARDENING (opt-in, default off): classify the corridor ahead and handle destroyed sections
+        // without the slow Baritone recover/abort. WALL (full-height blockage) -> reroute via the ring-road graph;
+        // GAP (road surface gone but band open: hole/crater/withers) -> power-fly across with the level firework
+        // cruise; CLEAR -> fall through to the proven ground bounce. The probe is cached on the PROBE_INTERVAL cadence.
+        if (nh.enabled && cfg.highway && inNether()) {
+            boolean probeTick = flightTicks % PROBE_INTERVAL == 0;
+            Band band = probeTick ? classifyBand(x, z, yaw) : lastBand;
+            lastBand = band;
+            if (band == Band.WALL && nh.rerouteAroundWalls) {
+                if (nh.recordGrief && probeTick) recordGrief(x, z, GriefMap.Type.WALL);
+                enterRingReroute(x, z);
+                return;
+            }
+            if (band == Band.GAP && nh.flyThroughGaps && hasAnyFirework()) {
+                if (nh.recordGrief && probeTick) recordGrief(x, z, GriefMap.Type.CRATER);   // GriefMap merges near-dupes
+                tickHighwayCruise(x, y, z, speed);   // power-fly across the open gap; bounce resumes when road returns
+                return;
+            }
+        }
+
         // Road sanity: bounce only works on a flat road. If we've sunk well below it, we hit a gap / fell off — recover
         // back onto the highway (Baritone climbs us back up to roadY on the centerline) instead of aborting the flight.
         if (y < cfg.roadY - cfg.roadDropAbort) {
+            // Hardening: a dropped bot over an open band power-flies across instead of recovering/aborting.
+            if (nh.enabled && nh.flyThroughGaps && inNether() && hasAnyFirework()) {
+                if (nh.recordGrief) recordGrief(x, z, GriefMap.Type.CRATER);
+                tickHighwayCruise(x, y, z, speed);
+                return;
+            }
             if (cfg.recoverFromDrop && cfg.passObstacles) enterRecover("dropped to y" + (int) y);
             else abort("dropped below the road (y " + (int) y + " < road " + cfg.roadY + ")");
             return;
@@ -1478,6 +1524,7 @@ public class ElytraPilot extends Module {
      */
     private float highwayCruiseYaw(double x, double y, double z) {
         var cfg = CONFIG.client.extra.elytraPilot;
+        if (cruiseAimOverride != null) return cruiseAimOverride;   // ring-road reroute steers toward its waypoint
         if (!cfg.highwayCruisePathfind) return desiredYaw(x, z);
         double[] d = roadDir();
         int tx = (int) Math.round(x + d[0] * cfg.highwayLookahead);
@@ -1533,6 +1580,128 @@ public class ElytraPilot extends Module {
 
     private boolean inNether() {
         return World.getCurrentDimension() == DimensionRegistry.THE_NETHER.get();
+    }
+
+    // --- nether grief-hardening (gated behind cfg.netherHardening.enabled) ---
+
+    /**
+     * Band corridor probe: classify the highway ahead as CLEAR (road intact), GAP (road surface gone but the band is
+     * open — hole/crater/withers, so power-fly across) or WALL (band sealed to the ceiling — reroute around). The band
+     * is [roadY - bandBelow, roadY + bandAbove] (defaults = 2b2t's y118-124). Unloaded cells ahead never classify.
+     */
+    private Band classifyBand(double x, double z, float yaw) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        var nh = cfg.netherHardening;
+        int bandLo = cfg.roadY - nh.bandBelow;
+        int bandHi = cfg.roadY + nh.bandAbove;
+        int bandH = bandHi - bandLo + 1;
+        double yawRad = Math.toRadians(yaw);
+        double lx = -Math.sin(yawRad), lz = Math.cos(yawRad);
+        boolean floorMissing = false;
+        for (int i = 1; i <= nh.probeLookAhead; i++) {
+            int bx = MathHelper.floorI(x + lx * i);
+            int bz = MathHelper.floorI(z + lz * i);
+            if (!World.isChunkLoadedChunkPos(bx >> 4, bz >> 4)) continue;   // unseen ahead — don't classify on it
+            int solidInBand = 0;
+            for (int yy = bandLo; yy <= bandHi; yy++) {
+                var b = World.getBlock(bx, yy, bz);
+                if (!b.isAir() && !World.isWater(b)) solidInBand++;
+            }
+            if (solidInBand >= bandH - 1) return Band.WALL;                 // band sealed full-height -> wall (top priority)
+            boolean floor = false;                                          // road surface present near roadY?
+            for (int yy = cfg.roadY; yy >= cfg.roadY - 2; yy--) {
+                var b = World.getBlock(bx, yy, bz);
+                if (!b.isAir() && !World.isWater(b)) { floor = true; break; }
+            }
+            if (!floor) floorMissing = true;
+        }
+        return floorMissing ? Band.GAP : Band.CLEAR;
+    }
+
+    /**
+     * Full-height blockage: plan a detour on the ring-road graph (penalising arcs near recorded grief) toward the
+     * target (or, on a free-heading flight, a point well past the wall on the travel axis), then fly it as a powered
+     * cruise. Falls back to the Baritone bypass when out of fireworks.
+     */
+    private void enterRingReroute(double x, double z) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        var nh = cfg.netherHardening;
+        if (!hasAnyFirework()) { enterPass(); return; }                     // can't power-fly a reroute — local bypass
+        double[] d = travelUnit();
+        double goalX = cfg.hasTarget ? cfg.targetX : x + d[0] * 4096;
+        double goalZ = cfg.hasTarget ? cfg.targetZ : z + d[1] * 4096;
+        HighwayGraph.Route r = HighwayGraph.get().route(x, z, goalX, goalZ,
+            griefMap().arcFilter(netherDimKey(), nh.rerouteClearance));
+        ringPath = r.waypoints();
+        ringIdx = 0;
+        ringTicks = 0;
+        if (BOT.isEBounceActive()) BOT.stopEBounce();
+        phase = Phase.REROUTE;
+        info("Highway blocked full-height — ring-road reroute (" + ringPath.size() + " waypoints"
+            + (r.usedBlocked() ? ", no fully-clean path" : "") + ")");
+        inGameAlertActivePlayer("<yellow>ElytraPilot: highway blocked — rerouting via ring road");
+    }
+
+    /**
+     * Fly the active ring reroute: a powered level cruise steered toward each waypoint in turn, then resume the bounce
+     * once past the blockage. Times out (or runs dry of fireworks) to a Baritone bypass.
+     */
+    private void tickReroute(double x, double y, double z, double speed) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        var nh = cfg.netherHardening;
+        if (ringPath == null || ringPath.isEmpty()) { phase = Phase.BOUNCE; bounceStallTicks = 0; return; }
+        if (!hasAnyFirework()) { ringPath = null; enterPass(); return; }
+        while (ringIdx < ringPath.size()) {                                 // drop waypoints we've reached
+            int[] wp = ringPath.get(ringIdx);
+            if (horizDist(x, z, wp[0], wp[1]) <= nh.rerouteArriveRadius) ringIdx++; else break;
+        }
+        if (ringIdx >= ringPath.size()) {                                   // rejoined past the blockage
+            ringPath = null;
+            phase = Phase.BOUNCE;
+            bounceStallTicks = 0;
+            info("Ring reroute complete — resuming bounce");
+            return;
+        }
+        if (++ringTicks > nh.rerouteTimeoutTicks) {
+            warn("Ring reroute timed out after {} ticks — Baritone bypass", ringTicks);
+            ringPath = null;
+            enterPass();
+            return;
+        }
+        int[] wp = ringPath.get(ringIdx);
+        // Steer the level firework cruise toward the waypoint (scoped override: set, cruise, clear).
+        cruiseAimOverride = (float) Math.toDegrees(Math.atan2(-(wp[0] + 0.5 - x), wp[1] + 0.5 - z));
+        tickHighwayCruise(x, y, z, speed);
+        cruiseAimOverride = null;
+    }
+
+    private GriefMap griefMap() {
+        if (griefMap == null) griefMap = new GriefMap();
+        return griefMap;
+    }
+
+    private String netherDimKey() {
+        return "minecraft:the_nether";
+    }
+
+    private void recordGrief(double x, double z, GriefMap.Type type) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        var nh = cfg.netherHardening;
+        griefMap().record(netherDimKey(), (int) Math.round(x), (int) Math.round(z),
+            cfg.roadY - nh.bandBelow, cfg.roadY + nh.bandAbove, type, System.currentTimeMillis());
+    }
+
+    /** Total enchanted golden apples ("god apples") carried, summed across stacks. */
+    private int countGodApples() {
+        List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+        int n = 0;
+        for (int s = 9; s <= 44; s++) {
+            ItemStack st = inv.get(s);
+            if (!isEmpty(st) && ItemRegistry.REGISTRY.get(st.getId()) == ItemRegistry.ENCHANTED_GOLDEN_APPLE) {
+                n += st.getAmount();
+            }
+        }
+        return n;
     }
 
     private void enterPass() {
@@ -2097,6 +2266,17 @@ public class ElytraPilot extends Module {
         if (totemPops <= cfg.totemPopLimit) {
             warn("Totem popped in flight ({}/{} before abort)", totemPops, cfg.totemPopLimit);
             return;
+        }
+        // GOD-APPLE WITHER TANK: with a deep enchanted-golden-apple stock to heal back, a popped totem mid-escape is
+        // not abort-worthy — leaving the area is the cure, and AutoEat keeps HP up. Keep flying while gapples remain
+        // above the threshold; only once the stock runs low do the normal totem-pop limits bite.
+        var nh = cfg.netherHardening;
+        if (nh.enabled && nh.witherTankGodApples > 0) {
+            int gapples = countGodApples();
+            if (gapples > nh.witherTankGodApples) {
+                warn("Totem popped ({}) but {} god apples in stock — tanking + flying out, not aborting", totemPops, gapples);
+                return;
+            }
         }
         warn("Popped {} totems — aborting the flight{}", totemPops,
             cfg.totemPopLogout ? " and DISCONNECTING to preserve the bot" : "");
