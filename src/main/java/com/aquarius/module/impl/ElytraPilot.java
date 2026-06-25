@@ -259,6 +259,11 @@ public class ElytraPilot extends Module {
 
     // --- public hooks for the trip planner to drive individual flight legs ---
 
+    /** Current flight phase name (for the diagnostic viewer feed); {@code IDLE} when not flying. */
+    public String viewerPhase() {
+        return phase == null ? "IDLE" : phase.name();
+    }
+
     /** True once the current flight leg has finished (landed/aborted). */
     public boolean isFlightDone() {
         return phase == Phase.DONE || phase == Phase.IDLE;
