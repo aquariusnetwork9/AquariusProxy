@@ -1,5 +1,6 @@
 package com.aquarius.feature.viewer;
 
+import com.aquarius.cache.data.chunk.Chunk;
 import com.aquarius.cache.data.entity.Entity;
 import com.aquarius.feature.highways.GriefMap;
 import com.aquarius.feature.map.Brightness;
@@ -19,13 +20,18 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.Deflater;
+import java.util.zip.DeflaterOutputStream;
 
+import static com.aquarius.Globals.BLOCK_DATA;
 import static com.aquarius.Globals.CACHE;
 import static com.aquarius.Globals.MAP_BLOCK_COLOR;
 import static com.aquarius.Globals.MODULE;
@@ -69,7 +75,78 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
             }
             return;
         }
+        if (path.equals("/viewer/chunks")) {
+            try {
+                final int r = Math.max(8, Math.min(64, intParam(req.uri(), "r", 40)));
+                respondBytes(ctx, renderChunks(r, 40, 28));
+            } catch (final Exception e) {
+                SERVER_LOG.warn("viewer chunks failed", e);
+                respondJson(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, "{\"error\":\"chunks failed\"}");
+            }
+            return;
+        }
         respondJson(ctx, HttpResponseStatus.NOT_FOUND, "{}");
+    }
+
+    /**
+     * Serializes a voxel box around the bot for the POV renderer: header (origin XYZ, size XYZ) + a 64-entry base
+     * map-color palette (RGB) + one byte per block (base mapColorId, 0 = air/skip), all deflate-compressed (the box
+     * is mostly air/uniform so it shrinks hugely). Block index = (y*sz + z)*sx + x.
+     */
+    private byte[] renderChunks(final int r, final int yBelow, final int yAbove) throws Exception {
+        final var pc = CACHE.getPlayerCache();
+        final var cc = CACHE.getChunkCache();
+        final int ox = (int) Math.floor(pc.getX()) - r;
+        final int oz = (int) Math.floor(pc.getZ()) - r;
+        final int oy = (int) Math.floor(pc.getY()) - yBelow;
+        final int sx = 2 * r, sz = 2 * r, sy = yBelow + yAbove;
+        final byte[] vox = new byte[sx * sy * sz];
+        for (int z = 0; z < sz; z++) {
+            final int wz = oz + z;
+            for (int x = 0; x < sx; x++) {
+                final int wx = ox + x;
+                final Chunk chunk = cc.get(wx >> 4, wz >> 4);
+                if (chunk == null) {
+                    continue;
+                }
+                final int minY = chunk.minY(), maxY = chunk.maxY();
+                for (int y = 0; y < sy; y++) {
+                    final int wy = oy + y;
+                    if (wy < minY || wy >= maxY) {
+                        continue;
+                    }
+                    final var bd = BLOCK_DATA.getBlockDataFromBlockStateId(chunk.getBlockStateId(wx & 15, wy, wz & 15));
+                    final int mc = bd == null ? 0 : bd.mapColorId();
+                    if (mc > 0) {
+                        vox[(y * sz + z) * sx + x] = (byte) mc;
+                    }
+                }
+            }
+        }
+        final ByteArrayOutputStream raw = new ByteArrayOutputStream();
+        final DataOutputStream d = new DataOutputStream(raw);
+        d.writeInt(ox);
+        d.writeInt(oy);
+        d.writeInt(oz);
+        d.writeShort(sx);
+        d.writeShort(sy);
+        d.writeShort(sz);
+        for (int i = 0; i < 64; i++) {
+            final int rgb = MAP_BLOCK_COLOR.getColor(i);
+            d.write((rgb >> 16) & 0xFF);
+            d.write((rgb >> 8) & 0xFF);
+            d.write(rgb & 0xFF);
+        }
+        d.write(vox);
+        d.flush();
+        final ByteArrayOutputStream comp = new ByteArrayOutputStream();
+        final Deflater def = new Deflater(Deflater.BEST_SPEED);
+        try (DeflaterOutputStream dos = new DeflaterOutputStream(comp, def)) {
+            final byte[] rb = raw.toByteArray();
+            dos.write(rb, 0, rb.length);
+        }
+        def.end();
+        return comp.toByteArray();
     }
 
     private static final int MAX_ENTITIES = 64;
@@ -199,6 +276,19 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
         res.headers().set("X-Center-Z", Integer.toString(centerZ));
         res.headers().set("X-Size", Integer.toString(size));
         res.headers().set("Access-Control-Expose-Headers", "X-Center-X,X-Center-Z,X-Size");
+        res.headers().set(HttpHeaderNames.CACHE_CONTROL, "no-store");
+        ctx.writeAndFlush(res).addListener(ChannelFutureListener.CLOSE);
+    }
+
+    /** Deflate-compressed binary body (the voxel chunk feed); the client inflates it. */
+    private void respondBytes(final ChannelHandlerContext ctx, final byte[] data) {
+        final ByteBuf buf = Unpooled.wrappedBuffer(data);
+        final FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, buf);
+        res.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/octet-stream");
+        res.headers().set(HttpHeaderNames.CONTENT_LENGTH, buf.readableBytes());
+        res.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
+        res.headers().set("X-Encoding", "deflate");                       // custom: client inflates (not HTTP Content-Encoding)
+        res.headers().set("Access-Control-Expose-Headers", "X-Encoding");
         res.headers().set(HttpHeaderNames.CACHE_CONTROL, "no-store");
         ctx.writeAndFlush(res).addListener(ChannelFutureListener.CLOSE);
     }
