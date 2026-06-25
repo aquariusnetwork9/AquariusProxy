@@ -1130,19 +1130,17 @@ public final class Config {
                 public int inputPriority = 5000;
 
                 /**
-                 * Grief-hardening for nether-highway travel. All OFF behind {@link NetherHardening#enabled} — opt-in,
-                 * primitive-style, so the proven e-bounce is untouched until you turn it on. When enabled, the band
-                 * look-ahead probe classifies the highway corridor and the bot: power-flies across destroyed-but-open
-                 * sections (holes / craters / withers) instead of recovering or aborting; reroutes via the ring-road
-                 * graph around full-height blockages; tanks wither fire while it has god apples to heal back; and
-                 * records what it hits into a LOCAL grief map (no network).
+                 * Grief-hardening for nether-highway travel — an intrinsic part of how the bot flies a highway, not a
+                 * mode you switch on. While bouncing or cruising a nether highway it actively scans the corridor ahead
+                 * and the moment it finds trouble it acts: power-flies across destroyed-but-open sections (holes /
+                 * craters / withers) instead of recovering or aborting; reroutes via the ring-road graph around
+                 * full-height blockages; tanks wither fire while it has god apples to heal back; and records what it
+                 * hits into a LOCAL grief map (no network). On clear road the scan finds nothing and the proven
+                 * e-bounce runs untouched. The per-capability flags below default on — disable one only to debug it.
                  */
                 public NetherHardening netherHardening = new NetherHardening();
 
                 public static class NetherHardening {
-                    /** Master switch. OFF = the flight loop behaves exactly as before. */
-                    public boolean enabled = false;
-
                     /** Road surface gone but the band still open -> power-fly across (level firework glide) rather than
                      *  Baritone-recovering or aborting. Needs fireworks; falls back to the old behaviour without them. */
                     public boolean flyThroughGaps = true;

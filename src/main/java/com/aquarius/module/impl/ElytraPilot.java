@@ -1276,7 +1276,7 @@ public class ElytraPilot extends Module {
         // without the slow Baritone recover/abort. WALL (full-height blockage) -> reroute via the ring-road graph;
         // GAP (road surface gone but band open: hole/crater/withers) -> power-fly across with the level firework
         // cruise; CLEAR -> fall through to the proven ground bounce. The probe is cached on the PROBE_INTERVAL cadence.
-        if (nh.enabled && cfg.highway && inNether()) {
+        if (cfg.highway && inNether()) {
             boolean probeTick = flightTicks % PROBE_INTERVAL == 0;
             Band band = probeTick ? classifyBand(x, z, yaw) : lastBand;
             lastBand = band;
@@ -1296,7 +1296,7 @@ public class ElytraPilot extends Module {
         // back onto the highway (Baritone climbs us back up to roadY on the centerline) instead of aborting the flight.
         if (y < cfg.roadY - cfg.roadDropAbort) {
             // Hardening: a dropped bot over an open band power-flies across instead of recovering/aborting.
-            if (nh.enabled && nh.flyThroughGaps && inNether() && hasAnyFirework()) {
+            if (nh.flyThroughGaps && inNether() && hasAnyFirework()) {
                 if (nh.recordGrief) recordGrief(x, z, GriefMap.Type.CRATER);
                 tickHighwayCruise(x, y, z, speed);
                 return;
@@ -1484,12 +1484,19 @@ public class ElytraPilot extends Module {
         }
         if (y >= ceilY && pitch < 0f) pitch = cfg.glidePitch;                  // never climb into the roof
 
-        // OBSTACLE: a griefed/walled road section. With pathfinding off, hand to the Baritone obstacle pass (the
-        // bounce's handler too). With it on, highwayCruiseYaw already steered the aim around it.
-        if (!cfg.highwayCruisePathfind && cfg.passObstacles
+        // OBSTACLE: a griefed/walled road section. A full-height WALL reroutes via the ring-road graph; a smaller
+        // obstacle hands to the Baritone pass (the bounce's handler too). With pathfinding on, highwayCruiseYaw already
+        // steered the aim around it. Skipped while a reroute is itself steering this cruise (no re-plan mid-reroute).
+        if (cruiseAimOverride == null && !cfg.highwayCruisePathfind && cfg.passObstacles
                 && terrainBlockedAhead(x, y, z, yaw, Math.min(cfg.lookAheadBlocks, 12))) {
-            info("Highway cruise blocked ahead — routing around it");
-            enterPass();
+            var nh = cfg.netherHardening;
+            if (nh.rerouteAroundWalls && cfg.highway && classifyBand(x, z, yaw) == Band.WALL) {
+                if (nh.recordGrief) recordGrief(x, z, GriefMap.Type.WALL);
+                enterRingReroute(x, z);
+            } else {
+                info("Highway cruise blocked ahead — routing around it");
+                enterPass();
+            }
             return;
         }
 
@@ -2271,7 +2278,7 @@ public class ElytraPilot extends Module {
         // not abort-worthy — leaving the area is the cure, and AutoEat keeps HP up. Keep flying while gapples remain
         // above the threshold; only once the stock runs low do the normal totem-pop limits bite.
         var nh = cfg.netherHardening;
-        if (nh.enabled && nh.witherTankGodApples > 0) {
+        if (nh.witherTankGodApples > 0) {
             int gapples = countGodApples();
             if (gapples > nh.witherTankGodApples) {
                 warn("Totem popped ({}) but {} god apples in stock — tanking + flying out, not aborting", totemPops, gapples);
