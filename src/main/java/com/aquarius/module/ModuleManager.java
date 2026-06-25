@@ -40,6 +40,7 @@ public class ModuleManager {
             new LitematicaBuilder(),
             new RbacGuard(),
             new RbacApiServer(),
+            new ViewerApiServer(),
             new AutoMend(),
             new AutoOmen(),
             new AutoReconnect(),

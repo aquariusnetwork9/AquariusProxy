@@ -2722,6 +2722,8 @@ public final class Config {
         public final Extra extra = new Extra();
         // RBAC (v5.0.0) — role/permission system that will replace the whitelist. Ships disabled; see docs/RBAC_DESIGN.md.
         public final com.aquarius.feature.permissions.PermissionsConfig permissions = new com.aquarius.feature.permissions.PermissionsConfig();
+        // Read-only local viewer feed for the Aquarius Bot Manager's live map / POV dashboard (loopback, off by default).
+        public final com.aquarius.feature.viewer.ViewerConfig viewer = new com.aquarius.feature.viewer.ViewerConfig();
         public final Ping ping = new Ping();
         public final ServerViaVersion viaversion = new ServerViaVersion();
         public boolean verifyUsers = true;
