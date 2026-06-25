@@ -12,6 +12,8 @@ import com.aquarius.mc.item.ItemRegistry;
 import com.aquarius.module.api.Module;
 import com.aquarius.module.impl.ElytraPilot;
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
@@ -37,12 +39,15 @@ import io.netty.util.concurrent.ScheduledFuture;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
@@ -55,6 +60,7 @@ import static com.aquarius.Globals.EXECUTOR;
 import static com.aquarius.Globals.MAP_BLOCK_COLOR;
 import static com.aquarius.Globals.MODULE;
 import static com.aquarius.Globals.SERVER_LOG;
+import static com.aquarius.Globals.saveConfigAsync;
 
 /**
  * Read-only viewer feed for the Aquarius Bot Manager's live map / POV viewer. A new instance per connection.
@@ -73,13 +79,21 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
     @Override
     protected void channelRead0(final ChannelHandlerContext ctx, final FullHttpRequest req) {
         final String path = req.uri().split("\\?", 2)[0];
-        // Control: command execution is the only POST endpoint (opt-in via server.viewer.control).
+        // Control: command execution + live config writes are the POST endpoints (opt-in via server.viewer.control).
         if (path.equals("/control/command")) {
             handleControlCommand(ctx, req);
             return;
         }
+        if (path.equals("/control/config") && req.method() == HttpMethod.POST) {
+            handleControlConfigSet(ctx, req);
+            return;
+        }
         if (req.method() != HttpMethod.GET) {
             respondJson(ctx, HttpResponseStatus.METHOD_NOT_ALLOWED, "{}");
+            return;
+        }
+        if (path.equals("/control/config")) {
+            respondJson(ctx, HttpResponseStatus.OK, GSON.toJson(controlConfig()));
             return;
         }
         if (path.equals("/control/state")) {
@@ -418,6 +432,115 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
         if (lines.isEmpty()) lines.add("ok");
         out.put("lines", lines);
         return out;
+    }
+
+    // ---- live config read/write (opt-in via server.viewer.control) ----
+
+    /** Config field paths that must never be exposed or written through this API (auth/proxy/discord/db secrets). */
+    private static final Set<String> SECRET_PATHS = Set.of(
+            "authentication.password",
+            "client.connectionProxy.user",
+            "client.connectionProxy.password",
+            "discord.token",
+            "database.password");
+
+    private static boolean isSecretPath(final String p) {
+        if (SECRET_PATHS.contains(p)) return true;
+        final String lp = p.toLowerCase(Locale.ROOT);
+        return lp.endsWith(".password") || lp.endsWith(".token") || lp.endsWith(".secret");
+    }
+
+    private static final class ControlConfigRequest { String path; JsonElement value; }
+
+    /**
+     * GET /control/config — the live config tree as JSON, with every secret field redacted (never expose tokens or
+     * passwords). The dashboard reads real field values from this to populate the control surface's settings.
+     */
+    private JsonObject controlConfig() {
+        final JsonObject root = GSON.toJsonTree(CONFIG).getAsJsonObject();
+        for (final String sp : SECRET_PATHS) {
+            redact(root, sp);
+        }
+        return root;
+    }
+
+    private static void redact(final JsonObject root, final String path) {
+        final String[] parts = path.split("\\.");
+        JsonObject o = root;
+        for (int i = 0; i < parts.length - 1 && o != null; i++) {
+            final JsonElement el = o.get(parts[i]);
+            o = (el != null && el.isJsonObject()) ? el.getAsJsonObject() : null;
+        }
+        if (o != null && o.has(parts[parts.length - 1])) {
+            o.addProperty(parts[parts.length - 1], "");
+        }
+    }
+
+    /** POST /control/config {path,value} — set a single config field by dot-path on the live config, then persist. */
+    private void handleControlConfigSet(final ChannelHandlerContext ctx, final FullHttpRequest req) {
+        if (!CONFIG.server.viewer.control) {
+            respondJson(ctx, HttpResponseStatus.FORBIDDEN, "{\"error\":\"control disabled\"}");
+            return;
+        }
+        final String body = req.content().toString(StandardCharsets.UTF_8);
+        final ControlConfigRequest r;
+        try {
+            r = GSON.fromJson(body, ControlConfigRequest.class);
+        } catch (final Exception e) {
+            respondJson(ctx, HttpResponseStatus.BAD_REQUEST, "{\"error\":\"bad request\"}");
+            return;
+        }
+        if (r == null || r.path == null || r.path.isBlank() || r.value == null) {
+            respondJson(ctx, HttpResponseStatus.BAD_REQUEST, "{\"error\":\"path and value required\"}");
+            return;
+        }
+        final String path = r.path.strip();
+        if (isSecretPath(path)) {
+            respondJson(ctx, HttpResponseStatus.FORBIDDEN, "{\"error\":\"protected field\"}");
+            return;
+        }
+        // mutate config + persist off the netty thread (mirrors how commands change config)
+        EXECUTOR.execute(() -> respondJson(ctx, HttpResponseStatus.OK, GSON.toJson(setConfigPath(path, r.value))));
+    }
+
+    /** Walk the live config object along {@code a.b.c}, coerce {@code value} to the leaf field's type, set it, save. */
+    private Map<String, Object> setConfigPath(final String path, final JsonElement value) {
+        final Map<String, Object> out = new LinkedHashMap<>();
+        try {
+            final String[] parts = path.split("\\.");
+            Object obj = CONFIG;
+            Field f = null;
+            for (int i = 0; i < parts.length; i++) {
+                f = obj.getClass().getField(parts[i]);   // public fields only
+                if (i < parts.length - 1) {
+                    obj = f.get(obj);
+                    if (obj == null) throw new IllegalArgumentException("null parent at '" + parts[i] + "'");
+                }
+            }
+            final Object coerced = coerce(f.getType(), value);
+            f.set(obj, coerced);
+            saveConfigAsync();
+            SERVER_LOG.info("Control config set: {} = {}", path, coerced);
+            out.put("ok", true);
+            out.put("path", path);
+            out.put("value", coerced);
+        } catch (final Exception e) {
+            out.put("ok", false);
+            out.put("error", e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+        }
+        return out;
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static Object coerce(final Class<?> t, final JsonElement v) {
+        if (t == boolean.class || t == Boolean.class) return v.getAsBoolean();
+        if (t == int.class || t == Integer.class) return v.getAsInt();
+        if (t == long.class || t == Long.class) return v.getAsLong();
+        if (t == double.class || t == Double.class) return v.getAsDouble();
+        if (t == float.class || t == Float.class) return v.getAsFloat();
+        if (t == String.class) return v.getAsString();
+        if (t.isEnum()) return Enum.valueOf((Class<Enum>) t.asSubclass(Enum.class), v.getAsString());
+        throw new IllegalArgumentException("unsupported field type: " + t.getSimpleName());
     }
 
     /** GET /control/state — live module on/off states (for the dashboard's toggles + status). */
