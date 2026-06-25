@@ -53,7 +53,11 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
         }
         if (path.equals("/viewer/map.png")) {
             try {
-                respondPng(ctx, renderMapPng(clampSize(intParam(req.uri(), "size", 256))));
+                final int size = clampSize(intParam(req.uri(), "size", 256));
+                // World block coord at the image centre (the map renders centred on the player's chunk).
+                final int cx = CACHE.getChunkCache().getCenterX() * 16;
+                final int cz = CACHE.getChunkCache().getCenterZ() * 16;
+                respondPng(ctx, renderMapPng(size), cx, cz, size);
             } catch (final Exception e) {
                 SERVER_LOG.warn("viewer map render failed", e);
                 respondJson(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, "{\"error\":\"map render failed\"}");
@@ -127,12 +131,17 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
         ctx.writeAndFlush(res).addListener(ChannelFutureListener.CLOSE);
     }
 
-    private void respondPng(final ChannelHandlerContext ctx, final byte[] png) {
+    private void respondPng(final ChannelHandlerContext ctx, final byte[] png, final int centerX, final int centerZ, final int size) {
         final ByteBuf buf = Unpooled.wrappedBuffer(png);
         final FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, buf);
         res.headers().set(HttpHeaderNames.CONTENT_TYPE, "image/png");
         res.headers().set(HttpHeaderNames.CONTENT_LENGTH, buf.readableBytes());
         res.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
+        // World coord at the image centre + side length (blocks), so the client can pan it precisely (1 block/px).
+        res.headers().set("X-Center-X", Integer.toString(centerX));
+        res.headers().set("X-Center-Z", Integer.toString(centerZ));
+        res.headers().set("X-Size", Integer.toString(size));
+        res.headers().set("Access-Control-Expose-Headers", "X-Center-X,X-Center-Z,X-Size");
         res.headers().set(HttpHeaderNames.CACHE_CONTROL, "no-store");
         ctx.writeAndFlush(res).addListener(ChannelFutureListener.CLOSE);
     }
