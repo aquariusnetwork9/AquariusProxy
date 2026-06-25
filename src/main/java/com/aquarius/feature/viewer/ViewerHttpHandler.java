@@ -13,12 +13,18 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.util.concurrent.ScheduledFuture;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -28,6 +34,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 
@@ -85,7 +92,60 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
             }
             return;
         }
+        if (path.equals("/viewer/stream")) {
+            startStream(ctx);
+            return;
+        }
         respondJson(ctx, HttpResponseStatus.NOT_FOUND, "{}");
+    }
+
+    /** ~20 Hz state push interval (ms). */
+    private static final long STREAM_PERIOD_MS = 50;
+    private ScheduledFuture<?> streamTask;
+
+    /**
+     * Server-Sent Events: open a chunked {@code text/event-stream} response and push the live {@link #state()} as a
+     * {@code data:} frame every {@link #STREAM_PERIOD_MS}ms until the client disconnects. The manager relays this
+     * straight through; the dashboard's EventSource consumes it (and falls back to polling if it isn't available).
+     */
+    private void startStream(final ChannelHandlerContext ctx) {
+        final HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        res.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/event-stream; charset=utf-8");
+        res.headers().set(HttpHeaderNames.CACHE_CONTROL, "no-store");
+        res.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
+        res.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
+        HttpUtil.setTransferEncodingChunked(res, true);
+        ctx.writeAndFlush(res);
+        streamTask = ctx.executor().scheduleAtFixedRate(() -> {
+            final var ch = ctx.channel();
+            if (!ch.isActive()) {
+                return;
+            }
+            if (!ch.isWritable()) {
+                return;                // drop this frame under backpressure rather than queueing unboundedly
+            }
+            final String frame;
+            try {
+                frame = "data: " + GSON.toJson(state()) + "\n\n";
+            } catch (final Exception e) {
+                return;                // a transient cache read race — skip this frame
+            }
+            ctx.writeAndFlush(new DefaultHttpContent(Unpooled.copiedBuffer(frame, StandardCharsets.UTF_8)));
+        }, 0, STREAM_PERIOD_MS, TimeUnit.MILLISECONDS);
+        ctx.channel().closeFuture().addListener(f -> cancelStream());
+    }
+
+    private void cancelStream() {
+        if (streamTask != null) {
+            streamTask.cancel(false);
+            streamTask = null;
+        }
+    }
+
+    @Override
+    public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
+        cancelStream();
+        super.channelInactive(ctx);
     }
 
     /**
