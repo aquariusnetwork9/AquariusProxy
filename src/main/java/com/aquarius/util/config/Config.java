@@ -198,6 +198,7 @@ public final class Config {
             public final OrderFiller orderFiller = new OrderFiller();
             public final Bridge bridge = new Bridge();
             public final Litematica litematica = new Litematica();
+            public final HighwayBuilder highwayBuilder = new HighwayBuilder();
 
             /**
              * PearlDrop — the DEPOSIT side of pearl stasis (the counterpart to {@link PearlPlus}, which pulls).
@@ -296,6 +297,51 @@ public final class Config {
                 /** Attempts at a single placement before it is skipped (floating / repeatedly rejected). */
                 public int maxPlaceRetries = 3;
                 /** Soft-pause the build while a non-self player is within {@link #playerPauseRange} blocks. */
+                public boolean pauseOnPlayer = false;
+                public double playerPauseRange = 48.0;
+            }
+
+            /**
+             * HighwayBuilder — automated nether-highway construction, modelled on Meteor Client's module. Clears a
+             * tunnel profile and lays an obsidian road in one of the 8 highway directions (4 cardinals + 4 diagonals),
+             * restocking the building block from nearby chests / placed shulker boxes. Baritone handles the movement
+             * (it paths to each break/place target), so this only owns the profile geometry + a job state machine.
+             */
+            public static class HighwayBuilder {
+                /** Whether the module is enabled (armed) on startup. */
+                public boolean enabled = false;
+                /** Build direction: north|south|east|west|ne|nw|se|sw. */
+                public String direction = "north";
+                /** Blocks of road to EACH side of the centre line (0 => 1-wide; 2 => 5-wide). */
+                public int width = 2;
+                /** Air clearance to dig out above the road surface (head + flight room). */
+                public int clearHeight = 3;
+                /** Lay the road surface (needed for the bot to walk forward). */
+                public boolean floor = true;
+                /** Place a 1-high railing on the two outer edges instead of clearing above them. */
+                public boolean walls = false;
+                /** Building-block item name (must be in inventory / restock containers). */
+                public String block = "obsidian";
+                /** Build at the bot's current Y when started; else at {@link #roadY}. */
+                public boolean useCurrentY = true;
+                /** Fixed road-surface Y when {@link #useCurrentY} is off (nether highway band ~120). */
+                public int roadY = 120;
+                /** Stop after this many blocks along the line (0 = until stopped / world border). */
+                public int targetDistance = 0;
+                /** Centre-line start (set on start). */
+                public boolean originSet = false;
+                public int originX = 0;
+                public int originZ = 0;
+                /** Restock the building block from chests / barrels / placed shulker boxes. */
+                public boolean restockFromChests = true;
+                public boolean restockFromShulkers = true;
+                public int restockRadius = 16;
+                public int restockVerticalRange = 8;
+                /** Ticks to wait for a break/place to settle before retrying / skipping (lag rejects actions silently). */
+                public int settleTicks = 10;
+                /** Attempts at a single block before it is skipped. */
+                public int maxRetries = 4;
+                /** Soft-pause while a non-self player is within {@link #playerPauseRange} blocks. */
                 public boolean pauseOnPlayer = false;
                 public double playerPauseRange = 48.0;
             }

@@ -96,6 +96,7 @@ public class CommandManager {
         new PearlPullCommand(),
         new BridgeCommand(),
         new LitematicaCommand(),
+        new HighwayCommand(),
         new PermsCommand(),
         new PlaytimeCommand(),
         new PluginsCommand(),

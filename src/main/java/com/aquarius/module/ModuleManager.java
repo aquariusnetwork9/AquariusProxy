@@ -38,6 +38,7 @@ public class ModuleManager {
             new PearlDrop(),
             new Bridge(),
             new LitematicaBuilder(),
+            new HighwayBuilder(),
             new RbacGuard(),
             new RbacApiServer(),
             new ViewerApiServer(),

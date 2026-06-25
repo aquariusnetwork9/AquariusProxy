@@ -84,8 +84,10 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
         }
         if (path.equals("/viewer/chunks")) {
             try {
-                final int r = Math.max(8, Math.min(64, intParam(req.uri(), "r", 40)));
-                respondBytes(ctx, renderChunks(r, 40, 28));
+                final int r = Math.max(8, Math.min(64, intParam(req.uri(), "r", 48)));
+                final int yb = Math.max(8, Math.min(96, intParam(req.uri(), "yb", 48)));
+                final int ya = Math.max(8, Math.min(96, intParam(req.uri(), "ya", 48)));
+                respondBytes(ctx, renderChunks(r, yb, ya));
             } catch (final Exception e) {
                 SERVER_LOG.warn("viewer chunks failed", e);
                 respondJson(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, "{\"error\":\"chunks failed\"}");
