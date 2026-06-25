@@ -1,5 +1,7 @@
 package com.aquarius.feature.viewer;
 
+import com.aquarius.cache.data.entity.Entity;
+import com.aquarius.feature.highways.GriefMap;
 import com.aquarius.feature.map.Brightness;
 import com.aquarius.feature.map.MapGenerator;
 import com.aquarius.module.impl.ElytraPilot;
@@ -18,7 +20,10 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import static com.aquarius.Globals.CACHE;
@@ -67,18 +72,70 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
         respondJson(ctx, HttpResponseStatus.NOT_FOUND, "{}");
     }
 
+    private static final int MAX_ENTITIES = 64;
+    private static final int MAX_GRIEF = 200;
+
     private Map<String, Object> state() {
         final var pc = CACHE.getPlayerCache();
+        final double px = pc.getX(), pz = pc.getZ();
         final Map<String, Object> m = new LinkedHashMap<>();
-        m.put("x", pc.getX());
+        m.put("x", px);
         m.put("y", pc.getY());
-        m.put("z", pc.getZ());
+        m.put("z", pz);
         m.put("yaw", pc.getYaw());
         m.put("pitch", pc.getPitch());
         m.put("health", pc.getThePlayer().getHealth());
         m.put("food", pc.getThePlayer().getFood());
+        final var dim = CACHE.getChunkCache().getCurrentDimension();
+        m.put("dimension", dim != null ? dim.name() : "?");
+
         final ElytraPilot pilot = MODULE.get(ElytraPilot.class);
-        m.put("flightPhase", pilot == null ? "IDLE" : pilot.viewerPhase());
+        if (pilot != null) {
+            m.put("flightPhase", pilot.viewerPhase());
+            m.put("band", pilot.viewerBand());
+            List<int[]> reroute = pilot.viewerReroute();
+            if (!reroute.isEmpty()) {
+                m.put("reroute", reroute);
+            }
+            int[] target = pilot.viewerTarget();
+            if (target != null) {
+                m.put("target", target);
+            }
+            final List<int[]> grief = new ArrayList<>();
+            for (GriefMap.Hazard h : pilot.viewerGrief()) {
+                grief.add(new int[] {h.x(), h.z()});
+                if (grief.size() >= MAX_GRIEF) {
+                    break;
+                }
+            }
+            if (!grief.isEmpty()) {
+                m.put("grief", grief);
+            }
+        } else {
+            m.put("flightPhase", "IDLE");
+        }
+
+        // Nearest entities (excluding self), capped.
+        final int selfId = pc.getEntityId();
+        final List<Entity> ents = CACHE.getEntityCache().snapshot();
+        ents.sort(Comparator.comparingDouble(e -> Math.hypot(e.getX() - px, e.getZ() - pz)));
+        final List<Map<String, Object>> out = new ArrayList<>();
+        for (Entity e : ents) {
+            if (e.getEntityId() == selfId) {
+                continue;
+            }
+            final Map<String, Object> em = new LinkedHashMap<>();
+            em.put("id", e.getEntityId());
+            em.put("type", e.getEntityType().name());
+            em.put("x", e.getX());
+            em.put("y", e.getY());
+            em.put("z", e.getZ());
+            out.add(em);
+            if (out.size() >= MAX_ENTITIES) {
+                break;
+            }
+        }
+        m.put("entities", out);
         m.put("t", System.currentTimeMillis());
         return m;
     }

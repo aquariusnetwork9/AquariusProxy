@@ -104,4 +104,9 @@ public class EntityCache implements CachedData {
     public @Nullable Entity get(UUID uuid) {
         return this.players.get(uuid);
     }
+
+    /** Snapshot of all tracked entities (for the read-only diagnostic viewer feed). */
+    public java.util.List<Entity> snapshot() {
+        return new java.util.ArrayList<>(this.entities.values());
+    }
 }

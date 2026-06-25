@@ -264,6 +264,27 @@ public class ElytraPilot extends Module {
         return phase == null ? "IDLE" : phase.name();
     }
 
+    /** Active ring-road reroute waypoints (nether XZ), or empty when not rerouting — for the viewer overlay. */
+    public List<int[]> viewerReroute() {
+        return ringPath != null ? ringPath : List.of();
+    }
+
+    /** Last band-probe verdict (CLEAR / GAP / WALL) — for the viewer. */
+    public String viewerBand() {
+        return lastBand == null ? "CLEAR" : lastBand.name();
+    }
+
+    /** Current coordinate target {x, z}, or {@code null} on a free-heading flight — for the viewer. */
+    public int[] viewerTarget() {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        return cfg.hasTarget ? new int[] {cfg.targetX, cfg.targetZ} : null;
+    }
+
+    /** Locally-recorded grief hazards (may be empty) — for the viewer overlay. */
+    public List<GriefMap.Hazard> viewerGrief() {
+        return griefMap != null ? griefMap.all() : List.of();
+    }
+
     /** True once the current flight leg has finished (landed/aborted). */
     public boolean isFlightDone() {
         return phase == Phase.DONE || phase == Phase.IDLE;
