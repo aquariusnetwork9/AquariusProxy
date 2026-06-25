@@ -15,4 +15,12 @@ public final class ViewerConfig {
 
     /** Listen port for the viewer HTTP feed. */
     public int port = 2998;
+
+    /**
+     * Allow the dashboard to CONTROL the bot through this feed (run commands), not just observe it. Opt-in: when
+     * off, {@code /control/command} is refused (the read-only {@code /control/state} + {@code /control/commands}
+     * metadata stay available). Same trust model as the rest of the feed — loopback only, relayed by the manager
+     * over its authenticated tunnel.
+     */
+    public boolean control = false;
 }

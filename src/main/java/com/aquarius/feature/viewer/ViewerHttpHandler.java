@@ -2,11 +2,20 @@ package com.aquarius.feature.viewer;
 
 import com.aquarius.cache.data.chunk.Chunk;
 import com.aquarius.cache.data.entity.Entity;
+import com.aquarius.command.api.Command;
+import com.aquarius.command.api.CommandContext;
+import com.aquarius.command.api.CommandSources;
 import com.aquarius.feature.highways.GriefMap;
 import com.aquarius.feature.map.Brightness;
 import com.aquarius.feature.map.MapGenerator;
+import com.aquarius.mc.item.ItemRegistry;
+import com.aquarius.module.api.Module;
 import com.aquarius.module.impl.ElytraPilot;
 import com.google.gson.Gson;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.EquipmentSlot;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
+import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
+import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
@@ -40,6 +49,9 @@ import java.util.zip.DeflaterOutputStream;
 
 import static com.aquarius.Globals.BLOCK_DATA;
 import static com.aquarius.Globals.CACHE;
+import static com.aquarius.Globals.COMMAND;
+import static com.aquarius.Globals.CONFIG;
+import static com.aquarius.Globals.EXECUTOR;
 import static com.aquarius.Globals.MAP_BLOCK_COLOR;
 import static com.aquarius.Globals.MODULE;
 import static com.aquarius.Globals.SERVER_LOG;
@@ -61,8 +73,25 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
     @Override
     protected void channelRead0(final ChannelHandlerContext ctx, final FullHttpRequest req) {
         final String path = req.uri().split("\\?", 2)[0];
+        // Control: command execution is the only POST endpoint (opt-in via server.viewer.control).
+        if (path.equals("/control/command")) {
+            handleControlCommand(ctx, req);
+            return;
+        }
         if (req.method() != HttpMethod.GET) {
             respondJson(ctx, HttpResponseStatus.METHOD_NOT_ALLOWED, "{}");
+            return;
+        }
+        if (path.equals("/control/state")) {
+            respondJson(ctx, HttpResponseStatus.OK, GSON.toJson(controlState()));
+            return;
+        }
+        if (path.equals("/control/commands")) {
+            respondJson(ctx, HttpResponseStatus.OK, GSON.toJson(commandList()));
+            return;
+        }
+        if (path.equals("/viewer/inventory")) {
+            respondJson(ctx, HttpResponseStatus.OK, GSON.toJson(inventoryState()));
             return;
         }
         if (path.equals("/viewer/state.json")) {
@@ -277,6 +306,152 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
         m.put("entities", out);
         m.put("t", System.currentTimeMillis());
         return m;
+    }
+
+    // ---------------------------------------------------------------- inventory / armor / vitals (read-only)
+
+    /** GET /viewer/inventory — vitals + armor pieces + hands + the main/hotbar grid, for live monitoring. */
+    private Map<String, Object> inventoryState() {
+        final var pc = CACHE.getPlayerCache();
+        final Map<String, Object> m = new LinkedHashMap<>();
+        m.put("health", pc.getThePlayer().getHealth());
+        m.put("food", pc.getThePlayer().getFood());
+
+        final Map<String, Object> armor = new LinkedHashMap<>();
+        armor.put("helmet", itemJson(pc.getEquipment(EquipmentSlot.HELMET)));
+        armor.put("chestplate", itemJson(pc.getEquipment(EquipmentSlot.CHESTPLATE)));
+        armor.put("leggings", itemJson(pc.getEquipment(EquipmentSlot.LEGGINGS)));
+        armor.put("boots", itemJson(pc.getEquipment(EquipmentSlot.BOOTS)));
+        m.put("armor", armor);
+        m.put("mainHand", itemJson(pc.getEquipment(Hand.MAIN_HAND)));
+        m.put("offHand", itemJson(pc.getEquipment(Hand.OFF_HAND)));
+
+        final var inv = pc.getPlayerInventory();
+        final List<Map<String, Object>> hotbar = new ArrayList<>();
+        for (int i = 36; i <= 44 && i < inv.size(); i++) hotbar.add(itemJson(inv.get(i)));
+        final List<Map<String, Object>> main = new ArrayList<>();
+        for (int i = 9; i <= 35 && i < inv.size(); i++) main.add(itemJson(inv.get(i)));
+        m.put("hotbar", hotbar);
+        m.put("main", main);
+
+        int totems = 0;
+        for (int i = 9; i < inv.size(); i++) {
+            final ItemStack s = inv.get(i);
+            if (s == null) continue;
+            final var d = ItemRegistry.REGISTRY.get(s.getId());
+            if (d != null && "totem_of_undying".equals(d.name())) totems += s.getAmount();
+        }
+        m.put("totems", totems);
+        m.put("t", System.currentTimeMillis());
+        return m;
+    }
+
+    /** Compact JSON for one item stack (null for an empty slot): name, count, durability, enchanted flag. */
+    private Map<String, Object> itemJson(final ItemStack s) {
+        if (s == null) return null;
+        final var data = ItemRegistry.REGISTRY.get(s.getId());
+        final Map<String, Object> m = new LinkedHashMap<>();
+        m.put("name", data != null ? data.name() : ("id:" + s.getId()));
+        m.put("count", s.getAmount());
+        if (data != null) {
+            final Integer maxDamage = data.components().get(DataComponentTypes.MAX_DAMAGE);
+            if (maxDamage != null) {
+                final Integer damage = s.getDataComponentsOrEmpty().get(DataComponentTypes.DAMAGE);
+                m.put("dur", maxDamage - (damage == null ? 0 : damage));
+                m.put("max", maxDamage);
+            }
+        }
+        final var ench = s.getDataComponentsOrEmpty().get(DataComponentTypes.ENCHANTMENTS);
+        if (ench != null) m.put("ench", true);
+        return m;
+    }
+
+    // ---------------------------------------------------------------- control (opt-in command execution)
+
+    private static final class ControlCommandRequest { String command; }
+
+    /** POST /control/command — run a command as the loopback/terminal source and return its structured output. */
+    private void handleControlCommand(final ChannelHandlerContext ctx, final FullHttpRequest req) {
+        if (req.method() != HttpMethod.POST) {
+            respondJson(ctx, HttpResponseStatus.METHOD_NOT_ALLOWED, "{}");
+            return;
+        }
+        if (!CONFIG.server.viewer.control) {
+            respondJson(ctx, HttpResponseStatus.FORBIDDEN, "{\"error\":\"control disabled\"}");
+            return;
+        }
+        final String body = req.content().toString(StandardCharsets.UTF_8);
+        String cmd;
+        try {
+            final ControlCommandRequest r = GSON.fromJson(body, ControlCommandRequest.class);
+            cmd = r == null ? null : r.command;
+        } catch (final Exception e) {
+            respondJson(ctx, HttpResponseStatus.BAD_REQUEST, "{\"error\":\"bad request\"}");
+            return;
+        }
+        if (cmd == null || cmd.isBlank()) {
+            respondJson(ctx, HttpResponseStatus.BAD_REQUEST, "{\"error\":\"empty command\"}");
+            return;
+        }
+        final String command = cmd.strip();
+        // run off the netty thread (a command may touch the game loop); respond when it's done
+        EXECUTOR.execute(() -> respondJson(ctx, HttpResponseStatus.OK, GSON.toJson(runControlCommand(command))));
+    }
+
+    private Map<String, Object> runControlCommand(final String command) {
+        SERVER_LOG.info("Control command: {}", command);
+        final Map<String, Object> out = new LinkedHashMap<>();
+        final List<String> lines = new ArrayList<>();
+        try {
+            final CommandContext c = CommandContext.create(command, CommandSources.TERMINAL);
+            COMMAND.execute(c);
+            final var embed = c.getEmbed();
+            if (embed.title() != null) lines.add(embed.title());
+            if (embed.description() != null) lines.add(embed.description());
+            for (final var f : embed.fields()) lines.add(f.name() + ": " + f.value());
+            lines.addAll(c.getMultiLineOutput());
+            out.put("title", embed.title());
+        } catch (final Exception e) {
+            lines.add("error: " + e.getMessage());
+            out.put("error", true);
+        }
+        if (lines.isEmpty()) lines.add("ok");
+        out.put("lines", lines);
+        return out;
+    }
+
+    /** GET /control/state — live module on/off states (for the dashboard's toggles + status). */
+    private Map<String, Object> controlState() {
+        final Map<String, Object> m = new LinkedHashMap<>();
+        final List<Map<String, Object>> mods = new ArrayList<>();
+        for (final Module mod : MODULE.getModules()) {
+            final Map<String, Object> mm = new LinkedHashMap<>();
+            mm.put("name", mod.getClass().getSimpleName());
+            mm.put("enabled", mod.isEnabled());
+            mods.add(mm);
+        }
+        mods.sort(Comparator.comparing(a -> (String) a.get("name")));
+        m.put("modules", mods);
+        m.put("control", CONFIG.server.viewer.control);
+        m.put("t", System.currentTimeMillis());
+        return m;
+    }
+
+    /** GET /control/commands — the command tree metadata, so the dashboard can auto-generate its palette / forms. */
+    private List<Map<String, Object>> commandList() {
+        final List<Map<String, Object>> out = new ArrayList<>();
+        for (final Command cmd : COMMAND.getCommands()) {
+            final var u = cmd.commandUsage();
+            final Map<String, Object> m = new LinkedHashMap<>();
+            m.put("name", u.getName());
+            m.put("category", u.getCategory() != null ? u.getCategory().name() : "");
+            m.put("description", u.getDescription());
+            m.put("aliases", u.getAliases());
+            m.put("usage", u.getUsageLines());
+            out.add(m);
+        }
+        out.sort(Comparator.comparing(a -> (String) a.get("name")));
+        return out;
     }
 
     /** Renders the bot's surroundings (vanilla map-color indices from {@link MapGenerator}) to a PNG. */
