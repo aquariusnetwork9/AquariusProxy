@@ -5,6 +5,9 @@
   <img src="https://img.shields.io/badge/version-5.0.0-blue.svg" alt="Version"/>
   <img src="https://img.shields.io/badge/release-pre--release%20%2F%20beta-yellow.svg" alt="Pre-release / beta"/>
   <img src="https://img.shields.io/badge/license-AGPL--3.0-orange.svg" alt="License"/>
+  <a href="https://github.com/aquariusnetwork9/AquariusProxy/releases"><img src="https://img.shields.io/github/downloads/aquariusnetwork9/AquariusProxy/total.svg?label=downloads&color=success" alt="Downloads"/></a>
+  <a href="https://github.com/aquariusnetwork9/AquariusProxy/stargazers"><img src="https://img.shields.io/github/stars/aquariusnetwork9/AquariusProxy?label=stars&style=flat" alt="Stars"/></a>
+  <a href="https://github.com/aquariusnetwork9/AquariusProxy/commits/1.21.4"><img src="https://img.shields.io/github/last-commit/aquariusnetwork9/AquariusProxy/1.21.4" alt="Last commit"/></a>
 </p>
 
 **AquariusProxy** is a headless Minecraft proxy/bot for [2b2t.org](https://www.2b2t.org/) (works on any server), built as a fork of [ZenithProxy](https://github.com/rfresh2/ZenithProxy) by rfresh2.
