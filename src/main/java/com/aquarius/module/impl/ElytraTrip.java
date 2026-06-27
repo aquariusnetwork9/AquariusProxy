@@ -684,13 +684,20 @@ public class ElytraTrip extends Module {
     }
 
     private void finish(String why) {
+        var cfg = CONFIG.client.extra.elytraPilot;
         phase = Phase.DONE;
-        elytra().endFlight();
         BARITONE.stop();
-        CONFIG.client.extra.elytraPilot.tripActive = false;
+        cfg.tripActive = false;   // cleared first: a goal logout/relogin must NOT resume the (completed) trip
         clearRouteState();
         inGameAlertActivePlayer("<green>Trip complete: " + why);
         info("Trip complete: {}", why);
+        // Goal stop: at the ultimate destination, optionally anchor a spawn point and/or log out (with the optional
+        // relogin timer). The pilot runs the grounded action and disables itself when done; otherwise just end the flight.
+        if (cfg.goalLogout || cfg.goalSetSpawn) {
+            elytra().runGroundedStop(cfg.goalLogout, cfg.goalSetSpawn, cfg.goalRelogMinutes, cfg.goalRelogOnSpawnFail);
+            return;
+        }
+        elytra().endFlight();
         // Actually disable the module so the NEXT `fly trip` produces a fresh enable edge — without this the
         // module stays enabled in DONE/FAILED and re-arming via the command is a silent no-op (onEnable never runs).
         syncEnabledFromConfig();

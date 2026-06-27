@@ -21,6 +21,7 @@ import com.aquarius.feature.player.Input;
 import com.aquarius.feature.player.InputRequest;
 import com.aquarius.feature.pathfinder.goals.GoalNear;
 import com.aquarius.feature.player.World;
+import com.aquarius.mc.block.Direction;
 import com.aquarius.mc.dimension.DimensionRegistry;
 import com.aquarius.mc.item.ItemRegistry;
 import com.aquarius.module.api.Module;
@@ -51,6 +52,7 @@ import static com.aquarius.Globals.CONFIG;
 import static com.aquarius.Globals.INPUTS;
 import static com.aquarius.Globals.INVENTORY;
 import static com.aquarius.Globals.MODULE;
+import static com.aquarius.util.DisconnectMessages.PITSTOP_DISCONNECT;
 
 /**
  * ElytraPilot — autopilot elytra flight.
@@ -70,7 +72,7 @@ import static com.aquarius.Globals.MODULE;
  */
 public class ElytraPilot extends Module {
 
-    private enum Phase { IDLE, TAKEOFF, CRUISE, BOUNCE, HOP, PASS, REROUTE, SWAP, RESUPPLY, DESCEND, LAND, LANDWALK, WALKOUT, EMERGENCY, DONE }
+    private enum Phase { IDLE, TAKEOFF, CRUISE, BOUNCE, HOP, PASS, REROUTE, SWAP, RESUPPLY, DESCEND, LAND, LANDWALK, WALKOUT, EMERGENCY, PITSTOP_LAND, STOP_ACT, DONE }
 
     /** Nether-hardening band-probe verdict: clear road / open gap to power-fly across / full-height wall to reroute. */
     private enum Band { CLEAR, GAP, WALL }
@@ -98,6 +100,7 @@ public class ElytraPilot extends Module {
     private static final int WALKOUT_TIMEOUT_TICKS = 1200;   // ~60s per walk-out leg
     private static final int MAX_WALKOUT_ATTEMPTS = 4;
     private static final float HIGHWAY_FRONTIER_FACTOR = 0.7f; // highways sit in previously-loaded, oft-reloaded chunks -> loading ~30% less of a problem; gentler governor than open nether
+    private static final int STOP_ACT_TIMEOUT_TICKS = 200;  // ~10s cap on the grounded set-spawn routine before giving up
     private static final int[][] NEIGHBORS = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
     private Phase phase = Phase.IDLE;
@@ -198,6 +201,20 @@ public class ElytraPilot extends Module {
     private int boostGuaranteeTicks;               // ticks the live rocket is GUARANTEED to keep boosting
     private int boostMaxTicks;                     // ticks it might keep boosting (lifetime has random spread)
 
+    // --- pitstop / goal stop action (set spawn + log out, at an intermediate pitstop or the ultimate goal) ---
+    private boolean actLogout;                     // STOP_ACT: log out when the action finishes
+    private boolean actSetSpawn;                   // STOP_ACT: place + set a bed/anchor spawn point first
+    private int actRelogMinutes;                   // STOP_ACT: minutes to stay logged out (<= 0 = stay out)
+    private boolean actRelogOnSpawnFail;           // STOP_ACT: relogin even when the spawn-set failed
+    private boolean actIsPitstop;                  // STOP_ACT: true = intermediate pitstop (keep trip active to resume), false = goal
+    private int actStep;                           // STOP_ACT: 0=init, 1=set-spawn, 2=finish
+    private int spawnStep;                         // STOP_ACT set-spawn sub-step
+    private int actTicks;                          // STOP_ACT: overall timeout guard
+    private int actPlaceDelay;                     // STOP_ACT: ticks to let a placement/selection settle
+    private boolean actSpawnFailed;                // STOP_ACT: the spawn-set could not be completed
+    private int spawnFootX, spawnFootY, spawnFootZ;// placed bed-foot / anchor cell (set-spawn click + verify)
+    private int placedBedId = -1;                  // the bed item id placed (so the set-spawn click avoids re-placing it)
+
     @Override
     public boolean enabledSetting() {
         return CONFIG.client.extra.elytraPilot.enabled;
@@ -207,7 +224,7 @@ public class ElytraPilot extends Module {
     public List<EventConsumer<?>> registerEvents() {
         return List.of(
             of(ClientBotTick.class, this::onTick),
-            of(ClientBotTick.Starting.class, e -> reset()),
+            of(ClientBotTick.Starting.class, e -> onStarting()),
             of(ClientBotTick.Stopped.class, e -> reset()),
             of(ClientDeathEvent.class, e -> {
                 if (phase != Phase.IDLE && phase != Phase.DONE) abort("bot died");
@@ -388,6 +405,32 @@ public class ElytraPilot extends Module {
         setbackHoldTicks = 0;
         boostGuaranteeTicks = 0;
         boostMaxTicks = 0;
+        // pitstop/goal stop-action transients (NOT cfg.pitstopConsumed — that persists across the relogin)
+        actLogout = false;
+        actSetSpawn = false;
+        actRelogMinutes = 0;
+        actRelogOnSpawnFail = true;
+        actIsPitstop = false;
+        actStep = 0;
+        spawnStep = 0;
+        actTicks = 0;
+        actPlaceDelay = 0;
+        actSpawnFailed = false;
+        placedBedId = -1;
+    }
+
+    /**
+     * World-enter (login/reconnect): reset, then resume a STANDALONE flight that logged out at a pitstop. A trip
+     * resumes via {@link ElytraTrip}'s own {@code tripStartOnConnect}; a goal logout (consumed flag never set)
+     * stays parked. Gated on the module still being enabled with a target and a consumed pitstop.
+     */
+    private void onStarting() {
+        reset();
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (cfg.enabled && !cfg.tripActive && cfg.hasTarget && cfg.pitstopConsumed) {
+            info("Reconnected after a pitstop — resuming flight to " + cfg.targetX + ", " + cfg.targetZ + ".");
+            phase = cfg.ebounce ? Phase.BOUNCE : Phase.TAKEOFF;
+        }
     }
 
     /**
@@ -469,25 +512,30 @@ public class ElytraPilot extends Module {
                 healthyTicks = 0;
             }
 
+            // Pitstop geofence: while airborne in a flying phase, divert to land at the armed pitstop coordinate.
+            checkPitstopGeofence(x, y, z);
+
             // Self-heal: if we should be gliding but aren't (elytra broke, desync, knockback), recover.
             if ((phase == Phase.CRUISE || phase == Phase.DESCEND) && !BOT.isFallFlying()) {
                 handleLostFlight(x, y, z);
             } else {
                 switch (phase) {
-                    case TAKEOFF   -> tickTakeoff();
-                    case CRUISE    -> tickCruise(x, y, z, speed);
-                    case BOUNCE    -> tickBounce(x, y, z, speed);
-                    case HOP       -> tickHop(x, y, z, speed);
-                    case PASS      -> tickPass(x, y, z, speed);
-                    case REROUTE   -> tickReroute(x, y, z, speed);
-                    case SWAP      -> tickSwap(x, y, z);
-                    case RESUPPLY  -> tickResupply(x, y, z, speed);
-                    case DESCEND   -> tickDescend(x, y, z, speed);
-                    case LAND      -> tickLand(x, y, z, speed);
-                    case LANDWALK  -> tickLandWalk(x, y, z);
-                    case WALKOUT   -> tickWalkout(x, y, z);
-                    case EMERGENCY -> tickEmergency(x, y, z);
-                    default        -> { }
+                    case TAKEOFF      -> tickTakeoff();
+                    case CRUISE       -> tickCruise(x, y, z, speed);
+                    case BOUNCE       -> tickBounce(x, y, z, speed);
+                    case HOP          -> tickHop(x, y, z, speed);
+                    case PASS         -> tickPass(x, y, z, speed);
+                    case REROUTE      -> tickReroute(x, y, z, speed);
+                    case SWAP         -> tickSwap(x, y, z);
+                    case RESUPPLY     -> tickResupply(x, y, z, speed);
+                    case DESCEND      -> tickDescend(x, y, z, speed);
+                    case LAND         -> tickLand(x, y, z, speed);
+                    case LANDWALK     -> tickLandWalk(x, y, z);
+                    case WALKOUT      -> tickWalkout(x, y, z);
+                    case EMERGENCY    -> tickEmergency(x, y, z);
+                    case PITSTOP_LAND -> tickPitstopLand(x, y, z, speed);
+                    case STOP_ACT     -> tickStopAct(x, y, z);
+                    default           -> { }
                 }
             }
             // Safety: the synthesized e-bounce stream must only run in BOUNCE. Any other phase (swap/land/abort/
@@ -1981,7 +2029,7 @@ public class ElytraPilot extends Module {
         if (!BOT.isFallFlying()) {
             double horiz = horizDist(x, z, cfg.targetX + 0.5, cfg.targetZ + 0.5);
             if (cfg.baritoneLand && cfg.hasTarget && horiz > cfg.arriveRadius) { enterLandWalk(); return; }
-            complete("landed");
+            onArrivedAtGoal("landed");
             return;
         }
         if (landTicks == 0) landSpinYaw = CACHE.getPlayerCache().getYaw();
@@ -2011,7 +2059,7 @@ public class ElytraPilot extends Module {
     private void tickLandWalk(double x, double y, double z) {
         var cfg = CONFIG.client.extra.elytraPilot;
         double horiz = horizDist(x, z, cfg.targetX + 0.5, cfg.targetZ + 0.5);
-        if (horiz <= cfg.arriveRadius) { BARITONE.stop(); complete("walked to target"); return; }
+        if (horiz <= cfg.arriveRadius) { BARITONE.stop(); onArrivedAtGoal("walked to target"); return; }
         if (!baritoneStarted) {
             int rsq = Math.max(1, cfg.arriveRadius * cfg.arriveRadius);
             BARITONE.pathTo(new GoalNear(cfg.targetX, cfg.approxGroundY, cfg.targetZ, rsq));
@@ -2021,7 +2069,7 @@ public class ElytraPilot extends Module {
         }
         if (!BARITONE.isActive() || ++landWalkTicks > LANDWALK_TIMEOUT_TICKS) {
             BARITONE.stop();
-            complete(horiz <= cfg.arriveRadius + 6 ? "walked near target" : "landed near target; could not walk the last leg");
+            onArrivedAtGoal(horiz <= cfg.arriveRadius + 6 ? "walked near target" : "landed near target; could not walk the last leg");
         }
     }
 
@@ -2834,6 +2882,304 @@ public class ElytraPilot extends Module {
         while (d > 180) d -= 360;
         while (d < -180) d += 360;
         return d;
+    }
+
+    // ============================== pitstop / goal stop action ==============================
+    // A shared grounded routine — optionally anchor a respawn point (bed in the overworld, glowstone-charged
+    // respawn anchor in the nether), then optionally log out with an OPTIONAL relogin timer — driven from two
+    // trigger points: the intermediate PITSTOP geofence (below) and the flight's ultimate GOAL arrival
+    // (onArrivedAtGoal for a standalone flight; ElytraTrip.finish() -> runGroundedStop for a trip).
+
+    /** Convenient bed item ids (any colour counts as a placeable bed). */
+    private static final int[] BED_IDS = {
+        ItemRegistry.WHITE_BED.id(), ItemRegistry.ORANGE_BED.id(), ItemRegistry.MAGENTA_BED.id(),
+        ItemRegistry.LIGHT_BLUE_BED.id(), ItemRegistry.YELLOW_BED.id(), ItemRegistry.LIME_BED.id(),
+        ItemRegistry.PINK_BED.id(), ItemRegistry.GRAY_BED.id(), ItemRegistry.LIGHT_GRAY_BED.id(),
+        ItemRegistry.CYAN_BED.id(), ItemRegistry.PURPLE_BED.id(), ItemRegistry.BLUE_BED.id(),
+        ItemRegistry.BROWN_BED.id(), ItemRegistry.GREEN_BED.id(), ItemRegistry.RED_BED.id(),
+        ItemRegistry.BLACK_BED.id()
+    };
+
+    /**
+     * Pitstop geofence: while airborne in a flying phase, if the bot comes within {@code pitstopRadius} of the
+     * armed pitstop coordinate (in the matching dimension) and it hasn't fired yet, divert to land there and run
+     * the stop action. The consumed flag (persisted in config) keeps it from re-firing the instant the bot
+     * relogs in inside the geofence; it clears once the bot is back out of range.
+     */
+    private void checkPitstopGeofence(double x, double y, double z) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (!(cfg.pitstopLogout || cfg.pitstopSetSpawn) || !cfg.pitstopArmed) return;
+        if (phase != Phase.CRUISE && phase != Phase.DESCEND && phase != Phase.BOUNCE
+                && phase != Phase.HOP && phase != Phase.PASS && phase != Phase.REROUTE) return;
+        if (cfg.pitstopInNether != inNether()) return;                       // wrong dimension for this pitstop
+        boolean inside = horizDist(x, z, cfg.pitstopX, cfg.pitstopZ) <= cfg.pitstopRadius;
+        if (cfg.pitstopConsumed) {
+            if (!inside) cfg.pitstopConsumed = false;                        // left the geofence — re-arm for a later pass
+            return;
+        }
+        if (!inside) return;
+        String what = (cfg.pitstopSetSpawn ? "set spawn" : "")
+            + (cfg.pitstopSetSpawn && cfg.pitstopLogout ? " + " : "")
+            + (cfg.pitstopLogout ? "log out" : "");
+        info("Pitstop reached at " + cfg.pitstopX + ", " + cfg.pitstopZ + " — landing to " + what + ".");
+        inGameAlertActivePlayer("<aqua>ElytraPilot: pitstop reached — landing to " + what + ".");
+        landX = cfg.pitstopX;
+        landZ = cfg.pitstopZ;
+        landGroundY = cfg.approxGroundY;
+        landIsTarget = false;
+        haveLandSpot = true;
+        landTicks = 0;
+        landSpinYaw = CACHE.getPlayerCache().getYaw();
+        phase = Phase.PITSTOP_LAND;
+        BARITONE.stop();
+    }
+
+    /**
+     * Bring the bot down at the pitstop coordinate (NOT {@code cfg.target}, so a concurrent trip's per-leg target
+     * updates are untouched): glide in horizontally, spiral-dive off excess altitude over the spot, then flutter
+     * down. On a settled landing, run the stop action with the pitstop options.
+     */
+    private void tickPitstopLand(double x, double y, double z, double speed) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (!BOT.isFallFlying()) {
+            enterStopAct(cfg.pitstopLogout, cfg.pitstopSetSpawn, cfg.pitstopRelogMinutes, cfg.pitstopRelogOnSpawnFail, true);
+            return;
+        }
+        float yaw = (float) Math.toDegrees(Math.atan2(-(landX + 0.5 - x), landZ + 0.5 - z));
+        double horiz = horizDist(x, z, landX + 0.5, landZ + 0.5);
+        int clearance = heightAboveGround(x, y, z);
+        boolean overCap = speed * 20.0 >= cfg.maxSpeed;
+        if (horiz > cfg.arriveRadius) {                                   // approach: glide toward the spot, descending
+            float aim = (float) Math.toDegrees(Math.atan2(Math.max(0, clearance), Math.max(horiz, 1.0)));
+            float pitch = clampF(aim, cfg.glidePitch, 30f);
+            submitInput(false, false, yaw, overCap ? Math.min(pitch, 0f) : pitch);
+        } else if (clearance > 16) {                                     // over the spot but high — spiral dive
+            landSpinYaw += cfg.landSpinStep;
+            if (landSpinYaw > 180f) landSpinYaw -= 360f;
+            submitInput(false, false, landSpinYaw, cfg.landDivePitch);
+        } else {                                                          // low over the spot — helicopter down
+            if (clearance <= cfg.landCutClearance) BOT.stopFallFlying();
+            landSpinYaw += cfg.landSpinStep;
+            if (landSpinYaw > 180f) landSpinYaw -= 360f;
+            submitInput(false, false, landSpinYaw, speed * 20.0 > cfg.landBrakeSpeed ? -55f : -3f);
+        }
+        if (++landTicks > LAND_TIMEOUT_TICKS) BOT.stopFallFlying();        // timed out — drop the elytra, settle next tick
+    }
+
+    /** Goal arrival for a STANDALONE flight (a trip drives the goal stop via {@link #runGroundedStop} from finish()). */
+    private void onArrivedAtGoal(String why) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (!cfg.tripActive && (cfg.goalLogout || cfg.goalSetSpawn)) {
+            String what = (cfg.goalSetSpawn ? "set spawn" : "")
+                + (cfg.goalSetSpawn && cfg.goalLogout ? " + " : "")
+                + (cfg.goalLogout ? "log out" : "");
+            info("Arrived at the goal — " + what + ".");
+            enterStopAct(cfg.goalLogout, cfg.goalSetSpawn, cfg.goalRelogMinutes, cfg.goalRelogOnSpawnFail, false);
+        } else {
+            complete(why);
+        }
+    }
+
+    /** Public entry for {@link ElytraTrip#finish}: run the grounded stop action at the trip's ultimate destination. */
+    public void runGroundedStop(boolean logout, boolean setSpawn, int relogMinutes, boolean relogOnSpawnFail) {
+        CONFIG.client.extra.elytraPilot.enabled = true;
+        syncEnabledFromConfig();                                           // ensure the tick handler is registered
+        enterStopAct(logout, setSpawn, relogMinutes, relogOnSpawnFail, false);
+    }
+
+    private void enterStopAct(boolean logout, boolean setSpawn, int relogMinutes, boolean relogOnSpawnFail, boolean isPitstop) {
+        actLogout = logout;
+        actSetSpawn = setSpawn;
+        actRelogMinutes = relogMinutes;
+        actRelogOnSpawnFail = relogOnSpawnFail;
+        actIsPitstop = isPitstop;
+        actStep = 0;
+        spawnStep = 0;
+        actTicks = 0;
+        actPlaceDelay = 0;
+        actSpawnFailed = false;
+        placedBedId = -1;
+        phase = Phase.STOP_ACT;
+        BARITONE.stop();
+    }
+
+    /** Grounded step machine: optionally set spawn, then finish (log out / continue). */
+    private void tickStopAct(double x, double y, double z) {
+        if (++actTicks > STOP_ACT_TIMEOUT_TICKS && actStep != 2) {
+            if (actStep == 1) { actSpawnFailed = true; warn("Pitstop set-spawn timed out"); }
+            actStep = 2;
+        }
+        switch (actStep) {
+            case 0 -> { if (actSetSpawn) { actStep = 1; spawnStep = 0; } else actStep = 2; }
+            case 1 -> {
+                if (actPlaceDelay > 0) { actPlaceDelay--; return; }
+                if (inNether()) tickAnchorSet(); else tickBedSet();
+            }
+            default -> finishStopAct();
+        }
+    }
+
+    /** Nether: place a respawn anchor, charge it with glowstone (>=1), then click it to set spawn. */
+    private void tickAnchorSet() {
+        switch (spawnStep) {
+            case 0 -> {
+                if (countItem(ItemRegistry.RESPAWN_ANCHOR.id()) == 0 || countItem(ItemRegistry.GLOWSTONE.id()) == 0) {
+                    failSpawn("no respawn anchor / glowstone"); return;
+                }
+                int[] cell = findPlacementCell();
+                if (cell == null) { failSpawn("no spot to place the respawn anchor"); return; }
+                spawnFootX = cell[0]; spawnFootY = cell[1]; spawnFootZ = cell[2];
+                if (!ensureHeld(ItemRegistry.RESPAWN_ANCHOR.id())) return;
+                if (!BOT.getInteractions().emitAirPlace(spawnFootX, spawnFootY - 1, spawnFootZ, Direction.UP)) return;
+                spawnStep = 1; actPlaceDelay = 12;   // let the placement confirm in the block cache before verifying
+            }
+            case 1 -> {
+                if (World.getBlock(spawnFootX, spawnFootY, spawnFootZ).isAir()) { failSpawn("anchor didn't place"); return; }
+                if (!ensureHeld(ItemRegistry.GLOWSTONE.id())) return;
+                BOT.getInteractions().ghostUseItemOn(spawnFootX, spawnFootY, spawnFootZ, Direction.UP, Hand.MAIN_HAND); // charge
+                spawnStep = 2; actPlaceDelay = 8;    // let the charge register before the set-spawn click
+            }
+            default -> {
+                if (!holdInert(ItemRegistry.GLOWSTONE.id())) return;       // non-glowstone in hand -> the click SETS spawn
+                BOT.getInteractions().ghostUseItemOn(spawnFootX, spawnFootY, spawnFootZ, Direction.UP, Hand.MAIN_HAND);
+                info("Respawn anchor charged + spawn set at " + spawnFootX + ", " + spawnFootY + ", " + spawnFootZ + ".");
+                inGameAlertActivePlayer("<green>ElytraPilot: respawn anchor set.");
+                actStep = 2;
+            }
+        }
+    }
+
+    /** Overworld: place a bed in front of the bot, then click it to set spawn (a bed click sets spawn even by day). */
+    private void tickBedSet() {
+        switch (spawnStep) {
+            case 0 -> {
+                int bedId = findBedItemId();
+                if (bedId < 0) { failSpawn("no bed in inventory"); return; }
+                var pc = CACHE.getPlayerCache();
+                Direction f = facingFromYaw(pc.getYaw());
+                int fx = MathHelper.floorI(pc.getX()), fy = MathHelper.floorI(pc.getY()), fz = MathHelper.floorI(pc.getZ());
+                int footX = fx + f.x(), footZ = fz + f.z();
+                int headX = fx + 2 * f.x(), headZ = fz + 2 * f.z();
+                if (!isAirCell(footX, fy, footZ) || !isAirCell(headX, fy, headZ) || !isSolid(footX, fy - 1, footZ)) {
+                    failSpawn("no clear spot in front to place a bed"); return;
+                }
+                spawnFootX = footX; spawnFootY = fy; spawnFootZ = footZ; placedBedId = bedId;
+                if (!ensureHeld(bedId)) return;
+                if (!BOT.getInteractions().emitAirPlace(footX, fy - 1, footZ, Direction.UP)) return;
+                spawnStep = 1; actPlaceDelay = 12;   // let the placement confirm in the block cache before verifying
+            }
+            default -> {
+                if (World.getBlock(spawnFootX, spawnFootY, spawnFootZ).isAir()) { failSpawn("bed didn't place"); return; }
+                if (!holdInert(placedBedId)) return;                       // non-bed in hand -> the click SETS spawn
+                BOT.getInteractions().ghostUseItemOn(spawnFootX, spawnFootY, spawnFootZ, Direction.UP, Hand.MAIN_HAND);
+                info("Bed placed + spawn set at " + spawnFootX + ", " + spawnFootY + ", " + spawnFootZ + ".");
+                inGameAlertActivePlayer("<green>ElytraPilot: bed spawn set.");
+                actStep = 2;
+            }
+        }
+    }
+
+    private void failSpawn(String why) {
+        actSpawnFailed = true;
+        warn("Pitstop spawn-set failed: " + why);
+        inGameAlertActivePlayer("<yellow>ElytraPilot: spawn-set failed (" + why + ")");
+        actStep = 2;                                                       // best-effort — proceed to the logout/finish decision
+    }
+
+    /** Log out (+ optional relogin) or, for a spawn-set-only pitstop, resume the flight toward the goal. */
+    private void finishStopAct() {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (actIsPitstop) cfg.pitstopConsumed = true;
+        if (actLogout) {
+            // <= 0 timer = stay logged out; a failed spawn-set with relogOnSpawnFail off also stays out.
+            boolean skipRelog = actRelogMinutes <= 0 || (actSpawnFailed && !actRelogOnSpawnFail);
+            String tag = actIsPitstop ? "pitstop" : "goal";
+            Proxy.getInstance().disconnect(PITSTOP_DISCONNECT);            // non-reconnectable: we schedule our own relogin
+            if (!skipRelog) {
+                MODULE.get(AutoReconnect.class).scheduleAutoReconnect(actRelogMinutes * 60);
+                complete(tag + " — logged out, back in " + actRelogMinutes + "m", true);
+            } else {
+                complete(tag + " — logged out, staying out for a manual relogin", true);
+            }
+        } else if (actIsPitstop) {
+            info("Pitstop spawn set — resuming flight to the goal.");
+            beginFlight();                                                 // re-arm + climb back out toward the goal
+        } else {
+            complete("goal — spawn set", true);
+        }
+    }
+
+    /** First inventory bed item id (any colour), or -1 if none. */
+    private int findBedItemId() {
+        for (int id : BED_IDS) if (countItem(id) > 0) return id;
+        return -1;
+    }
+
+    /** An adjacent air cell with solid ground beneath, for a single-block (anchor) placement; null if none. */
+    private int[] findPlacementCell() {
+        var pc = CACHE.getPlayerCache();
+        int fx = MathHelper.floorI(pc.getX()), fy = MathHelper.floorI(pc.getY()), fz = MathHelper.floorI(pc.getZ());
+        for (int[] d : NEIGHBORS) {
+            int ax = fx + d[0], az = fz + d[1];
+            if (isAirCell(ax, fy, az) && isSolid(ax, fy - 1, az)) return new int[]{ax, fy, az};
+        }
+        return null;
+    }
+
+    private static boolean isAirCell(int x, int y, int z) {
+        return World.getBlock(x, y, z).isAir();
+    }
+
+    private static boolean isSolid(int x, int y, int z) {
+        var b = World.getBlock(x, y, z);
+        return !b.isAir() && !World.isFluid(b);
+    }
+
+    /** Minecraft horizontal facing from yaw: 0=+Z(S), 90=-X(W), 180=-Z(N), 270=+X(E). */
+    private static Direction facingFromYaw(float yaw) {
+        int i = Math.floorMod(Math.round(yaw / 90f), 4);
+        return switch (i) {
+            case 0 -> Direction.SOUTH;
+            case 1 -> Direction.WEST;
+            case 2 -> Direction.NORTH;
+            default -> Direction.EAST;
+        };
+    }
+
+    private int countItem(int id) {
+        int n = 0;
+        for (ItemStack s : CACHE.getPlayerCache().getPlayerInventory()) if (!isEmpty(s) && s.getId() == id) n += s.getAmount();
+        return n;
+    }
+
+    /** True once {@code itemId} is in the main hand; otherwise kicks off a select/move and returns false. */
+    private boolean ensureHeld(int itemId) {
+        var pc = CACHE.getPlayerCache();
+        var inv = pc.getPlayerInventory();
+        ItemStack held = inv.get(36 + pc.getHeldItemSlot());
+        if (!isEmpty(held) && held.getId() == itemId) return true;
+        if (INVENTORY.hasActiveRequest()) return false;
+        for (int s = 36; s <= 44; s++) if (!isEmpty(inv.get(s)) && inv.get(s).getId() == itemId) { submitInvAction(new SetHeldItem(s - 36)); return false; }
+        for (int s = 9; s <= 35; s++) if (!isEmpty(inv.get(s)) && inv.get(s).getId() == itemId) {
+            int button = findEmptyHotbarButton();
+            if (button < 0) button = pc.getHeldItemSlot();
+            submitInvAction(new MoveToHotbarSlot(s, MoveToHotbarAction.from(button)), new SetHeldItem(button));
+            return false;
+        }
+        return false;
+    }
+
+    /** Hold any item that is NOT {@code avoidId} (prefer an empty hand) so a block click triggers the block's use
+     *  (set spawn) rather than placing/charging. Returns true once held; false while selecting. */
+    private boolean holdInert(int avoidId) {
+        var pc = CACHE.getPlayerCache();
+        var inv = pc.getPlayerInventory();
+        ItemStack held = inv.get(36 + pc.getHeldItemSlot());
+        if (isEmpty(held) || held.getId() != avoidId) return true;
+        if (INVENTORY.hasActiveRequest()) return false;
+        for (int s = 36; s <= 44; s++) if (isEmpty(inv.get(s))) { submitInvAction(new SetHeldItem(s - 36)); return false; }
+        for (int s = 36; s <= 44; s++) { ItemStack it = inv.get(s); if (!isEmpty(it) && it.getId() != avoidId) { submitInvAction(new SetHeldItem(s - 36)); return false; } }
+        return true; // whole hotbar is the avoid item — proceed anyway
     }
 
     private void complete(String why) {

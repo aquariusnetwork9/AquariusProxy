@@ -117,7 +117,10 @@ public class AutoReconnect extends Module {
         SERVER_CLOSING_MESSAGE,
         LOGIN_FAILED,
         AUTH_REQUIRED,
-        MAX_PT_DISCONNECT
+        MAX_PT_DISCONNECT,
+        // A pitstop/goal logout schedules its OWN relogin (on its own timer) via scheduleAutoReconnect —
+        // so the auto-reconnect handler must not fire a second reconnect here with the wrong delay.
+        PITSTOP_DISCONNECT
     );
 
     private boolean isReconnectableDisconnect(final String reason) {

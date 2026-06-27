@@ -1,6 +1,8 @@
 package com.aquarius.command.impl;
 
 import com.aquarius.feature.elytra.Route;
+import com.aquarius.feature.player.World;
+import com.aquarius.mc.dimension.DimensionRegistry;
 import com.aquarius.module.impl.ElytraPilot;
 import com.aquarius.module.impl.ElytraTrip;
 import com.aquarius.util.config.Config.Client.Extra.ElytraPilot.HighwayDir;
@@ -122,7 +124,19 @@ public class ElytraPilotCommand extends Command {
                 "boostbelow <bps>      (solver path: fire a rocket when speed drops below this and not already boosted)",
                 "setbackhold <ticks>   (after a server position setback, hold all rockets this long; never fight a rubberband)",
                 "relaunchpitch <deg>   (relaunch pitch when a CEILING is above: shallow ~-20 = slide forward out from under it)",
-                "relaunchpitchup <deg> (relaunch pitch when OPEN SKY is above: steep ~-75 = punch straight up out of a lava ocean)"
+                "relaunchpitchup <deg> (relaunch pitch when OPEN SKY is above: steep ~-75 = punch straight up out of a lava ocean)",
+                "pitstop at <x> <z>    (program an INTERMEDIATE stop coordinate, in the bot's current dimension)",
+                "pitstop logout <on/off>   (on reaching the pitstop, land + log out; relogin after the timer)",
+                "pitstop setspawn <on/off> (at the pitstop, set a bed (overworld) / glowstone-charged respawn anchor (nether))",
+                "pitstop nether <on/off>   (the pitstop coordinate is a NETHER coordinate)",
+                "pitstop radius <blocks>   (how close to the pitstop counts as reached)",
+                "pitstop timer <minutes>   (minutes logged out before relogging in; `pitstop timer off` = stay out)",
+                "pitstop relogonfail <on/off> (off = a FAILED spawn-set keeps the bot logged out, ignoring the timer)",
+                "pitstop off / pitstop     (disarm / show the pitstop + goal stop config)",
+                "goal logout <on/off>      (log out on reaching the ULTIMATE destination; relogin after the goal timer)",
+                "goal setspawn <on/off>    (set a bed/respawn-anchor spawn point at the destination)",
+                "goal timer <minutes> | off   (relogin delay at the destination; off/0 = stay parked, logged out)",
+                "goal relogonfail <on/off> (off = a FAILED spawn-set keeps the bot logged out at the destination)"
             )
             .build();
     }
@@ -673,6 +687,89 @@ public class ElytraPilotCommand extends Command {
                 c.getSource().getEmbed().title("ElytraPilot relaunch pitch (open/up) = " + CONFIG.client.extra.elytraPilot.relaunchPitchUp
                     + "° (steep = punch straight up out of a lava ocean / open ground)");
             })))
+            .then(literal("pitstop")
+                .then(literal("logout").then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.pitstopLogout = getToggle(c, "toggle");
+                    c.getSource().getEmbed().title("ElytraPilot pitstop logout " + toggleStrCaps(CONFIG.client.extra.elytraPilot.pitstopLogout))
+                        .description("On reaching the pitstop coordinate, land + log out (relogin after the timer). Set the coordinate with `fly pitstop at <x> <z>`.");
+                })))
+                .then(literal("setspawn").then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.pitstopSetSpawn = getToggle(c, "toggle");
+                    c.getSource().getEmbed().title("ElytraPilot pitstop set-spawn " + toggleStrCaps(CONFIG.client.extra.elytraPilot.pitstopSetSpawn))
+                        .description("At the pitstop, place + set a bed (overworld) or a glowstone-charged respawn anchor (nether). Best-effort: if it can't, it warns and (if logging out) logs out anyway.");
+                })))
+                .then(literal("at").then(argument("x", integer()).then(argument("z", integer()).executes(c -> {
+                    var cfg = CONFIG.client.extra.elytraPilot;
+                    cfg.pitstopX = getInteger(c, "x");
+                    cfg.pitstopZ = getInteger(c, "z");
+                    cfg.pitstopArmed = true;
+                    cfg.pitstopConsumed = false;
+                    cfg.pitstopInNether = World.getCurrentDimension() == DimensionRegistry.THE_NETHER.get();
+                    c.getSource().getEmbed().title("ElytraPilot pitstop armed at " + cfg.pitstopX + ", " + cfg.pitstopZ)
+                        .description("Dimension: " + (cfg.pitstopInNether ? "nether" : "overworld")
+                            + ". Now toggle `pitstop logout` and/or `pitstop setspawn`.");
+                }))))
+                .then(literal("nether").then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.pitstopInNether = getToggle(c, "toggle");
+                    c.getSource().getEmbed().title("ElytraPilot pitstop coordinate is "
+                        + (CONFIG.client.extra.elytraPilot.pitstopInNether ? "NETHER" : "OVERWORLD"));
+                })))
+                .then(literal("radius").then(argument("blocks", integer(1)).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.pitstopRadius = getInteger(c, "blocks");
+                    c.getSource().getEmbed().title("ElytraPilot pitstop radius = " + CONFIG.client.extra.elytraPilot.pitstopRadius + " blocks");
+                })))
+                .then(literal("timer")
+                    .then(literal("off").executes(c -> {
+                        CONFIG.client.extra.elytraPilot.pitstopRelogMinutes = 0;
+                        c.getSource().getEmbed().title("ElytraPilot pitstop timer OFF")
+                            .description("Logs out at the pitstop and stays out for a manual reconnect.");
+                    }))
+                    .then(argument("minutes", integer(0)).executes(c -> {
+                        int m = getInteger(c, "minutes");
+                        CONFIG.client.extra.elytraPilot.pitstopRelogMinutes = m;
+                        c.getSource().getEmbed().title("ElytraPilot pitstop timer = " + (m <= 0 ? "off (stay logged out)" : m + " min"));
+                    })))
+                .then(literal("relogonfail").then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.pitstopRelogOnSpawnFail = getToggle(c, "toggle");
+                    c.getSource().getEmbed().title("ElytraPilot pitstop relogin-on-spawn-fail " + toggleStrCaps(CONFIG.client.extra.elytraPilot.pitstopRelogOnSpawnFail))
+                        .description("Off = a FAILED spawn-set keeps the bot logged out (ignores the timer), so it never auto-returns to an unanchored spot.");
+                })))
+                .then(literal("off").executes(c -> {
+                    var cfg = CONFIG.client.extra.elytraPilot;
+                    cfg.pitstopArmed = false;
+                    cfg.pitstopConsumed = false;
+                    c.getSource().getEmbed().title("ElytraPilot pitstop disarmed");
+                }))
+                .executes(c -> {
+                    c.getSource().getEmbed().title("ElytraPilot pitstop + goal stop").description(stopStatus());
+                    return OK;
+                }))
+            .then(literal("goal")
+                .then(literal("logout").then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.goalLogout = getToggle(c, "toggle");
+                    c.getSource().getEmbed().title("ElytraPilot goal logout " + toggleStrCaps(CONFIG.client.extra.elytraPilot.goalLogout))
+                        .description("Log out on reaching the ULTIMATE destination (relogin after the goal timer; off = stay parked).");
+                })))
+                .then(literal("setspawn").then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.goalSetSpawn = getToggle(c, "toggle");
+                    c.getSource().getEmbed().title("ElytraPilot goal set-spawn " + toggleStrCaps(CONFIG.client.extra.elytraPilot.goalSetSpawn))
+                        .description("At the destination, set a bed (overworld) / glowstone-charged respawn anchor (nether). Best-effort.");
+                })))
+                .then(literal("timer")
+                    .then(literal("off").executes(c -> {
+                        CONFIG.client.extra.elytraPilot.goalRelogMinutes = 0;
+                        c.getSource().getEmbed().title("ElytraPilot goal timer OFF").description("Parks at the destination, logged out.");
+                    }))
+                    .then(argument("minutes", integer(0)).executes(c -> {
+                        int m = getInteger(c, "minutes");
+                        CONFIG.client.extra.elytraPilot.goalRelogMinutes = m;
+                        c.getSource().getEmbed().title("ElytraPilot goal timer = " + (m <= 0 ? "off (stay parked)" : m + " min"));
+                    })))
+                .then(literal("relogonfail").then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.goalRelogOnSpawnFail = getToggle(c, "toggle");
+                    c.getSource().getEmbed().title("ElytraPilot goal relogin-on-spawn-fail " + toggleStrCaps(CONFIG.client.extra.elytraPilot.goalRelogOnSpawnFail))
+                        .description("Off = a FAILED spawn-set keeps the bot logged out at the destination, ignoring the timer.");
+                }))))
             .then(literal("trip")
                 .then(literal("highways").then(argument("toggle", toggle()).executes(c -> {
                     CONFIG.client.extra.elytraPilot.tripUseHighways = getToggle(c, "toggle");
@@ -885,6 +982,20 @@ public class ElytraPilotCommand extends Command {
             ? "land in the nether at " + lastX + ", " + lastZ
             : "overworld portal-out to " + r.destX() + ", " + r.destY() + ", " + r.destZ());
         return sb.toString();
+    }
+
+    private static String stopStatus() {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        String pit = cfg.pitstopArmed
+            ? cfg.pitstopX + ", " + cfg.pitstopZ + " (" + (cfg.pitstopInNether ? "nether" : "overworld") + "), r=" + cfg.pitstopRadius
+                + " | logout " + (cfg.pitstopLogout ? "ON" : "off") + ", setspawn " + (cfg.pitstopSetSpawn ? "ON" : "off")
+                + ", timer " + (cfg.pitstopRelogMinutes <= 0 ? "off" : cfg.pitstopRelogMinutes + "m")
+                + ", relogOnFail " + (cfg.pitstopRelogOnSpawnFail ? "yes" : "no")
+            : "disarmed (set with `fly pitstop at <x> <z>`)";
+        String goal = "logout " + (cfg.goalLogout ? "ON" : "off") + ", setspawn " + (cfg.goalSetSpawn ? "ON" : "off")
+            + ", timer " + (cfg.goalRelogMinutes <= 0 ? "off" : cfg.goalRelogMinutes + "m")
+            + ", relogOnFail " + (cfg.goalRelogOnSpawnFail ? "yes" : "no");
+        return "**Pitstop:** " + pit + "\n**Goal:** " + goal;
     }
 
     private static double[] unitVec(HighwayDir d) {

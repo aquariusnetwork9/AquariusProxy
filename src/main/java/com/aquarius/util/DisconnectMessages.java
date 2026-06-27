@@ -10,4 +10,5 @@ public final class DisconnectMessages {
     public static final String LOGIN_FAILED = "Login Failed";
     public static final String AUTH_REQUIRED = "Cannot join online mode server with offline auth";
     public static final String SERVER_CLOSING_MESSAGE = "Server closed.";
+    public static final String PITSTOP_DISCONNECT = "Pitstop logout";
 }

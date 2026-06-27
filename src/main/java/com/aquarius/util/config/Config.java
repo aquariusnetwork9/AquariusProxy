@@ -730,6 +730,36 @@ public final class Config {
                  *  connect leaves the planner idle until you Launch again. */
                 public boolean tripStartOnConnect = true;
 
+                // --- pitstop: stop at a programmed INTERMEDIATE goal to log out and/or anchor spawn ---
+                /** On reaching the pitstop coordinate, land + log out (with the optional relogin timer below). */
+                public boolean pitstopLogout = false;
+                /** On reaching the pitstop coordinate, set a spawn point: a bed (overworld) or a glowstone-charged
+                 *  respawn anchor (nether). Independent of {@link #pitstopLogout}; the two can also run in tandem. */
+                public boolean pitstopSetSpawn = false;
+                /** A pitstop coordinate has been programmed (armed via `fly pitstop at`). */
+                public boolean pitstopArmed = false;
+                public int pitstopX = 0;
+                public int pitstopZ = 0;
+                /** The pitstop coordinate is a NETHER coordinate (only fires while in the nether). */
+                public boolean pitstopInNether = false;
+                /** Within this horizontal distance of the pitstop coordinate counts as "reached the pitstop". */
+                public int pitstopRadius = 24;
+                /** Minutes logged out before relogging in; &le; 0 = NO auto-relogin (stay logged out for a manual reconnect). */
+                public int pitstopRelogMinutes = 30;
+                /** When false, a FAILED spawn-set keeps the bot logged out (ignoring the timer) so it never
+                 *  auto-returns to an unanchored spot. */
+                public boolean pitstopRelogOnSpawnFail = true;
+                /** Set true once the pitstop has fired; cleared once the bot leaves the geofence (or it is re-armed),
+                 *  so the relogin tick (landing back inside the geofence) does not immediately re-trigger it. */
+                public boolean pitstopConsumed = false;
+
+                // --- goal stop: the SAME options applied at the flight's ULTIMATE destination ---
+                public boolean goalLogout = false;
+                public boolean goalSetSpawn = false;
+                /** Minutes logged out at the destination before relogging in; &le; 0 = stay parked, logged out. */
+                public int goalRelogMinutes = 0;
+                public boolean goalRelogOnSpawnFail = true;
+
                 /**
                  * Pre-flight gear-up: before a trip, audit the flight kit against the checklist below and, if
                  * anything is short, run Regear to top up ONLY the missing items from a nearby ender chest (kit
