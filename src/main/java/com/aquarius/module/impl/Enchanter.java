@@ -232,10 +232,11 @@ public class Enchanter extends AbstractFieldModule {
                 List<BlockPos> raw = findBlocks(radius, pf.y() - cfg.bandDown, pf.y() + cfg.bandUp, this::isContainerBlockName);
                 scanQueue.clear();
                 bookChests.clear(); inputChest = null; outputChest = null;
-                for (BlockPos b : raw) {
-                    if (isDoubleHalfAlreadyQueued(b)) continue;
-                    scanQueue.add(b);
-                }
+                // Deliberately NO double-chest dedup: visiting both halves of a double is harmless (they share
+                // one inventory — the second open just re-reads it), while any adjacency dedup silently drops the
+                // MIDDLE container in a row of singles. With mixed singles/doubles, "classify everything" is the
+                // only safe rule (mirrors KitMaker).
+                scanQueue.addAll(raw);
                 if (anvilPos == null) { abort("no anvil found within " + radius + " blocks"); return; }
                 if (scanQueue.isEmpty()) { abort("no chests/barrels found within " + radius + " blocks"); return; }
                 info("Enchanter: anvil @ {}, classifying {} containers.", anvilPos, scanQueue.size());
@@ -295,18 +296,6 @@ public class Enchanter extends AbstractFieldModule {
         if (CONFIG.client.extra.enchanter.throwXp && xpChest == null) { abort("no XP-bottle chest found (or turn off /enc xp)"); return; }
         info("Enchanter: layout OK - {} book source(s){}. Enchanting.", bookChests.size(), xpChest != null ? ", XP chest" : "");
         go(State.NEXT_ITEM);
-    }
-
-    /** True if a horizontally-adjacent same-name container is already queued (dedupe double-chest halves). */
-    private boolean isDoubleHalfAlreadyQueued(BlockPos b) {
-        String name = com.aquarius.feature.player.World.getBlock(b.x(), b.y(), b.z()).name();
-        for (BlockPos q : scanQueue) {
-            if (q.y() != b.y()) continue;
-            if ((Math.abs(q.x() - b.x()) == 1 && q.z() == b.z()) || (Math.abs(q.z() - b.z()) == 1 && q.x() == b.x())) {
-                if (com.aquarius.feature.player.World.getBlock(q.x(), q.y(), q.z()).name().equals(name)) return true;
-            }
-        }
-        return false;
     }
 
     // ---------------------------------------------------------------- next item
