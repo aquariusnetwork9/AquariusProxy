@@ -14,6 +14,7 @@ import com.aquarius.feature.player.InputRequest;
 import com.aquarius.mc.block.BlockPos;
 import com.aquarius.mc.enchantment.EnchantmentData;
 import com.aquarius.mc.enchantment.EnchantmentRegistry;
+import com.aquarius.mc.item.ItemRegistry;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerType;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
@@ -63,10 +64,14 @@ public class Enchanter extends AbstractFieldModule {
     /** One enchanted book the plan still needs to pull from the book chests. */
     private record Need(String ench, int level) {}
 
+    /** Ticks to wait for the world to stream in after a (re)connect before scanning the station. */
+    private static final int RECONNECT_GRACE_TICKS = 100;   // ~5s once our own chunk has loaded
+
     private State state = State.IDLE;
     private int step;
     private int timer;
     private int attempts;
+    private int reconnectGrace;
     private @Nullable GoalNear pathGoal;
 
     // discovered station
@@ -90,6 +95,7 @@ public class Enchanter extends AbstractFieldModule {
     private EnchantOptimizer.@Nullable Plan plan;
     private int stepIdx;        // which combine step
     private int bookChestIdx;   // which book chest during GATHER
+    private int lastGatherSlot = -1;   // last book slot we pulled from, to detect a stalled (un-moving) pull
 
     // anvil pillar settle tracking
     private int anvilStableTicks;
@@ -116,6 +122,7 @@ public class Enchanter extends AbstractFieldModule {
     @Override
     public void onEnable() {
         paused = false; complete = false; hazardPaused = false;
+        reconnectGrace = 0;
         cyclesDone = 0;
         anvilPos = null; inputChest = null; outputChest = null; xpChest = null;
         bookChests.clear(); scanQueue.clear();
@@ -134,7 +141,10 @@ public class Enchanter extends AbstractFieldModule {
     }
 
     private void onStarting(ClientBotTick.Starting event) {
-        if (state != State.IDLE && !complete) onEnable();   // re-scan cleanly after a (re)connect
+        if (state != State.IDLE && !complete) {
+            onEnable();                              // re-scan cleanly after a (re)connect...
+            reconnectGrace = RECONNECT_GRACE_TICKS;  // ...but let the world stream in first (see onTick gate)
+        }
     }
 
     private void resetItem() {
@@ -176,6 +186,12 @@ public class Enchanter extends AbstractFieldModule {
     private void onTick(ClientBotTick event) {
         var cfg = CONFIG.client.extra.enchanter;
         if (notReady()) return;
+        if (reconnectGrace > 0) {
+            // notReady() above already confirmed our chunk is loaded; count the settle down so neighbouring
+            // chunks (the station can be up to scanRadius away) stream in before the first scan reads them.
+            if (--reconnectGrace > 0) return;
+            info("Enchanter: world loaded after (re)connect - resuming.");
+        }
         if (rescanRequested) { rescanRequested = false; onEnable(); return; }
         if (state == State.IDLE || complete || paused) return;
 
@@ -253,7 +269,7 @@ public class Enchanter extends AbstractFieldModule {
         int chestSlots = Math.max(0, c.getSize() - 36);
         for (int i = 0; i < chestSlots; i++) {
             ItemStack s = c.getItemStack(i);
-            if (s == Container.EMPTY_STACK) continue;
+            if (!isRealItem(s)) continue;
             anyItem = true;
             if (isBottle(s)) anyBottle = true;
             else if (isEnchantedBook(s)) anyBook = true;
@@ -263,6 +279,13 @@ public class Enchanter extends AbstractFieldModule {
         if (anyBook) { if (!bookChests.contains(pos)) bookChests.add(pos); info("Enchanter:  book source @ {}", pos); return; }
         if (anyGear && inputChest == null) { inputChest = pos; info("Enchanter:  gear input @ {}", pos); return; }
         if (!anyItem && outputChest == null) { outputChest = pos; info("Enchanter:  finished output @ {}", pos); }
+    }
+
+    /** A genuine, non-empty item. Empty container slots can arrive as air stacks (id AIR, count 0), NOT the
+     *  {@link Container#EMPTY_STACK} sentinel, so a sentinel-only check would mis-read an empty chest as full
+     *  (e.g. the empty output chest would never be recognised). Mirrors {@link KitMaker}'s isRealItem. */
+    private boolean isRealItem(@Nullable ItemStack s) {
+        return s != Container.EMPTY_STACK && s.getAmount() > 0 && s.getId() != ItemRegistry.AIR.id();
     }
 
     private void finishLayout() {
@@ -375,15 +398,21 @@ public class Enchanter extends AbstractFieldModule {
                     if (++attempts >= 6) { bookChestIdx++; step = 0; return; }   // skip unreachable
                     open(bookChests.get(bookChestIdx)); timer = cfg.settleTicks; return;
                 }
-                step = 2;
+                step = 2; attempts = 0; lastGatherSlot = -1;
             }
             default -> {
                 if (openContainerId() == 0) { step = 0; return; }
                 Container c = openContainer();
                 if (c == null) { timer = cfg.fillDelayTicks; return; }
                 int slot = neededBookContainerSlot(c);
-                if (slot != -1) { if (!inventoryBusy()) shiftClick(c, slot); timer = cfg.fillDelayTicks; }
-                else { closeContainer(); bookChestIdx++; step = 0; timer = cfg.actionDelayTicks; }
+                if (slot != -1) {
+                    // A book is stack-size 1, so it needs a free slot to land in. No room -> we'd loop forever.
+                    if (emptyMainSlots() == 0) { abort("inventory full - free some slots so books can be gathered"); return; }
+                    if (slot != lastGatherSlot) { lastGatherSlot = slot; attempts = 0; }   // moved on to a new book = progress
+                    else if (++attempts >= 40) { abort("stuck gathering a book (container desynced)"); return; }
+                    if (!inventoryBusy()) shiftClick(c, slot);
+                    timer = cfg.fillDelayTicks;
+                } else { closeContainer(); bookChestIdx++; step = 0; lastGatherSlot = -1; timer = cfg.actionDelayTicks; }
             }
         }
     }
@@ -393,7 +422,7 @@ public class Enchanter extends AbstractFieldModule {
         int chestSlots = Math.max(0, c.getSize() - 36);
         for (int i = 0; i < chestSlots; i++) {
             ItemStack s = c.getItemStack(i);
-            if (s == Container.EMPTY_STACK) continue;
+            if (!isRealItem(s)) continue;
             for (Need n : neededBooks) {
                 if (!liveHasSingleBook(c, n) && isSingleBook(s, n)) return i;
             }
