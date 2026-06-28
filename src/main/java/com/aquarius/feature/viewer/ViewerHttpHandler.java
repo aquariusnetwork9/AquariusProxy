@@ -695,12 +695,12 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
      */
     private Map<String, Object> lookingAt() {
         final Map<String, Object> m = new LinkedHashMap<>();
-        if (!Proxy.getInstance().hasActivePlayer()) {
+        if (!Proxy.getInstance().isConnected()) {   // connected to the server (headless is fine — no client needed)
             m.put("hit", false);
             m.put("offline", true);
             return m;
         }
-        BOT.syncFromCache(true);
+        BOT.syncFromCache(true);                     // pull the bot's current position + look from the cache, then raycast
         final var r = RaycastHelper.playerBlockRaycast(LOOK_REACH, false);
         m.put("hit", r.hit());
         if (r.hit()) {
