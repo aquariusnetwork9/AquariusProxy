@@ -450,7 +450,18 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
         return lp.endsWith(".password") || lp.endsWith(".token") || lp.endsWith(".secret");
     }
 
-    private static final class ControlConfigRequest { String path; JsonElement value; }
+    /**
+     * POST /control/config body. {@code op} selects the mutation:
+     * <ul>
+     *   <li>{@code "set"} (default) — coerce {@code value} to the leaf field's type and set it (scalars/enums).</li>
+     *   <li>{@code "put"} — {@code path} is a {@link Map} field; deserialize {@code value} into the map's value type
+     *       and {@code map.put(key, …)} (add or replace a keyed entry, e.g. a villager trade or saved trip route).</li>
+     *   <li>{@code "add"} — {@code path} is a {@link List} field; deserialize {@code value} into the element type and
+     *       append it (e.g. a pearl-stasis location).</li>
+     *   <li>{@code "remove"} — drop the {@code key} from a map field, or the {@code index} from a list field.</li>
+     * </ul>
+     */
+    private static final class ControlConfigRequest { String path; String op; String key; Integer index; JsonElement value; }
 
     /**
      * GET /control/config — the live config tree as JSON, with every secret field redacted (never expose tokens or
@@ -490,8 +501,8 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
             respondJson(ctx, HttpResponseStatus.BAD_REQUEST, "{\"error\":\"bad request\"}");
             return;
         }
-        if (r == null || r.path == null || r.path.isBlank() || r.value == null) {
-            respondJson(ctx, HttpResponseStatus.BAD_REQUEST, "{\"error\":\"path and value required\"}");
+        if (r == null || r.path == null || r.path.isBlank()) {
+            respondJson(ctx, HttpResponseStatus.BAD_REQUEST, "{\"error\":\"path required\"}");
             return;
         }
         final String path = r.path.strip();
@@ -499,8 +510,108 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
             respondJson(ctx, HttpResponseStatus.FORBIDDEN, "{\"error\":\"protected field\"}");
             return;
         }
+        final String op = (r.op == null || r.op.isBlank()) ? "set" : r.op.strip().toLowerCase(Locale.ROOT);
         // mutate config + persist off the netty thread (mirrors how commands change config)
-        EXECUTOR.execute(() -> respondJson(ctx, HttpResponseStatus.OK, GSON.toJson(setConfigPath(path, r.value))));
+        EXECUTOR.execute(() -> {
+            final Map<String, Object> out;
+            switch (op) {
+                case "set" -> {
+                    if (r.value == null) { respondJson(ctx, HttpResponseStatus.BAD_REQUEST, "{\"error\":\"value required\"}"); return; }
+                    out = setConfigPath(path, r.value);
+                }
+                case "put", "add", "remove" -> out = mutateContainer(op, path, r.key, r.index, r.value);
+                default -> { respondJson(ctx, HttpResponseStatus.BAD_REQUEST, "{\"error\":\"unknown op '" + op + "'\"}"); return; }
+            }
+            respondJson(ctx, HttpResponseStatus.OK, GSON.toJson(out));
+        });
+    }
+
+    /**
+     * Add / replace / remove an entry in a {@link Map}- or {@link List}-typed config field ({@code path} points at the
+     * container itself, not a leaf). Entries are deserialized into the container's declared element type with the same
+     * {@link com.aquarius.Globals#GSON config Gson} that loads the file, so records ({@code BlockPos}, {@code Route},
+     * {@code Pearl}), enums and fastutil maps round-trip exactly as they do on disk. Persists, then nudges any module
+     * that caches the list so the change takes effect mid-run.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private Map<String, Object> mutateContainer(final String op, final String path, final String key,
+                                                final Integer index, final JsonElement value) {
+        final Map<String, Object> out = new LinkedHashMap<>();
+        try {
+            final String[] parts = path.split("\\.");
+            Object obj = CONFIG;
+            Field f = null;
+            for (int i = 0; i < parts.length; i++) {
+                f = obj.getClass().getField(parts[i]);   // public fields only
+                if (i < parts.length - 1) {
+                    obj = f.get(obj);
+                    if (obj == null) throw new IllegalArgumentException("null parent at '" + parts[i] + "'");
+                }
+            }
+            final Object container = f.get(obj);
+            if (container instanceof Map map) {
+                switch (op) {
+                    case "put" -> {
+                        if (key == null || key.isBlank()) throw new IllegalArgumentException("key required");
+                        if (value == null) throw new IllegalArgumentException("value required");
+                        map.put(key, com.aquarius.Globals.GSON.fromJson(value, elementType(f, 1)));
+                    }
+                    case "remove" -> {
+                        if (key == null) throw new IllegalArgumentException("key required");
+                        if (map.remove(key) == null) throw new IllegalArgumentException("no entry '" + key + "'");
+                    }
+                    default -> throw new IllegalArgumentException("op '" + op + "' is not valid on a map");
+                }
+                out.put("size", map.size());
+            } else if (container instanceof List list) {
+                switch (op) {
+                    case "add" -> {
+                        if (value == null) throw new IllegalArgumentException("value required");
+                        list.add(com.aquarius.Globals.GSON.fromJson(value, elementType(f, 0)));
+                    }
+                    case "remove" -> {
+                        if (index == null || index < 0 || index >= list.size())
+                            throw new IllegalArgumentException("index out of range");
+                        list.remove((int) index);
+                    }
+                    default -> throw new IllegalArgumentException("op '" + op + "' is not valid on a list");
+                }
+                out.put("size", list.size());
+            } else {
+                throw new IllegalArgumentException(path + " is not a map or list");
+            }
+            saveConfigAsync();
+            notifyConfigConsumers(path);
+            SERVER_LOG.info("Control config {}: {} (key={}, index={})", op, path, key, index);
+            out.put("ok", true);
+            out.put("path", path);
+        } catch (final Exception e) {
+            out.clear();
+            out.put("ok", false);
+            out.put("error", e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+        }
+        return out;
+    }
+
+    /** The declared element type at generic-argument slot {@code argIndex} of a Map/List field (Object if unparameterized). */
+    private static java.lang.reflect.Type elementType(final Field f, final int argIndex) {
+        if (f.getGenericType() instanceof java.lang.reflect.ParameterizedType pt) {
+            final java.lang.reflect.Type[] args = pt.getActualTypeArguments();
+            if (argIndex < args.length) return args[argIndex];
+        }
+        return Object.class;
+    }
+
+    /** Best-effort: tell a running module its config list changed so it re-reads instead of using a stale snapshot. */
+    private static void notifyConfigConsumers(final String path) {
+        try {
+            if (path.equals("client.extra.villagerTrader.trades")) {
+                final var m = MODULE.get(com.aquarius.module.impl.VillagerTrader.class);
+                if (m != null) m.onTradeListChange();
+            }
+        } catch (final Exception ignored) {
+            // a notify failure must never fail the write — the change is already persisted
+        }
     }
 
     /** Walk the live config object along {@code a.b.c}, coerce {@code value} to the leaf field's type, set it, save. */
