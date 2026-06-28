@@ -11,6 +11,8 @@ import com.aquarius.feature.map.MapGenerator;
 import com.aquarius.mc.item.ItemRegistry;
 import com.aquarius.module.api.Module;
 import com.aquarius.module.impl.ElytraPilot;
+import com.aquarius.Proxy;
+import com.aquarius.feature.player.raycast.RaycastHelper;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -53,6 +55,7 @@ import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 
 import static com.aquarius.Globals.BLOCK_DATA;
+import static com.aquarius.Globals.BOT;
 import static com.aquarius.Globals.CACHE;
 import static com.aquarius.Globals.COMMAND;
 import static com.aquarius.Globals.CONFIG;
@@ -98,6 +101,10 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
         }
         if (path.equals("/control/state")) {
             respondJson(ctx, HttpResponseStatus.OK, GSON.toJson(controlState()));
+            return;
+        }
+        if (path.equals("/control/lookingat")) {
+            respondJson(ctx, HttpResponseStatus.OK, GSON.toJson(lookingAt()));
             return;
         }
         if (path.equals("/control/commands")) {
@@ -569,6 +576,12 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
                         if (value == null) throw new IllegalArgumentException("value required");
                         list.add(com.aquarius.Globals.GSON.fromJson(value, elementType(f, 0)));
                     }
+                    case "put" -> {                       // replace the entry at index (in-place edit)
+                        if (value == null) throw new IllegalArgumentException("value required");
+                        if (index == null || index < 0 || index >= list.size())
+                            throw new IllegalArgumentException("index out of range");
+                        list.set(index, com.aquarius.Globals.GSON.fromJson(value, elementType(f, 0)));
+                    }
                     case "remove" -> {
                         if (index == null || index < 0 || index >= list.size())
                             throw new IllegalArgumentException("index out of range");
@@ -668,6 +681,34 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
         m.put("modules", mods);
         m.put("control", CONFIG.server.viewer.control);
         m.put("t", System.currentTimeMillis());
+        return m;
+    }
+
+    /** How far the look-target raycast reaches (blocks) — generous so you can aim at a chest across the room. */
+    private static final double LOOK_REACH = 96.0;
+
+    /**
+     * GET /control/lookingat — raycast the bot's crosshair and return the block it's pointed at: {@code {hit,x,y,z,block}}
+     * (or {@code {hit:false}} / {@code {hit:false,offline:true}}). Lets the dashboard fill a chest/coordinate field from
+     * wherever the bot is aimed instead of typing x/y/z. Coords are returned to the (loopback/authed-relay) dashboard but
+     * never written to the server log.
+     */
+    private Map<String, Object> lookingAt() {
+        final Map<String, Object> m = new LinkedHashMap<>();
+        if (!Proxy.getInstance().hasActivePlayer()) {
+            m.put("hit", false);
+            m.put("offline", true);
+            return m;
+        }
+        BOT.syncFromCache(true);
+        final var r = RaycastHelper.playerBlockRaycast(LOOK_REACH, false);
+        m.put("hit", r.hit());
+        if (r.hit()) {
+            m.put("x", r.x());
+            m.put("y", r.y());
+            m.put("z", r.z());
+            m.put("block", r.block().name());
+        }
         return m;
     }
 
