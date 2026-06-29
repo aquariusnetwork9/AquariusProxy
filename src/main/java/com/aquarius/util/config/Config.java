@@ -417,6 +417,15 @@ public final class Config {
                 public boolean enabled = false;
                 public long waitForInteractTimeoutTicks = 20L;
                 public boolean logTradeStatusToDiscord = false;
+                /**
+                 * When true, the trader remembers which configured trades each villager can fulfill (learned by
+                 * opening it once) and on later sweeps only revisits villagers known to offer the current trade,
+                 * skipping villagers that offer none of the configured trades. Dramatically cuts the
+                 * open-every-villager churn in a large trading hall. The learned map is in-memory and is rebuilt
+                 * on (re)connect and whenever the trade list changes. Disable to fall back to the legacy
+                 * profession-only sweep (open every villager of the matching profession every time).
+                 */
+                public boolean targetKnownVillagers = true;
 
                 public LinkedHashMap<String, Trade> trades = new LinkedHashMap<>();
 
@@ -434,6 +443,15 @@ public final class Config {
                     public int inputItem2RestockStacks = 4;
                     public int inputItem2RestockCountThreshold = 64;
                     public int outputItemStoreCountThreshold = 64;
+                    /**
+                     * Hard ceiling (in stacks) on how much of input item 2 the bot will carry. At the start of
+                     * each trade cycle, if it holds more than this, it deposits the excess back into
+                     * {@code inputItem2Chest}, leaving exactly this many stacks. Prevents the trader from
+                     * hoarding stacks of a shared input (e.g. books) it pulled but never sold. 0 = no cap.
+                     */
+                    public int inputItem2MaxCarryStacks = 2;
+                    /** Hard ceiling (in stacks) on carried input item 1, mirroring {@link #inputItem2MaxCarryStacks}. 0 = no cap (default — leaves emeralds untouched). */
+                    public int inputItem1MaxCarryStacks = 0;
                     public int maxInput1PerTrade = 99;
                     public int maxInput2PerTrade = 99;
                     public PostTradeStoreMode postTradeStoreMode = PostTradeStoreMode.NONE;

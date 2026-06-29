@@ -55,6 +55,9 @@ public class VillagerTraderCommand extends Command {
                 "clear",
                 "list",
                 "set help",
+                "targeting on/off  (only revisit villagers known to offer a configured trade; skip useless ones)",
+                "rescan  (forget learned villager offers and re-learn the hall)",
+                "villagers  (how many villagers are known / skipped)",
                 "waitForInteractTimeout <ticks>",
                 "logTradeStatusToDiscord on/off",
                 "panel  (post an interactive trader panel to Discord: toggle trades + timeout modal + run)"
@@ -161,6 +164,8 @@ public class VillagerTraderCommand extends Command {
                         "set <id> inputItem1RestockCountThreshold <count>",
                         "set <id> inputItem2RestockCountThreshold <count>",
                         "set <id> outputItemStoreCountThreshold <count>",
+                        "set <id> inputItem1MaxCarryStacks <count>  (0 = no cap)",
+                        "set <id> inputItem2MaxCarryStacks <count>  (0 = no cap; default 2)",
                         "set <id> outputEnchants add <enchantment> <level>",
                         "set <id> outputEnchants del <enchantment>",
                         "set <id> outputEnchants clear",
@@ -455,6 +460,40 @@ public class VillagerTraderCommand extends Command {
                             .description(printTrade(id, trade));
                         return OK;
                     })))
+                    .then(literal("inputItem1MaxCarryStacks").then(argument("inputItem1MaxCarryStacks", integer(0, 35)).executes(c -> {
+                        var id = CustomStringArgumentType.getString(c, "id");
+                        if (!CONFIG.client.extra.villagerTrader.trades.containsKey(id)) {
+                            c.getSource().getEmbed()
+                                .title("Trade ID Not Found")
+                                .addField("ID", id)
+                                .description(printAllTrades());
+                            c.getSource().getData().put("list", true);
+                            return ERROR;
+                        }
+                        var trade = CONFIG.client.extra.villagerTrader.trades.get(id);
+                        trade.inputItem1MaxCarryStacks = getInteger(c, "inputItem1MaxCarryStacks");
+                        c.getSource().getEmbed()
+                            .title("Input Item 1 Max Carry Stacks Set")
+                            .description(printTrade(id, trade));
+                        return OK;
+                    })))
+                    .then(literal("inputItem2MaxCarryStacks").then(argument("inputItem2MaxCarryStacks", integer(0, 35)).executes(c -> {
+                        var id = CustomStringArgumentType.getString(c, "id");
+                        if (!CONFIG.client.extra.villagerTrader.trades.containsKey(id)) {
+                            c.getSource().getEmbed()
+                                .title("Trade ID Not Found")
+                                .addField("ID", id)
+                                .description(printAllTrades());
+                            c.getSource().getData().put("list", true);
+                            return ERROR;
+                        }
+                        var trade = CONFIG.client.extra.villagerTrader.trades.get(id);
+                        trade.inputItem2MaxCarryStacks = getInteger(c, "inputItem2MaxCarryStacks");
+                        c.getSource().getEmbed()
+                            .title("Input Item 2 Max Carry Stacks Set")
+                            .description(printTrade(id, trade));
+                        return OK;
+                    })))
                     .then(literal("outputEnchants")
                         .then(literal("add").then(argument("enchant", enchantment()).then(argument("level", integer(1)).executes(c -> {
                             var id = CustomStringArgumentType.getString(c, "id");
@@ -601,6 +640,25 @@ public class VillagerTraderCommand extends Command {
                     .title("Trade List")
                     .description(printAllTrades());
                 c.getSource().getData().put("list", true);
+            }))
+            .then(literal("targeting").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.villagerTrader.targetKnownVillagers = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("Villager Targeting " + toggleStrCaps(CONFIG.client.extra.villagerTrader.targetKnownVillagers))
+                    .description(CONFIG.client.extra.villagerTrader.targetKnownVillagers
+                        ? "Only revisits villagers known to offer the current trade and skips villagers that offer none of your trades (each villager is learned by opening it once per session)."
+                        : "Legacy mode: opens every villager of the matching profession on every sweep.");
+            })))
+            .then(literal("rescan").executes(c -> {
+                inEventLoop(() -> MODULE.get(VillagerTrader.class).clearVillagerCache());
+                c.getSource().getEmbed()
+                    .title("Villager Cache Cleared")
+                    .description("Forgot all learned villager offers; the next sweep will re-learn the hall.");
+            }))
+            .then(literal("villagers").executes(c -> {
+                c.getSource().getEmbed()
+                    .title("Villager Cache")
+                    .description(MODULE.get(VillagerTrader.class).villagerCacheSummary());
             }))
             .then(literal("waitForInteractTimeout").then(argument("ticks", time()).executes(c -> {;
                 CONFIG.client.extra.villagerTrader.waitForInteractTimeoutTicks = getInteger(c, "ticks");

@@ -74,6 +74,12 @@ public class VillagerTrader extends Module {
     private int input1SellCount = 0;
     private int input2SellCount = 0;
     private long tradeStartTime = System.nanoTime();
+    // --- villager offer memory (in-memory; rebuilt on (re)connect + trade-list change) ---
+    // UUID -> set of configured trade ids this villager is known to offer. A villager that offers none of the
+    // configured trades goes in uselessVillagers and is never opened again until the cache is cleared.
+    private final Map<UUID, Set<String>> villagerTradeCapabilities = new HashMap<>();
+    private final Set<UUID> uselessVillagers = new HashSet<>();
+    private UUID currentVillagerUuid = null;
 
     @Override
     public boolean enabledSetting() {
@@ -101,10 +107,23 @@ public class VillagerTrader extends Module {
         state = State.ENTRYPOINT;
         interactedVillagersCache.invalidateAll();
         offersPacket = null;
+        currentVillagerUuid = null;
+        clearVillagerCache();
         waitForInteractTimer.reset();
         waitForRestockTimer.reset();
         tradeIterator.reset();
         resetTradeCounter();
+    }
+
+    /** Forget everything learned about which villagers offer which trades (forces a fresh learning sweep). */
+    public void clearVillagerCache() {
+        villagerTradeCapabilities.clear();
+        uselessVillagers.clear();
+    }
+
+    public String villagerCacheSummary() {
+        return "known villagers: " + villagerTradeCapabilities.size()
+            + ", skipped (offer nothing wanted): " + uselessVillagers.size();
     }
 
     private void resetTradeCounter() {
@@ -148,6 +167,16 @@ public class VillagerTrader extends Module {
             }
             case EVAL_RESTOCK -> {
                 var trade = tradeIterator.current();
+                // Hard carry caps: shed any input held above the configured ceiling before (re)stocking, so the
+                // bot never hoards stacks of a shared input (e.g. books) it pulled but never sold.
+                if (overCarryCap(trade.getInputItem2(), trade.inputItem2MaxCarryStacks)) {
+                    setState(State.DEPOSIT_EXCESS_INPUT_2_GO_TO_CHEST);
+                    return;
+                }
+                if (overCarryCap(trade.getInputItem1(), trade.inputItem1MaxCarryStacks)) {
+                    setState(State.DEPOSIT_EXCESS_INPUT_1_GO_TO_CHEST);
+                    return;
+                }
                 var input1 = ItemRegistry.REGISTRY.get(trade.inputItem1);
                 int input1Count = countItem(input1.id());
                 if (trade.inputItem1RestockCountThreshold > input1Count) {
@@ -272,6 +301,84 @@ public class VillagerTrader extends Module {
                     setState(State.CRAFT_EMERALD_BLOCKS);
                 }
             }
+            case DEPOSIT_EXCESS_INPUT_1_GO_TO_CHEST -> {
+                var trade = tradeIterator.current();
+                storePathingFuture = BARITONE.rightClickBlock(trade.inputItem1Chest.x(), trade.inputItem1Chest.y(), trade.inputItem1Chest.z());
+                storePathingFuture.addExecutedListener(f -> waitForInteractTimer.reset());
+                setState(State.DEPOSIT_EXCESS_INPUT_1_DEPOSIT);
+            }
+            case DEPOSIT_EXCESS_INPUT_1_DEPOSIT -> {
+                if (storePathingFuture.isCompleted()) {
+                    var trade = tradeIterator.current();
+                    var openContainer = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+                    if (openContainer.getContainerId() == 0) {
+                        if (waitForInteractTimer.tick(CONFIG.client.extra.villagerTrader.waitForInteractTimeoutTicks)) {
+                            setState(State.DEPOSIT_EXCESS_INPUT_1_GO_TO_CHEST);
+                        }
+                        return;
+                    }
+                    var input1 = trade.getInputItem1();
+                    int slotsToDeposit = Math.max(0, countSlotUsages(input1.id()) - trade.inputItem1MaxCarryStacks);
+                    var actions = Lists.newArrayList(
+                        InventoryActionMacros.deposit(
+                            openContainer.getContainerId(),
+                            i -> input1.id() == i.getId(),
+                            slotsToDeposit));
+                    actions.add(new CloseContainer(openContainer.getContainerId()));
+                    storeDepositFuture = INVENTORY.submit(InventoryActionRequest.builder()
+                        .owner(this)
+                        .priority(getPriority())
+                        .actions(actions)
+                        .build());
+                    setState(State.DEPOSIT_EXCESS_INPUT_1_AWAIT_DEPOSIT);
+                }
+            }
+            case DEPOSIT_EXCESS_INPUT_1_AWAIT_DEPOSIT -> {
+                if (storeDepositFuture.isCompleted()) {
+                    var trade = tradeIterator.current();
+                    info("Deposited excess {} back to chest (cap {} stacks)", trade.inputItem1, trade.inputItem1MaxCarryStacks);
+                    setState(State.EVAL_RESTOCK);
+                }
+            }
+            case DEPOSIT_EXCESS_INPUT_2_GO_TO_CHEST -> {
+                var trade = tradeIterator.current();
+                storePathingFuture = BARITONE.rightClickBlock(trade.inputItem2Chest.x(), trade.inputItem2Chest.y(), trade.inputItem2Chest.z());
+                storePathingFuture.addExecutedListener(f -> waitForInteractTimer.reset());
+                setState(State.DEPOSIT_EXCESS_INPUT_2_DEPOSIT);
+            }
+            case DEPOSIT_EXCESS_INPUT_2_DEPOSIT -> {
+                if (storePathingFuture.isCompleted()) {
+                    var trade = tradeIterator.current();
+                    var openContainer = CACHE.getPlayerCache().getInventoryCache().getOpenContainer();
+                    if (openContainer.getContainerId() == 0) {
+                        if (waitForInteractTimer.tick(CONFIG.client.extra.villagerTrader.waitForInteractTimeoutTicks)) {
+                            setState(State.DEPOSIT_EXCESS_INPUT_2_GO_TO_CHEST);
+                        }
+                        return;
+                    }
+                    var input2 = trade.getInputItem2();
+                    int slotsToDeposit = Math.max(0, countSlotUsages(input2.id()) - trade.inputItem2MaxCarryStacks);
+                    var actions = Lists.newArrayList(
+                        InventoryActionMacros.deposit(
+                            openContainer.getContainerId(),
+                            i -> input2.id() == i.getId(),
+                            slotsToDeposit));
+                    actions.add(new CloseContainer(openContainer.getContainerId()));
+                    storeDepositFuture = INVENTORY.submit(InventoryActionRequest.builder()
+                        .owner(this)
+                        .priority(getPriority())
+                        .actions(actions)
+                        .build());
+                    setState(State.DEPOSIT_EXCESS_INPUT_2_AWAIT_DEPOSIT);
+                }
+            }
+            case DEPOSIT_EXCESS_INPUT_2_AWAIT_DEPOSIT -> {
+                if (storeDepositFuture.isCompleted()) {
+                    var trade = tradeIterator.current();
+                    info("Deposited excess {} back to chest (cap {} stacks)", trade.inputItem2, trade.inputItem2MaxCarryStacks);
+                    setState(State.EVAL_RESTOCK);
+                }
+            }
             case CRAFT_EMERALD_BLOCKS -> {
                 int emeraldBlockCount = countItem(ItemRegistry.EMERALD_BLOCK.id());
                 if (emeraldBlockCount == 0) {
@@ -312,19 +419,26 @@ public class VillagerTrader extends Module {
                 var trade = tradeIterator.current();
                 var nextVillagerOptional = nextVillager(trade);
                 if (nextVillagerOptional.isEmpty()) {
-                    if (interactedVillagersCache.asMap().isEmpty()) {
-                        warn("No villagers found to trade with, going back to restock chest");
-                        setState(State.EVAL_RESTOCK);
-                    } else {
+                    if (!interactedVillagersCache.asMap().isEmpty()) {
                         if (countItem(trade.getOutputItem().id()) > 0) {
                             setState(State.STORE_GO_TO_CHEST);
                         } else {
                             setState(State.READY_NEXT_TRADE);
                         }
+                    } else if (CONFIG.client.extra.villagerTrader.targetKnownVillagers && anyMatchingProfessionVillager(trade)) {
+                        // Targeting is on and matching-profession villagers ARE present, but none is known to offer
+                        // this trade (the rest are useless or known to offer only other trades) — don't hot-loop
+                        // the restock check, just move on to the next trade.
+                        debug("No villager offers trade {}; advancing", getTradeId(trade));
+                        setState(State.READY_NEXT_TRADE);
+                    } else {
+                        warn("No villagers found to trade with, going back to restock chest");
+                        setState(State.EVAL_RESTOCK);
                     }
                     return;
                 }
                 var nextVillager = nextVillagerOptional.get();
+                currentVillagerUuid = nextVillager.getUuid();
                 offersPacket = null;
                 interactWithVillagerFuture = BARITONE.rightClickEntity(nextVillager);
                 interactWithVillagerFuture.addExecutedListener(f -> waitForInteractTimer.reset());
@@ -350,25 +464,13 @@ public class VillagerTrader extends Module {
             }
             case TRADING_TRY_START_PURCHASE -> {
                 var trade = tradeIterator.current();
+                recordVillagerCapabilities(currentVillagerUuid, offersPacket);
                 var trades = offersPacket.getTrades();
                 List<InventoryAction> actions = Lists.newArrayList();
                 for (int i = 0; i < trades.length; i++) {
                     var villagerTrade = trades[i];
                     if (villagerTrade.isTradeDisabled()) continue;
-                    if (villagerTrade.getOutput() == null) continue;
-                    if (villagerTrade.getOutput().getId() != ItemRegistry.REGISTRY.get(trade.outputItem).id()) continue;
-                    if (villagerTrade.getFirstInput().getId() != ItemRegistry.REGISTRY.get(trade.inputItem1).id()) continue;
-                    if (trade.has2InputTrade()) {
-                        if (villagerTrade.getSecondInput() == null) continue;
-                        if (villagerTrade.getSecondInput().getId() != ItemRegistry.REGISTRY.get(trade.inputItem2).id()) continue;
-                    } else {
-                        if (villagerTrade.getSecondInput() != null) continue;
-                    }
-                    if (!trade.outputItemEnchantments.isEmpty()) {
-                        if (!enchantmentFilter(trade, villagerTrade.getOutput())) {
-                            continue;
-                        }
-                    }
+                    if (!villagerOfferMatchesTrade(villagerTrade, trade)) continue;
 
                     int availableTradeCount = villagerTrade.getMaxUses() - villagerTrade.getNumUses(); // each shift click can consume many trades
 
@@ -766,12 +868,79 @@ public class VillagerTrader extends Module {
     }
 
     private Optional<EntityLiving> nextVillager(final Trade trade) {
+        var tradeId = getTradeId(trade);
+        boolean targeting = CONFIG.client.extra.villagerTrader.targetKnownVillagers && tradeId != null;
         return CACHE.getEntityCache().getEntities().values().stream()
             .filter(e -> e.getEntityType() == EntityType.VILLAGER)
             .filter(e -> !interactedVillagersCache.asMap().containsKey(e.getUuid()))
             .map(e -> (EntityLiving) e)
             .filter(e -> trade.villagerProfession == getVillagerProfession(e))
+            .filter(e -> !targeting || villagerIsCandidate(e.getUuid(), tradeId))
             .min(Comparator.comparingDouble(e -> e.distanceSqTo(CACHE.getPlayerCache().getThePlayer())));
+    }
+
+    /**
+     * A villager is worth opening for {@code tradeId} if it is already KNOWN to offer that trade, or if it is
+     * still UNKNOWN (never opened — open it once to learn what it offers). Villagers known to offer none of the
+     * configured trades, or known to offer only other trades, are skipped.
+     */
+    private boolean villagerIsCandidate(UUID uuid, String tradeId) {
+        if (uselessVillagers.contains(uuid)) return false;
+        var caps = villagerTradeCapabilities.get(uuid);
+        if (caps == null) return true; // unknown — learn it
+        return caps.contains(tradeId);
+    }
+
+    private boolean anyMatchingProfessionVillager(final Trade trade) {
+        return CACHE.getEntityCache().getEntities().values().stream()
+            .filter(e -> e.getEntityType() == EntityType.VILLAGER)
+            .map(e -> (EntityLiving) e)
+            .anyMatch(e -> trade.villagerProfession == getVillagerProfession(e));
+    }
+
+    /** Record, against every configured trade, which ones this villager's offers can fulfill. */
+    private void recordVillagerCapabilities(UUID villagerUuid, ClientboundMerchantOffersPacket offers) {
+        if (villagerUuid == null || offers == null) return;
+        Set<String> caps = new HashSet<>();
+        for (var entry : CONFIG.client.extra.villagerTrader.trades.entrySet()) {
+            var t = entry.getValue();
+            if (!t.enabled) continue;
+            for (var villagerTrade : offers.getTrades()) {
+                if (villagerOfferMatchesTrade(villagerTrade, t)) {
+                    caps.add(entry.getKey());
+                    break;
+                }
+            }
+        }
+        if (caps.isEmpty()) {
+            uselessVillagers.add(villagerUuid);
+            villagerTradeCapabilities.remove(villagerUuid);
+        } else {
+            uselessVillagers.remove(villagerUuid);
+            villagerTradeCapabilities.put(villagerUuid, caps);
+        }
+    }
+
+    /** Whether a villager's offer matches a configured trade by item + enchant (ignores price/affordability/sold-out). */
+    private boolean villagerOfferMatchesTrade(VillagerTrade villagerTrade, Trade trade) {
+        if (villagerTrade.getOutput() == null) return false;
+        if (villagerTrade.getOutput().getId() != ItemRegistry.REGISTRY.get(trade.outputItem).id()) return false;
+        if (villagerTrade.getFirstInput().getId() != ItemRegistry.REGISTRY.get(trade.inputItem1).id()) return false;
+        if (trade.has2InputTrade()) {
+            if (villagerTrade.getSecondInput() == null) return false;
+            if (villagerTrade.getSecondInput().getId() != ItemRegistry.REGISTRY.get(trade.inputItem2).id()) return false;
+        } else {
+            if (villagerTrade.getSecondInput() != null) return false;
+        }
+        if (!trade.outputItemEnchantments.isEmpty()) {
+            return enchantmentFilter(trade, villagerTrade.getOutput());
+        }
+        return true;
+    }
+
+    private boolean overCarryCap(com.aquarius.mc.item.ItemData item, int maxStacks) {
+        if (maxStacks <= 0) return false;
+        return countItem(item.id()) > maxStacks * item.stackSize();
     }
 
     private VillagerProfession getVillagerProfession(EntityLiving villager) {
@@ -874,6 +1043,12 @@ public class VillagerTrader extends Module {
         RESTOCK_INPUT_2_GO_TO_CHEST,
         RESTOCK_INPUT_2_WITHDRAW,
         RESTOCK_INPUT_2_AWAIT_WITHDRAW,
+        DEPOSIT_EXCESS_INPUT_1_GO_TO_CHEST,
+        DEPOSIT_EXCESS_INPUT_1_DEPOSIT,
+        DEPOSIT_EXCESS_INPUT_1_AWAIT_DEPOSIT,
+        DEPOSIT_EXCESS_INPUT_2_GO_TO_CHEST,
+        DEPOSIT_EXCESS_INPUT_2_DEPOSIT,
+        DEPOSIT_EXCESS_INPUT_2_AWAIT_DEPOSIT,
         CRAFT_EMERALD_BLOCKS,
         AWAIT_CRAFT_EMERALD_BLOCKS,
         TRADING_INTERACT_WITH_VILLAGER,
