@@ -165,10 +165,19 @@ public class VillagerTrader extends Module {
         return countItem(ItemRegistry.EMERALD.id()) + 9 * countItem(ItemRegistry.EMERALD_BLOCK.id());
     }
 
+    /** Held count of a trade input. Emeralds count BOTH loose emeralds and emerald blocks (9 each), because the
+     * restock withdraw pulls either form and CRAFT_EMERALD_BLOCKS uncrafts blocks into spendable emeralds. Counting
+     * only loose emeralds made a bot whose supply chest holds emerald BLOCKS believe it had none — so it walked back
+     * to the chest every single trade, re-withdrew blocks into an already-stocked inventory, and logged a spurious
+     * "Failed restocking sufficient emerald" each cycle. */
+    private int heldInputCount(com.aquarius.mc.item.ItemData item) {
+        return item == ItemRegistry.EMERALD ? carriedEmeralds() : countItem(item.id());
+    }
+
     /** After a restock pass, can this trade actually do at least one purchase (does it hold each required input)? */
     private boolean tradeInputsAvailable(Trade trade) {
-        if (countItem(trade.getInputItem1().id()) <= 0) return false;
-        if (trade.has2InputTrade() && countItem(trade.getInputItem2().id()) <= 0) return false;
+        if (heldInputCount(trade.getInputItem1()) <= 0) return false;
+        if (trade.has2InputTrade() && heldInputCount(trade.getInputItem2()) <= 0) return false;
         return true;
     }
 
@@ -319,14 +328,14 @@ public class VillagerTrader extends Module {
                     return;
                 }
                 var input1 = ItemRegistry.REGISTRY.get(trade.inputItem1);
-                int input1Count = countItem(input1.id());
+                int input1Count = heldInputCount(input1);
                 if (give1RestockThreshold(trade) > input1Count) {
                     setState(State.RESTOCK_INPUT_1_GO_TO_CHEST);
                     return;
                 }
                 if (trade.has2InputTrade()) {
                     var input2 = ItemRegistry.REGISTRY.get(trade.inputItem2);
-                    int input2Count = countItem(input2.id());
+                    int input2Count = heldInputCount(input2);
                     if (give2RestockThreshold(trade) > input2Count) {
                         setState(State.RESTOCK_INPUT_2_GO_TO_CHEST);
                         return;
@@ -386,7 +395,7 @@ public class VillagerTrader extends Module {
                 if (restockWithdrawFuture.isCompleted()) {
                     var trade = tradeIterator.current();
                     var input1 = ItemRegistry.REGISTRY.get(trade.inputItem1);
-                    int input1Count = countItem(input1.id());
+                    int input1Count = heldInputCount(input1);
                     if (give1RestockThreshold(trade) > input1Count) {
                         error("Failed restocking sufficient {} for trade: {}", input1.name(), trade.outputItem);
                     }
@@ -440,7 +449,7 @@ public class VillagerTrader extends Module {
                 if (restockWithdrawFuture.isCompleted()) {
                     var trade = tradeIterator.current();
                     var input2 = ItemRegistry.REGISTRY.get(trade.inputItem2);
-                    int input2Count = countItem(input2.id());
+                    int input2Count = heldInputCount(input2);
                     if (give2RestockThreshold(trade) > input2Count) {
                         error("Failed restocking sufficient {} for trade: {}", input2.name(), trade.outputItem);
                     }
