@@ -463,9 +463,10 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
      *   <li>{@code "set"} (default) — coerce {@code value} to the leaf field's type and set it (scalars/enums).</li>
      *   <li>{@code "put"} — {@code path} is a {@link Map} field; deserialize {@code value} into the map's value type
      *       and {@code map.put(key, …)} (add or replace a keyed entry, e.g. a villager trade or saved trip route).</li>
-     *   <li>{@code "add"} — {@code path} is a {@link List} field; deserialize {@code value} into the element type and
-     *       append it (e.g. a pearl-stasis location).</li>
-     *   <li>{@code "remove"} — drop the {@code key} from a map field, or the {@code index} from a list field.</li>
+     *   <li>{@code "add"} — {@code path} is a {@link List} or {@link Set} field; deserialize {@code value} into the
+     *       element type and add it (a pearl-stasis location; an illegal item / AutoEat food in a string set).</li>
+     *   <li>{@code "remove"} — drop the {@code key} from a map, the {@code index} from a list, or the {@code value}
+     *       from a list/set (string collections remove by value, since a set has no index).</li>
      * </ul>
      */
     private static final class ControlConfigRequest { String path; String op; String key; Integer index; JsonElement value; }
@@ -582,16 +583,35 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
                             throw new IllegalArgumentException("index out of range");
                         list.set(index, com.aquarius.Globals.GSON.fromJson(value, elementType(f, 0)));
                     }
-                    case "remove" -> {
-                        if (index == null || index < 0 || index >= list.size())
-                            throw new IllegalArgumentException("index out of range");
-                        list.remove((int) index);
+                    case "remove" -> {                    // by index (objects) OR by value (string lists)
+                        if (index != null) {
+                            if (index < 0 || index >= list.size())
+                                throw new IllegalArgumentException("index out of range");
+                            list.remove((int) index);
+                        } else if (value != null) {
+                            list.remove(com.aquarius.Globals.GSON.fromJson(value, elementType(f, 0)));
+                        } else {
+                            throw new IllegalArgumentException("index or value required");
+                        }
                     }
                     default -> throw new IllegalArgumentException("op '" + op + "' is not valid on a list");
                 }
                 out.put("size", list.size());
+            } else if (container instanceof Set set) {     // string-set fields (itemsBlacklist, AutoEat foods, …)
+                switch (op) {
+                    case "add" -> {
+                        if (value == null) throw new IllegalArgumentException("value required");
+                        set.add(com.aquarius.Globals.GSON.fromJson(value, elementType(f, 0)));
+                    }
+                    case "remove" -> {                    // sets have no index — remove by value
+                        if (value == null) throw new IllegalArgumentException("value required");
+                        set.remove(com.aquarius.Globals.GSON.fromJson(value, elementType(f, 0)));
+                    }
+                    default -> throw new IllegalArgumentException("op '" + op + "' is not valid on a set");
+                }
+                out.put("size", set.size());
             } else {
-                throw new IllegalArgumentException(path + " is not a map or list");
+                throw new IllegalArgumentException(path + " is not a map, list or set");
             }
             saveConfigAsync();
             notifyConfigConsumers(path);
