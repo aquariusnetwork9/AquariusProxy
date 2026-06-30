@@ -24,7 +24,10 @@ import com.aquarius.network.client.ClientSession;
 import com.aquarius.network.codec.PacketHandlerCodec;
 import com.aquarius.network.codec.PacketHandlerStateCodec;
 import com.aquarius.util.RequestFuture;
+import com.aquarius.mc.block.BlockPos;
 import com.aquarius.util.config.Config.Client.Extra.VillagerTrader.Trade;
+import com.aquarius.util.config.Config.Client.Extra.VillagerTrader.Trade.PostTradeStoreMode;
+import com.aquarius.util.config.Config.Client.Extra.VillagerTrader.TradeGroup;
 import com.aquarius.util.math.MathHelper;
 import com.aquarius.util.timer.Timer;
 import com.aquarius.util.timer.Timers;
@@ -67,6 +70,9 @@ public class VillagerTrader extends Module {
     private RequestFuture postTradeDepositFuture = RequestFuture.rejected;
     private final Timer waitForRestockTimer = Timers.tickTimer();
     private final Timer waitForInteractTimer = Timers.tickTimer();
+    private final Timer idleRecheckTimer = Timers.tickTimer();
+    // Ids of trades currently out of supply (chest empty + can't afford). Cleared on a successful restock / re-probe.
+    private final Set<String> exhaustedTrades = new HashSet<>();
     private int preTradeOutputCount = 0;
     private int preTradeInput1Count = 0;
     private int preTradeInput2Count = 0;
@@ -103,6 +109,112 @@ public class VillagerTrader extends Module {
         return Baritone.getPriority() + 100;
     }
 
+    // ----------------------------------------------------------------------------------------------------------------
+    // Trade groups: a member trade shares its group's INPUT supply profile (give chests / restock / carry caps /
+    // overflow / post-trade mode) instead of its own. Output chest + offer stay per-trade. An emerald-EARNING member
+    // (outputItem == emerald) is the exception — it keeps its own input chest (the sell-item source) and its emerald
+    // output is kept, not stored, to refill the group.
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /** True for an emerald-producing member (sells items FOR emeralds to refill its group). */
+    private boolean isEarner(Trade trade) {
+        return trade.getOutputItem() == ItemRegistry.EMERALD;
+    }
+
+    /** The enabled group a trade belongs to, or null if ungrouped / group missing / group disabled. */
+    private @Nullable TradeGroup groupOf(Trade trade) {
+        if (trade.group == null || trade.group.isEmpty()) return null;
+        var g = CONFIG.client.extra.villagerTrader.groups.get(trade.group);
+        return (g != null && g.enabled) ? g : null;
+    }
+
+    /** The group a trade draws its INPUT supply from, or null when it uses its own per-trade fields (ungrouped or earner). */
+    private @Nullable TradeGroup supplyGroup(Trade trade) {
+        if (isEarner(trade)) return null;
+        return groupOf(trade);
+    }
+
+    private BlockPos give1Chest(Trade t)        { var g = supplyGroup(t); return g != null ? g.inputItem1Chest : t.inputItem1Chest; }
+    private BlockPos give2Chest(Trade t)        { var g = supplyGroup(t); return g != null ? g.inputItem2Chest : t.inputItem2Chest; }
+    private int give1RestockStacks(Trade t)     { var g = supplyGroup(t); return g != null ? g.inputItem1RestockStacks : t.inputItem1RestockStacks; }
+    private int give1RestockThreshold(Trade t)  { var g = supplyGroup(t); return g != null ? g.inputItem1RestockCountThreshold : t.inputItem1RestockCountThreshold; }
+    private int give2RestockStacks(Trade t)     { var g = supplyGroup(t); return g != null ? g.inputItem2RestockStacks : t.inputItem2RestockStacks; }
+    private int give2RestockThreshold(Trade t)  { var g = supplyGroup(t); return g != null ? g.inputItem2RestockCountThreshold : t.inputItem2RestockCountThreshold; }
+    private int give1MaxCarry(Trade t)          { var g = supplyGroup(t); return g != null ? g.inputItem1MaxCarryStacks : t.inputItem1MaxCarryStacks; }
+    private int give2MaxCarry(Trade t)          { var g = supplyGroup(t); return g != null ? g.inputItem2MaxCarryStacks : t.inputItem2MaxCarryStacks; }
+    private PostTradeStoreMode postTradeMode(Trade t) { var g = supplyGroup(t); return g != null ? g.postTradeStoreMode : t.postTradeStoreMode; }
+    private BlockPos overflowChest(Trade t)     { var g = supplyGroup(t); return g != null ? g.overflowChestPos : t.overflowChestPos; }
+
+    private int carriedEmeralds() {
+        return countItem(ItemRegistry.EMERALD.id()) + 9 * countItem(ItemRegistry.EMERALD_BLOCK.id());
+    }
+
+    /** After a restock pass, can this trade actually do at least one purchase (does it hold each required input)? */
+    private boolean tradeInputsAvailable(Trade trade) {
+        if (countItem(trade.getInputItem1().id()) <= 0) return false;
+        if (trade.has2InputTrade() && countItem(trade.getInputItem2().id()) <= 0) return false;
+        return true;
+    }
+
+    /** A grouped spender that consumes emeralds and is at/below its group's emerald floor (or simply out of emeralds). */
+    private boolean needsEmeraldRefill(Trade trade) {
+        if (isEarner(trade) || !trade.hasEmeraldInputs()) return false;
+        var g = groupOf(trade);
+        if (g == null) return false; // self-refill only applies within a group
+        int floor = Math.max(g.minEmeralds, 0); // 0 = passive: only when emeralds are actually gone
+        return carriedEmeralds() <= floor;
+    }
+
+    /** The first enabled, non-exhausted earner sharing {@code spender}'s group, or null. */
+    private @Nullable Trade pickGroupEarner(Trade spender) {
+        if (spender.group == null || spender.group.isEmpty()) return null;
+        for (var e : CONFIG.client.extra.villagerTrader.trades.entrySet()) {
+            var t = e.getValue();
+            if (!t.enabled || !isEarner(t)) continue;
+            if (!spender.group.equals(t.group)) continue;
+            if (exhaustedTrades.contains(e.getKey())) continue;
+            return t;
+        }
+        return null;
+    }
+
+    private boolean allEnabledTradesExhausted() {
+        boolean any = false;
+        for (var e : CONFIG.client.extra.villagerTrader.trades.entrySet()) {
+            if (!e.getValue().enabled) continue;
+            any = true;
+            if (!exhaustedTrades.contains(e.getKey())) return false;
+        }
+        return any;
+    }
+
+    /**
+     * Reached the trading phase but the trade can't be funded (its supply chest is empty). Mark it exhausted, then:
+     * try to run a group earner to refill emeralds; else, if EVERY enabled trade is exhausted, park (idle in place)
+     * instead of wandering; else advance to the next trade.
+     */
+    private void onTradeOutOfSupply(Trade trade) {
+        var id = getTradeId(trade);
+        if (id != null) exhaustedTrades.add(id);
+        if (needsEmeraldRefill(trade)) {
+            var earner = pickGroupEarner(trade);
+            if (earner != null && earner != trade) {
+                info("Group '{}' out of emeralds — running earner '{}' to refill", trade.group, getTradeId(earner));
+                tradeIterator.pointAt(earner);
+                setState(State.ENTRYPOINT);
+                return;
+            }
+        }
+        if (allEnabledTradesExhausted()) {
+            warn("All trades out of supply — parking until the supply chests are refilled");
+            BARITONE.stop();
+            idleRecheckTimer.reset();
+            setState(State.IDLE_PARKED);
+            return;
+        }
+        setState(State.READY_NEXT_TRADE);
+    }
+
     private void reset() {
         state = State.ENTRYPOINT;
         interactedVillagersCache.invalidateAll();
@@ -111,6 +223,8 @@ public class VillagerTrader extends Module {
         clearVillagerCache();
         waitForInteractTimer.reset();
         waitForRestockTimer.reset();
+        idleRecheckTimer.reset();
+        exhaustedTrades.clear();
         tradeIterator.reset();
         resetTradeCounter();
     }
@@ -167,41 +281,56 @@ public class VillagerTrader extends Module {
             }
             case EVAL_RESTOCK -> {
                 var trade = tradeIterator.current();
+                // Proactive self-refill: a grouped spender at/below its emerald floor detours to a group earner to top
+                // up before spending (with minEmeralds=0 this only fires once emeralds are actually gone).
+                if (needsEmeraldRefill(trade)) {
+                    var earner = pickGroupEarner(trade);
+                    if (earner != null && earner != trade) {
+                        debug("Group '{}' below emerald floor — running earner '{}' first", trade.group, getTradeId(earner));
+                        tradeIterator.pointAt(earner);
+                        setState(State.ENTRYPOINT);
+                        return;
+                    }
+                }
                 // Hard carry caps: shed any input held above the configured ceiling before (re)stocking, so the
                 // bot never hoards stacks of a shared input (e.g. books) it pulled but never sold.
-                if (overCarryCap(trade.getInputItem2(), trade.inputItem2MaxCarryStacks)) {
+                if (overCarryCap(trade.getInputItem2(), give2MaxCarry(trade))) {
                     setState(State.DEPOSIT_EXCESS_INPUT_2_GO_TO_CHEST);
                     return;
                 }
-                if (overCarryCap(trade.getInputItem1(), trade.inputItem1MaxCarryStacks)) {
+                if (overCarryCap(trade.getInputItem1(), give1MaxCarry(trade))) {
                     setState(State.DEPOSIT_EXCESS_INPUT_1_GO_TO_CHEST);
                     return;
                 }
                 var input1 = ItemRegistry.REGISTRY.get(trade.inputItem1);
                 int input1Count = countItem(input1.id());
-                if (trade.inputItem1RestockCountThreshold > input1Count) {
+                if (give1RestockThreshold(trade) > input1Count) {
                     setState(State.RESTOCK_INPUT_1_GO_TO_CHEST);
                     return;
                 }
                 if (trade.has2InputTrade()) {
                     var input2 = ItemRegistry.REGISTRY.get(trade.inputItem2);
                     int input2Count = countItem(input2.id());
-                    if (trade.inputItem2RestockCountThreshold > input2Count) {
+                    if (give2RestockThreshold(trade) > input2Count) {
                         setState(State.RESTOCK_INPUT_2_GO_TO_CHEST);
                         return;
                     }
                 }
-                var output = ItemRegistry.REGISTRY.get(trade.outputItem);
-                int outputCount = countItem(output.id());
-                if (outputCount > trade.outputItemStoreCountThreshold) {
-                    setState(State.STORE_GO_TO_CHEST);
-                    return;
+                // Earners keep their emerald output (it funds the group) — never store it.
+                if (!isEarner(trade)) {
+                    var output = ItemRegistry.REGISTRY.get(trade.outputItem);
+                    int outputCount = countItem(output.id());
+                    if (outputCount > trade.outputItemStoreCountThreshold) {
+                        setState(State.STORE_GO_TO_CHEST);
+                        return;
+                    }
                 }
                 setState(State.CRAFT_EMERALD_BLOCKS);
             }
             case RESTOCK_INPUT_1_GO_TO_CHEST -> {
                 var trade = tradeIterator.current();
-                restockPathingFuture = BARITONE.rightClickBlock(trade.inputItem1Chest.x(), trade.inputItem1Chest.y(), trade.inputItem1Chest.z());
+                var chest = give1Chest(trade);
+                restockPathingFuture = BARITONE.rightClickBlock(chest.x(), chest.y(), chest.z());
                 restockPathingFuture.addExecutedListener(f -> waitForInteractTimer.reset());
                 setState(State.RESTOCK_INPUT_1_WITHDRAW);
             }
@@ -220,7 +349,7 @@ public class VillagerTrader extends Module {
                                     }
                                     return i.getId() == input1.id();
                                 },
-                                trade.inputItem1RestockStacks));
+                                give1RestockStacks(trade)));
                         actions.add(new CloseContainer(openContainer.getContainerId()));
                         var request = InventoryActionRequest.builder()
                             .owner(this)
@@ -242,7 +371,7 @@ public class VillagerTrader extends Module {
                     var trade = tradeIterator.current();
                     var input1 = ItemRegistry.REGISTRY.get(trade.inputItem1);
                     int input1Count = countItem(input1.id());
-                    if (trade.inputItem1RestockCountThreshold > input1Count) {
+                    if (give1RestockThreshold(trade) > input1Count) {
                         error("Failed restocking sufficient {} for trade: {}", input1.name(), trade.outputItem);
                     }
                     if (trade.has2InputTrade()) {
@@ -254,7 +383,8 @@ public class VillagerTrader extends Module {
             }
             case RESTOCK_INPUT_2_GO_TO_CHEST -> {
                 var trade = tradeIterator.current();
-                restockPathingFuture = BARITONE.rightClickBlock(trade.inputItem2Chest.x(), trade.inputItem2Chest.y(), trade.inputItem2Chest.z());
+                var chest = give2Chest(trade);
+                restockPathingFuture = BARITONE.rightClickBlock(chest.x(), chest.y(), chest.z());
                 restockPathingFuture.addExecutedListener(f -> waitForInteractTimer.reset());
                 setState(State.RESTOCK_INPUT_2_WITHDRAW);
             }
@@ -273,7 +403,7 @@ public class VillagerTrader extends Module {
                                     }
                                     return i.getId() == input2.id();
                                 },
-                                trade.inputItem2RestockStacks));
+                                give2RestockStacks(trade)));
                         actions.add(new CloseContainer(openContainer.getContainerId()));
                         var request = InventoryActionRequest.builder()
                             .owner(this)
@@ -295,7 +425,7 @@ public class VillagerTrader extends Module {
                     var trade = tradeIterator.current();
                     var input2 = ItemRegistry.REGISTRY.get(trade.inputItem2);
                     int input2Count = countItem(input2.id());
-                    if (trade.inputItem2RestockCountThreshold > input2Count) {
+                    if (give2RestockThreshold(trade) > input2Count) {
                         error("Failed restocking sufficient {} for trade: {}", input2.name(), trade.outputItem);
                     }
                     setState(State.CRAFT_EMERALD_BLOCKS);
@@ -303,7 +433,8 @@ public class VillagerTrader extends Module {
             }
             case DEPOSIT_EXCESS_INPUT_1_GO_TO_CHEST -> {
                 var trade = tradeIterator.current();
-                storePathingFuture = BARITONE.rightClickBlock(trade.inputItem1Chest.x(), trade.inputItem1Chest.y(), trade.inputItem1Chest.z());
+                var chest = give1Chest(trade);
+                storePathingFuture = BARITONE.rightClickBlock(chest.x(), chest.y(), chest.z());
                 storePathingFuture.addExecutedListener(f -> waitForInteractTimer.reset());
                 setState(State.DEPOSIT_EXCESS_INPUT_1_DEPOSIT);
             }
@@ -318,7 +449,7 @@ public class VillagerTrader extends Module {
                         return;
                     }
                     var input1 = trade.getInputItem1();
-                    int slotsToDeposit = Math.max(0, countSlotUsages(input1.id()) - trade.inputItem1MaxCarryStacks);
+                    int slotsToDeposit = Math.max(0, countSlotUsages(input1.id()) - give1MaxCarry(trade));
                     var actions = Lists.newArrayList(
                         InventoryActionMacros.deposit(
                             openContainer.getContainerId(),
@@ -336,13 +467,14 @@ public class VillagerTrader extends Module {
             case DEPOSIT_EXCESS_INPUT_1_AWAIT_DEPOSIT -> {
                 if (storeDepositFuture.isCompleted()) {
                     var trade = tradeIterator.current();
-                    info("Deposited excess {} back to chest (cap {} stacks)", trade.inputItem1, trade.inputItem1MaxCarryStacks);
+                    info("Deposited excess {} back to chest (cap {} stacks)", trade.inputItem1, give1MaxCarry(trade));
                     setState(State.EVAL_RESTOCK);
                 }
             }
             case DEPOSIT_EXCESS_INPUT_2_GO_TO_CHEST -> {
                 var trade = tradeIterator.current();
-                storePathingFuture = BARITONE.rightClickBlock(trade.inputItem2Chest.x(), trade.inputItem2Chest.y(), trade.inputItem2Chest.z());
+                var chest = give2Chest(trade);
+                storePathingFuture = BARITONE.rightClickBlock(chest.x(), chest.y(), chest.z());
                 storePathingFuture.addExecutedListener(f -> waitForInteractTimer.reset());
                 setState(State.DEPOSIT_EXCESS_INPUT_2_DEPOSIT);
             }
@@ -357,7 +489,7 @@ public class VillagerTrader extends Module {
                         return;
                     }
                     var input2 = trade.getInputItem2();
-                    int slotsToDeposit = Math.max(0, countSlotUsages(input2.id()) - trade.inputItem2MaxCarryStacks);
+                    int slotsToDeposit = Math.max(0, countSlotUsages(input2.id()) - give2MaxCarry(trade));
                     var actions = Lists.newArrayList(
                         InventoryActionMacros.deposit(
                             openContainer.getContainerId(),
@@ -375,7 +507,7 @@ public class VillagerTrader extends Module {
             case DEPOSIT_EXCESS_INPUT_2_AWAIT_DEPOSIT -> {
                 if (storeDepositFuture.isCompleted()) {
                     var trade = tradeIterator.current();
-                    info("Deposited excess {} back to chest (cap {} stacks)", trade.inputItem2, trade.inputItem2MaxCarryStacks);
+                    info("Deposited excess {} back to chest (cap {} stacks)", trade.inputItem2, give2MaxCarry(trade));
                     setState(State.EVAL_RESTOCK);
                 }
             }
@@ -417,6 +549,14 @@ public class VillagerTrader extends Module {
             }
             case TRADING_INTERACT_WITH_VILLAGER -> {
                 var trade = tradeIterator.current();
+                // Restock has already run; if we still can't fund a single purchase, the supply chest is empty.
+                // Don't sweep the whole hall buying nothing — refill from a group earner, or park, or move on.
+                if (!tradeInputsAvailable(trade)) {
+                    onTradeOutOfSupply(trade);
+                    return;
+                }
+                var id = getTradeId(trade);
+                if (id != null) exhaustedTrades.remove(id); // supply is back for this trade
                 var nextVillagerOptional = nextVillager(trade);
                 if (nextVillagerOptional.isEmpty()) {
                     if (!interactedVillagersCache.asMap().isEmpty()) {
@@ -567,7 +707,7 @@ public class VillagerTrader extends Module {
                     var outputBought = countItem(trade.getOutputItem().id()) - preTradeOutputCount;
                     info("Bought {} {}", outputBought, trade.getOutputItem());
                     outputBuyCount += outputBought;
-                    if (countItem(trade.getOutputItem().id()) > trade.outputItemStoreCountThreshold) {
+                    if (!isEarner(trade) && countItem(trade.getOutputItem().id()) > trade.outputItemStoreCountThreshold) {
                         setState(State.STORE_GO_TO_CHEST);
                     } else {
                         setState(State.EVAL_RESTOCK);
@@ -623,7 +763,7 @@ public class VillagerTrader extends Module {
             }
             case READY_NEXT_TRADE -> {
                 var trade = tradeIterator.current();
-                switch (trade.postTradeStoreMode) {
+                switch (postTradeMode(trade)) {
                     case NONE -> {
                         setState(State.NEXT_TRADE);
                     }
@@ -637,7 +777,8 @@ public class VillagerTrader extends Module {
             }
             case POST_TRADE_INPUT_1_GO_TO -> {
                 var trade = tradeIterator.current();
-                postTradePathingFuture = BARITONE.rightClickBlock(trade.inputItem1Chest.x(), trade.inputItem1Chest.y(), trade.inputItem1Chest.z());
+                var chest = give1Chest(trade);
+                postTradePathingFuture = BARITONE.rightClickBlock(chest.x(), chest.y(), chest.z());
                 postTradePathingFuture.addExecutedListener(f -> waitForInteractTimer.reset());
                 setState(State.POST_TRADE_INPUT_1_DEPOSIT);
             }
@@ -688,7 +829,8 @@ public class VillagerTrader extends Module {
             }
             case POST_TRADE_INPUT_2_GO_TO -> {
                 var trade = tradeIterator.current();
-                postTradePathingFuture = BARITONE.rightClickBlock(trade.inputItem2Chest.x(), trade.inputItem2Chest.y(), trade.inputItem2Chest.z());
+                var chest = give2Chest(trade);
+                postTradePathingFuture = BARITONE.rightClickBlock(chest.x(), chest.y(), chest.z());
                 postTradePathingFuture.addExecutedListener(f -> waitForInteractTimer.reset());
                 setState(State.POST_TRADE_INPUT_2_DEPOSIT);
             }
@@ -735,7 +877,8 @@ public class VillagerTrader extends Module {
             }
             case POST_TRADE_OVERFLOW_GO_TO -> {
                 var trade = tradeIterator.current();
-                postTradePathingFuture = BARITONE.rightClickBlock(trade.overflowChestPos.x(), trade.overflowChestPos.y(), trade.overflowChestPos.z());
+                var chest = overflowChest(trade);
+                postTradePathingFuture = BARITONE.rightClickBlock(chest.x(), chest.y(), chest.z());
                 postTradePathingFuture.addExecutedListener(f -> waitForInteractTimer.reset());
                 setState(State.POST_TRADE_OVERFLOW_DEPOSIT);
             }
@@ -823,6 +966,15 @@ public class VillagerTrader extends Module {
                     info(EmbedSerializer.serialize(tradeResult));
                 }
                 setState(State.ENTRYPOINT);
+            }
+            case IDLE_PARKED -> {
+                // Every enabled trade is out of supply. Idle in place (no pathing churn) and periodically re-probe;
+                // clearing the exhausted marks forces a real restock attempt rather than instantly re-parking.
+                if (idleRecheckTimer.tick(CONFIG.client.extra.villagerTrader.idleRecheckTicks)) {
+                    debug("Re-probing supply chests after park");
+                    exhaustedTrades.clear();
+                    setState(State.EVAL_RESTOCK);
+                }
             }
         }
     }
@@ -1071,7 +1223,8 @@ public class VillagerTrader extends Module {
         POST_TRADE_OVERFLOW_DEPOSIT,
         POST_TRADE_OVERFLOW_AWAIT_DEPOSIT,
         NEXT_TRADE,
-        AWAIT_RESTOCK
+        AWAIT_RESTOCK,
+        IDLE_PARKED
     }
 
     public enum VillagerProfession {
@@ -1112,6 +1265,17 @@ public class VillagerTrader extends Module {
 
         public Trade current() {
             return backingArray[index];
+        }
+
+        /** Point the iterator at a specific (enabled) trade so the next cycle runs it. No-op if it isn't in the set. */
+        public boolean pointAt(Trade t) {
+            for (int i = 0; i < backingArray.length; i++) {
+                if (backingArray[i] == t) {
+                    index = i;
+                    return true;
+                }
+            }
+            return false;
         }
 
         @Override

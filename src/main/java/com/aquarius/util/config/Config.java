@@ -429,8 +429,54 @@ public final class Config {
 
                 public LinkedHashMap<String, Trade> trades = new LinkedHashMap<>();
 
+                /**
+                 * Named trade groups. A member trade (one whose {@link Trade#group} equals a key here) shares this
+                 * group's INPUT supply profile — give-1/give-2 chests, restock stacks &amp; thresholds, carry caps,
+                 * overflow chest and post-trade store mode — instead of using its own. The trade still keeps its own
+                 * output chest + store threshold + offer (profession/items/enchants/per-trade max). Configure the
+                 * emerald (+book) supply once on the group; every member buys from it. An emerald-EARNING member
+                 * (its {@code outputItem == emerald}) is the exception: it keeps its OWN input chest (the sell-item
+                 * source) and its emerald output is kept, not stored — that is what refills the group.
+                 */
+                public LinkedHashMap<String, TradeGroup> groups = new LinkedHashMap<>();
+
+                /**
+                 * When every enabled trade is supply-exhausted (no emeralds and no earner can produce), the trader
+                 * parks (idles in place instead of wandering) and re-probes the supply chests every this-many ticks,
+                 * auto-resuming once supply returns. 20 ticks = 1s.
+                 */
+                public long idleRecheckTicks = 200L;
+
+                /**
+                 * Shared input-supply profile for a {@link Trade#group}. Mirrors the per-trade resupply fields it
+                 * replaces for grouped spending trades.
+                 */
+                public static class TradeGroup {
+                    public boolean enabled = true;
+                    public BlockPos inputItem1Chest = BlockPos.ZERO;
+                    public BlockPos inputItem2Chest = BlockPos.ZERO;
+                    public int inputItem1RestockStacks = 4;
+                    public int inputItem1RestockCountThreshold = 64;
+                    public int inputItem2RestockStacks = 4;
+                    public int inputItem2RestockCountThreshold = 64;
+                    /** Hard ceiling (in stacks) on carried input 1; 0 = no cap (default — leaves emeralds untouched). */
+                    public int inputItem1MaxCarryStacks = 0;
+                    /** Hard ceiling (in stacks) on carried input 2; default 2 (e.g. books). 0 = no cap. */
+                    public int inputItem2MaxCarryStacks = 2;
+                    public Trade.PostTradeStoreMode postTradeStoreMode = Trade.PostTradeStoreMode.NONE;
+                    public BlockPos overflowChestPos = BlockPos.ZERO;
+                    /**
+                     * Self-refill: when carried emeralds fall below this, the trader prefers running the group's
+                     * emerald-earning trades to top up before continuing to spend. 0 = passive (rely on the normal
+                     * round-robin to reach the earner on its own).
+                     */
+                    public int minEmeralds = 0;
+                }
+
                 public static class Trade {
                     public boolean enabled = true;
+                    /** Name of the {@link TradeGroup} this trade belongs to, or "" = ungrouped (uses its own resupply; legacy behavior). */
+                    public String group = "";
                     public com.aquarius.module.impl.VillagerTrader.VillagerProfession villagerProfession = com.aquarius.module.impl.VillagerTrader.VillagerProfession.CLERIC;
                     public String inputItem1 = ItemRegistry.AIR.name();
                     public String inputItem2 = ItemRegistry.AIR.name();

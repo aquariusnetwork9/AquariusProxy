@@ -618,7 +618,8 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
     /** Best-effort: tell a running module its config list changed so it re-reads instead of using a stale snapshot. */
     private static void notifyConfigConsumers(final String path) {
         try {
-            if (path.equals("client.extra.villagerTrader.trades")) {
+            if (path.equals("client.extra.villagerTrader.trades")
+                || path.equals("client.extra.villagerTrader.groups")) {
                 final var m = MODULE.get(com.aquarius.module.impl.VillagerTrader.class);
                 if (m != null) m.onTradeListChange();
             }
