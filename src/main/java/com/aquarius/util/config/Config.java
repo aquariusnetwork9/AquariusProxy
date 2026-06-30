@@ -2046,6 +2046,76 @@ public final class Config {
 
                 /** Ticks to wait after a place before reading the WORLD to confirm the shulker really landed. */
                 public int placeVerifyTicks = 10;
+
+                /**
+                 * Legacy single config-defined kit template (slot index → item/count/match). Superseded by the
+                 * named {@link #kits} library + {@link #activeKit}; kept for back-compat and as the fallback when
+                 * no kit is selected. Empty + no active kit = fall back to reading a placed/cached example shulker.
+                 */
+                public LinkedHashMap<String, TemplateSlot> template = new LinkedHashMap<>();
+
+                /**
+                 * Saved kit library built in the ABM control plane: name → kit definition. The module builds the
+                 * {@link #activeKit}; selecting a kit just points the builder + the run at it, so several kit designs
+                 * can be kept and re-built on demand.
+                 */
+                public LinkedHashMap<String, KitDef> kits = new LinkedHashMap<>();
+
+                /**
+                 * Which saved kit the module builds. A name present in {@link #kits} builds that kit;
+                 * {@code "__auto"} forces a physical auto-detect; empty falls back to {@link #template} then physical.
+                 */
+                public String activeKit = "";
+
+                /**
+                 * Kit captured from a physically auto-detected example during the last run (item/count + detected
+                 * enchants per slot). The dashboard reads this to "import detected kit" into the builder so a kit
+                 * discovered in-world can be edited and saved into {@link #kits}. Written automatically whenever the
+                 * module builds a template from a placed/cached example shulker.
+                 */
+                public LinkedHashMap<String, TemplateSlot> captured = new LinkedHashMap<>();
+
+                /**
+                 * Build a trailing PARTIAL kit (when {@link #allowPartial}) only if at least this fraction of the
+                 * kit's slots can actually be filled from what was gathered — so leftover scraps (a few armor + a
+                 * tool) never get counted/built as another near-empty kit. 0.30 = 30%.
+                 */
+                public double partialMinSlotFraction = 0.30;
+
+                /** A named kit in the {@link #kits} library: its slot map (slot index → item/count/match). */
+                public static class KitDef {
+                    public LinkedHashMap<String, TemplateSlot> slots = new LinkedHashMap<>();
+                }
+
+                /** One slot of the config-defined kit template. */
+                public static class TemplateSlot {
+                    /** Item id (no {@code minecraft:} prefix needed), e.g. {@code diamond_pickaxe}. */
+                    public String item = "";
+                    /** How many of {@link #item} this slot holds (clamped to the item's real max stack at fill time). */
+                    public int count = 1;
+                    /** Per-slot match override. {@link SlotMatch#Auto} uses the global {@link #matchMode}. */
+                    public SlotMatch match = SlotMatch.Auto;
+                    /**
+                     * Required enchantments when {@link #match} == {@link SlotMatch#ByEnchants}: enchant ids (e.g.
+                     * {@code silk_touch}, {@code fortune}). A source item matches iff it is the same item AND carries
+                     * EVERY listed enchant (level-insensitive, extra enchants ignored) — this is what keeps a Silk
+                     * Touch pickaxe and a Fortune pickaxe as separate, independently-enforced needs.
+                     */
+                    public List<String> enchants = new ArrayList<>();
+                }
+
+                /**
+                 * Per-slot match strictness, independent of the global {@link #matchMode}.
+                 * <ul>
+                 *   <li>{@code Auto} — use the module's global {@link #matchMode}.</li>
+                 *   <li>{@code ByType} — same item id only (ignore all components).</li>
+                 *   <li>{@code ByEnchants} — same item id AND contains every enchant in the slot's {@code enchants}
+                 *       list (level-insensitive, robust to extra enchants). The reliable way to distinguish two
+                 *       enchanted tools of the same type (e.g. Silk Touch vs Fortune pickaxe).</li>
+                 *   <li>{@code Exact} — identical data components.</li>
+                 * </ul>
+                 */
+                public enum SlotMatch { Auto, ByType, ByEnchants, Exact }
             }
 
             /**

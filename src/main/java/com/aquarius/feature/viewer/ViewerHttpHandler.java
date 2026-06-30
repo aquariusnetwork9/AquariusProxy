@@ -676,6 +676,8 @@ public final class ViewerHttpHandler extends SimpleChannelInboundHandler<FullHtt
             final Map<String, Object> mm = new LinkedHashMap<>();
             mm.put("name", mod.getClass().getSimpleName());
             mm.put("enabled", mod.isEnabled());
+            // modules that expose a richer live status object for their control-plane page
+            if (mod instanceof com.aquarius.module.impl.KitMaker km) mm.put("status", km.statusJson());
             mods.add(mm);
         }
         mods.sort(Comparator.comparing(a -> (String) a.get("name")));

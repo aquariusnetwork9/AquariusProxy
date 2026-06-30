@@ -128,10 +128,26 @@ public class VillagerTrader extends Module {
         return (g != null && g.enabled) ? g : null;
     }
 
-    /** The group a trade draws its INPUT supply from, or null when it uses its own per-trade fields (ungrouped or earner). */
+    /** Whether a trade should run at all: ungrouped (or its group was deleted) → yes; in a DISABLED group → no.
+     * This is what makes the per-group on/off switch actually pause that group's trades. Static so the iterator can use it. */
+    static boolean groupActive(Trade t) {
+        if (t.group == null || t.group.isEmpty()) return true;
+        var g = CONFIG.client.extra.villagerTrader.groups.get(t.group);
+        return g == null || g.enabled;
+    }
+
+    private static boolean isUnset(BlockPos p) { return p == null || (p.x() == 0 && p.y() == 0 && p.z() == 0); }
+
+    /**
+     * The group a trade draws its INPUT supply from, or null when it uses its own per-trade fields. Null for an earner,
+     * an ungrouped/disabled trade, OR a group that has no give-1 chest set yet — that last case lets a group act as a
+     * pure organizational on/off bucket (members keep their own chests) until you actually give it a shared supply.
+     */
     private @Nullable TradeGroup supplyGroup(Trade trade) {
         if (isEarner(trade)) return null;
-        return groupOf(trade);
+        var g = groupOf(trade);
+        if (g == null || isUnset(g.inputItem1Chest)) return null;
+        return g;
     }
 
     private BlockPos give1Chest(Trade t)        { var g = supplyGroup(t); return g != null ? g.inputItem1Chest : t.inputItem1Chest; }
@@ -159,8 +175,8 @@ public class VillagerTrader extends Module {
     /** A grouped spender that consumes emeralds and is at/below its group's emerald floor (or simply out of emeralds). */
     private boolean needsEmeraldRefill(Trade trade) {
         if (isEarner(trade) || !trade.hasEmeraldInputs()) return false;
-        var g = groupOf(trade);
-        if (g == null) return false; // self-refill only applies within a group
+        var g = supplyGroup(trade);
+        if (g == null) return false; // self-refill only applies within a shared-supply group
         int floor = Math.max(g.minEmeralds, 0); // 0 = passive: only when emeralds are actually gone
         return carriedEmeralds() <= floor;
     }
@@ -1255,7 +1271,7 @@ public class VillagerTrader extends Module {
         int index = 0;
         Trade[] backingArray = CONFIG.client.extra.villagerTrader.trades.values()
             .stream()
-            .filter(trade -> trade.enabled)
+            .filter(trade -> trade.enabled && groupActive(trade))
             .toArray(Trade[]::new);
 
         @Override
@@ -1289,7 +1305,7 @@ public class VillagerTrader extends Module {
         public void refresh() {
             backingArray = CONFIG.client.extra.villagerTrader.trades.values()
                 .stream()
-                .filter(trade -> trade.enabled)
+                .filter(trade -> trade.enabled && groupActive(trade))
                 .toArray(Trade[]::new);
             if (index >= backingArray.length) {
                 index = 0;
