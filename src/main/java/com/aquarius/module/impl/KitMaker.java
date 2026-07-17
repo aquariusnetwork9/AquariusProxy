@@ -53,7 +53,7 @@ import static com.aquarius.Globals.CONFIG;
 public class KitMaker extends AbstractFieldModule {
 
     private enum State {
-        IDLE, SCAN_TEMPLATE, SCAN_LAYOUT, ENSURE_SHULKER, GATHER, PLACE_SHULKER, FILL, BREAK_SHULKER, DEPOSIT, DONE
+        IDLE, SCAN_TEMPLATE, SCAN_LAYOUT, ENSURE_UNIT, GATHER, PLACE_SHULKER, FILL, BREAK_SHULKER, FILL_BUNDLE, DEPOSIT, DONE
     }
 
     /**
@@ -88,6 +88,15 @@ public class KitMaker extends AbstractFieldModule {
     private int cyclesDone;
     private String doneReason = "stopped";
 
+    // bundle mode: the "unit" the run packages is an empty bundle (not a shulker), filled in-inventory (no
+    // place/break). Set from the active kit's fillMode in onEnable; drives the unit predicates + the FILL_BUNDLE path.
+    private boolean bundleMode;
+    private @Nullable List<Need> bNeeds;                          // needs to stuff into the bundle (aggregated, per item)
+    private int bNeedIdx;                                         // staging/vacuum cursor over bNeeds / bStaged
+    private int bBundleSlot = -1;                                 // inventory slot (9-44) holding the empty bundle
+    private final List<Integer> bStaged = new ArrayList<>();      // scratch slots each holding one need's exact-count stack
+    private int bStageSlot = -1;                                  // scratch slot currently being built to an exact count
+
     // status (surfaced to the ABM control plane via statusJson())
     private String lastError = "";
     private String lastErrorKind = "";                            // "" | shulkerEmpty | missingSupply | depositFull | setup | other
@@ -119,9 +128,22 @@ public class KitMaker extends AbstractFieldModule {
         template.clear(); shulkerSrc = null; itemSrcs.clear(); depositChest = null; scanQueue.clear();
         placedShulker = null; pendingPlace = null; lastPlaceSpot = null; templatePos = null;
         lastError = ""; lastErrorKind = ""; kitsBuildable = -1; nextKitFillable = 0.0; shortfalls.clear(); needsCache = null; availPerNeed = null;
-        setBreakingAllowed(false);                 // forbidden until a harvest phase
+        bundleMode = activeBundleMode();
+        bNeeds = null; bNeedIdx = 0; bBundleSlot = -1; bStaged.clear(); bStageSlot = -1;
+        setBreakingAllowed(false);                 // forbidden until a harvest phase (bundle mode never breaks)
         go(State.SCAN_TEMPLATE);
-        info("Kit Maker: reading the template + scanning the chest layout.");
+        info("Kit Maker: reading the {} template + scanning the chest layout.", bundleMode ? "bundle" : "shulker");
+    }
+
+    /** True iff the active named kit's fillMode is "bundle". Legacy single-template + physical auto-detect are shulker-only. */
+    private boolean activeBundleMode() {
+        var cfg = CONFIG.client.extra.kitMaker;
+        String ak = cfg.activeKit == null ? "" : cfg.activeKit.trim();
+        if (!ak.isEmpty() && !ak.equals("__auto")) {
+            var kd = cfg.kits.get(ak);
+            if (kd != null && "bundle".equalsIgnoreCase(kd.fillMode)) return true;
+        }
+        return false;
     }
 
     @Override
@@ -201,11 +223,12 @@ public class KitMaker extends AbstractFieldModule {
         switch (state) {
             case SCAN_TEMPLATE -> tickScanTemplate();
             case SCAN_LAYOUT -> tickScanLayout();
-            case ENSURE_SHULKER -> tickEnsureShulker();
+            case ENSURE_UNIT -> tickEnsureUnit();
             case GATHER -> tickGather();
             case PLACE_SHULKER -> tickPlaceShulker();
             case FILL -> tickFill();
             case BREAK_SHULKER -> tickBreakShulker();
+            case FILL_BUNDLE -> tickFillBundle();
             case DEPOSIT -> tickDeposit();
             case DONE -> stop(doneReason);
             default -> { }
@@ -221,10 +244,15 @@ public class KitMaker extends AbstractFieldModule {
         if (slotMap != null) {
             buildTemplateFromSlots(slotMap);
             if (template.isEmpty()) { abort("the selected kit has no valid items - build one in the dashboard"); return; }
-            info("Kit Maker: using {} ({} slots).", activeKitLabel(), template.size());
+            if (bundleMode) {
+                double w = bundleWeight();
+                if (w > 1.0 + 1e-6) { abort("this bundle kit needs " + (int) Math.round(w * 100) + "% of a bundle - trim items so it fits one bundle (100%)"); return; }
+            }
+            info("Kit Maker: using {} ({} slots{}).", activeKitLabel(), template.size(), bundleMode ? ", bundle" : "");
             go(State.SCAN_LAYOUT);
             return;
         }
+        if (bundleMode) { abort("bundle kit has no items - build one in the dashboard"); return; }   // bundles need a slot-map kit
         switch (step) {
             case 0 -> {
                 // Legacy physical path: resolve the template block once (explicit coords if set, else the nearest
@@ -449,22 +477,28 @@ public class KitMaker extends AbstractFieldModule {
         }
     }
 
-    /** Classify a container by its contents: empty-shulker store, finished-kit deposit, or item source. */
+    /** Classify a container by its contents: empty-unit store (shulker/bundle), finished-kit deposit, or item source. */
     private void classify(BlockPos pos, Container c) {
-        boolean anyEmptyShulker = false, anyNonShulker = false;
+        boolean anyEmptyUnit = false, anyMaterial = false;
         int chestSlots = Math.max(0, c.getSize() - 36);
         for (int i = 0; i < chestSlots; i++) {
             ItemStack s = c.getItemStack(i);
             if (s == Container.EMPTY_STACK) continue;
-            if (isEmptyShulker(s)) anyEmptyShulker = true;
-            else if (!isShulkerBox(s)) anyNonShulker = true;   // a real material (filled kit shulkers are neither)
+            if (isEmptyUnit(s)) anyEmptyUnit = true;
+            else if (!isUnitItem(s)) anyMaterial = true;   // a real material (empty/filled kit units are neither)
         }
-        // Priority: a chest with real materials is an item source; one with empty shulkers is the shulker supply;
-        // anything else (empty, OR holding only FINISHED kit shulkers) is the deposit — the deposit naturally fills
+        // A chest holding ONLY shulkers stuffed with real materials must not fall through to "the deposit" (that
+        // slot is claimed by the first container with no top-level items) - peek inside every shulker (read-only,
+        // via its CONTAINER component) even though gather/tally only reach top-level slots today. This only fixes
+        // the classification; it deliberately does NOT feed the numeric "kits buildable" tally, since gather can't
+        // actually reach nested items yet - promising supply it can't pull would be worse than not counting it.
+        if (!anyMaterial && findShulkerSlotContaining(c, s -> isRealItem(s) && !isUnitItem(s)) != -1) anyMaterial = true;
+        // Priority: a chest with real materials is an item source; one with empty units is the shulker/bundle supply;
+        // anything else (empty, OR holding only FINISHED kit units) is the deposit — the deposit naturally fills
         // with kits across runs, so it must NOT be required to be empty (that broke every re-run).
-        if (anyNonShulker)                          { itemSrcs.add(pos); tallySupply(c); info("Kit Maker:  item source @ {}", pos); return; }
-        if (anyEmptyShulker) { if (shulkerSrc == null) { shulkerSrc = pos; info("Kit Maker:  shulker source @ {}", pos); } return; }
-        if (depositChest == null)                   { depositChest = pos; info("Kit Maker:  kit deposit @ {}", pos); }
+        if (anyMaterial)                          { itemSrcs.add(pos); tallySupply(c); info("Kit Maker:  item source @ {}", pos); return; }
+        if (anyEmptyUnit) { if (shulkerSrc == null) { shulkerSrc = pos; info("Kit Maker:  {} source @ {}", unitName(), pos); } return; }
+        if (depositChest == null)                 { depositChest = pos; info("Kit Maker:  kit deposit @ {}", pos); }
     }
 
     /** Accumulate how many of each need an item-source chest holds (drives the "kits buildable" estimate). */
@@ -482,11 +516,11 @@ public class KitMaker extends AbstractFieldModule {
 
     private void finishLayout() {
         computeEstimate();
-        if (shulkerSrc == null) { abort("no chest of empty shulkers found (the shulker source)"); return; }
+        if (shulkerSrc == null) { abort("no chest of empty " + unitName() + "s found (the " + unitName() + " source)"); return; }
         if (depositChest == null) { abort("no empty chest found for finished kits (the deposit)"); return; }
         if (itemSrcs.isEmpty()) { abort("no item-source chests found"); return; }
         info("Kit Maker: layout OK - {} item sources, ~{} kits buildable. Making kits.", itemSrcs.size(), kitsBuildable);
-        go(State.ENSURE_SHULKER);
+        go(State.ENSURE_UNIT);
     }
 
     /**
@@ -547,31 +581,32 @@ public class KitMaker extends AbstractFieldModule {
 
     // ---------------------------------------------------------------- per-kit loop
 
-    private void tickEnsureShulker() {
+    /** Ensure the inventory holds one empty kit unit (shulker box, or bundle in bundle mode), then gather. */
+    private void tickEnsureUnit() {
         var cfg = CONFIG.client.extra.kitMaker;
         if (cfg.maxKits > 0 && cyclesDone >= cfg.maxKits) { doneReason = "reached max kits (" + cfg.maxKits + ")"; go(State.DONE); return; }
         switch (step) {
             case 0 -> {
-                if (countInInv(this::isEmptyShulker) > 0) { srcIdx = 0; go(State.GATHER); return; }
+                if (countInInv(this::isEmptyUnit) > 0) { srcIdx = 0; go(State.GATHER); return; }
                 if (!arrivedAt(new GoalNear(shulkerSrc, REACH_RANGE_SQ))) { pathGoal = pathToNear(shulkerSrc); timer = cfg.actionDelayTicks; return; }
                 if (BARITONE.isActive()) BARITONE.stop();
                 open(shulkerSrc); timer = cfg.settleTicks; step = 1; attempts = 0;
             }
             case 1 -> {
                 if (openContainerId() == 0) {
-                    if (++attempts >= 6) { abort("shulker source wouldn't open"); return; }
+                    if (++attempts >= 6) { abort(unitName() + " source wouldn't open"); return; }
                     open(shulkerSrc); timer = cfg.settleTicks; return;
                 }
                 Container c = openContainer();
-                int src = c == null ? -1 : findContainerSlot(c, this::isEmptyShulker);
-                if (src == -1) { closeContainer(); doneReason = "no empty shulkers left in the source"; go(State.DONE); return; }
+                int src = c == null ? -1 : findContainerSlot(c, this::isEmptyUnit);
+                if (src == -1) { closeContainer(); doneReason = "no empty " + unitName() + "s left in the source"; go(State.DONE); return; }
                 if (!inventoryBusy()) shiftClick(c, src);
                 timer = cfg.fillDelayTicks; step = 2;
             }
-            default -> {   // wait for the pulled shulker to land in the OPEN window, then close + gather
+            default -> {   // wait for the pulled unit to land in the OPEN window, then close + gather
                 Container c = openContainer();
-                if (c != null && findPlayerWindowSlot(c, this::isEmptyShulker) != -1) { closeContainer(); srcIdx = 0; go(State.GATHER); }
-                else if (++attempts >= 12) { abort("pulled a shulker but it didn't reach the inventory"); }
+                if (c != null && findPlayerWindowSlot(c, this::isEmptyUnit) != -1) { closeContainer(); srcIdx = 0; go(State.GATHER); }
+                else if (++attempts >= 12) { abort("pulled a " + unitName() + " but it didn't reach the inventory"); }
                 else timer = cfg.fillDelayTicks;
             }
         }
@@ -581,17 +616,17 @@ public class KitMaker extends AbstractFieldModule {
         var cfg = CONFIG.client.extra.kitMaker;
         switch (step) {
             case 0 -> {
-                if (allNeedsMet()) { if (openContainerId() != 0) closeContainer(); goPlaceShulker(); return; }
+                if (allNeedsMet()) { proceedToFill(); return; }
                 if (srcIdx >= itemSrcs.size()) {
-                    if (openContainerId() != 0) closeContainer();
                     // Sources exhausted without a full kit. Build a best-effort PARTIAL kit only if allowed AND we
                     // gathered at least `partialMinSlotFraction` of the kit's slots — a few scraps don't get built
                     // (or counted) as a near-empty kit. Below that threshold, stop instead of looping.
                     double frac = gatheredSlotFraction();
                     if (cfg.allowPartial && frac >= cfg.partialMinSlotFraction) {
                         info("Kit Maker: sources short - building a partial kit ({}% of slots filled).", (int) Math.round(frac * 100));
-                        goPlaceShulker(); return;
+                        proceedToFill(); return;
                     }
+                    if (openContainerId() != 0) closeContainer();
                     doneReason = "not enough items in the sources for a kit"; go(State.DONE); return;
                 }
                 BlockPos src = itemSrcs.get(srcIdx);
@@ -626,6 +661,13 @@ public class KitMaker extends AbstractFieldModule {
     /** Enter PLACE_SHULKER fresh. */
     private void goPlaceShulker() { lastPlaceSpot = null; go(State.PLACE_SHULKER); }
 
+    /** After gathering, hand off to the mode's fill phase: FILL_BUNDLE (in-inventory) or PLACE_SHULKER (place+fill+break). */
+    private void proceedToFill() {
+        if (openContainerId() != 0) closeContainer();
+        if (bundleMode) go(State.FILL_BUNDLE);
+        else goPlaceShulker();
+    }
+
     private void tickPlaceShulker() {
         var cfg = CONFIG.client.extra.kitMaker;
         switch (step) {
@@ -637,7 +679,7 @@ public class KitMaker extends AbstractFieldModule {
                     timer = cfg.actionDelayTicks * 2; return;
                 }
                 int slot = findInInv(this::isEmptyShulker);
-                if (slot == -1) { go(State.ENSURE_SHULKER); return; }
+                if (slot == -1) { go(State.ENSURE_UNIT); return; }
                 place(pendingPlace, itemDataAt(slot));
                 lastPlaceSpot = pendingPlace;
                 timer = cfg.placeVerifyTicks; step = 1;
@@ -719,6 +761,144 @@ public class KitMaker extends AbstractFieldModule {
         if (empty != -1) leftClick(c, empty);
     }
 
+    // ---------------------------------------------------------------- bundle fill (no place/break)
+
+    /**
+     * FILL_BUNDLE — package the kit into an empty bundle held in the inventory. No chest is open: all clicks target
+     * the player-inventory window (container 0). Robust exact counts: because a bundle has no addressable slots and
+     * caps at one stack-equivalent by weight, inserting a whole source stack would starve later items — so we first
+     * STAGE each aggregated need into its own scratch slot holding EXACTLY the wanted count (built one item at a time
+     * from whatever source stacks were gathered, so a full source stack yields a partial-count staged stack), then
+     * pick the bundle up onto the cursor once and VACUUM each staged stack into it, then set the filled bundle down
+     * for DEPOSIT. Weight was pre-checked in SCAN_TEMPLATE, so every staged stack fits.
+     */
+    private void tickFillBundle() {
+        var cfg = CONFIG.client.extra.kitMaker;
+        Container c = openContainer();                 // container 0 (player inventory) while nothing is open
+        switch (step) {
+            case 0 -> {                                // INIT: player-inv window, free cursor, locate the empty bundle
+                if (openContainerId() != 0) { closeContainer(); timer = cfg.settleTicks; return; }
+                if (inventoryBusy()) { timer = cfg.fillDelayTicks; return; }
+                if (!cursorEmpty()) { stashCursorInv(c); timer = cfg.fillDelayTicks; return; }
+                bBundleSlot = findInInv(this::isEmptyBundle);
+                if (bBundleSlot == -1) { go(State.ENSURE_UNIT); return; }
+                bNeeds = aggregateNeeds();
+                bNeedIdx = 0; bStaged.clear(); bStageSlot = -1;
+                step = 1;
+            }
+            case 1 -> {                                // STAGE: build one exact-count scratch stack per need
+                if (bNeeds == null) { step = 0; return; }
+                if (bNeedIdx >= bNeeds.size()) {
+                    if (bStaged.isEmpty()) { doneReason = "no items available to fill the bundle"; go(State.DONE); return; }
+                    bNeedIdx = 0; step = 3; return;    // -> pick up the bundle
+                }
+                stageNextNeed(c, cfg);
+            }
+            case 3 -> {                                // acquire the empty bundle onto the cursor
+                if (inventoryBusy()) { timer = cfg.fillDelayTicks; return; }
+                ItemStack cur = mouseStack();
+                if (cur != Container.EMPTY_STACK && isBundle(cur)) { bNeedIdx = 0; step = 4; return; }
+                if (cur != Container.EMPTY_STACK) { stashCursorInv(c); timer = cfg.fillDelayTicks; return; }
+                bBundleSlot = findInInv(this::isEmptyBundle);   // slot may have shuffled during staging
+                if (bBundleSlot == -1) { doneReason = "lost the empty bundle before filling"; go(State.DONE); return; }
+                leftClick(c, bBundleSlot); timer = cfg.fillDelayTicks;
+            }
+            case 4 -> {                                // vacuum each staged stack into the bundle-on-cursor
+                if (inventoryBusy()) { timer = cfg.fillDelayTicks; return; }
+                ItemStack cur = mouseStack();
+                if (cur == Container.EMPTY_STACK || !isBundle(cur)) { step = 3; return; }   // lost the bundle -> re-grab
+                if (bNeedIdx >= bStaged.size()) { step = 5; attempts = 0; return; }
+                int slot = bStaged.get(bNeedIdx);
+                if (c.getItemStack(slot) == Container.EMPTY_STACK) { bNeedIdx++; return; }   // already consumed
+                leftClick(c, slot); bNeedIdx++; timer = cfg.fillDelayTicks;
+            }
+            default -> {                               // FINISH: set the filled bundle down, then deposit it
+                if (inventoryBusy()) { timer = cfg.fillDelayTicks; return; }
+                ItemStack cur = mouseStack();
+                if (cur != Container.EMPTY_STACK && isBundle(cur)) {
+                    int dst = findEmptyInvSlot(c, -1);
+                    if (dst == -1) { doneReason = "no inventory room to set down the filled bundle"; go(State.DONE); return; }
+                    leftClick(c, dst); timer = cfg.settleTicks; attempts = 0; return;
+                }
+                // cursor free: wait for the server to confirm the filled bundle landed, then deposit
+                if (countInInv(this::isFilledBundle) > 0 || ++attempts >= 12) { go(State.DEPOSIT); }
+                else timer = cfg.fillDelayTicks;
+            }
+        }
+    }
+
+    /** Stage the current need ({@code bNeeds.get(bNeedIdx)}) into one scratch slot holding exactly its wanted count,
+     *  one click per tick. Full source stacks are trimmed down by depositing single items; when the sources can't
+     *  reach the wanted count, the partial amount gathered is staged (partial kit) or the need is skipped. */
+    private void stageNextNeed(Container c, com.aquarius.util.config.Config.Client.Extra.KitMaker cfg) {
+        if (inventoryBusy()) { timer = cfg.fillDelayTicks; return; }
+        Need need = bNeeds.get(bNeedIdx);
+        KitSlot ks = need.slot();
+        int want = need.count();
+
+        if (bStageSlot == -1) {
+            // fast path: a slot already holds EXACTLY the wanted count of the matching item — vacuum it as-is
+            int exact = findInvSlot(i -> i != bBundleSlot && !bStaged.contains(i)
+                && matchesSlot(c.getItemStack(i), ks) && c.getItemStack(i).getAmount() == want);
+            if (exact != -1) { bStaged.add(exact); bNeedIdx++; return; }
+            int scratch = findEmptyInvSlot(c, bBundleSlot);
+            if (scratch == -1) { doneReason = "not enough inventory space to stage the bundle"; go(State.DONE); return; }
+            bStageSlot = scratch;
+        }
+
+        ItemStack staged = c.getItemStack(bStageSlot);
+        int have = (staged != Container.EMPTY_STACK && matchesSlot(staged, ks)) ? staged.getAmount() : 0;
+        if (have >= want) { bStaged.add(bStageSlot); bStageSlot = -1; bNeedIdx++; return; }
+
+        ItemStack cur = mouseStack();
+        if (cur != Container.EMPTY_STACK && matchesSlot(cur, ks)) { rightClick(c, bStageSlot); timer = cfg.fillDelayTicks; return; }
+        if (cur != Container.EMPTY_STACK) { stashCursorInv(c); timer = cfg.fillDelayTicks; return; }   // wrong item held
+
+        int src = findInvSlot(i -> i != bStageSlot && i != bBundleSlot && !bStaged.contains(i)
+            && matchesSlot(c.getItemStack(i), ks) && c.getItemStack(i).getAmount() > 0);
+        if (src == -1) {                               // nothing more of this item available
+            if (have > 0) { bStaged.add(bStageSlot); bStageSlot = -1; bNeedIdx++; }        // stage the partial we built
+            else if (CONFIG.client.extra.kitMaker.allowPartial) { bStageSlot = -1; bNeedIdx++; }  // skip need entirely
+            else { doneReason = "ran out of " + itemNameOf(ks) + " while filling the bundle"; go(State.DONE); }
+            return;
+        }
+        leftClick(c, src); timer = cfg.fillDelayTicks;  // whole source stack onto the cursor to trim from
+    }
+
+    /** Drop the cursor stack into the first empty standalone-inventory slot (9-44). */
+    private void stashCursorInv(Container c) {
+        int e = findEmptyInvSlot(c, -1);
+        if (e != -1) leftClick(c, e);
+    }
+    /** First standalone-inventory slot (9-44) whose index satisfies {@code pred}, or -1. */
+    private int findInvSlot(java.util.function.IntPredicate pred) {
+        for (int i = 9; i <= 44; i++) if (pred.test(i)) return i;
+        return -1;
+    }
+    /** First empty standalone-inventory slot (9-44), excluding {@code except}, or -1. */
+    private int findEmptyInvSlot(Container c, int except) {
+        for (int i = 9; i <= 44; i++) if (i != except && c.getItemStack(i) == Container.EMPTY_STACK) return i;
+        return -1;
+    }
+
+    // ---------------------------------------------------------------- unit (shulker / bundle) helpers
+
+    private boolean isEmptyUnit(@Nullable ItemStack s) { return bundleMode ? isEmptyBundle(s) : isEmptyShulker(s); }
+    private boolean isFilledUnit(@Nullable ItemStack s) { return bundleMode ? isFilledBundle(s) : isFilledShulker(s); }
+    private boolean isUnitItem(@Nullable ItemStack s) { return bundleMode ? isBundle(s) : isShulkerBox(s); }
+    private String unitName() { return bundleMode ? "bundle" : "shulker"; }
+
+    /** Total bundle weight of the current template, where 1.0 == one full bundle (Σ count / maxStack per item). */
+    private double bundleWeight() {
+        double w = 0;
+        for (Need n : aggregateNeeds()) {
+            ItemData d = ItemRegistry.REGISTRY.get(n.slot().itemId());
+            int max = d == null ? 64 : Math.max(1, d.stackSize());
+            w += (double) n.count() / max;
+        }
+        return w;
+    }
+
     private void tickBreakShulker() {
         var cfg = CONFIG.client.extra.kitMaker;
         if (step == 0) { setBreakingAllowed(true); step = 1; attempts = 0; }     // harvest phase: breaking ON
@@ -756,12 +936,12 @@ public class KitMaker extends AbstractFieldModule {
             default -> {
                 Container c = openContainer();
                 if (c == null) { step = 0; return; }
-                int src = findPlayerWindowSlot(c, this::isFilledShulker);
+                int src = findPlayerWindowSlot(c, this::isFilledUnit);
                 if (src == -1) {                                   // all finished kits deposited
                     closeContainer();
                     cyclesDone++;
                     info("Kit Maker: kit #{} deposited.", cyclesDone);
-                    go(State.ENSURE_SHULKER);
+                    go(State.ENSURE_UNIT);
                     return;
                 }
                 if (containerFull(c)) { closeContainer(); doneReason = "deposit chest is full"; go(State.DONE); return; }
@@ -962,6 +1142,8 @@ public class KitMaker extends AbstractFieldModule {
         m.put("hazardPaused", hazardPaused);
         m.put("kits", cyclesDone);
         m.put("maxKits", cfg.maxKits);
+        m.put("fillMode", bundleMode ? "bundle" : "shulker");
+        m.put("bundleFullPct", bundleMode ? (int) Math.round(bundleWeight() * 100) : 0);
         m.put("templateSlots", template.size());
         m.put("templateConfigured", !cfg.template.isEmpty());
         m.put("shulkerSrcOk", shulkerSrc != null);

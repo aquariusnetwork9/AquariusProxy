@@ -44,7 +44,7 @@ public class Regear extends AbstractFieldModule {
     private enum State {
         IDLE, RELOCATE, ACQUIRE, PLACE_ECHEST, PATH_ECHEST, OPEN_ECHEST, PULL_KIT, CLOSE_ECHEST,
         PLACE_KIT, OPEN_KIT, EMPTY_KIT, CLOSE_KIT, BREAK_KIT,
-        RETURN_OPEN, RETURN_DEPOSIT, RETURN_CLOSE, RECOVER_ECHEST, GEAR_UP, DONE
+        RETURN_OPEN, RETURN_DEPOSIT, RETURN_CLOSE, CHERRY_CHECK, RECOVER_ECHEST, GEAR_UP, DONE
     }
 
     private State state = State.IDLE;
@@ -66,8 +66,10 @@ public class Regear extends AbstractFieldModule {
     private boolean flightRefill;   // set by ElytraTrip: pull ONLY items the flight checklist is missing
     private boolean elytraRefill;   // set by ElytraPilot: refill ONLY elytras (fresh in, spent back to the kit)
     private int elytraRefillTarget; // target count of fresh elytras to hold in the inventory after the refill
+    private int mendBottleTarget;   // elytraRefill only: also pull XP bottles up to this count (0 = don't bother)
 
     private int gearArmorIdx;   // gear-up: which armour slot we're filling (0-3)
+    private int cherryPickAttempts;   // extra shulkers opened by the cherry-pick fallback beyond the primary kit shulker
     private int relocateAttempts;  // self-kills spent looking for an open-sky spot with a reachable echest
     private boolean relocateForceKill;  // RELOCATE entered from a reach failure: self-kill, don't re-accept this spot
     private double pathBestDist;   // closest we've gotten to the echest this attempt (stuck detector)
@@ -79,6 +81,10 @@ public class Regear extends AbstractFieldModule {
     /** ElytraPilot's e-bounce resupply: refill ONLY elytras — pull FRESH ones from the kit until the inventory holds
      *  {@code target}, dumping the SPENT ones back into the kit. The worn (armor) elytra is never touched. */
     public void setElytraRefill(boolean b, int target) { elytraRefill = b; elytraRefillTarget = target; }
+
+    /** ElytraPilot's e-bounce Mending repair: while already sourcing elytras, ALSO pull XP bottles up to
+     *  {@code target} (0 = don't bother) — sourcing only, ElytraPilot owns the actual throw once Regear completes. */
+    public void setMendBottleTarget(int target) { mendBottleTarget = target; }
 
     // --- kit-profile override: temporarily source the shulker-match + equip flags from a named KitProfile ---
     private record RegearSnapshot(String name, boolean matchColor, String color, boolean contents,
@@ -130,6 +136,7 @@ public class Regear extends AbstractFieldModule {
         pushProfile(CONFIG.client.extra.kitProfile(CONFIG.client.extra.regear.profile));
         paused = false; complete = false; hazardPaused = false;
         gearArmorIdx = 0;
+        cherryPickAttempts = 0;
         relocateAttempts = 0;
         relocateForceKill = false; pathBestDist = Double.MAX_VALUE; pathStuckTicks = 0;
         ownEchest = false; echPos = null; shulkPos = null; pathGoal = null; kitShulkerItem = null; avoidSpot = null;
@@ -150,6 +157,7 @@ public class Regear extends AbstractFieldModule {
         state = State.IDLE;
         flightRefill = false;
         elytraRefill = false;
+        mendBottleTarget = 0;
         echPos = null; shulkPos = null; pathGoal = null; kitShulkerItem = null; avoidSpot = null;
     }
 
@@ -167,6 +175,7 @@ public class Regear extends AbstractFieldModule {
         state = State.IDLE;
         flightRefill = false;
         elytraRefill = false;
+        mendBottleTarget = 0;
         warn("Regear paused: {}. Toggle /regear off/on to retry.", reason);
         inGameAlertActivePlayer("<red>Regear paused: " + reason);
     }
@@ -177,6 +186,7 @@ public class Regear extends AbstractFieldModule {
         state = State.IDLE;
         flightRefill = false;
         elytraRefill = false;
+        mendBottleTarget = 0;
         info("Regear complete - geared up.");
         inGameAlertActivePlayer("<green>Regear complete");
         if (CONFIG.client.extra.regear.disableWhenDone) {
@@ -219,7 +229,8 @@ public class Regear extends AbstractFieldModule {
             case BREAK_KIT -> tickBreakKit();
             case RETURN_OPEN -> tickReturnOpen();
             case RETURN_DEPOSIT -> tickReturnDeposit();
-            case RETURN_CLOSE -> tickCloseThen(ownEchest ? State.RECOVER_ECHEST : State.GEAR_UP);
+            case RETURN_CLOSE -> tickCloseThen(State.CHERRY_CHECK);
+            case CHERRY_CHECK -> tickCherryCheck();
             case RECOVER_ECHEST -> tickRecoverEchest();
             case GEAR_UP -> tickGearUp();
             case DONE -> finishOk();
@@ -377,21 +388,50 @@ public class Regear extends AbstractFieldModule {
         }
     }
 
-    /** Find the named/coloured kit shulker in the open echest and pull it into the inventory. */
+    /**
+     * Find the shulker to pull into the inventory. Round 0 tries the primary named/coloured/contents-matched
+     * "kit" shulker first, exactly as before — but most echests aren't organised around one hand-packed kit;
+     * they're separate single-item shulkers (an elytra shulker, a totem shulker, a rockets shulker, ...). So if
+     * round 0's primary match comes up empty, it falls straight through to the SAME cherry-pick search a later
+     * round would use ({@link #findRichestShulkerSlot} + {@link #cherryPickStillNeeds}: a read-only peek via each
+     * shulker's CONTAINER component, matching purely on content — the RICHEST match wins, never name/colour)
+     * instead of aborting, and marks this as a cherry-pick round from here on, so {@link #tickEmptyKit} pulls
+     * only what's needed rather than dumping the whole shulker.
+     */
     private void tickPullKit() {
         var cfg = CONFIG.client.extra.regear;
         if (openContainerId() == 0) { go(State.OPEN_ECHEST); return; }   // closed early -> reopen
         Container c = openContainer();
         if (c == null) { timer = cfg.actionDelayTicks; return; }
-        if (findPlayerWindowSlot(c, this::isKitShulker) != -1) { go(State.CLOSE_ECHEST); return; } // already pulled
-        // Contents mode picks the most-complete flight-kit shulker; name/colour mode takes the first match.
-        int src = cfg.matchByContents ? findBestKitShulkerSlot(c) : findContainerSlot(c, this::isKitShulker);
+        if (findPlayerWindowSlot(c, this::isShulkerBox) != -1) { go(State.CLOSE_ECHEST); return; } // already pulled
+
+        int src;
+        if (cherryPickAttempts == 0) {
+            src = cfg.matchByContents ? findBestKitShulkerSlot(c) : findContainerSlot(c, this::isKitShulker);
+            if (src == -1 && cfg.cherryPickFallback) {
+                // Pick the RICHEST candidate (most matching items), not just the first one found - fewer, fatter
+                // pulls beat visiting three half-empty shulkers, and matters most here since it's the common case
+                // for an echest of separate single-item shulkers (an elytra shulker, a totem shulker, ...).
+                src = findRichestShulkerSlot(c, this::cherryPickStillNeeds);
+                if (src != -1) cherryPickAttempts = 1;
+            }
+        } else {
+            src = findRichestShulkerSlot(c, this::cherryPickStillNeeds);
+        }
+
         if (src == -1) {
+            if (cherryPickAttempts > 0) {   // cherry-pick found nothing more - proceed with what's already gathered
+                info("Regear: cherry-pick found no more shulkers with missing items - continuing with what's gathered.");
+                go(ownEchest ? State.RECOVER_ECHEST : State.GEAR_UP);
+                return;
+            }
             // Ender storage is shared across all echests, so a missing kit shulker can't be fixed by relocating —
             // abort so the user re-stocks it (don't suicide-loop looking for a kit that isn't in ender storage).
-            abort(cfg.matchByContents ? "no shulker matching the flight-kit contents (elytra + fireworks) in the ender chest"
-                : cfg.matchByColor ? "no " + cfg.kitShulkerColor + " kit shulker in the ender chest"
-                                   : "no kit shulker named '" + cfg.kitShulkerName + "' in the ender chest");
+            String primary = cfg.matchByContents ? "no shulker matching the flight-kit contents (elytra + fireworks)"
+                : cfg.matchByColor ? "no " + cfg.kitShulkerColor + " kit shulker"
+                                   : "no kit shulker named '" + cfg.kitShulkerName + "'";
+            abort(primary + " in the ender chest" + (cfg.cherryPickFallback
+                ? ", and cherry-pick found no other shulker covering what's needed either" : ""));
             return;
         }
         if (!inventoryBusy()) shiftClick(c, src);
@@ -409,8 +449,11 @@ public class Regear extends AbstractFieldModule {
         var cfg = CONFIG.client.extra.regear;
         switch (step) {
             case 0 -> {
-                int slot = findInInv(this::isKitShulker);
-                if (slot == -1) { abort("lost the kit shulker after pulling it"); return; }
+                // isShulkerBox, not isKitShulker: a cherry-pick round's pull won't match the kit-selection
+                // criteria. Safe because CHERRY_CHECK guarantees the inventory holds at most one shulker box
+                // at a time between rounds (see its javadoc).
+                int slot = findInInv(this::isShulkerBox);
+                if (slot == -1) { abort("lost the shulker after pulling it"); return; }
                 kitShulkerItem = ItemRegistry.REGISTRY.get(CACHE.getPlayerCache().getPlayerInventory().get(slot).getId());
                 shulkPos = selectSpotBeside(avoidSpot);
                 if (shulkPos == null) { abort("no clear spot to place the kit shulker"); return; }
@@ -444,8 +487,8 @@ public class Regear extends AbstractFieldModule {
         Container c = openContainer();
         if (c == null) { timer = cfg.actionDelayTicks; return; }
         // E-bounce elytra refill: dump SPENT elytras from the inventory back into the kit, then pull FRESH elytras
-        // from the kit until the inventory holds the target count. Ignores all non-elytra kit items. The worn elytra
-        // (armor slot 6) is outside the 9-44 inventory range so it is never touched. One action per tick.
+        // from the kit until the inventory holds the target count. The worn elytra (armor slot 6) is outside the
+        // 9-44 inventory range so it is never touched. One action per tick.
         if (elytraRefill) {
             if (inventoryBusy()) { timer = cfg.actionDelayTicks; return; }
             int spent = findPlayerWindowSlot(c, this::isSpentElytra);     // worn-out spare -> back into the kit
@@ -454,13 +497,23 @@ public class Regear extends AbstractFieldModule {
                 int fresh = findContainerSlot(c, this::isFreshElytra);
                 if (fresh != -1 && findEmptyPlayerWindowSlot(c) != -1) { shiftClick(c, fresh); timer = cfg.actionDelayTicks; return; }
             }
-            go(State.CLOSE_KIT);   // no spent left, and target met or kit out of fresh elytras / no room
+            if (mendBottleTarget > 0 && countInInv(this::isXpBottle) < mendBottleTarget) {   // ElytraPilot will throw these once we're done
+                int bottle = findContainerSlot(c, this::isXpBottle);
+                if (bottle != -1 && findEmptyPlayerWindowSlot(c) != -1) { shiftClick(c, bottle); timer = cfg.actionDelayTicks; return; }
+            }
+            // Elytra/bottle needs (if any) are covered from THIS shulker - also grab food/totems it happens to hold
+            // if the flight checklist is short on them (elytras/food/totems are what actually deplete over a long
+            // e-bounce trip; armor/pickaxe/echest don't, so this deliberately stays narrow - see cherryPickStillNeeds).
+            int other = findContainerSlot(c, s -> (FlightGear.isEgap(s) || FlightGear.isTotem(s)) && FlightGear.stillNeeds(s));
+            if (other != -1 && findEmptyPlayerWindowSlot(c) != -1) { shiftClick(c, other); timer = cfg.actionDelayTicks; return; }
+            go(State.CLOSE_KIT);   // nothing left this shulker can help with
             return;
         }
-        // Flight refill: pull ONLY items the pre-flight checklist is still short on (re-evaluated per pull, so
-        // each category stops once satisfied). Normal regear: empty the whole kit.
-        int src = flightRefill
-            ? findContainerSlot(c, s -> s != Container.EMPTY_STACK && FlightGear.stillNeeds(s))
+        // Flight refill (round 0) and every cherry-pick round (any mode): pull ONLY items still short somewhere
+        // (re-evaluated per pull, so each category stops once satisfied). Normal regear's primary shulker
+        // (round 0, no flags): empty it completely, as before.
+        int src = (flightRefill || cherryPickAttempts > 0)
+            ? findContainerSlot(c, s -> s != Container.EMPTY_STACK && cherryPickStillNeeds(s))
             : findContainerSlot(c, s -> s != Container.EMPTY_STACK);
         if (src == -1) { go(State.CLOSE_KIT); return; }                // shulker empty / all deficits met
         if (emptyMainSlots() <= 0 && countInInv(s -> s == Container.EMPTY_STACK) == 0) {
@@ -484,14 +537,15 @@ public class Regear extends AbstractFieldModule {
         if (collected || ++step > 60) {
             if (BARITONE.isActive()) BARITONE.stop();
             shulkPos = null; attempts = 0;
-            if (CONFIG.client.extra.regear.returnShulker && collected) go(State.RETURN_OPEN);
-            else go(ownEchest ? State.RECOVER_ECHEST : State.GEAR_UP);
+            go(State.CHERRY_CHECK);   // CHERRY_CHECK owns the return-or-keep-carried decision
         } else {
             timer = cfg.actionDelayTicks;
         }
     }
 
-    /** Re-open the ender chest to put the empty shulker back. */
+    /** Re-open the ender chest to put the empty shulker back. Failure here always gives up on returning AND on
+     *  any further cherry-picking (an unreachable echest can't be reopened for another pull either) - it must
+     *  NOT route back through {@link #tickCherryCheck}, which would just retry this and loop forever. */
     private void tickReturnOpen() {
         var cfg = CONFIG.client.extra.regear;
         if (echPos == null || isAir(echPos)) { go(ownEchest ? State.RECOVER_ECHEST : State.GEAR_UP); return; }
@@ -517,6 +571,35 @@ public class Regear extends AbstractFieldModule {
         if (src == -1) { go(State.RETURN_CLOSE); return; }   // nothing left to return
         if (!inventoryBusy()) shiftClick(c, src);
         timer = cfg.actionDelayTicks;
+    }
+
+    /**
+     * The hub every kit-shulker cycle passes through after {@link #tickBreakKit} (whether or not a shulker was
+     * actually collected) AND again after a successful {@link #tickReturnDeposit}/RETURN_CLOSE - both re-derive
+     * the same decision from live state, which is what makes it safe to re-enter: whether to put the current
+     * shulker back, and whether to open another one.
+     *
+     * <p>Return-or-keep-carried: if we're about to cherry-pick again, the shulker is ALWAYS returned first (a
+     * clean inventory is what lets {@link #tickPlaceKit} unambiguously find "this round's" shulker via
+     * {@code isShulkerBox}); otherwise (this is the last shulker of the cycle) the user's
+     * {@link com.aquarius.util.config.Config.Client.Extra.Regear#returnShulker} preference governs, exactly as
+     * the single-shulker cycle always did.
+     *
+     * <p>Loop-or-stop: keep cherry-picking while it's enabled, the attempt budget isn't spent, and the current
+     * gear-up mode ({@link #cherryPickSatisfied}) still reports a deficit. The ender chest is never recovered
+     * mid-loop (still placed/reachable at {@code echPos}), so looping back just reopens it via {@link #tickPullKit}'s
+     * round-aware selection.
+     */
+    private void tickCherryCheck() {
+        var cfg = CONFIG.client.extra.regear;
+        boolean willContinue = cfg.cherryPickFallback && cherryPickAttempts < cfg.cherryPickMaxShulkers && !cherryPickSatisfied();
+        if (countInInv(this::isShulkerBox) > 0 && (willContinue || cfg.returnShulker)) { go(State.RETURN_OPEN); return; }
+        if (!willContinue) { go(ownEchest ? State.RECOVER_ECHEST : State.GEAR_UP); return; }
+        cherryPickAttempts++;
+        shulkPos = null; kitShulkerItem = null;
+        info("Regear: still short after {} shulker(s) - cherry-picking another from the ender chest ({}/{}).",
+            cherryPickAttempts, cherryPickAttempts, cfg.cherryPickMaxShulkers);
+        go(State.OPEN_ECHEST);
     }
 
     /** Break + recover the bot's own ender chest with a silk-touch pickaxe (so it drops as an ender chest). */
@@ -648,11 +731,91 @@ public class Regear extends AbstractFieldModule {
     private boolean isSpentElytra(@Nullable ItemStack s) {
         return FlightGear.isElytra(s) && remainingDurability(s) <= CONFIG.client.extra.elytraPilot.freshElytraMinDurability;
     }
+    /** An XP bottle — sourced for ElytraPilot's post-resupply Mending repair, never opened/used by Regear itself. */
+    private boolean isXpBottle(@Nullable ItemStack s) { return matchesName(s, "experience_bottle"); }
     /** Count of elytras inside a shulker (its CONTAINER component) — for matchByElytraCount kit identification. */
     private int countElytrasIn(@Nullable ItemStack shulker) {
         int n = 0;
         for (ItemStack inner : containerContents(shulker)) if (FlightGear.isElytra(inner)) n++;
         return n;
+    }
+
+    // ---------------------------------------------------------------- cherry-pick fallback
+
+    /** Would pulling {@code s} help meet a still-unmet deficit under the CURRENT resupply mode? Drives both the
+     *  cherry-pick candidate scan ({@link #findRichestShulkerSlot}, a read-only peek into echest shulkers) and,
+     *  for flight-refill / cherry-pick rounds, the extraction filter in {@link #tickEmptyKit}.
+     *  <p>elytraRefill (e-bounce) deliberately stays narrow: elytras (freshness-aware, via {@link #isFreshElytra})
+     *  plus food/totems (count-only, via {@link FlightGear#stillNeeds}) — the things that actually deplete over a
+     *  long bounce trip. Armor/pickaxe/fireworks/echest don't, and e-bounce itself is firework-free, so those are
+     *  deliberately left out of scope here even though {@code FlightGear.stillNeeds} could report them short. */
+    private boolean cherryPickStillNeeds(@Nullable ItemStack s) {
+        if (s == null || s == Container.EMPTY_STACK) return false;
+        if (flightRefill) return FlightGear.stillNeeds(s);
+        if (elytraRefill) {
+            if (FlightGear.isElytra(s)) return countInInv(this::isFreshElytra) < elytraRefillTarget;
+            if (isXpBottle(s)) return mendBottleTarget > 0 && countInInv(this::isXpBottle) < mendBottleTarget;
+            return (FlightGear.isEgap(s) || FlightGear.isTotem(s)) && FlightGear.stillNeeds(s);
+        }
+        return regearStillNeeds(s);
+    }
+
+    /** Have all deficits under the current resupply mode been met - i.e. is it still worth opening another shulker? */
+    private boolean cherryPickSatisfied() {
+        if (flightRefill) return !FlightGear.anyDeficit();
+        if (elytraRefill) return countInInv(this::isFreshElytra) >= elytraRefillTarget
+            && (mendBottleTarget <= 0 || countInInv(this::isXpBottle) >= mendBottleTarget)
+            && FlightGear.egapCountSatisfied() && FlightGear.totemCountSatisfied();
+        return regearSatisfied();
+    }
+
+    /** Normal (non-flight) regear's per-item deficit check: does {@code s} fill an armour/elytra/totem slot
+     *  that's still empty AND not already covered by something sitting loose in the inventory? Mirrors
+     *  {@link #tickGearUp}'s fill logic, but checks "anywhere" (worn OR carried) since gear-up hasn't run yet
+     *  when this is consulted mid-cycle. */
+    private boolean regearStillNeeds(ItemStack s) {
+        var cfg = CONFIG.client.extra.regear;
+        String n = itemName(s);
+        if (n == null) return false;
+        if (cfg.equipElytra && n.equals("elytra")) {
+            return !wornIsElytra() && findInInv(s2 -> "elytra".equals(itemName(s2))) == -1;
+        }
+        if (cfg.equipArmor) {
+            for (int i = 0; i < ARMOR_SUFFIX.length; i++) {
+                if (i == 1 && cfg.equipElytra) continue;   // chest slot handled above when flying
+                if (!n.endsWith(ARMOR_SUFFIX[i])) continue;
+                if (CACHE.getPlayerCache().getEquipment(ARMOR_EQUIP[i]) != Container.EMPTY_STACK) return false;
+                final int idx = i;
+                return findInInv(s2 -> { String n2 = itemName(s2); return n2 != null && n2.endsWith(ARMOR_SUFFIX[idx]); }) == -1;
+            }
+        }
+        if (cfg.offhandTotem && n.equals("totem_of_undying")) {
+            return CACHE.getPlayerCache().getEquipment(EquipmentSlot.OFF_HAND) == Container.EMPTY_STACK
+                && findInInv(s2 -> matchesName(s2, "totem_of_undying")) == -1;
+        }
+        return false;
+    }
+
+    /** Normal (non-flight) regear's "have we got everything the config asks for, anywhere (worn or carried)" check. */
+    private boolean regearSatisfied() {
+        var cfg = CONFIG.client.extra.regear;
+        if (cfg.equipElytra && !wornIsElytra() && findInInv(s -> "elytra".equals(itemName(s))) == -1) return false;
+        if (cfg.equipArmor) {
+            for (int i = 0; i < ARMOR_SUFFIX.length; i++) {
+                if (i == 1 && cfg.equipElytra) continue;
+                if (CACHE.getPlayerCache().getEquipment(ARMOR_EQUIP[i]) != Container.EMPTY_STACK) continue;
+                final int idx = i;
+                if (findInInv(s -> { String n = itemName(s); return n != null && n.endsWith(ARMOR_SUFFIX[idx]); }) == -1) return false;
+            }
+        }
+        if (cfg.offhandTotem && CACHE.getPlayerCache().getEquipment(EquipmentSlot.OFF_HAND) == Container.EMPTY_STACK
+            && findInInv(s -> matchesName(s, "totem_of_undying")) == -1) return false;
+        return true;
+    }
+
+    private boolean wornIsElytra() {
+        var worn = CACHE.getPlayerCache().getEquipment(EquipmentSlot.CHESTPLATE);
+        return worn != Container.EMPTY_STACK && "elytra".equals(itemName(worn));
     }
 
     private int findSilkPick() {

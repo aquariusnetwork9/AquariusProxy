@@ -57,14 +57,20 @@ public class VillagerTraderCommand extends Command {
                 "list",
                 "set help",
                 "set <id> group <groupId|none>  (share a group's supply profile; none = ungroup)",
+                "set <id> cycleCooldown <0-1200s>  (wait after this trade's sweep so its villagers restock; inherited from the group if grouped)",
+                "set <id> priceControl on/off  (ON by default: only buy out this trade's offer once every tradeEveryNRestocks DETECTED restocks, so bot buying doesn't drive demand up; off = unlimited buying)",
+                "set <id> tradeEveryNRestocks <N>  (default 3 = flat long-run price; higher trends price down, lower still rises but slower than every restock)",
                 "group add <id>  /  group del <id>  /  group list",
-                "group <id> <field> <value>  (shared supply: chests, restock, carry caps, postTradeStore, overflowChest, minEmeralds, on/off)",
+                "group <id> <field> <value>  (shared supply: chests, restock, carry caps, postTradeStore, overflowChest, minEmeralds, cycleCooldown, on/off)",
                 "targeting on/off  (only revisit villagers known to offer a configured trade; skip useless ones)",
                 "rescan  (forget learned villager offers and re-learn the hall)",
                 "villagers  (how many villagers are known / skipped)",
+                "cycleCooldown <seconds>  (0-1200; idle this long after a full sweep so villagers can restock; 0 = no wait)",
                 "waitForInteractTimeout <ticks>",
                 "logTradeStatusToDiscord on/off",
-                "panel  (post an interactive trader panel to Discord: toggle trades + timeout modal + run)"
+                "panel  (post an interactive trader panel to Discord: toggle trades + timeout modal + run)",
+                "price status [id]  (live per-villager-offer uses/demand/restock telemetry for priceControlEnabled trades)",
+                "price reset  (forget all learned per-villager restock/demand memory)"
             )
             .build();
     }
@@ -171,6 +177,9 @@ public class VillagerTraderCommand extends Command {
                         "set <id> inputItem1MaxCarryStacks <count>  (0 = no cap)",
                         "set <id> inputItem2MaxCarryStacks <count>  (0 = no cap; default 2)",
                         "set <id> group <groupId|none>  (inherit a group's shared supply profile)",
+                        "set <id> cycleCooldown <0-1200>  (seconds to idle after this trade's sweep; ignored while grouped)",
+                        "set <id> priceControl on/off  (ON by default; buy out fully only once every tradeEveryNRestocks detected restocks)",
+                        "set <id> tradeEveryNRestocks <1-100>  (default 3)",
                         "set <id> outputEnchants add <enchantment> <level>",
                         "set <id> outputEnchants del <enchantment>",
                         "set <id> outputEnchants clear",
@@ -529,6 +538,62 @@ public class VillagerTraderCommand extends Command {
                         inEventLoop(() -> MODULE.get(VillagerTrader.class).onTradeListChange());
                         return OK;
                     })))
+                    .then(literal("cycleCooldown").then(argument("cycleCooldown", integer(0, 1200)).executes(c -> {
+                        var id = CustomStringArgumentType.getString(c, "id");
+                        if (!CONFIG.client.extra.villagerTrader.trades.containsKey(id)) {
+                            c.getSource().getEmbed()
+                                .title("Trade ID Not Found")
+                                .addField("ID", id)
+                                .description(printAllTrades());
+                            c.getSource().getData().put("list", true);
+                            return ERROR;
+                        }
+                        var trade = CONFIG.client.extra.villagerTrader.trades.get(id);
+                        trade.cycleCooldownSeconds = getInteger(c, "cycleCooldown");
+                        var embed = c.getSource().getEmbed()
+                            .title("Trade Cycle Cooldown Set")
+                            .addField("Seconds", trade.cycleCooldownSeconds == 0 ? "0 (no wait)" : trade.cycleCooldownSeconds + "s")
+                            .description(printTrade(id, trade));
+                        if (trade.group != null && !trade.group.isEmpty()) {
+                            embed.addField("Note", "This trade is in group `" + trade.group + "`, so it uses the GROUP's cooldown; this per-trade value only applies once ungrouped.");
+                        }
+                        return OK;
+                    })))
+                    .then(literal("priceControl").then(argument("priceControlToggle", toggle()).executes(c -> {
+                        var id = CustomStringArgumentType.getString(c, "id");
+                        if (!CONFIG.client.extra.villagerTrader.trades.containsKey(id)) {
+                            c.getSource().getEmbed()
+                                .title("Trade ID Not Found")
+                                .addField("ID", id)
+                                .description(printAllTrades());
+                            c.getSource().getData().put("list", true);
+                            return ERROR;
+                        }
+                        var trade = CONFIG.client.extra.villagerTrader.trades.get(id);
+                        trade.priceControlEnabled = getToggle(c, "priceControlToggle");
+                        c.getSource().getEmbed()
+                            .title("Trade Price Control " + toggleStrCaps(trade.priceControlEnabled))
+                            .description(printTrade(id, trade));
+                        return OK;
+                    })))
+                    .then(literal("tradeEveryNRestocks").then(argument("tradeEveryNRestocks", integer(1, 100)).executes(c -> {
+                        var id = CustomStringArgumentType.getString(c, "id");
+                        if (!CONFIG.client.extra.villagerTrader.trades.containsKey(id)) {
+                            c.getSource().getEmbed()
+                                .title("Trade ID Not Found")
+                                .addField("ID", id)
+                                .description(printAllTrades());
+                            c.getSource().getData().put("list", true);
+                            return ERROR;
+                        }
+                        var trade = CONFIG.client.extra.villagerTrader.trades.get(id);
+                        trade.tradeEveryNRestocks = getInteger(c, "tradeEveryNRestocks");
+                        c.getSource().getEmbed()
+                            .title("Trade Every N Restocks Set")
+                            .addField("N", String.valueOf(trade.tradeEveryNRestocks))
+                            .description(printTrade(id, trade));
+                        return OK;
+                    })))
                     .then(literal("outputEnchants")
                         .then(literal("add").then(argument("enchant", enchantment()).then(argument("level", integer(1)).executes(c -> {
                             var id = CustomStringArgumentType.getString(c, "id");
@@ -704,6 +769,8 @@ public class VillagerTraderCommand extends Command {
                         return withGroup(c, (id, g) -> g.inputItem2MaxCarryStacks = getInteger(c, "v"), "Group Carry Cap (give-2) Set"); })))
                     .then(literal("minEmeralds").then(argument("v", integer(0)).executes(c -> {
                         return withGroup(c, (id, g) -> g.minEmeralds = getInteger(c, "v"), "Group Min Emeralds Set"); })))
+                    .then(literal("cycleCooldown").then(argument("v", integer(0, 1200)).executes(c -> {
+                        return withGroup(c, (id, g) -> g.cycleCooldownSeconds = getInteger(c, "v"), "Group Cycle Cooldown Set"); })))
                     .then(literal("postTradeStore").then(argument("mode", enumStrings(Trade.PostTradeStoreMode.values())).executes(c -> {
                         return withGroup(c, (id, g) -> g.postTradeStoreMode = Trade.PostTradeStoreMode.valueOf(getString(c, "mode").toUpperCase()), "Group Post Trade Store Set"); })))
                 ))
@@ -777,7 +844,28 @@ public class VillagerTraderCommand extends Command {
                     .description(posted
                         ? "In Discord: toggle individual trades (dropdown), flip log-to-Discord, set the interact timeout (modal), then Run. Adding/editing trades stays on .trader add / set."
                         : "Enable the Discord bot to use the interactive trader panel.");
-            }));
+            }))
+            .then(literal("price")
+                .then(literal("status")
+                    .executes(c -> {
+                        c.getSource().getEmbed()
+                            .title("Price Control Status")
+                            .description(printPriceStatus(MODULE.get(VillagerTrader.class).snapshotPriceStatus(null)));
+                        c.getSource().getData().put("list", true);
+                    })
+                    .then(argument("id", wordWithChars()).executes(c -> {
+                        var id = CustomStringArgumentType.getString(c, "id");
+                        c.getSource().getEmbed()
+                            .title("Price Control Status: " + id)
+                            .description(printPriceStatus(MODULE.get(VillagerTrader.class).snapshotPriceStatus(id)));
+                        c.getSource().getData().put("list", true);
+                    })))
+                .then(literal("reset").executes(c -> {
+                    inEventLoop(() -> MODULE.get(VillagerTrader.class).resetPriceControlState());
+                    c.getSource().getEmbed()
+                        .title("Price Control State Reset")
+                        .description("Forgot all learned per-villager restock/demand memory; every offer's next visit is treated as immediately eligible for a full buy.");
+                })));
     }
 
     @Override
@@ -827,6 +915,9 @@ public class VillagerTraderCommand extends Command {
         sb.append("`").append(trade.outputItem).append("`");
         if (!trade.enabled) {
             sb.append(" (disabled)");
+        }
+        if (trade.priceControlEnabled) {
+            sb.append(", priceControl 1/").append(trade.tradeEveryNRestocks).append(" (on)");
         }
         return sb.toString();
     }
@@ -893,7 +984,26 @@ public class VillagerTraderCommand extends Command {
             + ", restock " + g.inputItem1RestockStacks + "/" + g.inputItem2RestockStacks + " stacks"
             + ", caps " + g.inputItem1MaxCarryStacks + "/" + g.inputItem2MaxCarryStacks
             + ", postTrade " + g.postTradeStoreMode.name().toLowerCase()
-            + ", minEmeralds " + g.minEmeralds;
+            + ", minEmeralds " + g.minEmeralds
+            + ", cooldown " + (g.cycleCooldownSeconds == 0 ? "off" : g.cycleCooldownSeconds + "s");
+    }
+
+    /** Renders live per-(villager, offer) restock/demand telemetry for ".trader price status [id]". */
+    public String printPriceStatus(List<VillagerTrader.PriceStatusEntry> entries) {
+        if (entries.isEmpty()) return "No tracked villager offers yet (visit at least one villager first).";
+        StringBuilder sb = new StringBuilder();
+        for (var e : entries) {
+            var due = Math.max(0, e.tradeEveryNRestocks() - e.restocksSinceLastFullBuy());
+            sb.append("`").append(e.tradeId() != null ? e.tradeId() : "?").append("`")
+                .append(" #").append(e.offerIndex())
+                .append(" @").append(e.villagerUuid().toString(), 0, 8)
+                .append(": uses ").append(e.numUses()).append("/").append(e.maxUses())
+                .append(", demand ").append(e.demand())
+                .append(", ").append(due == 0 ? "eligible now" : due + " restock(s) until eligible")
+                .append(e.msSinceLastRestockDetected() < 0 ? "" : ", last restock " + (e.msSinceLastRestockDetected() / 1000) + "s ago")
+                .append("\n");
+        }
+        return sb.toString();
     }
 
     public String printAllGroups() {

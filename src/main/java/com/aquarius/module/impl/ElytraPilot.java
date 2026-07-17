@@ -23,6 +23,7 @@ import com.aquarius.feature.pathfinder.goals.GoalNear;
 import com.aquarius.feature.player.World;
 import com.aquarius.mc.block.Direction;
 import com.aquarius.mc.dimension.DimensionRegistry;
+import com.aquarius.mc.enchantment.EnchantmentRegistry;
 import com.aquarius.mc.item.ItemRegistry;
 import com.aquarius.module.api.Module;
 import com.aquarius.util.config.Config.Client.Extra.ElytraPilot.HighwayDir;
@@ -122,6 +123,19 @@ public class ElytraPilot extends Module {
     private int resupplyTicks;                  // RESUPPLY: settle / overall guard counter
     private boolean savedRgEquipElytra, savedRgEquipArmor, savedRgOffhandTotem, savedRgSelfKillRelocate; // restored after
     private boolean resupplyUsedProfile;        // resupply drove Regear from a kit profile (pushProfile) vs the legacy overrides
+    private int mendState;                      // 0 = idle; 1 = throwing/waiting - tickMend() owns the tick while set
+    private int mendTicks;                      // ticks spent in the current mend attempt (mendTimeoutTicks safety cap)
+    private int mendStartDurability;             // worn elytra durability when the mend attempt began, for the log line
+    private int mendBottlesThrown;
+    private boolean mendThrowArmed;              // right-click currently held down, waiting for the bottle count to drop
+    private int mendThrowTries;                  // ticks spent waiting for the current throw to register
+    private int mendSpacing;                     // ticks left before the next throw (mendThrowSpacingTicks pacing)
+    private int mendSubStep;                     // 0 = borrow offhand (once), 1 = throw loop, 2 = restore offhand + finish
+    private boolean mendOffhandBorrowed;         // true once a spare's been swapped into the offhand - must be swapped back
+    private int mendOffhandSlot = -1;            // the main-inv slot the spare came from (same slot swaps it back)
+    private boolean mendAutoTotemWasEnabled;     // AutoTotem's enabled state before we borrowed the offhand, for restore
+    private boolean mendRestoreSubmitted;        // the swap-back action has been submitted - now just settling
+    private int mendRestoreTicks;                // ticks left to settle after the swap-back before trusting it landed
     private double bouncePrevY = Double.NaN;   // last-tick Y, for the bounce telemetry readout
     private double bouncePrevX = Double.NaN;   // last-tick X, for the bounce telemetry's horizontal-delta readout
     private int bounceRamp;                     // e-bounce Sprint-start: ticks since the ground RUN ended, drives the injected-speed ramp goal; reset on any disturbance
@@ -349,6 +363,13 @@ public class ElytraPilot extends Module {
         cruiseAimOverride = null;        // griefMap is intentionally NOT reset — accumulated knowledge persists across flights
         resupplyStarted = false;
         resupplyTicks = 0;
+        // A mend cycle interrupted mid-borrow (e.g. a reconnect re-running onEnable) must not leave AutoTotem
+        // disabled forever - restore it here rather than only in finishMend().
+        if (mendOffhandBorrowed) {
+            CONFIG.client.extra.autoTotem.enabled = mendAutoTotemWasEnabled;
+            MODULE.get(AutoTotem.class).syncEnabledFromConfig();
+        }
+        mendState = 0; mendSubStep = 0; mendOffhandBorrowed = false; mendOffhandSlot = -1; mendRestoreSubmitted = false;
         bounceRamp = 0;
         bounceReadyToJump = false;
         bounceHolding = false;
@@ -547,6 +568,7 @@ public class ElytraPilot extends Module {
             haveLast = true;
             ticksSinceFire++;
             if (redeployCooldown > 0) redeployCooldown--;
+            if (mendSpacing > 0) mendSpacing--;
             if (setbackHoldTicks > 0) setbackHoldTicks--;
             if (boostGuaranteeTicks > 0) boostGuaranteeTicks--;
             if (boostMaxTicks > 0) boostMaxTicks--;
@@ -2500,6 +2522,8 @@ public class ElytraPilot extends Module {
         var cfg = CONFIG.client.extra.elytraPilot;
         var rg = MODULE.get(Regear.class);
 
+        if (mendState != 0) { tickMend(); return; }   // Regear's done; throwing the bottles it pulled - see tickMend
+
         if (!resupplyStarted) {
             // Settle on the road first so Regear starts from a stable grounded state (it places an echest beside us).
             submitMove(false, false, false, false, desiredYaw(x, z), 0f);
@@ -2526,6 +2550,10 @@ public class ElytraPilot extends Module {
                 CONFIG.client.extra.regear.returnShulker = true;
                 rg.setElytraRefill(true, cfg.resupplyElytraCount);
             }
+            // While we're already sourcing from the echest, also pull XP bottles for a post-cycle Mending repair
+            // IF the worn elytra actually has Mending and needs it — checked once here so a non-Mending elytra
+            // never wastes a single bottle pull.
+            rg.setMendBottleTarget(shouldMend() ? cfg.mendBottleCount : 0);
             CONFIG.client.extra.regear.enabled = true;
             rg.syncEnabledFromConfig();
             resupplyStarted = true;
@@ -2540,6 +2568,17 @@ public class ElytraPilot extends Module {
         }
         if (rg.isComplete()) {
             restoreRegearConfig();
+            // Regear never touches the worn elytra, so its durability/enchantments can't have changed since we
+            // decided this at resupply start - recomputing here (rather than caching) is just simpler and just as
+            // correct. Still grounded (Regear only just closed out), so this is the one guaranteed-stationary
+            // window to throw bottles in.
+            if (shouldMend() && countItem(ItemRegistry.EXPERIENCE_BOTTLE.id()) > 0) {
+                mendState = 1; mendSubStep = 0; mendTicks = 0; mendBottlesThrown = 0; mendThrowArmed = false;
+                mendOffhandBorrowed = false; mendOffhandSlot = -1; mendRestoreSubmitted = false;
+                mendStartDurability = wornElytraDurability();
+                info("Elytra resupply: mending the worn elytra with {} XP bottle(s).", countItem(ItemRegistry.EXPERIENCE_BOTTLE.id()));
+                return;
+            }
             phase = Phase.BOUNCE;
             bounceStallTicks = 0;
             info("Elytra resupply complete — resuming bounce (spares=" + countSpareElytras() + ")");
@@ -2668,6 +2707,131 @@ public class ElytraPilot extends Module {
     private int wornElytraDurability() {
         ItemStack c = chestplate();
         return isElytra(c) ? remainingDurability(c) : 0;
+    }
+
+    /** Worth a mend attempt: the worn elytra IS an elytra, has Mending, and is below the repair floor. Gates a
+     *  single bottle from ever being pulled/thrown at a non-Mending elytra, since vanilla Mending would just
+     *  ignore it. */
+    private boolean shouldMend() {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (!cfg.mendWornElytra) return false;
+        ItemStack c = chestplate();
+        if (!isElytra(c)) return false;
+        if (wornElytraDurability() >= cfg.mendDurabilityThreshold) return false;
+        return hasMending(c);
+    }
+
+    private boolean hasMending(ItemStack s) {
+        var ench = s.getDataComponentsOrEmpty().get(DataComponentTypes.ENCHANTMENTS);
+        return ench != null && ench.getEnchantments().containsKey(EnchantmentRegistry.MENDING.get().id());
+    }
+
+    /** Inventory slot (9-44) of the most-damaged carried SPARE elytra that's Mending-enchanted and below the
+     *  repair floor, or -1 if none qualifies. Picks the WORST (not best) durability — the opposite of
+     *  {@link #findBestSpareElytraSlot}, since this drives repair rather than equip-selection; a fresh spare
+     *  naturally never qualifies (it's above the floor), so there's no overlap with the emergency-swap pool. */
+    private int findMendableSpareElytraSlot() {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+        int worst = -1, worstDur = cfg.mendDurabilityThreshold;   // exclusive ceiling - must be BELOW this to bother
+        for (int s = 9; s <= 44; s++) {
+            ItemStack it = inv.get(s);
+            if (!isElytra(it) || !hasMending(it)) continue;
+            int d = remainingDurability(it);
+            if (d < worstDur) { worstDur = d; worst = s; }
+        }
+        return worst;
+    }
+
+    /**
+     * Runs the post-resupply Mending burst in three sub-steps: (0) once, optionally borrow the offhand for a
+     * damaged spare elytra (see {@link #mendSpareElytraOffhand} in the doc), (1) throw the XP bottles Regear
+     * pulled, one at a time, at the bot's own feet — Mending repairs whatever's worn/held/offhand automatically
+     * (server-side) as the orbs are collected — (2) if the offhand was borrowed, swap the spare back out and
+     * restore AutoTotem before actually resuming the bounce. Runs only from the guaranteed-stationary window
+     * right after Regear completes (see the {@code rg.isComplete()} branch in {@link #tickResupply});
+     * {@code mendState != 0} routes every subsequent tick here until {@link #finishMend} is reached. Never fails
+     * the resupply — out of bottles, a throw that won't register, or the timeout just cut the attempt short and
+     * resume bouncing (after restoring the offhand, if borrowed) with whatever durability was reached.
+     */
+    private void tickMend() {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (mendSubStep != 2 && ++mendTicks > cfg.mendTimeoutTicks) { mendSubStep = 2; mendRestoreSubmitted = false; return; }
+
+        switch (mendSubStep) {
+            case 0 -> {   // one-time setup: borrow the offhand for a damaged Mending spare, if configured + safe
+                if (!cfg.mendSpareElytraOffhand
+                    || CACHE.getPlayerCache().getThePlayer().getHealth() < cfg.mendMinHealthToBorrowOffhand) {
+                    mendSubStep = 1; return;                            // not attempting this cycle
+                }
+                int spare = findMendableSpareElytraSlot();
+                if (spare == -1) { mendSubStep = 1; return; }           // no damaged Mending spare to bother with
+                if (INVENTORY.hasActiveRequest()) return;               // wait for room, retry next tick
+                mendAutoTotemWasEnabled = CONFIG.client.extra.autoTotem.enabled;
+                CONFIG.client.extra.autoTotem.enabled = false;
+                MODULE.get(AutoTotem.class).syncEnabledFromConfig();
+                submitInvAction(new MoveToHotbarSlot(spare, MoveToHotbarAction.OFF_HAND));
+                mendOffhandSlot = spare;
+                mendOffhandBorrowed = true;
+                mendSubStep = 1;
+            }
+            case 1 -> {   // throw loop
+                if (mendSpacing > 0) return;         // pacing between throws (decremented once per tick above)
+                int bottles = countItem(ItemRegistry.EXPERIENCE_BOTTLE.id());
+                if (bottles <= 0) { mendSubStep = 2; mendRestoreSubmitted = false; return; }
+                if (!ensureHeld(ItemRegistry.EXPERIENCE_BOTTLE.id())) return;   // still selecting the bottle - wait
+                float yaw = CACHE.getPlayerCache().getYaw();
+                if (mendThrowArmed) {
+                    if (countItem(ItemRegistry.EXPERIENCE_BOTTLE.id()) < bottles) {   // count dropped -> it landed
+                        submitInput(false, false, yaw, cfg.mendThrowPitch);           // release
+                        mendThrowArmed = false;
+                        mendBottlesThrown++;
+                        mendThrowTries = 0;
+                        mendSpacing = cfg.mendThrowSpacingTicks;                      // let the orb + level packet land
+                        return;
+                    }
+                    if (++mendThrowTries >= 10) {                                    // didn't register - re-arm next tick
+                        submitInput(false, false, yaw, cfg.mendThrowPitch);
+                        mendThrowArmed = false;
+                        return;
+                    }
+                    submitInput(false, true, yaw, cfg.mendThrowPitch);               // keep pressing until it throws
+                    return;
+                }
+                mendThrowTries = 0;
+                submitInput(false, true, yaw, cfg.mendThrowPitch);
+                mendThrowArmed = true;
+            }
+            default -> {   // restoring the offhand (if borrowed), then finish
+                if (mendOffhandBorrowed) {
+                    if (!mendRestoreSubmitted) {
+                        if (INVENTORY.hasActiveRequest()) return;      // wait for room, retry next tick
+                        submitInvAction(new MoveToHotbarSlot(mendOffhandSlot, MoveToHotbarAction.OFF_HAND));  // same call - swaps back
+                        mendRestoreSubmitted = true;
+                        mendRestoreTicks = cfg.mendRestoreSettleTicks;
+                        return;
+                    }
+                    if (mendRestoreTicks > 0) { mendRestoreTicks--; return; }
+                }
+                finishMend();
+            }
+        }
+    }
+
+    private void finishMend() {
+        if (mendOffhandBorrowed) {
+            CONFIG.client.extra.autoTotem.enabled = mendAutoTotemWasEnabled;
+            MODULE.get(AutoTotem.class).syncEnabledFromConfig();
+            mendOffhandBorrowed = false; mendOffhandSlot = -1;
+        }
+        mendState = 0; mendSubStep = 0;
+        if (mendBottlesThrown > 0) {
+            int gained = wornElytraDurability() - mendStartDurability;
+            info("Elytra resupply: mended {} durability with {} bottle(s).", gained, mendBottlesThrown);
+        }
+        phase = Phase.BOUNCE;
+        bounceStallTicks = 0;
+        info("Elytra resupply complete — resuming bounce (spares=" + countSpareElytras() + ")");
     }
 
     private boolean isElytra(ItemStack s) {

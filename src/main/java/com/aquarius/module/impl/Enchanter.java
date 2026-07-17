@@ -276,6 +276,15 @@ public class Enchanter extends AbstractFieldModule {
             else if (isEnchantedBook(s)) anyBook = true;
             else if (isBaseGear(s)) anyGear = true;
         }
+        // A chest holding ONLY shulkers (of books/gear/bottles) must not fall through to "the finished output"
+        // (claimed by the first container with no top-level items) - peek inside every shulker (read-only, via
+        // its CONTAINER component) even though gathering only reaches top-level slots today. Classification only:
+        // this deliberately doesn't make gather() try to pull from inside them, since it can't actually reach them.
+        if (!anyItem) {
+            if (findShulkerSlotContaining(c, this::isBottle) != -1) { anyItem = true; anyBottle = true; }
+            if (findShulkerSlotContaining(c, this::isEnchantedBook) != -1) { anyItem = true; anyBook = true; }
+            if (findShulkerSlotContaining(c, this::isBaseGear) != -1) { anyItem = true; anyGear = true; }
+        }
         if (anyBottle && xpChest == null) { xpChest = pos; info("Enchanter:  XP-bottle source @ {}", pos); return; }
         if (anyBook) { if (!bookChests.contains(pos)) bookChests.add(pos); info("Enchanter:  book source @ {}", pos); return; }
         if (anyGear && inputChest == null) { inputChest = pos; info("Enchanter:  gear input @ {}", pos); return; }

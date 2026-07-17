@@ -51,6 +51,8 @@ public class ReleaseChannelCommand extends Command {
             Configures the current AutoUpdater release channel.
 
             The release channel is a combination of a platform (java or linux) and a Minecraft protocol version.
+            Append `pre` to opt into release-candidate prereleases, or `dev` to opt into unversioned dev builds
+            published from dev/* branches (untested, no version bump per build).
             """)
             .usageLines(
                 "list",
@@ -78,25 +80,37 @@ public class ReleaseChannelCommand extends Command {
                     .then(argument("minecraft_version", enumStrings(MINECRAFT_VERSIONS)).executes(c -> {
                             final String channel = getString(c, "channel");
                             final String minecraft_version = getString(c, "minecraft_version");
-                            setChannel(c, channel, minecraft_version, false, false);
+                            setChannel(c, channel, minecraft_version, null, false);
                             return OK;
                         })
                         .then(literal("force").executes(c -> {
                             final String channel = getString(c, "channel");
                             final String minecraft_version = getString(c, "minecraft_version");
-                            setChannel(c, channel, minecraft_version, false, true);
+                            setChannel(c, channel, minecraft_version, null, true);
                             return OK;
                         }))
                         .then(literal("pre").executes(c -> {
                                 final String channel = getString(c, "channel");
                                 final String minecraft_version = getString(c, "minecraft_version");
-                                setChannel(c, channel, minecraft_version, true, false);
+                                setChannel(c, channel, minecraft_version, "pre", false);
                                 return OK;
                             })
                             .then(literal("force").executes(c -> {
                                 final String channel = getString(c, "channel");
                                 final String minecraft_version = getString(c, "minecraft_version");
-                                setChannel(c, channel, minecraft_version, true, true);
+                                setChannel(c, channel, minecraft_version, "pre", true);
+                                return OK;
+                            })))
+                        .then(literal("dev").executes(c -> {
+                                final String channel = getString(c, "channel");
+                                final String minecraft_version = getString(c, "minecraft_version");
+                                setChannel(c, channel, minecraft_version, "dev", false);
+                                return OK;
+                            })
+                            .then(literal("force").executes(c -> {
+                                final String channel = getString(c, "channel");
+                                final String minecraft_version = getString(c, "minecraft_version");
+                                setChannel(c, channel, minecraft_version, "dev", true);
                                 return OK;
                             }))))));
     }
@@ -107,7 +121,7 @@ public class ReleaseChannelCommand extends Command {
             .addField("Current Release Channel", LAUNCH_CONFIG.release_channel, false);
     }
 
-    private void setChannel(com.mojang.brigadier.context.CommandContext<CommandContext> c, String channel, String minecraft_version, boolean pre, boolean force) {
+    private void setChannel(com.mojang.brigadier.context.CommandContext<CommandContext> c, String channel, String minecraft_version, String suffix, boolean force) {
         if (!PLATFORMS.contains(channel) && !force) {
             c.getSource().getEmbed()
                 .title("Invalid Platform!")
@@ -132,7 +146,7 @@ public class ReleaseChannelCommand extends Command {
             }
         }
         LAUNCH_CONFIG.release_channel = channel + "." + minecraft_version;
-        if (pre) LAUNCH_CONFIG.release_channel += ".pre";
+        if (suffix != null) LAUNCH_CONFIG.release_channel += "." + suffix;
         c.getSource().getEmbed()
             .title("Release Channel Updated!")
             .addField("Info", "Please restart AquariusProxy for changes to take effect.\nOr apply now: `update`", false)

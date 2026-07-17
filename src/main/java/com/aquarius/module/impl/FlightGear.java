@@ -92,6 +92,12 @@ final class FlightGear {
     static boolean hasWeapon()    { return countItems(FlightGear::isWeapon, false) > 0; }
     static boolean elytraAnywhere() { return elytraWorn() || countItems(FlightGear::isElytra, false) > 0; }
 
+    /** Count-only satisfaction (ignores the offhand-equip requirement, which is a separate equip-step concern
+     *  handled elsewhere) — used by {@link Regear}'s e-bounce cherry-pick to decide whether it's worth pulling
+     *  more food/totems while it's already stopped at the ender chest for an elytra top-up. */
+    static boolean egapCountSatisfied()  { return egapCount() >= minEgaps(); }
+    static boolean totemCountSatisfied() { return totemCount() >= minTotems(); }
+
     /** Sum item quantity (not slots) over the inventory (9-44), optionally including the offhand. */
     private static int countItems(java.util.function.Predicate<ItemStack> pred, boolean includeOffhand) {
         int n = 0;
@@ -155,6 +161,22 @@ final class FlightGear {
         if (dist > c.spawnRegionRadius) return base;
         int est = (int) Math.ceil(dist / Math.max(1.0, c.elytraBlocksPerElytra) * c.fireworkSafetyMargin);
         return Math.max(base, est);
+    }
+
+    /**
+     * True if ANY required checklist category is still short (the optional weapon never counts). Unlike
+     * {@link #ready()} this ignores {@link #elytraWorn()} — worn-vs-carried is an equip-step concern, not a
+     * sourcing one. Drives {@link Regear}'s cherry-pick fallback: "is it worth opening another shulker?"
+     */
+    static boolean anyDeficit() {
+        return elytraCount() < requiredElytras()
+            || armorPiecesAnywhere() < minArmor()
+            || totemCount() < minTotems()
+            || (reqOffhand() && !offhandTotem())
+            || fireworkCount() < requiredFireworks()
+            || egapCount() < minEgaps()
+            || (reqPickaxe() && !hasPickaxe())
+            || echestCount() < minEchests();
     }
 
     /** All REQUIRED checks pass (the sword/axe is optional and never gates). */

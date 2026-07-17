@@ -86,6 +86,14 @@ public class VillagerTrader extends Module {
     private final Map<UUID, Set<String>> villagerTradeCapabilities = new HashMap<>();
     private final Set<UUID> uselessVillagers = new HashSet<>();
     private UUID currentVillagerUuid = null;
+    // The trade whose sweep just finished, driving the current AWAIT_RESTOCK wait (its group's cooldown if grouped,
+    // else its own). Re-read live each tick so editing the cooldown mid-wait takes effect. Cleared on reset().
+    private Trade cooldownTrade = null;
+    // Per-(villager, live offer index) restock/demand memory for Trade#priceControlEnabled. Keyed by offer INDEX
+    // (not trade id) since one configured trade can match multiple live offers on the same villager (e.g. two
+    // enchant-level tiers of a book — see canShiftClickPurchase), each accruing Minecraft demand independently.
+    // Deliberately NOT cleared in reset()/on reconnect (see reset()) — only ".trader price reset" clears it.
+    private final Map<UUID, Map<Integer, OfferPriceState>> offerPriceStateByVillager = new HashMap<>();
 
     @Override
     public boolean enabledSetting() {
@@ -107,6 +115,22 @@ public class VillagerTrader extends Module {
 
     private int getPriority() {
         return Baritone.getPriority() + 100;
+    }
+
+    /**
+     * Effective post-cycle cooldown (seconds) for a trade: inherited from its group when grouped (all members,
+     * earners included, share the group's pacing), else the trade's own value. Clamped to [0, 1200] on read so a
+     * hand-edited / API-set out-of-range value can't misbehave.
+     */
+    private int effectiveCooldownSeconds(Trade trade) {
+        var g = groupOf(trade);
+        int secs = (g != null) ? g.cycleCooldownSeconds : trade.cycleCooldownSeconds;
+        return MathHelper.clamp(secs, 0, 1200);
+    }
+
+    /** Effective post-cycle cooldown as client ticks (20/s); 0 disables the wait entirely. */
+    private long effectiveCooldownTicks(Trade trade) {
+        return effectiveCooldownSeconds(trade) * 20L;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -245,6 +269,7 @@ public class VillagerTrader extends Module {
         interactedVillagersCache.invalidateAll();
         offersPacket = null;
         currentVillagerUuid = null;
+        cooldownTrade = null;
         clearVillagerCache();
         waitForInteractTimer.reset();
         waitForRestockTimer.reset();
@@ -671,6 +696,17 @@ public class VillagerTrader extends Module {
                         }
                     }
 
+                    // Bot-level demand/price pacing: buy out this offer fully only once every
+                    // tradeEveryNRestocks DETECTED restocks, skipping the rest so demand can decay between visits
+                    // (buying out every restock is the worst case for long-run price — see Trade#priceControlEnabled).
+                    if (trade.priceControlEnabled) {
+                        if (!priceControlEligible(trade, i)) {
+                            maxTradeCount = 0;
+                        } else if (maxTradeCount > 0) {
+                            markOfferFullyBought(i);
+                        }
+                    }
+
                     if (canShiftClickPurchase(villagerTrade)) {
                         int outputsStackSize = ItemRegistry.REGISTRY.get(villagerTrade.getOutput().getId()).stackSize();
                         int maxTradesPerOutputStack = outputsStackSize / villagerTrade.getOutput().getAmount();
@@ -990,7 +1026,35 @@ public class VillagerTrader extends Module {
                 } else {
                     info(EmbedSerializer.serialize(tradeResult));
                 }
-                setState(State.ENTRYPOINT);
+                // Cooldown boundary: we just finished the completed trade's segment of the sweep — either it was
+                // ungrouped (a trade "by itself"), the next trade belongs to a DIFFERENT group, or the iterator
+                // wrapped back to the start. At that point wait the completed trade's effective cooldown (its
+                // group's when grouped, else its own) so those villagers can restock before we sweep them again.
+                // Mid-group steps and group emerald-earner detours (which route through ENTRYPOINT) don't wait here.
+                boolean boundary = trade.group == null || trade.group.isEmpty()
+                                || !trade.group.equals(nextTrade.group)
+                                || tradeIterator.lastNextWrapped();
+                int cooldownSecs = effectiveCooldownSeconds(trade);
+                if (boundary && cooldownSecs > 0) {
+                    info("Trade segment '{}' complete — cooling down {}s before the next sweep",
+                        Objects.requireNonNullElse(getTradeId(trade), "?"), cooldownSecs);
+                    cooldownTrade = trade;
+                    BARITONE.stop();
+                    waitForRestockTimer.reset();
+                    setState(State.AWAIT_RESTOCK);
+                } else {
+                    setState(State.ENTRYPOINT);
+                }
+            }
+            case AWAIT_RESTOCK -> {
+                // Idle in place (no pathing churn) until the completed segment's cooldown elapses, then start the
+                // next sweep. Re-reads the effective cooldown each tick, so a live edit (even down to 0) takes
+                // effect immediately. If the driving trade vanished from config, reset() has already bailed us out.
+                long ticks = cooldownTrade != null ? effectiveCooldownTicks(cooldownTrade) : 0L;
+                if (waitForRestockTimer.tick(ticks)) {
+                    debug("Cycle cooldown elapsed — starting next trade sweep");
+                    setState(State.ENTRYPOINT);
+                }
             }
             case IDLE_PARKED -> {
                 // Every enabled trade is out of supply. Idle in place (no pathing churn) and periodically re-probe;
@@ -1075,17 +1139,20 @@ public class VillagerTrader extends Module {
             .anyMatch(e -> trade.villagerProfession == getVillagerProfession(e));
     }
 
-    /** Record, against every configured trade, which ones this villager's offers can fulfill. */
+    /** Record, against every configured trade, which ones this villager's offers can fulfill. Also updates the
+     * per-offer demand/restock memory for every matching live offer (not just the first) — a villager can offer
+     * more than one live offer matching a single configured trade (e.g. two enchant-level tiers of a book). */
     private void recordVillagerCapabilities(UUID villagerUuid, ClientboundMerchantOffersPacket offers) {
         if (villagerUuid == null || offers == null) return;
         Set<String> caps = new HashSet<>();
+        var trades = offers.getTrades();
         for (var entry : CONFIG.client.extra.villagerTrader.trades.entrySet()) {
             var t = entry.getValue();
             if (!t.enabled) continue;
-            for (var villagerTrade : offers.getTrades()) {
-                if (villagerOfferMatchesTrade(villagerTrade, t)) {
+            for (int i = 0; i < trades.length; i++) {
+                if (villagerOfferMatchesTrade(trades[i], t)) {
                     caps.add(entry.getKey());
-                    break;
+                    updateOfferPriceState(villagerUuid, i, entry.getKey(), trades[i]);
                 }
             }
         }
@@ -1096,6 +1163,102 @@ public class VillagerTrader extends Module {
             uselessVillagers.remove(villagerUuid);
             villagerTradeCapabilities.put(villagerUuid, caps);
         }
+    }
+
+    /** Detects a Minecraft-side restock for one live villager offer (numUses reset down since we last looked —
+     * there's no dedicated restock packet, this is the only client-observable signal) and keeps the per-offer
+     * demand/uses snapshot used by Trade#priceControlEnabled up to date. Tracked for every matching offer
+     * regardless of whether price control is enabled, so `.trader price status` has data to show either way.
+     * State is keyed by live offer INDEX, which is only a stable identity within a session as long as a villager's
+     * trades[] array doesn't reorder/replace an existing slot (new trades append on level-up, so this should hold
+     * in practice) — this is verified defensively below rather than assumed, so an index reuse by a DIFFERENT
+     * physical offer (e.g. after some server-side trade-list edit) can't misattribute stale numUses history and
+     * produce a false restock detection or a wrongly-inherited eligibility budget. */
+    private void updateOfferPriceState(UUID villagerUuid, int offerIndex, String tradeId, VillagerTrade offer) {
+        var perVillager = offerPriceStateByVillager.computeIfAbsent(villagerUuid, k -> new HashMap<>());
+        var state = perVillager.computeIfAbsent(offerIndex, k -> new OfferPriceState());
+        int firstInputId = offer.getFirstInput().getId();
+        int secondInputId = offer.getSecondInput() != null ? offer.getSecondInput().getId() : -1;
+        int outputId = offer.getOutput() != null ? offer.getOutput().getId() : -1;
+        boolean identityKnown = state.lastObservedNumUses >= 0;
+        boolean sameOffer = identityKnown
+            && state.firstInputId == firstInputId
+            && state.secondInputId == secondInputId
+            && state.outputId == outputId;
+        if (identityKnown && !sameOffer) {
+            debug("Offer #{} on villager {} no longer matches its previous identity (was input1={},input2={},output={}, "
+                + "now input1={},input2={},output={}) — treating as a fresh offer, discarding stale restock history",
+                offerIndex, villagerUuid, state.firstInputId, state.secondInputId, state.outputId,
+                firstInputId, secondInputId, outputId);
+        }
+        if (!sameOffer) {
+            // Fresh identity (first sighting, or the array slot now holds a different physical offer): reset
+            // tracking cleanly instead of comparing numUses across two unrelated offers.
+            state.lastObservedNumUses = -1;
+            state.restocksSinceLastFullBuy = Integer.MAX_VALUE;
+            state.lastRestockDetectedAtMillis = -1;
+            state.firstInputId = firstInputId;
+            state.secondInputId = secondInputId;
+            state.outputId = outputId;
+        }
+        state.tradeId = tradeId;
+        int numUses = offer.getNumUses();
+        if (state.lastObservedNumUses >= 0 && numUses < state.lastObservedNumUses) {
+            state.restocksSinceLastFullBuy++;
+            state.lastRestockDetectedAtMillis = System.currentTimeMillis();
+            info("Villager {} restock detected for offer #{} (uses {} -> {}, demand {})",
+                villagerUuid, offerIndex, state.lastObservedNumUses, numUses, offer.getDemand());
+        }
+        state.lastObservedNumUses = numUses;
+        state.lastObservedMaxUses = offer.getMaxUses();
+        state.lastObservedDemand = offer.getDemand();
+    }
+
+    /** Buy-out eligibility for one live offer under Trade#priceControlEnabled: true once at least
+     * tradeEveryNRestocks restocks have been DETECTED since the last full buy (or on first-ever sighting — the
+     * existing maxInput1PerTrade/maxInput2PerTrade ceiling already guards against overpaying on an unknown offer,
+     * so there's no need to also withhold the very first encounter). */
+    private boolean priceControlEligible(Trade trade, int offerIndex) {
+        var state = offerPriceStateByVillager.getOrDefault(currentVillagerUuid, Map.of()).get(offerIndex);
+        return state == null || state.restocksSinceLastFullBuy >= trade.tradeEveryNRestocks;
+    }
+
+    /** Marks a live offer as just fully bought out, resetting its restock-skip counter. No-op on first-ever
+     * sighting (state==null) since updateOfferPriceState always runs first in the same purchase pass and will
+     * have already created it. */
+    private void markOfferFullyBought(int offerIndex) {
+        var state = offerPriceStateByVillager.getOrDefault(currentVillagerUuid, Map.of()).get(offerIndex);
+        if (state != null) state.restocksSinceLastFullBuy = 0;
+    }
+
+    /** Wipes ALL per-villager price-control memory. Deliberately NOT wired into reset()/rescan — see the field's
+     * doc comment; only ".trader price reset" should call this. */
+    public void resetPriceControlState() {
+        offerPriceStateByVillager.clear();
+    }
+
+    public record PriceStatusEntry(UUID villagerUuid, @Nullable String tradeId, int offerIndex, int numUses,
+                                    int maxUses, int demand, int tradeEveryNRestocks, int restocksSinceLastFullBuy,
+                                    long msSinceLastRestockDetected) {}
+
+    /** Live snapshot of every tracked (villager, offer) — optionally filtered to one configured trade id — for
+     * the ".trader price status" command. Reflects whatever was last observed; a villager not visited since the
+     * bot started won't appear. */
+    public List<PriceStatusEntry> snapshotPriceStatus(@Nullable String tradeIdFilter) {
+        List<PriceStatusEntry> out = new ArrayList<>();
+        long now = System.currentTimeMillis();
+        for (var villagerEntry : offerPriceStateByVillager.entrySet()) {
+            for (var offerEntry : villagerEntry.getValue().entrySet()) {
+                var state = offerEntry.getValue();
+                if (tradeIdFilter != null && !tradeIdFilter.equals(state.tradeId)) continue;
+                var t = state.tradeId != null ? CONFIG.client.extra.villagerTrader.trades.get(state.tradeId) : null;
+                out.add(new PriceStatusEntry(villagerEntry.getKey(), state.tradeId, offerEntry.getKey(),
+                    state.lastObservedNumUses, state.lastObservedMaxUses, state.lastObservedDemand,
+                    t != null ? t.tradeEveryNRestocks : -1, state.restocksSinceLastFullBuy,
+                    state.lastRestockDetectedAtMillis < 0 ? -1 : now - state.lastRestockDetectedAtMillis));
+            }
+        }
+        return out;
     }
 
     /** Whether a villager's offer matches a configured trade by item + enchant (ignores price/affordability/sold-out). */
@@ -1211,6 +1374,21 @@ public class VillagerTrader extends Module {
         return null;
     }
 
+    private static final class OfferPriceState {
+        @Nullable String tradeId;
+        // Item-identity fingerprint of the physical offer last seen at this index — lets updateOfferPriceState
+        // detect when the villager's live offer array no longer has the same offer at this slot (see its doc
+        // comment) instead of blindly trusting index stability.
+        int firstInputId;
+        int secondInputId;
+        int outputId;
+        int lastObservedNumUses = -1;   // -1 = never observed
+        int restocksSinceLastFullBuy = Integer.MAX_VALUE; // "already due" until we know otherwise
+        int lastObservedMaxUses;
+        int lastObservedDemand;
+        long lastRestockDetectedAtMillis = -1;
+    }
+
     public enum State {
         ENTRYPOINT,
         EVAL_RESTOCK,
@@ -1278,6 +1456,9 @@ public class VillagerTrader extends Module {
 
     public static class TradeIterator implements Iterator<Trade> {
         int index = 0;
+        // True when the most recent next() rolled the index past the end back to 0 — i.e. a full sweep just finished.
+        // Only meaningful immediately after a next() call; pointAt()/reset() clear it so a jump isn't read as a wrap.
+        boolean lastNextWrapped = false;
         Trade[] backingArray = CONFIG.client.extra.villagerTrader.trades.values()
             .stream()
             .filter(trade -> trade.enabled && groupActive(trade))
@@ -1292,11 +1473,17 @@ public class VillagerTrader extends Module {
             return backingArray[index];
         }
 
+        /** Whether the last {@link #next()} wrapped from the final trade back to the first (a completed sweep). */
+        public boolean lastNextWrapped() {
+            return lastNextWrapped;
+        }
+
         /** Point the iterator at a specific (enabled) trade so the next cycle runs it. No-op if it isn't in the set. */
         public boolean pointAt(Trade t) {
             for (int i = 0; i < backingArray.length; i++) {
                 if (backingArray[i] == t) {
                     index = i;
+                    lastNextWrapped = false;
                     return true;
                 }
             }
@@ -1307,6 +1494,9 @@ public class VillagerTrader extends Module {
         public Trade next() {
             if (++index >= backingArray.length) {
                 index = 0;
+                lastNextWrapped = true;
+            } else {
+                lastNextWrapped = false;
             }
             return backingArray[index];
         }
@@ -1323,6 +1513,7 @@ public class VillagerTrader extends Module {
 
         public void reset() {
             index = 0;
+            lastNextWrapped = false;
             refresh();
         }
     }

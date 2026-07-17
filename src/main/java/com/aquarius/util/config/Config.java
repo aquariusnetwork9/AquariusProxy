@@ -471,6 +471,13 @@ public final class Config {
                      * round-robin to reach the earner on its own).
                      */
                     public int minEmeralds = 0;
+                    /**
+                     * After the bot finishes this group's run of trades, idle in place for this many SECONDS before
+                     * moving on / starting the next sweep — gives the group's villagers time to restock their offers
+                     * instead of hammering them in a tight loop. Every member trade INHERITS this (its own
+                     * {@link Trade#cycleCooldownSeconds} is ignored while grouped). Default 60; 0 = no wait. Clamped [0, 1200] on read.
+                     */
+                    public int cycleCooldownSeconds = 60;
                 }
 
                 public static class Trade {
@@ -500,6 +507,33 @@ public final class Config {
                     public int inputItem1MaxCarryStacks = 0;
                     public int maxInput1PerTrade = 99;
                     public int maxInput2PerTrade = 99;
+                    /**
+                     * After the bot finishes this trade's sweep (when ungrouped — a trade "by itself"), idle in place
+                     * for this many SECONDS before moving on, letting its villagers restock. IGNORED while the trade
+                     * is in a group (it inherits {@link TradeGroup#cycleCooldownSeconds} instead). Default 0 = no wait
+                     * (a lone trade keeps sweeping continuously unless you opt in); groups default to 60. Clamped [0, 1200] on read.
+                     */
+                    public int cycleCooldownSeconds = 0;
+                    /**
+                     * Bot-side price control for THIS trade — ON by default. Minecraft only recalculates a merchant
+                     * offer's demand (and live price) at server-side restocks (up to twice per Minecraft day) —
+                     * never between them, however many purchases happen in that window. Buying out an offer fully
+                     * at EVERY restock is the worst case for long-run price (each such restock adds demand); this
+                     * instead buys out fully only once every {@link #tradeEveryNRestocks} DETECTED restocks (a
+                     * numUses decrease observed on a later visit — there's no dedicated restock packet), skipping
+                     * the rest so demand decays in between. Independent of {@link #cycleCooldownSeconds}, which
+                     * only paces how often the bot bothers to travel back, not whether it's allowed to buy once
+                     * there. Set false per-trade to opt back out (unlimited buying, matching pre-price-control
+                     * behavior). Default true.
+                     */
+                    public boolean priceControlEnabled = true;
+                    /**
+                     * Buy out this trade's offer fully once every N detected restocks (skip the other N-1).
+                     * Breakeven (flat long-run demand) is exactly 3; higher values trend price down over time at
+                     * the cost of fewer purchases; lower values (1-2) still grow demand, just slower than trading
+                     * every restock. Ignored while {@link #priceControlEnabled} is false. Default 3.
+                     */
+                    public int tradeEveryNRestocks = 3;
                     public PostTradeStoreMode postTradeStoreMode = PostTradeStoreMode.NONE;
                     public enum PostTradeStoreMode {
                         NONE,
@@ -1044,6 +1078,57 @@ public final class Config {
 
                 /** E-bounce resupply target: refill the inventory to this many fresh elytras from the kit. */
                 public int resupplyElytraCount = 9;
+
+                /**
+                 * After an e-bounce elytra top-up, if the worn elytra is enchanted with Mending and its durability
+                 * is below {@link #mendDurabilityThreshold}, pull {@link #mendBottleCount} XP bottles from the kit
+                 * (via Regear, same cherry-pick sourcing as elytras/food/totems) and throw them at the bot's own
+                 * feet to top it up via Mending before resuming the bounce. Checked every resupply regardless of
+                 * whether it fires — a hard no-op if the worn elytra ISN'T Mending-enchanted (vanilla Mending never
+                 * repairs a non-enchanted item, so bottles would just be wasted; this is verified before a single
+                 * bottle is pulled). Never fails the resupply: a skipped/partial mend just leaves the elytra at
+                 * whatever durability it reached, and the elytra/food/totem refill still stands either way.
+                 */
+                public boolean mendWornElytra = false;
+
+                /** Durability floor (out of the elytra's 432 max) that triggers a mend attempt. */
+                public int mendDurabilityThreshold = 200;
+
+                /** XP bottles pulled from the kit and thrown per mend attempt. */
+                public int mendBottleCount = 8;
+
+                /** Look-down pitch (degrees) when throwing a bottle, so it breaks at the bot's own feet and the
+                 *  orbs are collected immediately — same convention as {@code enchanter.xpThrowPitch}. */
+                public float mendThrowPitch = 88.0f;
+
+                /** Ticks between individual bottle throws (lets the orb + level packet land). */
+                public int mendThrowSpacingTicks = 6;
+
+                /** Safety cap on ticks spent mending before giving up and resuming the bounce anyway. */
+                public int mendTimeoutTicks = 200;
+
+                /**
+                 * ALSO repair a carried SPARE elytra (not the worn one) during the same mend burst, by temporarily
+                 * moving it into the OFFHAND — vanilla Mending repairs anything equipped/held, offhand included,
+                 * not just worn armour. This briefly takes the offhand away from AutoTotem (which normally keeps
+                 * a totem there for death-save): {@code autoTotem.enabled} is flipped off for the burst, then both
+                 * are restored (spare back to inventory, totem back to offhand, AutoTotem re-enabled) the moment
+                 * it ends — success, timeout, or otherwise. Off by default; only turn on if a brief totem-blackout
+                 * on the ground mid-resupply is an acceptable trade-off for your setup. Skipped for this cycle
+                 * (worn-elytra repair still happens) if current health is below
+                 * {@link #mendMinHealthToBorrowOffhand}, or if no carried spare is both Mending-enchanted and
+                 * actually damaged enough to be worth it.
+                 */
+                public boolean mendSpareElytraOffhand = false;
+
+                /** Skip borrowing the offhand this cycle (but still repair the worn elytra) if current health is
+                 *  below this — a bounded, short totem-blackout is one thing at full health on the ground; not
+                 *  worth it while already hurt. */
+                public float mendMinHealthToBorrowOffhand = 15.0f;
+
+                /** Ticks to wait after submitting the offhand swap-back before trusting it landed and truly
+                 *  resuming the bounce — never hands control back with the totem/elytra swap still in flight. */
+                public int mendRestoreSettleTicks = 6;
 
                 /**
                  * "E-bounce" mode: instead of the firework climb/glide profile, skip along a FLAT straight road
@@ -1929,6 +2014,24 @@ public final class Config {
                 /** Put the emptied shulker back into the ender chest buffer (vs. leaving it carried). */
                 public boolean returnShulker = true;
 
+                /**
+                 * Fallback for when the primary kit shulker ({@link #matchByContents} / {@link #matchByColor} /
+                 * {@link #kitShulkerName}) doesn't cover everything the current gear-up still needs — including
+                 * when there's no primary kit shulker in the ender chest AT ALL, which is the common case for an
+                 * echest organised as separate single-item shulkers (an elytra shulker, a totem shulker, a
+                 * rockets shulker, ...) rather than one hand-packed kit. Either way it scans the OTHER shulkers —
+                 * a read-only peek via each one's CONTAINER component, the same trick {@link #matchByContents}
+                 * uses — for one holding a still-missing item, pulls + empties (only the missing items) + returns
+                 * it too, and repeats until satisfied or {@link #cherryPickMaxShulkers} shulkers have been tried
+                 * in total. The primary kit shulker, if one exists, is always tried first and emptied completely
+                 * exactly as before; this only widens the search when that alone didn't fully cover the need.
+                 */
+                public boolean cherryPickFallback = true;
+
+                /** Safety cap on shulkers opened via {@link #cherryPickFallback} — beyond the primary kit shulker
+                 *  when one was found, or total when there wasn't one to begin with. */
+                public int cherryPickMaxShulkers = 3;
+
                 /** Soft-pause the cycle while a non-self player is within {@link #playerPauseRange} blocks. Default
                  *  OFF — at 2b2t spawn there's almost always someone within range, which would stall the gear-up /
                  *  relocation indefinitely; turn it on for solo-field resupply if you want the safety pause. */
@@ -2085,6 +2188,14 @@ public final class Config {
                 /** A named kit in the {@link #kits} library: its slot map (slot index → item/count/match). */
                 public static class KitDef {
                     public LinkedHashMap<String, TemplateSlot> slots = new LinkedHashMap<>();
+                    /**
+                     * How the bot packages this kit: {@code "shulker"} (default) places + fills a 27-slot shulker box
+                     * per the addressable slot map, then breaks + collects it; {@code "bundle"} pulls an empty bundle
+                     * and stuffs the kit's items into it in-inventory (no place/break), honouring the bundle's weight
+                     * budget (Σ count/maxStack ≤ 1.0). Bundle kits ignore slot ordering — the slot map is read as a
+                     * flat (item, count, match) need list — and can only hold one stack-equivalent of mixed items.
+                     */
+                    public String fillMode = "shulker";
                 }
 
                 /** One slot of the config-defined kit template. */
