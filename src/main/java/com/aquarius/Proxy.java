@@ -6,6 +6,7 @@ import com.aquarius.cache.CacheResetType;
 import com.aquarius.discord.ChatRelayEventListener;
 import com.aquarius.discord.Embed;
 import com.aquarius.discord.NotificationEventListener;
+import com.aquarius.discord.NtfyNotificationListener;
 import com.aquarius.event.client.*;
 import com.aquarius.event.message.PrivateMessageSendEvent;
 import com.aquarius.event.queue.QueueCompleteEvent;
@@ -174,6 +175,7 @@ public class Proxy {
                 }
             }
             NotificationEventListener.INSTANCE.subscribeEvents();
+            NtfyNotificationListener.INSTANCE.subscribeEvents();
             ChatRelayEventListener.INSTANCE.subscribeEvents();
             if (CONFIG.plugins.enabled) PLUGIN_MANAGER.initialize();
             Queue.start();

@@ -34,6 +34,7 @@ public final class Config {
     public final InGameCommands inGameCommands = new InGameCommands();
     public final Theme theme = new Theme();
     public final Discord discord = new Discord();
+    public final Notifications notifications = new Notifications();
     public final Database database = new Database();
     public final AutoUpdater autoUpdater = new AutoUpdater();
 
@@ -3044,6 +3045,39 @@ public final class Config {
              * notice that exposes the bot's own location relative to nearby players.
              */
             public boolean visualRangeCoords = false;
+        }
+    }
+
+    public static final class Notifications {
+        public final Ntfy ntfy = new Ntfy();
+
+        public static class Ntfy {
+            public boolean enabled = false;
+            /** ntfy.sh or a self-hosted base URL, no trailing slash. */
+            public String server = "https://ntfy.sh";
+            /** Only "secret" here is guessing this string - anyone who knows it can subscribe. */
+            public String topic = "";
+            public final NtfyEvent visualRange = new NtfyEvent(true, 5, "warning,eyes");
+            public final NtfyEvent offline = new NtfyEvent(true, 4, "red_circle");
+            public final NtfyEvent online = new NtfyEvent(true, 2, "green_circle");
+            public final NtfyEvent proxyEvent = new NtfyEvent(true, 1, "");
+
+            public static class NtfyEvent {
+                public boolean enabled;
+                /** ntfy priority 1 (min) - 5 (urgent). */
+                public int priority;
+                /** Comma-separated ntfy tags/emoji shortcodes. */
+                public String tags;
+
+                public NtfyEvent() {
+                }
+
+                public NtfyEvent(boolean enabled, int priority, String tags) {
+                    this.enabled = enabled;
+                    this.priority = priority;
+                    this.tags = tags;
+                }
+            }
         }
     }
 
