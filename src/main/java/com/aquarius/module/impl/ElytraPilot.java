@@ -2,7 +2,10 @@ package com.aquarius.module.impl;
 
 import com.github.rfresh2.EventConsumer;
 import com.aquarius.Proxy;
+import com.aquarius.cache.data.entity.EntityLiving;
+import com.aquarius.cache.data.entity.EntityStandard;
 import com.aquarius.cache.data.inventory.Container;
+import com.aquarius.feature.player.raycast.RaycastHelper;
 import com.aquarius.event.client.ChunkDataEvent;
 import com.aquarius.event.client.ClientBotTick;
 import com.aquarius.event.client.ClientDeathEvent;
@@ -116,6 +119,7 @@ public class ElytraPilot extends Module {
     private boolean swapRedeploying;
     private int redeployCooldown;
     private int bounceStallTicks;
+    private boolean bounceKillAuraWeEnabledIt;   // so we only turn KillAura back off if WE were the ones who armed it
     private boolean passRecovery;               // PASS was entered to recover a fall off the road (vs route past an obstacle)
     private int recoverEpisodes;                // consecutive fall-recoveries; decays after sustained healthy flight
     private boolean resupplyStarted;            // RESUPPLY: have we handed off to Regear yet (settle first)
@@ -1451,9 +1455,19 @@ public class ElytraPilot extends Module {
         // Setback/frontier settles return above, so they never count here; the startup ramp clears 8 b/s well under the
         // limit. Once moving, the counter resets.
         if (speed * 20.0 < cfg.bounceStallSpeed) {
-            if (++bounceStallTicks > cfg.bounceStallLimit) {
+            // HOSTILE IN THE ROADWAY (unpaved highways especially — piglins/magma cubes wander onto a dug tunnel's
+            // floor): this stalls forward progress the same way a wall does, but it isn't terrain, so Baritone's
+            // obstacle-pass doesn't know to fight it and would try to route around it like grief. Detect it
+            // specifically and let KillAura clear it — give it a much longer leash than a genuine obstruction before
+            // giving up and escalating to the reroute (covers the case where a mob happens to be near an actual wall).
+            EntityLiving hostile = nearestHostile(x, y, z, cfg.bounceHostileScanRadius);
+            if (hostile != null) engageBounceKillAura(); else disengageBounceKillAura();
+            int limit = hostile != null ? cfg.bounceHostileFightLimit : cfg.bounceStallLimit;
+            if (++bounceStallTicks > limit) {
                 bounceStallTicks = 0;
-                info("Bounce stalled on a highway obstacle (no forward progress) — routing around it");
+                info(hostile != null
+                    ? "Bounce stalled fighting through a hostile — routing around it"
+                    : "Bounce stalled on a highway obstacle (no forward progress) — routing around it");
                 if (cfg.passObstacles) enterPass();
                 else if (cfg.bounceHopObstacles) enterHop();
                 else { abort("blocked on the road and obstacle-pass is disabled"); }
@@ -1461,6 +1475,7 @@ public class ElytraPilot extends Module {
             }
         } else {
             bounceStallTicks = 0;
+            disengageBounceKillAura();
         }
 
         // RE-DEPLOY: re-engage the elytra EVERY airborne tick it isn't registered (the capture re-sends START_FALL_FLYING
@@ -1902,6 +1917,62 @@ public class ElytraPilot extends Module {
             return new double[]{ cfg.roadDirX / len, cfg.roadDirZ / len };
         }
         return highwayUnit(cfg.highwayDir);
+    }
+
+    /** Scans a small window around (x,y,z) for the actual local floor and returns the Y of its walkable surface, or
+     *  {@code fallback} if nothing solid is found nearby (unloaded chunk, deep pit). A highway map entry without a
+     *  surveyed {@code yLevel} (dug tunnels, mostly) only has the network's generic default to go on, which can be
+     *  off by a block or two from the real floor — sampling where the bot is actually standing is exact instead. */
+    public static int sampleGroundY(double x, double y, double z, int fallback) {
+        int bx = MathHelper.floorI(x), bz = MathHelper.floorI(z);
+        if (!World.isChunkLoadedChunkPos(bx >> 4, bz >> 4)) return fallback;
+        int top = MathHelper.floorI(y) + 2;
+        for (int by = top; by >= top - 8; by--) {
+            var b = World.getBlock(bx, by, bz);
+            if (!b.isAir() && !World.isWater(b)) return by + 1;
+        }
+        return fallback;
+    }
+
+    /** Nearest alive hostile mob within {@code radius} blocks of (x,y,z), or null. Mirrors WhisperControl's
+     *  protect-mode scan (KillAura's hostile table + a line-of-sight raycast so a mob in a side pocket/behind a
+     *  wall of the tunnel doesn't falsely count as "in the way"). */
+    private EntityLiving nearestHostile(double x, double y, double z, int radius) {
+        EntityLiving best = null;
+        double bestSq = (double) radius * radius;
+        double eyeY = y + 1.62;
+        for (var e : CACHE.getEntityCache().getEntities().values()) {
+            if (!(e instanceof EntityStandard mob)) continue;
+            if (!mob.isAlive()) continue;
+            if (!KillAura.isHostile(mob.getEntityType())) continue;
+            double dx = mob.getX() - x, dy = mob.getY() - y, dz = mob.getZ() - z;
+            double dsq = dx * dx + dy * dy + dz * dz;
+            if (dsq > bestSq) continue;
+            var dims = mob.dimensions();
+            double mobCenterY = mob.getY() + dims.getY() / 2.0;
+            if (RaycastHelper.blockRaycast(x, eyeY, z, mob.getX(), mobCenterY, mob.getZ(), false).hit()) continue;
+            bestSq = dsq;
+            best = mob;
+        }
+        return best;
+    }
+
+    /** Turns KillAura on to clear a hostile blocking the bounce — a no-op if it's already on (ours from a prior
+     *  call, or the user's own setting; either way we don't touch/restore something we didn't enable). */
+    private void engageBounceKillAura() {
+        if (CONFIG.client.extra.killAura.enabled) return;
+        CONFIG.client.extra.killAura.targetHostileMobs = true;
+        CONFIG.client.extra.killAura.enabled = true;
+        MODULE.get(KillAura.class).syncEnabledFromConfig();
+        bounceKillAuraWeEnabledIt = true;
+    }
+
+    /** Restores KillAura to off, but only if {@link #engageBounceKillAura} was the one that turned it on. */
+    private void disengageBounceKillAura() {
+        if (!bounceKillAuraWeEnabledIt) return;
+        CONFIG.client.extra.killAura.enabled = false;
+        MODULE.get(KillAura.class).syncEnabledFromConfig();
+        bounceKillAuraWeEnabledIt = false;
     }
 
     /** Equip a fresh elytra mid-air, then re-deploy + re-boost. The bot free-falls while the chestplate is swapped. */
