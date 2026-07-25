@@ -1,6 +1,7 @@
 package com.aquarius.command.impl;
 
 import com.aquarius.feature.elytra.Route;
+import com.aquarius.feature.highways.HighwayNetwork;
 import com.aquarius.feature.player.World;
 import com.aquarius.mc.dimension.DimensionRegistry;
 import com.aquarius.module.impl.ElytraPilot;
@@ -297,7 +298,7 @@ public class ElytraPilotCommand extends Command {
             .then(literal("bounceredeployvy").then(argument("vy", doubleArg()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.bounceRedeployMaxVy = getDouble(c, "vy");
                 c.getSource().getEmbed().title("ElytraPilot e-bounce redeploy maxVy = " + CONFIG.client.extra.elytraPilot.bounceRedeployMaxVy)
-                    .description("Only re-deploy the elytra once vertical speed drops below this (deploy on the way DOWN). Keeps the rise ballistic = low apex (no ceiling hits). Raise toward 0.4 to deploy throughout the rise.");
+                    .description("Only re-deploy the elytra once vertical speed drops below this. Keep HIGH (default 5 = re-deploy from liftoff, continuous fall-flying — required for the bounce to hold at speed). Low values (deploy-on-descent) collapse into setbacks within seconds.");
             })))
             .then(literal("bounceclearground").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.bounceClearOnGround = getToggle(c, "toggle");
@@ -475,26 +476,72 @@ public class ElytraPilotCommand extends Command {
                 c.getSource().getEmbed().title("ElytraPilot e-bounce HOLD-exit = " + CONFIG.client.extra.elytraPilot.bounceHoldExitFrac + " x target")
                     .description("Drop back to firework KICKSTART if HOLD speed falls below this fraction of target.");
             })))
-            .then(literal("highway").then(argument("dir", word()).executes(c -> {
-                HighwayDir dir;
-                try {
-                    dir = HighwayDir.valueOf(getString(c, "dir").toUpperCase());
-                } catch (IllegalArgumentException e) {
-                    c.getSource().getEmbed().title("Error").description("Direction must be one of: N S E W NE SE NW SW");
-                    return ERROR;
-                }
-                var cfg = CONFIG.client.extra.elytraPilot;
-                cfg.highway = true;
-                cfg.highwayDir = dir;
-                cfg.ebounce = true;
-                cfg.roadY = 120;
-                cfg.hasTarget = false;
-                cfg.roadAnchorX = 0; cfg.roadAnchorZ = 0; cfg.roadDirX = 0; cfg.roadDirZ = 0;  // clean spawn highway
-                c.getSource().getEmbed()
-                    .title("ElytraPilot highway " + dir)
-                    .description("E-bounce along the " + dir + " nether highway (y" + cfg.roadY + "). Run /fly on to start.");
-                return OK;
-            })))
+            .then(literal("highway")
+                .then(literal("auto").executes(c -> {
+                    var pc = CACHE.getPlayerCache();
+                    var snap = HighwayNetwork.get().nearestUsable(pc.getX(), pc.getZ());
+                    if (snap == null) {
+                        c.getSource().getEmbed().title("Error").description("No highway data loaded / no usable road found.");
+                        return ERROR;
+                    }
+                    var road = snap.road();
+                    var seg = snap.segment();
+                    var cfg = CONFIG.client.extra.elytraPilot;
+                    cfg.highway = true;
+                    cfg.ebounce = true;
+                    cfg.hasTarget = false;
+                    // A surveyed yLevel (paved rings mostly) is exact; a dug tunnel usually has none, so sample the
+                    // ACTUAL floor where the bot is standing right now instead of trusting the network's generic
+                    // default (which can be off by a block or two — enough to break the ground bounce's onGround
+                    // detection). Dug highways are still flat and clear, just not obsidian, so ground e-bounce is
+                    // still the right mode for them; they only need the correct Y, not a different flight mode.
+                    Integer surveyedY = road.yLevel();
+                    cfg.roadY = surveyedY != null ? surveyedY
+                        : ElytraPilot.sampleGroundY(pc.getX(), pc.getY(), pc.getZ(), HighwayNetwork.get().defaultYLevel());
+                    cfg.roadAnchorX = seg.x1(); cfg.roadAnchorZ = seg.z1();
+                    cfg.roadDirX = seg.x2() - seg.x1(); cfg.roadDirZ = seg.z2() - seg.z1();
+                    cfg.roadSurface = road.surface();
+                    c.getSource().getEmbed()
+                        .title("ElytraPilot highway auto-detected: " + road.name())
+                        .description(String.format(
+                            "Surface: %s, road Y=%d (%s), %.0f blocks off-road. Ground e-bounce. Run /fly on to start.",
+                            road.surface(), cfg.roadY, surveyedY != null ? "surveyed" : "sampled here", snap.distance()));
+                    return OK;
+                }))
+                .then(argument("dir", word()).executes(c -> {
+                    HighwayDir dir;
+                    try {
+                        dir = HighwayDir.valueOf(getString(c, "dir").toUpperCase());
+                    } catch (IllegalArgumentException e) {
+                        c.getSource().getEmbed().title("Error").description("Direction must be one of: N S E W NE SE NW SW");
+                        return ERROR;
+                    }
+                    var cfg = CONFIG.client.extra.elytraPilot;
+                    cfg.highway = true;
+                    cfg.highwayDir = dir;
+                    cfg.ebounce = true;
+                    cfg.hasTarget = false;
+                    cfg.roadAnchorX = 0; cfg.roadAnchorZ = 0; cfg.roadDirX = 0; cfg.roadDirZ = 0;  // clean spawn highway (pure compass direction)
+                    // The cardinal/diagonal axis is only PAVED out to 3.75M — beyond that even a straight-direction
+                    // highway is dug, same as the diamond/ring roads. Look up the real road at the current position
+                    // (same axis, so direction/anchor above still correctly describe it) instead of assuming.
+                    var pc = CACHE.getPlayerCache();
+                    var snap = HighwayNetwork.get().nearestUsable(pc.getX(), pc.getZ());
+                    if (snap != null && "axis".equals(snap.road().category())) {
+                        Integer surveyedY = snap.road().yLevel();
+                        cfg.roadY = surveyedY != null ? surveyedY
+                            : ElytraPilot.sampleGroundY(pc.getX(), pc.getY(), pc.getZ(), HighwayNetwork.get().defaultYLevel());
+                        cfg.roadSurface = snap.road().surface();
+                    } else {
+                        cfg.roadY = 120;
+                        cfg.roadSurface = "unknown";
+                    }
+                    c.getSource().getEmbed()
+                        .title("ElytraPilot highway " + dir)
+                        .description(String.format("E-bounce along the %s nether highway (y%d, surface %s). Run /fly on to start.",
+                            dir, cfg.roadY, cfg.roadSurface));
+                    return OK;
+                })))
             .then(literal("pass").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.passObstacles = getToggle(c, "toggle");
                 c.getSource().getEmbed().title("ElytraPilot obstacle passing " + toggleStrCaps(CONFIG.client.extra.elytraPilot.passObstacles));

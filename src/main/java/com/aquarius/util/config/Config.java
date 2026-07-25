@@ -932,6 +932,12 @@ public final class Config {
                 public double roadDirX = 0.0;
                 public double roadDirZ = 0.0;
 
+                /** Surface of the currently-targeted highway ("paved"/"dug"/"planned"/"unknown"), set by
+                 *  {@code /fly highway auto} from the bundled {@link com.aquarius.feature.highways.HighwayNetwork}
+                 *  map. Non-"paved" forces the firework highway-cruise glide instead of the ground e-bounce, which
+                 *  needs a known-flat paved surface it doesn't have on a merely-dug tunnel. */
+                public String roadSurface = "unknown";
+
                 // --- Saved multi-leg routes (named, reusable per base; driven by ElytraTrip). ---
                 /** Named routes: ride a highway to a milestone, branch off, arrive at an off-highway base. */
                 public Map<String, Route> tripRoutes = new LinkedHashMap<>();
@@ -1164,11 +1170,14 @@ public final class Config {
                  *  setback; too HIGH and the bot stays ballistic (air-drag) too long and bleeds speed. ~0.3-0.6. */
                 public double bounceDeployHeight = 0.3;
 
-                /** E-bounce: only re-deploy the elytra once the bot's vertical velocity has dropped below this (i.e. at/near
-                 *  the apex, on the way DOWN). This keeps the RISE ballistic (full gravity 0.08 -> low apex ~roadY+1, so it
-                 *  never punches into the nether ceiling) like the real capture, then glides the descent (0.99 drag +
-                 *  dive-conversion build speed). Set high (e.g. 1.0) to deploy throughout the rise (over-climbs). ~0.1. */
-                public double bounceRedeployMaxVy = 0.10;
+                /** E-bounce: only re-deploy the elytra once the bot's vertical velocity has dropped below this. HIGH
+                 *  (e.g. 5.0 = effectively unconditional) re-deploys the instant the jump leaves the ground, keeping
+                 *  fall-flying CONTINUOUS through the whole cycle — the server tracks the bot as a glider on every tick
+                 *  and accepts the bounce at full speed (live-validated ~40 b/s, 0 setbacks). LOW (e.g. 0.1 = deploy only
+                 *  at/after the apex) leaves the rise un-glided; the server eventually stops granting fall-flying to that
+                 *  pattern and pins the bot at a walking-jump (collapses within seconds once past ~12-20 b/s). The
+                 *  constant-pitch steep dive is what keeps the apex low now — the ballistic rise is no longer needed. */
+                public double bounceRedeployMaxVy = 5.0;
 
                 /** E-bounce: blocks above {@link #roadY} at which the nose-down dive starts ramping in. Below it the bot
                  *  flies level ({@link #bouncePitch}). Above it, pitch ramps PROPORTIONALLY with height (see
@@ -1350,6 +1359,16 @@ public final class Config {
                  *  Above it the stall counter resets. Set below the cruise speed but above the startup ramp's first
                  *  ticks so a real wall (speed pinned ~0) is caught but normal flight never trips it. ~8. */
                 public double bounceStallSpeed = 8.0;
+
+                /** Radius (blocks) to scan for a hostile mob standing in the way when the bounce stalls — piglins,
+                 *  magma cubes etc. wander onto unpaved/dug highways more than the built obsidian roads. */
+                public int bounceHostileScanRadius = 12;
+
+                /** Like {@link #bounceStallLimit} but used instead of it while a hostile is detected nearby — much
+                 *  more generous, since KillAura needs a few seconds to actually close in and land the kill. Only
+                 *  after this longer window does a mob-adjacent stall still escalate to the obstacle-pass reroute
+                 *  (covers a genuine wall that happens to have a mob near it too). */
+                public int bounceHostileFightLimit = 200;
 
                 /** InputManager priority for flight control (high so it overrides other movement). */
                 public int inputPriority = 5000;

@@ -64,6 +64,12 @@ public class Baritone implements Pathfinder {
     private final InteractWithProcess interactWithProcess = new InteractWithProcess(this);
     private final ClearAreaProcess clearAreaProcess = new ClearAreaProcess(this);
     private final Timer teleportDelayTimer = Timers.timer();
+    private final Timer teleportStarvationTimer = Timers.timer();
+    private double lastTeleportX = Double.NaN;
+    private double lastTeleportY = Double.NaN;
+    private double lastTeleportZ = Double.NaN;
+    private static final double TELEPORT_DEDUP_EPSILON = 0.05;    // blocks; a resend within this of the last correction isn't a NEW one
+    private static final long TELEPORT_STARVATION_CAP_MS = 3000L; // never withhold a tick longer than this no matter how dense the corrections
     private final IngamePathRenderer ingamePathRenderer = new IngamePathRenderer();
 
     public Baritone() {
@@ -210,7 +216,7 @@ public class Baritone implements Pathfinder {
     private void onClientBotTick(ClientBotTick event) {
         if (!CACHE.getPlayerCache().isAlive()) return;
         if (CACHE.getChunkCache().getCache().size() < 8) return;
-        if (!teleportDelayTimer.tick(CONFIG.client.extra.pathfinder.teleportDelayMs, false)) return;
+        if (!teleportGateOpen()) return;
         lookBehavior.onTick();
         pathingBehavior.onTick();
         if (pathingControlManager.isActive()) {
@@ -247,6 +253,39 @@ public class Baritone implements Pathfinder {
     }
 
     public void onPlayerPosRotate() {
-        teleportDelayTimer.reset();
+        var pc = CACHE.getPlayerCache();
+        double x = pc.getX(), y = pc.getY(), z = pc.getZ();
+        boolean sameAsLast = !Double.isNaN(lastTeleportX)
+            && Math.abs(x - lastTeleportX) < TELEPORT_DEDUP_EPSILON
+            && Math.abs(y - lastTeleportY) < TELEPORT_DEDUP_EPSILON
+            && Math.abs(z - lastTeleportZ) < TELEPORT_DEDUP_EPSILON;
+        lastTeleportX = x;
+        lastTeleportY = y;
+        lastTeleportZ = z;
+        // A resend of essentially the same position isn't a new correction to settle for. A dense, unbroken stream of
+        // these (observed live: identical coords resent 2-3x/sec, indefinitely) used to keep re-arming this timer
+        // before it could ever elapse, permanently starving onClientBotTick() of ticks -- so Baritone could compute a
+        // path but never actually drive it, deadlocked forever even once the position had genuinely settled.
+        if (!sameAsLast) teleportDelayTimer.reset();
+    }
+
+    /**
+     * True once it's safe for {@link #onClientBotTick} to actually tick (and therefore move the bot): either the
+     * normal per-teleport cooldown has elapsed, or -- regardless of how densely corrections keep arriving --
+     * {@link #TELEPORT_STARVATION_CAP_MS} has passed since the last tick we were allowed to take. Baritone's whole
+     * purpose here is often to move the bot OUT of a stuck situation, so a resend storm must never be able to
+     * withhold ticking from it indefinitely.
+     */
+    private boolean teleportGateOpen() {
+        if (teleportDelayTimer.tick(CONFIG.client.extra.pathfinder.teleportDelayMs, false)) {
+            teleportStarvationTimer.reset();
+            return true;
+        }
+        if (teleportStarvationTimer.tick(TELEPORT_STARVATION_CAP_MS, false)) {
+            teleportDelayTimer.reset();
+            teleportStarvationTimer.reset();
+            return true;
+        }
+        return false;
     }
 }
