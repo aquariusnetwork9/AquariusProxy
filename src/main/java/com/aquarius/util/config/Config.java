@@ -1059,8 +1059,18 @@ public final class Config {
 
                 /** On the last-elytra emergency landing, disconnect to preserve the bot + kit where it lands. An armed
                  *  trip is cancelled by the emergency landing regardless of this flag — with no usable elytra left, a
-                 *  surviving leg would only re-arm into another emergency. Off = land and stay online, grounded. */
+                 *  surviving leg would only re-arm into another emergency. Off = land and stay online, grounded.
+                 *  <p>Applies ONLY to the out-of-elytra case; a bot that merely ran out of ways past an obstruction
+                 *  uses {@link #blockedLogout} instead. These used to share this one flag, so a healthy bot walled in
+                 *  on a highway logged itself out under a setting named for elytra durability. */
                 public boolean lastElytraLogout = true;
+
+                /** Log out after a BLOCKED emergency landing (every bypass tier exhausted against an obstruction) —
+                 *  as opposed to {@link #lastElytraLogout}'s out-of-elytra case. Defaults OFF: the bot is still
+                 *  airworthy, so logging it out just strands it wherever the grief happened to be, and staying online
+                 *  leaves it reachable to redirect by hand. The armed trip is cancelled either way so it can't
+                 *  re-arm straight back into the same wall. */
+                public boolean blockedLogout = false;
 
                 /**
                  * Minimum blocks of clearance above the ground before a (flight-dropping) swap is attempted.
@@ -1390,8 +1400,37 @@ public final class Config {
                      *  Baritone-recovering or aborting. Needs fireworks; falls back to the old behaviour without them. */
                     public boolean flyThroughGaps = true;
 
-                    /** Full-height blockage (wall to the ceiling) -> reroute around it via the ring-road graph. */
+                    /** Full-height blockage (wall to the ceiling) -> reroute around it via the ring-road graph. Only
+                     *  useful within {@link #ringRerouteMaxNodeDist} of a crossing; past that the local
+                     *  {@link #detourAroundWalls} descend-detour takes over. */
                     public boolean rerouteAroundWalls = true;
+
+                    /** Full-height blockage -> drop BELOW the highway band into open nether, fly the road axis past the
+                     *  blockage, then climb back up and rejoin. This is the far-out answer: it needs no ring road, no
+                     *  side highway and no loaded chunks ahead, and it flies the one layer the native seed router
+                     *  models well (grief clusters at road level, y~120, not down at the cruise altitude). */
+                    public boolean detourAroundWalls = true;
+
+                    /** First detour's length along the road axis (blocks). Each further attempt DOUBLES it, because the
+                     *  bot can't see how wide the blockage is — chunks that far ahead aren't loaded — so it probes:
+                     *  fly out, climb back into the band, look; still walled -> go further. */
+                    public int detourAheadBlocks = 256;
+
+                    /** Detour attempts (each double the last) before giving up on the nether route. The default reaches
+                     *  256+512+…+8192 blocks of blockage, well past any realistic grief project. */
+                    public int maxDetourAttempts = 6;
+
+                    /** LAST RESORT (opt-in): when every nether bypass fails, route around the blockage through the
+                     *  OVERWORLD — portal out, fly the 8x-scaled distance, portal back in past it. Off by default
+                     *  because it costs eight times the distance in fireworks and elytra durability and needs two
+                     *  portal transitions (carry >=10 obsidian + flint & steel, or it can only use existing portals).
+                     *  Still beats a stranded bot: it makes real forward progress where the nether has no way through. */
+                    public boolean overworldReroute = false;
+
+                    /** Beyond this distance from the nearest ring/radial crossing, skip the ring-road reroute entirely
+                     *  and go straight to the local detour. Snapping to a "nearest" ring that's 300k blocks away turns
+                     *  a detour into a longer trip than the one being made. */
+                    public double ringRerouteMaxNodeDist = 4000.0;
 
                     /** Record encountered hazards into the bot's LOCAL grief map. No connection is opened and nothing is
                      *  pushed anywhere; the only egress is an explicit, opt-in export pulled by something else. */

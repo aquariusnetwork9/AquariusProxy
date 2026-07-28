@@ -56,6 +56,9 @@ public class ElytraTrip extends Module {
         NETHER_OPEN,       // highways off — open-nether cruise straight to the target's nether coords
         NETHER_DEST,       // the destination IS in the nether: fly to the exact coords and land there
         NETHER_SEEK_EXIT,  // near the target's nether coords: walk into an exit portal, wait for the overworld
+        OWR_EXIT,          // road blocked past every nether bypass: portal OUT to the overworld to go around it
+        OWR_TRAVEL,        // overworld: fly to the 8x-scaled coords of the nether rejoin point
+        OWR_ENTER,         // at those coords: portal back INTO the nether, past the blockage
         FINAL_APPROACH,    // fly the overworld to the exact target
         DONE,
         FAILED
@@ -80,6 +83,11 @@ public class ElytraTrip extends Module {
     private boolean savedEquipElytra; // GEAR_UP: prior regear.equipElytra, restored when gear-up ends
     private boolean gearUsedProfile;  // GEAR_UP: drove Regear from a kit profile (pushProfile) vs the legacy override
     private HighwayDir chosenDir;     // nether transit: the highway picked (nearest line that heads toward the target)
+
+    // --- overworld reroute (last-resort bypass of a nether blockage; see requestOverworldReroute) ---
+    private int owrNetherX, owrNetherZ;   // nether coords to rejoin the road at, past the blockage
+    private Phase owrResumePhase = Phase.IDLE;  // the leg phase to return to once back in the nether
+    private boolean portalBuildTried;     // one AutoPortal attempt per transition, not one per tick
 
     // --- multi-leg route execution ---
     private Route activeRoute;        // non-null while running a saved route; null = a plain coord trip
@@ -242,6 +250,9 @@ public class ElytraTrip extends Module {
                 case NETHER_OPEN      -> tickNetherOpen(cfg);
                 case NETHER_DEST      -> tickNetherDest(cfg);
                 case NETHER_SEEK_EXIT -> tickNetherSeekExit();
+                case OWR_EXIT         -> tickOwrExit();
+                case OWR_TRAVEL       -> tickOwrTravel();
+                case OWR_ENTER        -> tickOwrEnter();
                 case FINAL_APPROACH   -> tickFinalApproach(cfg.tripTargetX, cfg.tripTargetZ);
                 default               -> { }
             }
@@ -442,6 +453,9 @@ public class ElytraTrip extends Module {
             elytra().beginFlight();
             legStarted = true;
         }
+        // A bypass in progress OWNS the leg: it leaves the road on purpose (the local detour flies below it, the ring
+        // reroute goes around via the web), so neither the drift check nor the leg guard applies until it rejoins.
+        if (elytra().isBypassingBlockage()) return;
         double perp = perpDist(x, z);
         if (perp > cfg.highwayAcquireRadius) {              // knocked far off the road — re-acquire instead of fighting
             elytra().endFlight();
@@ -552,6 +566,114 @@ public class ElytraTrip extends Module {
         }
         if ((guardTicks += THROTTLE_TICKS) > HIGHWAY_GUARD_TICKS)
             abort("nether travel leg timed out before reaching the destination");
+    }
+
+    /**
+     * Take over a blockage the pilot couldn't get past in the nether, routing around it through the OVERWORLD.
+     *
+     * <p>Nether coords are 1:8, so this covers the same ground at eight times the distance — plus two portal
+     * transitions, each of which can fail on a server where a portal has to be built from carried obsidian. It is
+     * deliberately the last tier, below the local descend-detour, and off by default. It is still worth having: it
+     * makes forward progress where the nether route simply has no way through, at a cost in fireworks and elytra
+     * durability rather than a stranded bot.
+     *
+     * @param netherX nether X to rejoin the road at, past the blockage
+     * @param netherZ nether Z to rejoin the road at, past the blockage
+     * @return true if this trip accepted the reroute
+     */
+    public boolean requestOverworldReroute(int netherX, int netherZ, String why) {
+        if (phase == Phase.IDLE || phase == Phase.DONE || phase == Phase.FAILED) return false;
+        if (!CONFIG.client.extra.elytraPilot.tripActive) return false;
+        owrNetherX = netherX;
+        owrNetherZ = netherZ;
+        owrResumePhase = phase;
+        phase = Phase.OWR_EXIT;
+        legStarted = false;
+        guardTicks = 0;
+        portalBuildTried = false;
+        elytra().endFlight();
+        warn("{} — rerouting around it through the overworld (rejoining the nether at {}, {}).", why, netherX, netherZ);
+        inGameAlertActivePlayer("<yellow>Trip: nether route blocked — going around through the overworld");
+        return true;
+    }
+
+    /** Step 1: get out of the nether — walk into a portal, or build one from carried obsidian. */
+    private void tickOwrExit() {
+        if (inOverworld()) {
+            info("In the overworld — flying around the blockage to {}, {}.",
+                Math.round(owrNetherX * NETHER_SCALE), Math.round(owrNetherZ * NETHER_SCALE));
+            phase = Phase.OWR_TRAVEL;
+            legStarted = false;
+            guardTicks = 0;
+            return;
+        }
+        if (seekOrBuildPortal()) return;
+        if ((guardTicks += THROTTLE_TICKS) > PORTAL_GUARD_TICKS)
+            abort("blocked in the nether and no portal out (carry >=10 obsidian + flint & steel for the overworld reroute)");
+    }
+
+    /** Step 2: fly the overworld to the 8x-scaled coords of the nether rejoin point. */
+    private void tickOwrTravel() {
+        if (!inOverworld()) { abort("left the overworld during the reroute"); return; }
+        var cfg = CONFIG.client.extra.elytraPilot;
+        int tx = (int) Math.round(owrNetherX * NETHER_SCALE);
+        int tz = (int) Math.round(owrNetherZ * NETHER_SCALE);
+        if (!legStarted) {
+            cfg.highway = false;
+            cfg.ebounce = false;
+            cfg.hasTarget = true;
+            cfg.targetX = tx;
+            cfg.targetZ = tz;
+            elytra().beginFlight();
+            legStarted = true;
+            return;
+        }
+        if (elytra().isFlightDone()) {
+            if (!elytra().wasFlightSuccessful()) { abort("the overworld reroute leg failed"); return; }
+            elytra().endFlight();
+            info("Overworld leg done — portalling back into the nether past the blockage.");
+            phase = Phase.OWR_ENTER;
+            legStarted = false;
+            guardTicks = 0;
+            portalBuildTried = false;
+            return;
+        }
+        if ((guardTicks += THROTTLE_TICKS) > HIGHWAY_GUARD_TICKS)
+            abort("the overworld reroute leg timed out");
+    }
+
+    /** Step 3: back into the nether past the blockage, then resume the road leg that was blocked. */
+    private void tickOwrEnter() {
+        if (inNether()) {
+            info("Back in the nether past the blockage — re-acquiring the road.");
+            phase = owrResumePhase == Phase.NETHER_HIGHWAY ? Phase.NETHER_HW_FLYIN : owrResumePhase;
+            legStarted = false;
+            guardTicks = 0;
+            graceTicks = 0;
+            return;
+        }
+        if (seekOrBuildPortal()) return;
+        if ((guardTicks += THROTTLE_TICKS) > PORTAL_GUARD_TICKS)
+            abort("couldn't get back into the nether (carry >=10 obsidian + flint & steel for the overworld reroute)");
+    }
+
+    /**
+     * Walk into the nearest portal; if Baritone can't find one, build one from carried materials. Returns true while
+     * something is in progress, so the caller only counts guard ticks when neither path is doing anything.
+     */
+    private boolean seekOrBuildPortal() {
+        elytra().endFlight();                       // don't let flight fight Baritone / the build
+        var ap = MODULE.get(AutoPortal.class);
+        if (ap.getState() == AutoPortal.State.PLACING || ap.getState() == AutoPortal.State.LIGHTING) return true;
+        if (BARITONE.isActive()) return true;
+        if (!portalBuildTried) {                    // one build attempt per transition; retry is the caller's guard
+            BARITONE.getTo(BlockRegistry.NETHER_PORTAL);
+            if (BARITONE.isActive()) return true;
+            portalBuildTried = true;
+            if (ap.start()) { info("No reachable portal — building one."); return true; }
+            warn("No reachable portal and can't build one (needs >=10 obsidian + a lighter).");
+        }
+        return false;
     }
 
     private void tickNetherSeekExit() {
