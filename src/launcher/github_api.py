@@ -68,7 +68,14 @@ class GitHubAPI:
             # channel ("java.1.21.4") serves full (non-prerelease) releases only. Both match the same
             # "+java.1.21.4" channel tag. Pick the highest semantic version (not newest publish time, so
             # re-publishing an older version can't masquerade as the latest).
-            include_prereleases = channel.endswith(".pre")
+            #
+            # A ".dev" channel (e.g. "java.1.21.4.dev") opts into untested dev builds published straight
+            # from dev/* branches by dev-build.yml. Unlike ".pre", these live under their own permanent
+            # "+java.1.21.4.dev" tag suffix (never promoted/merged into the stable "+java.1.21.4" tag), and
+            # the base X.Y.Z is intentionally frozen/reused across many dev builds, so version tuples tie.
+            # Ties fall back to GitHub's releases-list order (newest-created first), which is safe here
+            # because each dev build always mints a brand-new tag rather than overwriting an old one.
+            include_prereleases = channel.endswith(".pre") or channel.endswith(".dev")
             match_channel = channel[:-4] if include_prereleases else channel
             latest_release = max(
                 (r for r in releases

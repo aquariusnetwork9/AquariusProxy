@@ -15,6 +15,7 @@ import com.aquarius.mc.block.BlockPos;
 import com.aquarius.mc.block.Direction;
 import com.aquarius.mc.item.ItemData;
 import com.aquarius.mc.item.ItemRegistry;
+import com.aquarius.mc.item.ItemTags;
 import com.aquarius.module.api.Module;
 import com.aquarius.util.math.MathHelper;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand;
@@ -203,6 +204,35 @@ public abstract class AbstractFieldModule extends Module {
     protected int findEmptyPlayerWindowSlot(Container c) {
         return findPlayerWindowSlot(c, s -> s == Container.EMPTY_STACK);
     }
+    /** CONTAINER-half slot (0 .. size-37) of the first shulker box whose nested contents match {@code pred},
+     *  read via its CONTAINER component — the same passive, no-opening peek {@link StashScanner} uses for its
+     *  census. Lets a caller ask "is there a shulker in here holding X" without placing/opening anything. -1 if
+     *  no shulker in the window has a match. */
+    protected int findShulkerSlotContaining(Container c, Predicate<ItemStack> pred) {
+        int chestSlots = Math.max(0, c.getSize() - 36);
+        for (int i = 0; i < chestSlots; i++) {
+            ItemStack s = c.getItemStack(i);
+            if (!isShulkerBox(s)) continue;
+            for (ItemStack inner : containerContents(s)) if (pred.test(inner)) return i;
+        }
+        return -1;
+    }
+    /** Like {@link #findShulkerSlotContaining}, but among shulkers with a match, picks the one where the total
+     *  quantity of matching items is highest — "the shulker with the MOST elytras/food/totems," not just the
+     *  first one with any. Fewer, richer pulls beat many thin ones (less time spent stopped mid-trip). Ties keep
+     *  whichever was found first. -1 if no shulker in the window has a match. */
+    protected int findRichestShulkerSlot(Container c, Predicate<ItemStack> pred) {
+        int chestSlots = Math.max(0, c.getSize() - 36);
+        int best = -1, bestQty = 0;
+        for (int i = 0; i < chestSlots; i++) {
+            ItemStack s = c.getItemStack(i);
+            if (!isShulkerBox(s)) continue;
+            int qty = 0;
+            for (ItemStack inner : containerContents(s)) if (pred.test(inner)) qty += inner.getAmount();
+            if (qty > bestQty) { bestQty = qty; best = i; }
+        }
+        return best;
+    }
     /** First standalone player-inventory slot (9-44) matching {@code pred}, or -1. */
     protected int findInInv(Predicate<ItemStack> pred) {
         List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
@@ -262,6 +292,20 @@ public abstract class AbstractFieldModule extends Module {
         for (ItemStack i : c) if (i != Container.EMPTY_STACK) return false;
         return true;
     }
+    /** Any bundle item (default + all 16 dyed variants) — identified by the {@code BUNDLES} item tag. */
+    protected boolean isBundle(@Nullable ItemStack s) {
+        if (s == null || s == Container.EMPTY_STACK) return false;
+        ItemData d = ItemRegistry.REGISTRY.get(s.getId());
+        return d != null && d.itemTags().contains(ItemTags.BUNDLES);
+    }
+    /** Items packed inside a bundle item via its BUNDLE_CONTENTS component (flat list, empty if none). */
+    protected List<ItemStack> bundleContents(@Nullable ItemStack s) {
+        if (s == null || s == Container.EMPTY_STACK) return List.of();
+        List<ItemStack> c = s.getDataComponentsOrEmpty().get(DataComponentTypes.BUNDLE_CONTENTS);
+        return c == null ? List.of() : c;
+    }
+    protected boolean isEmptyBundle(@Nullable ItemStack s) { return isBundle(s) && contentsAllEmpty(bundleContents(s)); }
+    protected boolean isFilledBundle(@Nullable ItemStack s) { return isBundle(s) && !contentsAllEmpty(bundleContents(s)); }
     /** The configured ender-chest item that the miner / regear places as a buffer. */
     protected boolean isEnderChestItem(@Nullable ItemStack s) { return matchesName(s, "ender_chest"); }
     protected boolean hasEnderChest() { return InventoryUtil.searchPlayerInventory(this::isEnderChestItem) != -1; }

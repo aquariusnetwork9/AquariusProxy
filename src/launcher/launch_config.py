@@ -93,7 +93,7 @@ class LaunchConfig:
         # extract mc version from release channel
         # e.g. java.1.20.1 -> 1.20.1 or linux.1.20.1 -> 1.20.1
         channel = self.release_channel
-        if channel.endswith(".pre"):
+        if channel.endswith(".pre") or channel.endswith(".dev"):
             channel = channel[:-4]
         java = channel.startswith("java")
         linux = channel.startswith("linux")

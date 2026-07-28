@@ -63,6 +63,18 @@ public class ElytraPilotCommand extends Command {
                 "swapdur <n>           (swap the worn elytra at this remaining durability; max is 432)",
                 "sparedur <n>          (min remaining durability for an inventory elytra to count as a spare)",
                 "clearance <blocks>    (min height above ground before a flight-dropping swap is attempted)",
+                "lastelytra dur <n>    (no spare left: worn elytra at this durability triggers the graceful emergency landing; 0-432, 0 = failsafe off)",
+                "lastelytra logout <on/off> (on the last-elytra emergency landing, also log out to preserve the bot + kit where it lands)",
+                "lastelytra            (show the last-elytra failsafe config)",
+                "grief                 (show the blockage-handling escalation ladder)",
+                "grief gaps <on/off>   (destroyed road surface but open band: power-fly across on fireworks)",
+                "grief walls <on/off>  (full-height blockage near spawn: reroute via the ring-road web)",
+                "grief detour <on/off> (full-height blockage far out: descend below the road, fly past, climb back — no side highway needed)",
+                "grief detourahead <n> (first detour's length along the road axis; each attempt doubles it)",
+                "grief detourattempts <n> (detour attempts before giving up on the nether route)",
+                "grief ringmax <blocks>(farther than this from a ring crossing, skip the web and detour locally)",
+                "grief overworld <on/off> (LAST RESORT: portal out, fly 8x the distance overworld, portal back past the blockage)",
+                "grief logout <on/off> (log out after giving up on a blockage; separate from lastelytra logout)",
                 "ebounce <on/off>      (bounce-highway mode: skip along a flat road, no fireworks)",
                 "road <y>              (the flat road's surface Y, for ebounce)",
                 "maxspeed <bps>        (speed cap in blocks/sec; 2b2t limit is 40 — keep ~38)",
@@ -251,6 +263,104 @@ public class ElytraPilotCommand extends Command {
                 CONFIG.client.extra.elytraPilot.minSwapClearance = getInteger(c, "blocks");
                 c.getSource().getEmbed().title("ElytraPilot min swap clearance = " + CONFIG.client.extra.elytraPilot.minSwapClearance);
             })))
+            .then(literal("lastelytra")
+                .then(literal("dur").then(argument("durability", integer(0, 432)).executes(c -> {
+                    int d = getInteger(c, "durability");
+                    CONFIG.client.extra.elytraPilot.lastElytraEmergencyDurability = d;
+                    c.getSource().getEmbed()
+                        .title("ElytraPilot last-elytra emergency durability = " + (d == 0 ? "0 (failsafe OFF)" : String.valueOf(d)))
+                        .description(d == 0
+                            ? "0 disables the failsafe: with no spare left the bot flies the last elytra until it BREAKS, then falls. Only set this if something else is catching the fall."
+                            : "With NO usable spare left, the worn elytra dropping to this triggers the graceful emergency landing — it glides down while it still can instead of flying to breaking and falling. ~1 durability per second of glide, so " + d + " ≈ " + d + "s to get down. Max is 432 (a full elytra).");
+                })))
+                .then(literal("logout").then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.lastElytraLogout = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                        .title("ElytraPilot last-elytra logout " + toggleStrCaps(CONFIG.client.extra.elytraPilot.lastElytraLogout))
+                        .description("On = after the emergency landing, disconnect to preserve the bot + kit where it lands. Off = land and stay online, grounded with a near-dead elytra and no spare. An armed trip is cancelled either way — with no usable elytra left, a surviving leg would only re-arm into another emergency.");
+                })))
+                .executes(c -> {
+                    var cfg = CONFIG.client.extra.elytraPilot;
+                    String s = !cfg.swapElytra
+                        // The whole wear manager is gated on swapElytra, so `fly swap off` silently disables the
+                        // proactive landing too. Say so rather than reporting a threshold that can never fire.
+                        ? "DISABLED — `fly swap` is OFF, which turns off elytra wear management entirely, including this"
+                          + " failsafe. It would otherwise emergency-land at " + cfg.lastElytraEmergencyDurability + " durability."
+                        : cfg.lastElytraEmergencyDurability <= 0
+                            ? "DISABLED — dur is 0, so the last elytra is flown until it BREAKS."
+                            : "Emergency landing at " + cfg.lastElytraEmergencyDurability + " durability once no usable spare"
+                              + " remains (a spare counts at > " + cfg.freshElytraMinDurability + " durability).";
+                    c.getSource().getEmbed().title("ElytraPilot last-elytra failsafe")
+                        .description(s + "\nLogout on landing: " + toggleStrCaps(cfg.lastElytraLogout)
+                            + " — an armed trip is cancelled on the emergency landing either way.");
+                    return OK;
+                }))
+            .then(literal("grief")
+                .then(literal("gaps").then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.netherHardening.flyThroughGaps = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                        .title("ElytraPilot fly-through-gaps " + toggleStrCaps(CONFIG.client.extra.elytraPilot.netherHardening.flyThroughGaps))
+                        .description("Road surface destroyed but the band still open (crater/withers): power-fly across on fireworks instead of recovering or aborting.");
+                })))
+                .then(literal("walls").then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.netherHardening.rerouteAroundWalls = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                        .title("ElytraPilot ring-road reroute " + toggleStrCaps(CONFIG.client.extra.elytraPilot.netherHardening.rerouteAroundWalls))
+                        .description("Full-height blockage: detour via the ring/radial web. Only used within `grief ringmax` of a crossing — past that the web's rings are hundreds of thousands of blocks apart and the local detour takes over.");
+                })))
+                .then(literal("detour").then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.netherHardening.detourAroundWalls = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                        .title("ElytraPilot local descend-detour " + toggleStrCaps(CONFIG.client.extra.elytraPilot.netherHardening.detourAroundWalls))
+                        .description("Full-height blockage: drop BELOW the road into open nether, fly the road axis past it, climb back and rejoin. Needs no ring road and no side highway — this is the one that works far out.");
+                })))
+                .then(literal("detourahead").then(argument("blocks", integer(16, 100000)).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.netherHardening.detourAheadBlocks = getInteger(c, "blocks");
+                    c.getSource().getEmbed()
+                        .title("ElytraPilot detour base length = " + CONFIG.client.extra.elytraPilot.netherHardening.detourAheadBlocks + "b")
+                        .description("First detour's length along the road axis. Each further attempt DOUBLES it — the bot can't see how wide a blockage is (those chunks aren't loaded), so each rejoin doubles as the probe.");
+                })))
+                .then(literal("detourattempts").then(argument("n", integer(1, 12)).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.netherHardening.maxDetourAttempts = getInteger(c, "n");
+                    var nh = CONFIG.client.extra.elytraPilot.netherHardening;
+                    c.getSource().getEmbed()
+                        .title("ElytraPilot detour attempts = " + nh.maxDetourAttempts)
+                        .description("Doubling each time, that reaches " + (long) nh.detourAheadBlocks * (1L << (nh.maxDetourAttempts - 1)) + "b on the final attempt.");
+                })))
+                .then(literal("ringmax").then(argument("blocks", doubleArg(0)).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.netherHardening.ringRerouteMaxNodeDist = getDouble(c, "blocks");
+                    c.getSource().getEmbed()
+                        .title("ElytraPilot ring-reroute cutoff = " + (long) CONFIG.client.extra.elytraPilot.netherHardening.ringRerouteMaxNodeDist + "b")
+                        .description("Farther than this from the nearest ring/radial crossing, skip the web entirely and detour locally. Snapping to a 'nearest' ring 300k blocks away turns a detour into a longer trip than the one being made.");
+                })))
+                .then(literal("overworld").then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.netherHardening.overworldReroute = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                        .title("ElytraPilot overworld reroute " + toggleStrCaps(CONFIG.client.extra.elytraPilot.netherHardening.overworldReroute))
+                        .description("LAST RESORT: when every nether bypass fails, portal out, fly the 8x-scaled distance overworld, portal back in past the blockage. Costs 8x the fireworks/durability and needs two portal transitions (carry >=10 obsidian + flint & steel). Trips only.");
+                })))
+                .then(literal("logout").then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.blockedLogout = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                        .title("ElytraPilot blocked-logout " + toggleStrCaps(CONFIG.client.extra.elytraPilot.blockedLogout))
+                        .description("Whether to log out after giving up on a blockage. Separate from `lastelytra logout` — a blocked bot is still airworthy, so logging it out just strands it. Off = land and stay online.");
+                })))
+                .executes(c -> {
+                    var cfg = CONFIG.client.extra.elytraPilot;
+                    var nh = cfg.netherHardening;
+                    c.getSource().getEmbed().title("ElytraPilot blockage handling").description(
+                        "Escalation ladder when the highway ahead is destroyed:\n"
+                        + "1. GAP (band open): power-fly across — " + toggleStrCaps(nh.flyThroughGaps) + "\n"
+                        + "2. WALL within " + (long) nh.ringRerouteMaxNodeDist + "b of a ring crossing: ring-road reroute — "
+                            + toggleStrCaps(nh.rerouteAroundWalls) + "\n"
+                        + "3. WALL beyond that: local descend-detour — " + toggleStrCaps(nh.detourAroundWalls)
+                            + " (" + nh.maxDetourAttempts + " attempts, " + nh.detourAheadBlocks + "b doubling to "
+                            + (long) nh.detourAheadBlocks * (1L << (nh.maxDetourAttempts - 1)) + "b)\n"
+                        + "4. All nether bypasses failed: overworld reroute — " + toggleStrCaps(nh.overworldReroute) + "\n"
+                        + "5. Give up: land" + (cfg.blockedLogout ? " AND LOG OUT" : ", stay online")
+                            + " (`grief logout`), trip cancelled either way.");
+                    return OK;
+                }))
             .then(literal("ebounce").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.ebounce = getToggle(c, "toggle");
                 c.getSource().getEmbed()

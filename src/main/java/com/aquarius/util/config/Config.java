@@ -418,11 +418,73 @@ public final class Config {
                 public boolean enabled = false;
                 public long waitForInteractTimeoutTicks = 20L;
                 public boolean logTradeStatusToDiscord = false;
+                /**
+                 * When true, the trader remembers which configured trades each villager can fulfill (learned by
+                 * opening it once) and on later sweeps only revisits villagers known to offer the current trade,
+                 * skipping villagers that offer none of the configured trades. Dramatically cuts the
+                 * open-every-villager churn in a large trading hall. The learned map is in-memory and is rebuilt
+                 * on (re)connect and whenever the trade list changes. Disable to fall back to the legacy
+                 * profession-only sweep (open every villager of the matching profession every time).
+                 */
+                public boolean targetKnownVillagers = true;
 
                 public LinkedHashMap<String, Trade> trades = new LinkedHashMap<>();
 
+                /**
+                 * Named trade groups. A member trade (one whose {@link Trade#group} equals a key here) shares this
+                 * group's INPUT supply profile — give-1/give-2 chests, restock stacks &amp; thresholds, carry caps,
+                 * overflow chest and post-trade store mode — instead of using its own. The trade still keeps its own
+                 * output chest + store threshold + offer (profession/items/enchants/per-trade max). Configure the
+                 * emerald (+book) supply once on the group; every member buys from it. An emerald-EARNING member
+                 * (its {@code outputItem == emerald}) is the exception: it keeps its OWN input chest (the sell-item
+                 * source) and its emerald output is kept, not stored — that is what refills the group.
+                 */
+                public LinkedHashMap<String, TradeGroup> groups = new LinkedHashMap<>();
+
+                /**
+                 * When every enabled trade is supply-exhausted (no emeralds and no earner can produce), the trader
+                 * parks (idles in place instead of wandering) and re-probes the supply chests every this-many ticks,
+                 * auto-resuming once supply returns. 20 ticks = 1s.
+                 */
+                public long idleRecheckTicks = 200L;
+
+                /**
+                 * Shared input-supply profile for a {@link Trade#group}. Mirrors the per-trade resupply fields it
+                 * replaces for grouped spending trades.
+                 */
+                public static class TradeGroup {
+                    public boolean enabled = true;
+                    public BlockPos inputItem1Chest = BlockPos.ZERO;
+                    public BlockPos inputItem2Chest = BlockPos.ZERO;
+                    public int inputItem1RestockStacks = 4;
+                    public int inputItem1RestockCountThreshold = 64;
+                    public int inputItem2RestockStacks = 4;
+                    public int inputItem2RestockCountThreshold = 64;
+                    /** Hard ceiling (in stacks) on carried input 1; 0 = no cap (default — leaves emeralds untouched). */
+                    public int inputItem1MaxCarryStacks = 0;
+                    /** Hard ceiling (in stacks) on carried input 2; default 2 (e.g. books). 0 = no cap. */
+                    public int inputItem2MaxCarryStacks = 2;
+                    public Trade.PostTradeStoreMode postTradeStoreMode = Trade.PostTradeStoreMode.NONE;
+                    public BlockPos overflowChestPos = BlockPos.ZERO;
+                    /**
+                     * Self-refill: when carried emeralds fall below this, the trader prefers running the group's
+                     * emerald-earning trades to top up before continuing to spend. 0 = passive (rely on the normal
+                     * round-robin to reach the earner on its own).
+                     */
+                    public int minEmeralds = 0;
+                    /**
+                     * After the bot finishes this group's run of trades, idle in place for this many SECONDS before
+                     * moving on / starting the next sweep — gives the group's villagers time to restock their offers
+                     * instead of hammering them in a tight loop. Every member trade INHERITS this (its own
+                     * {@link Trade#cycleCooldownSeconds} is ignored while grouped). Default 60; 0 = no wait. Clamped [0, 1200] on read.
+                     */
+                    public int cycleCooldownSeconds = 60;
+                }
+
                 public static class Trade {
                     public boolean enabled = true;
+                    /** Name of the {@link TradeGroup} this trade belongs to, or "" = ungrouped (uses its own resupply; legacy behavior). */
+                    public String group = "";
                     public com.aquarius.module.impl.VillagerTrader.VillagerProfession villagerProfession = com.aquarius.module.impl.VillagerTrader.VillagerProfession.CLERIC;
                     public String inputItem1 = ItemRegistry.AIR.name();
                     public String inputItem2 = ItemRegistry.AIR.name();
@@ -435,8 +497,44 @@ public final class Config {
                     public int inputItem2RestockStacks = 4;
                     public int inputItem2RestockCountThreshold = 64;
                     public int outputItemStoreCountThreshold = 64;
+                    /**
+                     * Hard ceiling (in stacks) on how much of input item 2 the bot will carry. At the start of
+                     * each trade cycle, if it holds more than this, it deposits the excess back into
+                     * {@code inputItem2Chest}, leaving exactly this many stacks. Prevents the trader from
+                     * hoarding stacks of a shared input (e.g. books) it pulled but never sold. 0 = no cap.
+                     */
+                    public int inputItem2MaxCarryStacks = 2;
+                    /** Hard ceiling (in stacks) on carried input item 1, mirroring {@link #inputItem2MaxCarryStacks}. 0 = no cap (default — leaves emeralds untouched). */
+                    public int inputItem1MaxCarryStacks = 0;
                     public int maxInput1PerTrade = 99;
                     public int maxInput2PerTrade = 99;
+                    /**
+                     * After the bot finishes this trade's sweep (when ungrouped — a trade "by itself"), idle in place
+                     * for this many SECONDS before moving on, letting its villagers restock. IGNORED while the trade
+                     * is in a group (it inherits {@link TradeGroup#cycleCooldownSeconds} instead). Default 0 = no wait
+                     * (a lone trade keeps sweeping continuously unless you opt in); groups default to 60. Clamped [0, 1200] on read.
+                     */
+                    public int cycleCooldownSeconds = 0;
+                    /**
+                     * Bot-side price control for THIS trade — ON by default. Minecraft only recalculates a merchant
+                     * offer's demand (and live price) at server-side restocks (up to twice per Minecraft day) —
+                     * never between them, however many purchases happen in that window. Buying out an offer fully
+                     * at EVERY restock is the worst case for long-run price (each such restock adds demand); this
+                     * instead buys out fully only once every {@link #tradeEveryNRestocks} DETECTED restocks (a
+                     * numUses decrease observed on a later visit — there's no dedicated restock packet), skipping
+                     * the rest so demand decays in between. Independent of {@link #cycleCooldownSeconds}, which
+                     * only paces how often the bot bothers to travel back, not whether it's allowed to buy once
+                     * there. Set false per-trade to opt back out (unlimited buying, matching pre-price-control
+                     * behavior). Default true.
+                     */
+                    public boolean priceControlEnabled = true;
+                    /**
+                     * Buy out this trade's offer fully once every N detected restocks (skip the other N-1).
+                     * Breakeven (flat long-run demand) is exactly 3; higher values trend price down over time at
+                     * the cost of fewer purchases; lower values (1-2) still grow demand, just slower than trading
+                     * every restock. Ignored while {@link #priceControlEnabled} is false. Default 3.
+                     */
+                    public int tradeEveryNRestocks = 3;
                     public PostTradeStoreMode postTradeStoreMode = PostTradeStoreMode.NONE;
                     public enum PostTradeStoreMode {
                         NONE,
@@ -960,9 +1058,20 @@ public final class Config {
                  *  last elytra to breaking and fall. 100 ≈ ~100s of glide left to get down. */
                 public int lastElytraEmergencyDurability = 100;
 
-                /** On the last-elytra emergency landing, disconnect to preserve the bot + kit where it lands (and
-                 *  cancel the trip so it doesn't re-arm into a fall on reconnect). */
+                /** On the last-elytra emergency landing, disconnect to preserve the bot + kit where it lands. An armed
+                 *  trip is cancelled by the emergency landing regardless of this flag — with no usable elytra left, a
+                 *  surviving leg would only re-arm into another emergency. Off = land and stay online, grounded.
+                 *  <p>Applies ONLY to the out-of-elytra case; a bot that merely ran out of ways past an obstruction
+                 *  uses {@link #blockedLogout} instead. These used to share this one flag, so a healthy bot walled in
+                 *  on a highway logged itself out under a setting named for elytra durability. */
                 public boolean lastElytraLogout = true;
+
+                /** Log out after a BLOCKED emergency landing (every bypass tier exhausted against an obstruction) —
+                 *  as opposed to {@link #lastElytraLogout}'s out-of-elytra case. Defaults OFF: the bot is still
+                 *  airworthy, so logging it out just strands it wherever the grief happened to be, and staying online
+                 *  leaves it reachable to redirect by hand. The armed trip is cancelled either way so it can't
+                 *  re-arm straight back into the same wall. */
+                public boolean blockedLogout = false;
 
                 /**
                  * Minimum blocks of clearance above the ground before a (flight-dropping) swap is attempted.
@@ -987,6 +1096,57 @@ public final class Config {
 
                 /** E-bounce resupply target: refill the inventory to this many fresh elytras from the kit. */
                 public int resupplyElytraCount = 9;
+
+                /**
+                 * After an e-bounce elytra top-up, if the worn elytra is enchanted with Mending and its durability
+                 * is below {@link #mendDurabilityThreshold}, pull {@link #mendBottleCount} XP bottles from the kit
+                 * (via Regear, same cherry-pick sourcing as elytras/food/totems) and throw them at the bot's own
+                 * feet to top it up via Mending before resuming the bounce. Checked every resupply regardless of
+                 * whether it fires — a hard no-op if the worn elytra ISN'T Mending-enchanted (vanilla Mending never
+                 * repairs a non-enchanted item, so bottles would just be wasted; this is verified before a single
+                 * bottle is pulled). Never fails the resupply: a skipped/partial mend just leaves the elytra at
+                 * whatever durability it reached, and the elytra/food/totem refill still stands either way.
+                 */
+                public boolean mendWornElytra = false;
+
+                /** Durability floor (out of the elytra's 432 max) that triggers a mend attempt. */
+                public int mendDurabilityThreshold = 200;
+
+                /** XP bottles pulled from the kit and thrown per mend attempt. */
+                public int mendBottleCount = 8;
+
+                /** Look-down pitch (degrees) when throwing a bottle, so it breaks at the bot's own feet and the
+                 *  orbs are collected immediately — same convention as {@code enchanter.xpThrowPitch}. */
+                public float mendThrowPitch = 88.0f;
+
+                /** Ticks between individual bottle throws (lets the orb + level packet land). */
+                public int mendThrowSpacingTicks = 6;
+
+                /** Safety cap on ticks spent mending before giving up and resuming the bounce anyway. */
+                public int mendTimeoutTicks = 200;
+
+                /**
+                 * ALSO repair a carried SPARE elytra (not the worn one) during the same mend burst, by temporarily
+                 * moving it into the OFFHAND — vanilla Mending repairs anything equipped/held, offhand included,
+                 * not just worn armour. This briefly takes the offhand away from AutoTotem (which normally keeps
+                 * a totem there for death-save): {@code autoTotem.enabled} is flipped off for the burst, then both
+                 * are restored (spare back to inventory, totem back to offhand, AutoTotem re-enabled) the moment
+                 * it ends — success, timeout, or otherwise. Off by default; only turn on if a brief totem-blackout
+                 * on the ground mid-resupply is an acceptable trade-off for your setup. Skipped for this cycle
+                 * (worn-elytra repair still happens) if current health is below
+                 * {@link #mendMinHealthToBorrowOffhand}, or if no carried spare is both Mending-enchanted and
+                 * actually damaged enough to be worth it.
+                 */
+                public boolean mendSpareElytraOffhand = false;
+
+                /** Skip borrowing the offhand this cycle (but still repair the worn elytra) if current health is
+                 *  below this — a bounded, short totem-blackout is one thing at full health on the ground; not
+                 *  worth it while already hurt. */
+                public float mendMinHealthToBorrowOffhand = 15.0f;
+
+                /** Ticks to wait after submitting the offhand swap-back before trusting it landed and truly
+                 *  resuming the bounce — never hands control back with the totem/elytra swap still in flight. */
+                public int mendRestoreSettleTicks = 6;
 
                 /**
                  * "E-bounce" mode: instead of the firework climb/glide profile, skip along a FLAT straight road
@@ -1241,8 +1401,37 @@ public final class Config {
                      *  Baritone-recovering or aborting. Needs fireworks; falls back to the old behaviour without them. */
                     public boolean flyThroughGaps = true;
 
-                    /** Full-height blockage (wall to the ceiling) -> reroute around it via the ring-road graph. */
+                    /** Full-height blockage (wall to the ceiling) -> reroute around it via the ring-road graph. Only
+                     *  useful within {@link #ringRerouteMaxNodeDist} of a crossing; past that the local
+                     *  {@link #detourAroundWalls} descend-detour takes over. */
                     public boolean rerouteAroundWalls = true;
+
+                    /** Full-height blockage -> drop BELOW the highway band into open nether, fly the road axis past the
+                     *  blockage, then climb back up and rejoin. This is the far-out answer: it needs no ring road, no
+                     *  side highway and no loaded chunks ahead, and it flies the one layer the native seed router
+                     *  models well (grief clusters at road level, y~120, not down at the cruise altitude). */
+                    public boolean detourAroundWalls = true;
+
+                    /** First detour's length along the road axis (blocks). Each further attempt DOUBLES it, because the
+                     *  bot can't see how wide the blockage is — chunks that far ahead aren't loaded — so it probes:
+                     *  fly out, climb back into the band, look; still walled -> go further. */
+                    public int detourAheadBlocks = 256;
+
+                    /** Detour attempts (each double the last) before giving up on the nether route. The default reaches
+                     *  256+512+…+8192 blocks of blockage, well past any realistic grief project. */
+                    public int maxDetourAttempts = 6;
+
+                    /** LAST RESORT (opt-in): when every nether bypass fails, route around the blockage through the
+                     *  OVERWORLD — portal out, fly the 8x-scaled distance, portal back in past it. Off by default
+                     *  because it costs eight times the distance in fireworks and elytra durability and needs two
+                     *  portal transitions (carry >=10 obsidian + flint & steel, or it can only use existing portals).
+                     *  Still beats a stranded bot: it makes real forward progress where the nether has no way through. */
+                    public boolean overworldReroute = false;
+
+                    /** Beyond this distance from the nearest ring/radial crossing, skip the ring-road reroute entirely
+                     *  and go straight to the local detour. Snapping to a "nearest" ring that's 300k blocks away turns
+                     *  a detour into a longer trip than the one being made. */
+                    public double ringRerouteMaxNodeDist = 4000.0;
 
                     /** Record encountered hazards into the bot's LOCAL grief map. No connection is opened and nothing is
                      *  pushed anywhere; the only egress is an explicit, opt-in export pulled by something else. */
@@ -1885,6 +2074,24 @@ public final class Config {
                 /** Put the emptied shulker back into the ender chest buffer (vs. leaving it carried). */
                 public boolean returnShulker = true;
 
+                /**
+                 * Fallback for when the primary kit shulker ({@link #matchByContents} / {@link #matchByColor} /
+                 * {@link #kitShulkerName}) doesn't cover everything the current gear-up still needs — including
+                 * when there's no primary kit shulker in the ender chest AT ALL, which is the common case for an
+                 * echest organised as separate single-item shulkers (an elytra shulker, a totem shulker, a
+                 * rockets shulker, ...) rather than one hand-packed kit. Either way it scans the OTHER shulkers —
+                 * a read-only peek via each one's CONTAINER component, the same trick {@link #matchByContents}
+                 * uses — for one holding a still-missing item, pulls + empties (only the missing items) + returns
+                 * it too, and repeats until satisfied or {@link #cherryPickMaxShulkers} shulkers have been tried
+                 * in total. The primary kit shulker, if one exists, is always tried first and emptied completely
+                 * exactly as before; this only widens the search when that alone didn't fully cover the need.
+                 */
+                public boolean cherryPickFallback = true;
+
+                /** Safety cap on shulkers opened via {@link #cherryPickFallback} — beyond the primary kit shulker
+                 *  when one was found, or total when there wasn't one to begin with. */
+                public int cherryPickMaxShulkers = 3;
+
                 /** Soft-pause the cycle while a non-self player is within {@link #playerPauseRange} blocks. Default
                  *  OFF — at 2b2t spawn there's almost always someone within range, which would stall the gear-up /
                  *  relocation indefinitely; turn it on for solo-field resupply if you want the safety pause. */
@@ -2002,6 +2209,84 @@ public final class Config {
 
                 /** Ticks to wait after a place before reading the WORLD to confirm the shulker really landed. */
                 public int placeVerifyTicks = 10;
+
+                /**
+                 * Legacy single config-defined kit template (slot index → item/count/match). Superseded by the
+                 * named {@link #kits} library + {@link #activeKit}; kept for back-compat and as the fallback when
+                 * no kit is selected. Empty + no active kit = fall back to reading a placed/cached example shulker.
+                 */
+                public LinkedHashMap<String, TemplateSlot> template = new LinkedHashMap<>();
+
+                /**
+                 * Saved kit library built in the ABM control plane: name → kit definition. The module builds the
+                 * {@link #activeKit}; selecting a kit just points the builder + the run at it, so several kit designs
+                 * can be kept and re-built on demand.
+                 */
+                public LinkedHashMap<String, KitDef> kits = new LinkedHashMap<>();
+
+                /**
+                 * Which saved kit the module builds. A name present in {@link #kits} builds that kit;
+                 * {@code "__auto"} forces a physical auto-detect; empty falls back to {@link #template} then physical.
+                 */
+                public String activeKit = "";
+
+                /**
+                 * Kit captured from a physically auto-detected example during the last run (item/count + detected
+                 * enchants per slot). The dashboard reads this to "import detected kit" into the builder so a kit
+                 * discovered in-world can be edited and saved into {@link #kits}. Written automatically whenever the
+                 * module builds a template from a placed/cached example shulker.
+                 */
+                public LinkedHashMap<String, TemplateSlot> captured = new LinkedHashMap<>();
+
+                /**
+                 * Build a trailing PARTIAL kit (when {@link #allowPartial}) only if at least this fraction of the
+                 * kit's slots can actually be filled from what was gathered — so leftover scraps (a few armor + a
+                 * tool) never get counted/built as another near-empty kit. 0.30 = 30%.
+                 */
+                public double partialMinSlotFraction = 0.30;
+
+                /** A named kit in the {@link #kits} library: its slot map (slot index → item/count/match). */
+                public static class KitDef {
+                    public LinkedHashMap<String, TemplateSlot> slots = new LinkedHashMap<>();
+                    /**
+                     * How the bot packages this kit: {@code "shulker"} (default) places + fills a 27-slot shulker box
+                     * per the addressable slot map, then breaks + collects it; {@code "bundle"} pulls an empty bundle
+                     * and stuffs the kit's items into it in-inventory (no place/break), honouring the bundle's weight
+                     * budget (Σ count/maxStack ≤ 1.0). Bundle kits ignore slot ordering — the slot map is read as a
+                     * flat (item, count, match) need list — and can only hold one stack-equivalent of mixed items.
+                     */
+                    public String fillMode = "shulker";
+                }
+
+                /** One slot of the config-defined kit template. */
+                public static class TemplateSlot {
+                    /** Item id (no {@code minecraft:} prefix needed), e.g. {@code diamond_pickaxe}. */
+                    public String item = "";
+                    /** How many of {@link #item} this slot holds (clamped to the item's real max stack at fill time). */
+                    public int count = 1;
+                    /** Per-slot match override. {@link SlotMatch#Auto} uses the global {@link #matchMode}. */
+                    public SlotMatch match = SlotMatch.Auto;
+                    /**
+                     * Required enchantments when {@link #match} == {@link SlotMatch#ByEnchants}: enchant ids (e.g.
+                     * {@code silk_touch}, {@code fortune}). A source item matches iff it is the same item AND carries
+                     * EVERY listed enchant (level-insensitive, extra enchants ignored) — this is what keeps a Silk
+                     * Touch pickaxe and a Fortune pickaxe as separate, independently-enforced needs.
+                     */
+                    public List<String> enchants = new ArrayList<>();
+                }
+
+                /**
+                 * Per-slot match strictness, independent of the global {@link #matchMode}.
+                 * <ul>
+                 *   <li>{@code Auto} — use the module's global {@link #matchMode}.</li>
+                 *   <li>{@code ByType} — same item id only (ignore all components).</li>
+                 *   <li>{@code ByEnchants} — same item id AND contains every enchant in the slot's {@code enchants}
+                 *       list (level-insensitive, robust to extra enchants). The reliable way to distinguish two
+                 *       enchanted tools of the same type (e.g. Silk Touch vs Fortune pickaxe).</li>
+                 *   <li>{@code Exact} — identical data components.</li>
+                 * </ul>
+                 */
+                public enum SlotMatch { Auto, ByType, ByEnchants, Exact }
             }
 
             /**

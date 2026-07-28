@@ -11,6 +11,7 @@ import com.aquarius.discord.Panels;
 import com.aquarius.feature.player.World;
 import com.aquarius.module.impl.VillagerTrader;
 import com.aquarius.util.config.Config.Client.Extra.VillagerTrader.Trade;
+import com.aquarius.util.config.Config.Client.Extra.VillagerTrader.TradeGroup;
 
 import java.util.List;
 
@@ -55,9 +56,21 @@ public class VillagerTraderCommand extends Command {
                 "clear",
                 "list",
                 "set help",
+                "set <id> group <groupId|none>  (share a group's supply profile; none = ungroup)",
+                "set <id> cycleCooldown <0-1200s>  (wait after this trade's sweep so its villagers restock; inherited from the group if grouped)",
+                "set <id> priceControl on/off  (ON by default: only buy out this trade's offer once every tradeEveryNRestocks DETECTED restocks, so bot buying doesn't drive demand up; off = unlimited buying)",
+                "set <id> tradeEveryNRestocks <N>  (default 3 = flat long-run price; higher trends price down, lower still rises but slower than every restock)",
+                "group add <id>  /  group del <id>  /  group list",
+                "group <id> <field> <value>  (shared supply: chests, restock, carry caps, postTradeStore, overflowChest, minEmeralds, cycleCooldown, on/off)",
+                "targeting on/off  (only revisit villagers known to offer a configured trade; skip useless ones)",
+                "rescan  (forget learned villager offers and re-learn the hall)",
+                "villagers  (how many villagers are known / skipped)",
+                "cycleCooldown <seconds>  (0-1200; idle this long after a full sweep so villagers can restock; 0 = no wait)",
                 "waitForInteractTimeout <ticks>",
                 "logTradeStatusToDiscord on/off",
-                "panel  (post an interactive trader panel to Discord: toggle trades + timeout modal + run)"
+                "panel  (post an interactive trader panel to Discord: toggle trades + timeout modal + run)",
+                "price status [id]  (live per-villager-offer uses/demand/restock telemetry for priceControlEnabled trades)",
+                "price reset  (forget all learned per-villager restock/demand memory)"
             )
             .build();
     }
@@ -161,6 +174,12 @@ public class VillagerTraderCommand extends Command {
                         "set <id> inputItem1RestockCountThreshold <count>",
                         "set <id> inputItem2RestockCountThreshold <count>",
                         "set <id> outputItemStoreCountThreshold <count>",
+                        "set <id> inputItem1MaxCarryStacks <count>  (0 = no cap)",
+                        "set <id> inputItem2MaxCarryStacks <count>  (0 = no cap; default 2)",
+                        "set <id> group <groupId|none>  (inherit a group's shared supply profile)",
+                        "set <id> cycleCooldown <0-1200>  (seconds to idle after this trade's sweep; ignored while grouped)",
+                        "set <id> priceControl on/off  (ON by default; buy out fully only once every tradeEveryNRestocks detected restocks)",
+                        "set <id> tradeEveryNRestocks <1-100>  (default 3)",
                         "set <id> outputEnchants add <enchantment> <level>",
                         "set <id> outputEnchants del <enchantment>",
                         "set <id> outputEnchants clear",
@@ -455,6 +474,126 @@ public class VillagerTraderCommand extends Command {
                             .description(printTrade(id, trade));
                         return OK;
                     })))
+                    .then(literal("inputItem1MaxCarryStacks").then(argument("inputItem1MaxCarryStacks", integer(0, 35)).executes(c -> {
+                        var id = CustomStringArgumentType.getString(c, "id");
+                        if (!CONFIG.client.extra.villagerTrader.trades.containsKey(id)) {
+                            c.getSource().getEmbed()
+                                .title("Trade ID Not Found")
+                                .addField("ID", id)
+                                .description(printAllTrades());
+                            c.getSource().getData().put("list", true);
+                            return ERROR;
+                        }
+                        var trade = CONFIG.client.extra.villagerTrader.trades.get(id);
+                        trade.inputItem1MaxCarryStacks = getInteger(c, "inputItem1MaxCarryStacks");
+                        c.getSource().getEmbed()
+                            .title("Input Item 1 Max Carry Stacks Set")
+                            .description(printTrade(id, trade));
+                        return OK;
+                    })))
+                    .then(literal("inputItem2MaxCarryStacks").then(argument("inputItem2MaxCarryStacks", integer(0, 35)).executes(c -> {
+                        var id = CustomStringArgumentType.getString(c, "id");
+                        if (!CONFIG.client.extra.villagerTrader.trades.containsKey(id)) {
+                            c.getSource().getEmbed()
+                                .title("Trade ID Not Found")
+                                .addField("ID", id)
+                                .description(printAllTrades());
+                            c.getSource().getData().put("list", true);
+                            return ERROR;
+                        }
+                        var trade = CONFIG.client.extra.villagerTrader.trades.get(id);
+                        trade.inputItem2MaxCarryStacks = getInteger(c, "inputItem2MaxCarryStacks");
+                        c.getSource().getEmbed()
+                            .title("Input Item 2 Max Carry Stacks Set")
+                            .description(printTrade(id, trade));
+                        return OK;
+                    })))
+                    .then(literal("group").then(argument("group", wordWithChars()).executes(c -> {
+                        var id = CustomStringArgumentType.getString(c, "id");
+                        if (!CONFIG.client.extra.villagerTrader.trades.containsKey(id)) {
+                            c.getSource().getEmbed()
+                                .title("Trade ID Not Found")
+                                .addField("ID", id)
+                                .description(printAllTrades());
+                            c.getSource().getData().put("list", true);
+                            return ERROR;
+                        }
+                        var trade = CONFIG.client.extra.villagerTrader.trades.get(id);
+                        var g = CustomStringArgumentType.getString(c, "group");
+                        if (g.equalsIgnoreCase("none") || g.equals("-") || g.isEmpty()) {
+                            trade.group = "";
+                        } else if (!CONFIG.client.extra.villagerTrader.groups.containsKey(g)) {
+                            c.getSource().getEmbed()
+                                .title("Trade Group Not Found")
+                                .addField("Group", g)
+                                .description(printAllGroups());
+                            c.getSource().getData().put("list", true);
+                            return ERROR;
+                        } else {
+                            trade.group = g;
+                        }
+                        c.getSource().getEmbed()
+                            .title("Trade Group Set")
+                            .description(printTrade(id, trade));
+                        inEventLoop(() -> MODULE.get(VillagerTrader.class).onTradeListChange());
+                        return OK;
+                    })))
+                    .then(literal("cycleCooldown").then(argument("cycleCooldown", integer(0, 1200)).executes(c -> {
+                        var id = CustomStringArgumentType.getString(c, "id");
+                        if (!CONFIG.client.extra.villagerTrader.trades.containsKey(id)) {
+                            c.getSource().getEmbed()
+                                .title("Trade ID Not Found")
+                                .addField("ID", id)
+                                .description(printAllTrades());
+                            c.getSource().getData().put("list", true);
+                            return ERROR;
+                        }
+                        var trade = CONFIG.client.extra.villagerTrader.trades.get(id);
+                        trade.cycleCooldownSeconds = getInteger(c, "cycleCooldown");
+                        var embed = c.getSource().getEmbed()
+                            .title("Trade Cycle Cooldown Set")
+                            .addField("Seconds", trade.cycleCooldownSeconds == 0 ? "0 (no wait)" : trade.cycleCooldownSeconds + "s")
+                            .description(printTrade(id, trade));
+                        if (trade.group != null && !trade.group.isEmpty()) {
+                            embed.addField("Note", "This trade is in group `" + trade.group + "`, so it uses the GROUP's cooldown; this per-trade value only applies once ungrouped.");
+                        }
+                        return OK;
+                    })))
+                    .then(literal("priceControl").then(argument("priceControlToggle", toggle()).executes(c -> {
+                        var id = CustomStringArgumentType.getString(c, "id");
+                        if (!CONFIG.client.extra.villagerTrader.trades.containsKey(id)) {
+                            c.getSource().getEmbed()
+                                .title("Trade ID Not Found")
+                                .addField("ID", id)
+                                .description(printAllTrades());
+                            c.getSource().getData().put("list", true);
+                            return ERROR;
+                        }
+                        var trade = CONFIG.client.extra.villagerTrader.trades.get(id);
+                        trade.priceControlEnabled = getToggle(c, "priceControlToggle");
+                        c.getSource().getEmbed()
+                            .title("Trade Price Control " + toggleStrCaps(trade.priceControlEnabled))
+                            .description(printTrade(id, trade));
+                        return OK;
+                    })))
+                    .then(literal("tradeEveryNRestocks").then(argument("tradeEveryNRestocks", integer(1, 100)).executes(c -> {
+                        var id = CustomStringArgumentType.getString(c, "id");
+                        if (!CONFIG.client.extra.villagerTrader.trades.containsKey(id)) {
+                            c.getSource().getEmbed()
+                                .title("Trade ID Not Found")
+                                .addField("ID", id)
+                                .description(printAllTrades());
+                            c.getSource().getData().put("list", true);
+                            return ERROR;
+                        }
+                        var trade = CONFIG.client.extra.villagerTrader.trades.get(id);
+                        trade.tradeEveryNRestocks = getInteger(c, "tradeEveryNRestocks");
+                        c.getSource().getEmbed()
+                            .title("Trade Every N Restocks Set")
+                            .addField("N", String.valueOf(trade.tradeEveryNRestocks))
+                            .description(printTrade(id, trade));
+                        return OK;
+                    })))
                     .then(literal("outputEnchants")
                         .then(literal("add").then(argument("enchant", enchantment()).then(argument("level", integer(1)).executes(c -> {
                             var id = CustomStringArgumentType.getString(c, "id");
@@ -568,6 +707,73 @@ public class VillagerTraderCommand extends Command {
                         return OK;
                     })))
                 ))
+            .then(literal("group")
+                .then(literal("add").then(argument("id", wordWithChars()).executes(c -> {
+                    var id = CustomStringArgumentType.getString(c, "id");
+                    inEventLoop(() -> {
+                        CONFIG.client.extra.villagerTrader.groups.putIfAbsent(id, new TradeGroup());
+                        MODULE.get(VillagerTrader.class).onTradeListChange();
+                    });
+                    c.getSource().getEmbed()
+                        .title("Trade Group Added")
+                        .description(printAllGroups());
+                    c.getSource().getData().put("list", true);
+                    return OK;
+                })))
+                .then(literal("del").then(argument("id", wordWithChars()).executes(c -> {
+                    var id = CustomStringArgumentType.getString(c, "id");
+                    if (!CONFIG.client.extra.villagerTrader.groups.containsKey(id)) {
+                        groupNotFound(c, id);
+                        return ERROR;
+                    }
+                    inEventLoop(() -> {
+                        CONFIG.client.extra.villagerTrader.groups.remove(id);
+                        // detach members so they fall back to their own per-trade resupply
+                        for (var t : CONFIG.client.extra.villagerTrader.trades.values()) {
+                            if (id.equals(t.group)) t.group = "";
+                        }
+                        MODULE.get(VillagerTrader.class).onTradeListChange();
+                    });
+                    c.getSource().getEmbed()
+                        .title("Trade Group Removed")
+                        .description(printAllGroups());
+                    c.getSource().getData().put("list", true);
+                    return OK;
+                })))
+                .then(literal("list").executes(c -> {
+                    c.getSource().getEmbed()
+                        .title("Trade Groups")
+                        .description(printAllGroups());
+                    c.getSource().getData().put("list", true);
+                }))
+                .then(argument("id", wordWithChars())
+                    .then(argument("toggle", toggle()).executes(c -> {
+                        return withGroup(c, (id, g) -> g.enabled = getToggle(c, "toggle"), "Trade Group Enabled Set"); }))
+                    .then(literal("inputItem1Chest").then(argument("pos", blockPos()).executes(c -> {
+                        return withGroup(c, (id, g) -> g.inputItem1Chest = getBlockPos(c, "pos"), "Group Give-1 Chest Set"); })))
+                    .then(literal("inputItem2Chest").then(argument("pos", blockPos()).executes(c -> {
+                        return withGroup(c, (id, g) -> g.inputItem2Chest = getBlockPos(c, "pos"), "Group Give-2 Chest Set"); })))
+                    .then(literal("overflowChest").then(argument("pos", blockPos()).executes(c -> {
+                        return withGroup(c, (id, g) -> g.overflowChestPos = getBlockPos(c, "pos"), "Group Overflow Chest Set"); })))
+                    .then(literal("inputItem1RestockStacks").then(argument("v", integer(1, 35)).executes(c -> {
+                        return withGroup(c, (id, g) -> g.inputItem1RestockStacks = getInteger(c, "v"), "Group Restock Stacks (give-1) Set"); })))
+                    .then(literal("inputItem2RestockStacks").then(argument("v", integer(1, 35)).executes(c -> {
+                        return withGroup(c, (id, g) -> g.inputItem2RestockStacks = getInteger(c, "v"), "Group Restock Stacks (give-2) Set"); })))
+                    .then(literal("inputItem1RestockCountThreshold").then(argument("v", integer(0)).executes(c -> {
+                        return withGroup(c, (id, g) -> g.inputItem1RestockCountThreshold = getInteger(c, "v"), "Group Restock Threshold (give-1) Set"); })))
+                    .then(literal("inputItem2RestockCountThreshold").then(argument("v", integer(0)).executes(c -> {
+                        return withGroup(c, (id, g) -> g.inputItem2RestockCountThreshold = getInteger(c, "v"), "Group Restock Threshold (give-2) Set"); })))
+                    .then(literal("inputItem1MaxCarryStacks").then(argument("v", integer(0, 35)).executes(c -> {
+                        return withGroup(c, (id, g) -> g.inputItem1MaxCarryStacks = getInteger(c, "v"), "Group Carry Cap (give-1) Set"); })))
+                    .then(literal("inputItem2MaxCarryStacks").then(argument("v", integer(0, 35)).executes(c -> {
+                        return withGroup(c, (id, g) -> g.inputItem2MaxCarryStacks = getInteger(c, "v"), "Group Carry Cap (give-2) Set"); })))
+                    .then(literal("minEmeralds").then(argument("v", integer(0)).executes(c -> {
+                        return withGroup(c, (id, g) -> g.minEmeralds = getInteger(c, "v"), "Group Min Emeralds Set"); })))
+                    .then(literal("cycleCooldown").then(argument("v", integer(0, 1200)).executes(c -> {
+                        return withGroup(c, (id, g) -> g.cycleCooldownSeconds = getInteger(c, "v"), "Group Cycle Cooldown Set"); })))
+                    .then(literal("postTradeStore").then(argument("mode", enumStrings(Trade.PostTradeStoreMode.values())).executes(c -> {
+                        return withGroup(c, (id, g) -> g.postTradeStoreMode = Trade.PostTradeStoreMode.valueOf(getString(c, "mode").toUpperCase()), "Group Post Trade Store Set"); })))
+                ))
             .then(literal("del").then(argument("id", wordWithChars()).executes(c -> {
                 var id = CustomStringArgumentType.getString(c, "id");
                 if (!CONFIG.client.extra.villagerTrader.trades.containsKey(id)) {
@@ -602,6 +808,25 @@ public class VillagerTraderCommand extends Command {
                     .description(printAllTrades());
                 c.getSource().getData().put("list", true);
             }))
+            .then(literal("targeting").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.villagerTrader.targetKnownVillagers = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("Villager Targeting " + toggleStrCaps(CONFIG.client.extra.villagerTrader.targetKnownVillagers))
+                    .description(CONFIG.client.extra.villagerTrader.targetKnownVillagers
+                        ? "Only revisits villagers known to offer the current trade and skips villagers that offer none of your trades (each villager is learned by opening it once per session)."
+                        : "Legacy mode: opens every villager of the matching profession on every sweep.");
+            })))
+            .then(literal("rescan").executes(c -> {
+                inEventLoop(() -> MODULE.get(VillagerTrader.class).clearVillagerCache());
+                c.getSource().getEmbed()
+                    .title("Villager Cache Cleared")
+                    .description("Forgot all learned villager offers; the next sweep will re-learn the hall.");
+            }))
+            .then(literal("villagers").executes(c -> {
+                c.getSource().getEmbed()
+                    .title("Villager Cache")
+                    .description(MODULE.get(VillagerTrader.class).villagerCacheSummary());
+            }))
             .then(literal("waitForInteractTimeout").then(argument("ticks", time()).executes(c -> {;
                 CONFIG.client.extra.villagerTrader.waitForInteractTimeoutTicks = getInteger(c, "ticks");
                 c.getSource().getEmbed()
@@ -619,7 +844,28 @@ public class VillagerTraderCommand extends Command {
                     .description(posted
                         ? "In Discord: toggle individual trades (dropdown), flip log-to-Discord, set the interact timeout (modal), then Run. Adding/editing trades stays on .trader add / set."
                         : "Enable the Discord bot to use the interactive trader panel.");
-            }));
+            }))
+            .then(literal("price")
+                .then(literal("status")
+                    .executes(c -> {
+                        c.getSource().getEmbed()
+                            .title("Price Control Status")
+                            .description(printPriceStatus(MODULE.get(VillagerTrader.class).snapshotPriceStatus(null)));
+                        c.getSource().getData().put("list", true);
+                    })
+                    .then(argument("id", wordWithChars()).executes(c -> {
+                        var id = CustomStringArgumentType.getString(c, "id");
+                        c.getSource().getEmbed()
+                            .title("Price Control Status: " + id)
+                            .description(printPriceStatus(MODULE.get(VillagerTrader.class).snapshotPriceStatus(id)));
+                        c.getSource().getData().put("list", true);
+                    })))
+                .then(literal("reset").executes(c -> {
+                    inEventLoop(() -> MODULE.get(VillagerTrader.class).resetPriceControlState());
+                    c.getSource().getEmbed()
+                        .title("Price Control State Reset")
+                        .description("Forgot all learned per-villager restock/demand memory; every offer's next visit is treated as immediately eligible for a full buy.");
+                })));
     }
 
     @Override
@@ -670,6 +916,9 @@ public class VillagerTraderCommand extends Command {
         if (!trade.enabled) {
             sb.append(" (disabled)");
         }
+        if (trade.priceControlEnabled) {
+            sb.append(", priceControl 1/").append(trade.tradeEveryNRestocks).append(" (on)");
+        }
         return sb.toString();
     }
 
@@ -696,6 +945,73 @@ public class VillagerTraderCommand extends Command {
             sb
                 .append(printTrade(id, trade))
                 .append("\n");
+        }
+        return sb.toString();
+    }
+
+    /** Look up the group named by the {@code id} argument, mutate it, and print it; ERROR if it doesn't exist. */
+    private int withGroup(com.mojang.brigadier.context.CommandContext<CommandContext> c,
+                          java.util.function.BiConsumer<String, TradeGroup> mutator, String title) {
+        var id = CustomStringArgumentType.getString(c, "id");
+        var group = CONFIG.client.extra.villagerTrader.groups.get(id);
+        if (group == null) {
+            groupNotFound(c, id);
+            return ERROR;
+        }
+        mutator.accept(id, group);
+        c.getSource().getEmbed()
+            .title(title)
+            .description(printGroup(id, group));
+        return OK;
+    }
+
+    private void groupNotFound(com.mojang.brigadier.context.CommandContext<CommandContext> c, String id) {
+        c.getSource().getEmbed()
+            .title("Trade Group Not Found")
+            .addField("Group", id)
+            .description(printAllGroups());
+        c.getSource().getData().put("list", true);
+    }
+
+    // NOTE: deliberately does NOT echo chest coordinates (see project rule on never logging real coords).
+    public String printGroup(String id, TradeGroup g) {
+        int members = 0;
+        for (var t : CONFIG.client.extra.villagerTrader.trades.values()) {
+            if (id.equals(t.group)) members++;
+        }
+        return "`" + id + "`" + (g.enabled ? "" : " (disabled)")
+            + ": " + members + " member" + (members == 1 ? "" : "s")
+            + ", restock " + g.inputItem1RestockStacks + "/" + g.inputItem2RestockStacks + " stacks"
+            + ", caps " + g.inputItem1MaxCarryStacks + "/" + g.inputItem2MaxCarryStacks
+            + ", postTrade " + g.postTradeStoreMode.name().toLowerCase()
+            + ", minEmeralds " + g.minEmeralds
+            + ", cooldown " + (g.cycleCooldownSeconds == 0 ? "off" : g.cycleCooldownSeconds + "s");
+    }
+
+    /** Renders live per-(villager, offer) restock/demand telemetry for ".trader price status [id]". */
+    public String printPriceStatus(List<VillagerTrader.PriceStatusEntry> entries) {
+        if (entries.isEmpty()) return "No tracked villager offers yet (visit at least one villager first).";
+        StringBuilder sb = new StringBuilder();
+        for (var e : entries) {
+            var due = Math.max(0, e.tradeEveryNRestocks() - e.restocksSinceLastFullBuy());
+            sb.append("`").append(e.tradeId() != null ? e.tradeId() : "?").append("`")
+                .append(" #").append(e.offerIndex())
+                .append(" @").append(e.villagerUuid().toString(), 0, 8)
+                .append(": uses ").append(e.numUses()).append("/").append(e.maxUses())
+                .append(", demand ").append(e.demand())
+                .append(", ").append(due == 0 ? "eligible now" : due + " restock(s) until eligible")
+                .append(e.msSinceLastRestockDetected() < 0 ? "" : ", last restock " + (e.msSinceLastRestockDetected() / 1000) + "s ago")
+                .append("\n");
+        }
+        return sb.toString();
+    }
+
+    public String printAllGroups() {
+        var groups = CONFIG.client.extra.villagerTrader.groups;
+        if (groups.isEmpty()) return "No trade groups configured.";
+        StringBuilder sb = new StringBuilder();
+        for (var entry : groups.entrySet()) {
+            sb.append(printGroup(entry.getKey(), entry.getValue())).append("\n");
         }
         return sb.toString();
     }

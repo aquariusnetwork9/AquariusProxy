@@ -197,6 +197,17 @@ public final class HighwayGraph {
         return Math.hypot((double) p[0] - q[0], (double) p[1] - q[1]);
     }
 
+    /**
+     * Distance (blocks) to the nearest graph crossing. Callers use this to decide whether a ring-road reroute is even
+     * sensible from here: the web is dense near spawn (rings 200-2500 apart) but past ~100k the rings are hundreds of
+     * thousands of blocks apart, so "detour via the nearest ring" out there means flying most of the way back to
+     * spawn. Far from any crossing, a purely local bypass beats the graph.
+     */
+    public double nearestNodeDistance(double x, double z) {
+        int[] p = nodes.get(nearestNode(x, z));
+        return p == null ? Double.POSITIVE_INFINITY : Math.hypot(x - p[0], z - p[1]);
+    }
+
     private long nearestNode(double x, double z) {
         long best = 0L;
         double bestD = Double.POSITIVE_INFINITY;

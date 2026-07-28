@@ -26,6 +26,7 @@ import com.aquarius.feature.pathfinder.goals.GoalNear;
 import com.aquarius.feature.player.World;
 import com.aquarius.mc.block.Direction;
 import com.aquarius.mc.dimension.DimensionRegistry;
+import com.aquarius.mc.enchantment.EnchantmentRegistry;
 import com.aquarius.mc.item.ItemRegistry;
 import com.aquarius.module.api.Module;
 import com.aquarius.util.config.Config.Client.Extra.ElytraPilot.HighwayDir;
@@ -75,10 +76,27 @@ import static com.aquarius.util.DisconnectMessages.PITSTOP_DISCONNECT;
  */
 public class ElytraPilot extends Module {
 
-    private enum Phase { IDLE, TAKEOFF, CRUISE, BOUNCE, HOP, PASS, REROUTE, SWAP, RESUPPLY, DESCEND, LAND, LANDWALK, WALKOUT, EMERGENCY, PITSTOP_LAND, STOP_ACT, DONE }
+    private enum Phase { IDLE, TAKEOFF, CRUISE, BOUNCE, HOP, PASS, REROUTE, DETOUR, SWAP, RESUPPLY, DESCEND, LAND, LANDWALK, WALKOUT, EMERGENCY, PITSTOP_LAND, STOP_ACT, DONE }
 
     /** Nether-hardening band-probe verdict: clear road / open gap to power-fly across / full-height wall to reroute. */
     private enum Band { CLEAR, GAP, WALL }
+
+    /**
+     * Why the graceful emergency landing was entered. These want OPPOSITE handling and used to share one config flag
+     * named after only the first of them: {@link #NO_ELYTRA} genuinely can't fly on, so parking + logging out
+     * preserves the kit; {@link #BLOCKED} is a healthy bot that simply ran out of ways past an obstruction, where
+     * logging out strands it far from anywhere for no reason.
+     */
+    private enum EmergencyReason {
+        NO_ELYTRA("out of usable elytra"),
+        BLOCKED("blocked — out of ways past the obstruction");
+
+        private final String label;
+
+        EmergencyReason(String label) {
+            this.label = label;
+        }
+    }
 
     private static final int CHESTPLATE_SLOT = 6;          // container 0: 5=helm,6=chest,7=legs,8=boots
     private static final int TAKEOFF_TIMEOUT_TICKS = 200;  // ~10s to get airborne + deployed
@@ -86,6 +104,7 @@ public class ElytraPilot extends Module {
     private static final int SWAP_EQUIP_TIMEOUT_TICKS = 100;
     private static final int SWAP_REDEPLOY_TIMEOUT_TICKS = 100;
     private static final int PROBE_INTERVAL = 10;           // recompute terrain scans every N ticks
+    private static final double DETOUR_ASSUMED_BPS = 20.0;  // pessimistic detour cruise speed, for the distance-scaled budget
     private static final int OPEN_TARGET_TOLERANCE = 8;     // land at the target if its open surface is within this of approxGroundY
     private static final int LANDWALK_TIMEOUT_TICKS = 1200; // ~60s for Baritone to reach the target on the ground
     private static final int HOP_MIN_TICKS = 6;             // commit to a hop for at least this long so we clear the block
@@ -126,6 +145,19 @@ public class ElytraPilot extends Module {
     private int resupplyTicks;                  // RESUPPLY: settle / overall guard counter
     private boolean savedRgEquipElytra, savedRgEquipArmor, savedRgOffhandTotem, savedRgSelfKillRelocate; // restored after
     private boolean resupplyUsedProfile;        // resupply drove Regear from a kit profile (pushProfile) vs the legacy overrides
+    private int mendState;                      // 0 = idle; 1 = throwing/waiting - tickMend() owns the tick while set
+    private int mendTicks;                      // ticks spent in the current mend attempt (mendTimeoutTicks safety cap)
+    private int mendStartDurability;             // worn elytra durability when the mend attempt began, for the log line
+    private int mendBottlesThrown;
+    private boolean mendThrowArmed;              // right-click currently held down, waiting for the bottle count to drop
+    private int mendThrowTries;                  // ticks spent waiting for the current throw to register
+    private int mendSpacing;                     // ticks left before the next throw (mendThrowSpacingTicks pacing)
+    private int mendSubStep;                     // 0 = borrow offhand (once), 1 = throw loop, 2 = restore offhand + finish
+    private boolean mendOffhandBorrowed;         // true once a spare's been swapped into the offhand - must be swapped back
+    private int mendOffhandSlot = -1;            // the main-inv slot the spare came from (same slot swaps it back)
+    private boolean mendAutoTotemWasEnabled;     // AutoTotem's enabled state before we borrowed the offhand, for restore
+    private boolean mendRestoreSubmitted;        // the swap-back action has been submitted - now just settling
+    private int mendRestoreTicks;                // ticks left to settle after the swap-back before trusting it landed
     private double bouncePrevY = Double.NaN;   // last-tick Y, for the bounce telemetry readout
     private double bouncePrevX = Double.NaN;   // last-tick X, for the bounce telemetry's horizontal-delta readout
     private int bounceRamp;                     // e-bounce Sprint-start: ticks since the ground RUN ended, drives the injected-speed ramp goal; reset on any disturbance
@@ -136,7 +168,7 @@ public class ElytraPilot extends Module {
     private int bounceRestoreTicksLeft;         // e-bounce HOLD bleed-and-restore: ticks of restore injection remaining this cycle (re-armed to bounceRestoreTicks on each ground touch)
     private boolean bounceClimbing;             // airborne-glide e-bounce: vertical porpoise phase (true = climbing toward the band ceiling, false = sinking)
 
-    // --- nether grief-hardening (all gated behind cfg.netherHardening.enabled; default off) ---
+    // --- nether grief-hardening (per-capability flags under cfg.netherHardening; gap/wall handling default ON) ---
     private Band lastBand = Band.CLEAR;         // cached band-probe verdict (recomputed every PROBE_INTERVAL)
     private GriefMap griefMap;                   // this bot's LOCAL hazard record; accumulates across flights, never reset
     private List<int[]> ringPath;                // active ring-road reroute waypoints (nether XZ), or null
@@ -147,8 +179,18 @@ public class ElytraPilot extends Module {
     private int passTicks;
     private int passAttempts;
     private int passTX, passTZ;
+    // --- local descend-detour (works far from any ring road, unlike the ring reroute) ---
+    private boolean detourActive;      // config below is clobbered and MUST be restored before leaving DETOUR
+    private int detourStage;           // 0 = below-road transit to the rejoin point, 1 = climbing back into the band
+    private int detourTX, detourTZ;    // rejoin point on the road centerline, past the blockage
+    private int detourTicks;
+    private int detourBudget;          // distance-scaled tick budget for this attempt (NOT a fixed timeout)
+    private int detourAttempts;
+    private boolean detourSavedHighway, detourSavedHasTarget;
+    private int detourSavedTargetX, detourSavedTargetZ;
     private boolean emergencyAlerted;
-    private boolean emergencyLogout;   // EMERGENCY entered for the last-elytra case: log out + cancel the trip on land
+    private boolean emergencyLogout;   // log out on landing (which config flag decides this depends on emergencyReason)
+    private EmergencyReason emergencyReason = EmergencyReason.NO_ELYTRA;
     private boolean noSpareWarned;
     private double lastX, lastZ;
     private boolean haveLast;
@@ -306,6 +348,16 @@ public class ElytraPilot extends Module {
         return griefMap != null ? griefMap.all() : List.of();
     }
 
+    /**
+     * True while the pilot is bypassing a blockage on its own (local detour or ring reroute). The trip planner must
+     * leave the leg alone during this: the bypass deliberately leaves the road — below it, or around it via the web —
+     * which would otherwise read as "drifted off the road" and get yanked into a re-acquire, and it can outlast a
+     * leg's guard timer without the leg being stalled.
+     */
+    public boolean isBypassingBlockage() {
+        return phase == Phase.DETOUR || phase == Phase.REROUTE;
+    }
+
     /** True once the current flight leg has finished (landed/aborted). */
     public boolean isFlightDone() {
         return phase == Phase.DONE || phase == Phase.IDLE;
@@ -350,9 +402,21 @@ public class ElytraPilot extends Module {
         ringPath = null;
         ringIdx = 0;
         ringTicks = 0;
+        endDetour();                     // restore any clobbered cruise target BEFORE clearing the detour state
+        detourStage = 0;
+        detourTicks = 0;
+        detourBudget = 0;
+        detourAttempts = 0;
         cruiseAimOverride = null;        // griefMap is intentionally NOT reset — accumulated knowledge persists across flights
         resupplyStarted = false;
         resupplyTicks = 0;
+        // A mend cycle interrupted mid-borrow (e.g. a reconnect re-running onEnable) must not leave AutoTotem
+        // disabled forever - restore it here rather than only in finishMend().
+        if (mendOffhandBorrowed) {
+            CONFIG.client.extra.autoTotem.enabled = mendAutoTotemWasEnabled;
+            MODULE.get(AutoTotem.class).syncEnabledFromConfig();
+        }
+        mendState = 0; mendSubStep = 0; mendOffhandBorrowed = false; mendOffhandSlot = -1; mendRestoreSubmitted = false;
         bounceRamp = 0;
         bounceReadyToJump = false;
         bounceHolding = false;
@@ -520,7 +584,9 @@ public class ElytraPilot extends Module {
             checkPitstopGeofence(x, y, z);
 
             // Self-heal: if we should be gliding but aren't (elytra broke, desync, knockback), recover.
-            if ((phase == Phase.CRUISE || phase == Phase.DESCEND) && !BOT.isFallFlying()) {
+            // DETOUR is a powered cruise like CRUISE, so it needs the same self-heal — losing flight fifty blocks below
+            // the road (broken elytra, desync, knockback) otherwise just falls into the terrain the detour is threading.
+            if ((phase == Phase.CRUISE || phase == Phase.DESCEND || phase == Phase.DETOUR) && !BOT.isFallFlying()) {
                 handleLostFlight(x, y, z);
             } else {
                 switch (phase) {
@@ -530,6 +596,7 @@ public class ElytraPilot extends Module {
                     case HOP          -> tickHop(x, y, z, speed);
                     case PASS         -> tickPass(x, y, z, speed);
                     case REROUTE      -> tickReroute(x, y, z, speed);
+                    case DETOUR       -> tickDetour(x, y, z, speed);
                     case SWAP         -> tickSwap(x, y, z);
                     case RESUPPLY     -> tickResupply(x, y, z, speed);
                     case DESCEND      -> tickDescend(x, y, z, speed);
@@ -551,6 +618,7 @@ public class ElytraPilot extends Module {
             haveLast = true;
             ticksSinceFire++;
             if (redeployCooldown > 0) redeployCooldown--;
+            if (mendSpacing > 0) mendSpacing--;
             if (setbackHoldTicks > 0) setbackHoldTicks--;
             if (boostGuaranteeTicks > 0) boostGuaranteeTicks--;
             if (boostMaxTicks > 0) boostMaxTicks--;
@@ -562,9 +630,19 @@ public class ElytraPilot extends Module {
 
     // --- phases ---
 
+    /**
+     * Where to return after an interruption (takeoff, elytra swap, resupply). Normally the bounce or the cruise, but a
+     * DETOUR must resume ITS flight: mid-detour the bot is fifty blocks below the road with the cruise target pointed
+     * at the rejoin point, so dropping it back into BOUNCE would have it trying to bounce on open nether air.
+     */
+    private Phase resumePhase() {
+        if (detourActive) return Phase.DETOUR;
+        return CONFIG.client.extra.elytraPilot.ebounce ? Phase.BOUNCE : Phase.CRUISE;
+    }
+
     private void tickTakeoff() {
         if (BOT.isFallFlying()) {
-            phase = CONFIG.client.extra.elytraPilot.ebounce ? Phase.BOUNCE : Phase.CRUISE;
+            phase = resumePhase();
             ticksSinceFire = Integer.MAX_VALUE / 2; // fire immediately on the first cruise tick
             pinTicks = 0;
             info("Airborne — entering " + (CONFIG.client.extra.elytraPilot.ebounce ? "bounce" : "cruise"));
@@ -1358,9 +1436,9 @@ public class ElytraPilot extends Module {
             boolean probeTick = flightTicks % PROBE_INTERVAL == 0;
             Band band = probeTick ? classifyBand(x, z, yaw) : lastBand;
             lastBand = band;
-            if (band == Band.WALL && nh.rerouteAroundWalls) {
+            if (band == Band.WALL && (nh.rerouteAroundWalls || nh.detourAroundWalls)) {
                 if (nh.recordGrief && probeTick) recordGrief(x, z, GriefMap.Type.WALL);
-                enterRingReroute(x, z);
+                enterWallBypass(x, z, "highway blocked full-height");
                 return;
             }
             if (band == Band.GAP && nh.flyThroughGaps && hasAnyFirework()) {
@@ -1579,9 +1657,9 @@ public class ElytraPilot extends Module {
         if (cruiseAimOverride == null && !cfg.highwayCruisePathfind && cfg.passObstacles
                 && terrainBlockedAhead(x, y, z, yaw, Math.min(cfg.lookAheadBlocks, 12))) {
             var nh = cfg.netherHardening;
-            if (nh.rerouteAroundWalls && cfg.highway && classifyBand(x, z, yaw) == Band.WALL) {
+            if ((nh.rerouteAroundWalls || nh.detourAroundWalls) && cfg.highway && classifyBand(x, z, yaw) == Band.WALL) {
                 if (nh.recordGrief) recordGrief(x, z, GriefMap.Type.WALL);
-                enterRingReroute(x, z);
+                enterWallBypass(x, z, "highway cruise blocked full-height");
             } else {
                 info("Highway cruise blocked ahead — routing around it");
                 enterPass();
@@ -1678,7 +1756,7 @@ public class ElytraPilot extends Module {
         return World.getCurrentDimension() == DimensionRegistry.THE_NETHER.get();
     }
 
-    // --- nether grief-hardening (gated behind cfg.netherHardening.enabled) ---
+    // --- nether grief-hardening (per-capability flags under cfg.netherHardening; there is no single master gate) ---
 
     /**
      * Band corridor probe: classify the highway ahead as CLEAR (road intact), GAP (road surface gone but the band is
@@ -1719,6 +1797,179 @@ public class ElytraPilot extends Module {
      * target (or, on a free-heading flight, a point well past the wall on the travel axis), then fly it as a powered
      * cruise. Falls back to the Baritone bypass when out of fireworks.
      */
+    /**
+     * Pick how to get past a full-height blockage. Near spawn the ring web is dense and a graph reroute uses real
+     * roads; far out its crossings are hundreds of thousands of blocks apart, so the graph would route the bot most
+     * of the way back to spawn — there, the local descend-detour is the only sane option.
+     */
+    private void enterWallBypass(double x, double z, String why) {
+        var nh = CONFIG.client.extra.elytraPilot.netherHardening;
+        if (nh.rerouteAroundWalls) {
+            double toNode = HighwayGraph.get().nearestNodeDistance(x, z);
+            if (toNode <= nh.ringRerouteMaxNodeDist) { enterRingReroute(x, z); return; }
+            if (nh.detourAroundWalls)
+                info("Nearest ring crossing is {}b away — too far to reroute via the web, detouring locally", (long) toNode);
+        }
+        if (nh.detourAroundWalls) enterDetour(x, z, why); else enterPass();
+    }
+
+    /**
+     * LOCAL descend-detour around a full-height blockage — the far-out answer the ring reroute can't give.
+     *
+     * <p>The ring graph only has nodes where the 8 radials cross a ring road, and past ~100k those rings are hundreds
+     * of thousands of blocks apart, so {@code route()} snapping both endpoints to the "nearest" crossing produces a
+     * detour longer than the whole remaining trip. Out there the only thing that works is to leave the road
+     * vertically: 2b2t highways sit in a thin band around y120, and a full-height wall means full-height <em>in that
+     * band</em> — the open nether fifty blocks below is almost always passable, and it is exactly the terrain the
+     * native seed router models correctly (player-built grief clusters at road level, which is what the router can't
+     * see). So we drop to {@code netherCruiseY}, run the road axis past the blockage, and climb back into the band.
+     *
+     * <p>Distances escalate per attempt because the bot cannot see how wide the blockage is — chunks that far ahead
+     * aren't loaded. Each rejoin doubles as the probe: fly out, climb back into the band, look. Still walled? Go
+     * further. That is cheap in a way the ground walk-past never was.
+     */
+    private void enterDetour(double x, double z, String why) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        var nh = cfg.netherHardening;
+        // "Are we on a highway leg?" must read the SAVED value while a detour is active — stage 0 deliberately sets
+        // cfg.highway=false to route the open-nether cruise, so reading it live would make every escalation bail out.
+        boolean onHighwayLeg = detourActive ? detourSavedHighway : cfg.highway;
+        // Both bail-outs hand off to PASS, which walks Baritone to a point on the road at roadY — so the clobbered
+        // cruise target MUST be restored first, or a bail-out mid-detour leaves the bot bypassing at the wrong
+        // altitude against a stale target.
+        if (!nh.detourAroundWalls || !inNether() || !onHighwayLeg) { endDetour(); enterPass(); return; }
+        if (!hasAnyFirework()) {                      // the detour is a powered cruise; without rockets it can't fly
+            endDetour();
+            info("Blocked full-height but out of fireworks — falling back to the local Baritone bypass");
+            enterPass();
+            return;
+        }
+        if (detourAttempts >= nh.maxDetourAttempts) {
+            endDetour();
+            warn("Detoured {} times and the road is still blocked — giving up on the nether route", detourAttempts);
+            if (!tryOverworldReroute("highway blocked past " + detourAttempts + " detours"))
+                enterEmergencyLanding(EmergencyReason.BLOCKED);
+            return;
+        }
+        detourAttempts++;
+        // Escalate: base, 2x, 4x, 8x … A wall is usually tens of blocks; a serious grief project is thousands.
+        double ahead = (double) nh.detourAheadBlocks * (1L << (detourAttempts - 1));
+        double[] d = travelUnit();
+        double ax = cfg.roadAnchorX, az = cfg.roadAnchorZ;
+        double t = (x - ax) * d[0] + (z - az) * d[1];      // our position along the road axis
+        detourTX = (int) Math.round(ax + (t + ahead) * d[0]);
+        detourTZ = (int) Math.round(az + (t + ahead) * d[1]);
+        // Budget the attempt by DISTANCE, not a flat timer. (The ring reroute's fixed 60s is why it never completes a
+        // real detour.) Assume a pessimistic average speed, then double it for terrain threading and re-planning.
+        detourBudget = (int) Math.max(1200, (ahead / DETOUR_ASSUMED_BPS) * 20.0 * 2.0);
+        if (!detourActive) {                                // save once; nested re-entry must not save the clobbered values
+            detourSavedHighway = cfg.highway;
+            detourSavedHasTarget = cfg.hasTarget;
+            detourSavedTargetX = cfg.targetX;
+            detourSavedTargetZ = cfg.targetZ;
+            detourActive = true;
+        }
+        // Hand the open-nether cruise the rejoin point: highway=false routes it through tickNetherCruise, which holds
+        // netherCruiseY and threads terrain in 3D via the native router.
+        cfg.highway = false;
+        cfg.hasTarget = true;
+        cfg.targetX = detourTX;
+        cfg.targetZ = detourTZ;
+        if (BOT.isEBounceActive()) BOT.stopEBounce();
+        detourStage = 0;
+        detourTicks = 0;
+        phase = Phase.DETOUR;
+        info("{} — descending to open nether to detour {}b along the road (attempt {}/{}), rejoining at {}, {}",
+            why, (long) ahead, detourAttempts, nh.maxDetourAttempts, detourTX, detourTZ);
+        inGameAlertActivePlayer("<yellow>ElytraPilot: highway blocked — detouring below the road");
+    }
+
+    /**
+     * Last resort: hand the blockage to the trip planner to go AROUND it through the overworld — portal out, fly the
+     * overworld to a point past the blockage, portal back in. Costs 8x the distance (nether coords are 1:8) plus the
+     * fireworks and elytra wear to fly it, which is why it sits below the local detour rather than replacing it. It
+     * only applies to an armed trip; a standalone {@code .fly highway} has no planner to reroute.
+     *
+     * @return true if the trip took ownership of the reroute (this flight is now over, cleanly)
+     */
+    private boolean tryOverworldReroute(String why) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        var nh = cfg.netherHardening;
+        if (!nh.overworldReroute || !inNether() || !cfg.highway) return false;
+        double x = CACHE.getPlayerCache().getX(), z = CACHE.getPlayerCache().getZ();
+        double[] d = travelUnit();
+        // Aim past everything the local detours already failed to clear, plus one more doubling of margin.
+        double ahead = (double) nh.detourAheadBlocks * (1L << Math.max(1, nh.maxDetourAttempts));
+        double ax = cfg.roadAnchorX, az = cfg.roadAnchorZ;
+        double t = (x - ax) * d[0] + (z - az) * d[1];
+        int rejoinX = (int) Math.round(ax + (t + ahead) * d[0]);
+        int rejoinZ = (int) Math.round(az + (t + ahead) * d[1]);
+        if (!MODULE.get(ElytraTrip.class).requestOverworldReroute(rejoinX, rejoinZ, why)) return false;
+        endDetour();
+        complete("handing off to an overworld reroute around the blockage", false);
+        return true;
+    }
+
+    /** Restore the flight config the detour clobbered. Safe to call when no detour is active. */
+    private void endDetour() {
+        if (!detourActive) return;
+        var cfg = CONFIG.client.extra.elytraPilot;
+        cfg.highway = detourSavedHighway;
+        cfg.hasTarget = detourSavedHasTarget;
+        cfg.targetX = detourSavedTargetX;
+        cfg.targetZ = detourSavedTargetZ;
+        detourActive = false;
+    }
+
+    /**
+     * Fly the local detour. Stage 0 runs below the road to the rejoin point (open-nether cruise); stage 1 climbs back
+     * into the highway band and probes it — CLEAR resumes the bounce, WALL escalates to a longer detour.
+     */
+    private void tickDetour(double x, double y, double z, double speed) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        var nh = cfg.netherHardening;
+        if (!hasAnyFirework()) {                        // ran dry mid-detour — get down under control rather than fall
+            endDetour();
+            warn("Out of fireworks mid-detour — landing");
+            enterEmergencyLanding(EmergencyReason.BLOCKED);
+            return;
+        }
+        if (++detourTicks > detourBudget) {
+            warn("Detour attempt {} exceeded its {}-tick budget — escalating", detourAttempts, detourBudget);
+            enterDetour(x, z, "detour timed out");      // next attempt reaches further; endDetour NOT called (config stays clobbered)
+            return;
+        }
+        if (detourStage == 0) {
+            // Below-road transit. tickCruise routes open nether (highway=false) at netherCruiseY toward the rejoin point.
+            if (horizDist(x, z, detourTX, detourTZ) <= Math.max(cfg.arriveRadius, nh.rerouteArriveRadius)) {
+                detourStage = 1;
+                cfg.highway = true;                      // climb back into the band via the powered highway cruise
+                info("Past the blockage — climbing back to the road at {}, {}", detourTX, detourTZ);
+                return;
+            }
+            tickCruise(x, y, z, speed);
+            return;
+        }
+        // Stage 1: back at the rejoin XZ, climb into the band and check whether the road is actually clear here.
+        if (Math.abs(y - cfg.roadY) <= cfg.roadDropAbort) {
+            Band band = classifyBand(x, z, desiredYaw(x, z));
+            if (band == Band.WALL) {
+                if (nh.recordGrief) recordGrief(x, z, GriefMap.Type.WALL);
+                warn("Rejoin point is still walled — extending the detour");
+                enterDetour(x, z, "still blocked at the rejoin point");
+                return;
+            }
+            endDetour();
+            detourAttempts = 0;                          // cleared this blockage; the next one starts fresh
+            phase = Phase.BOUNCE;
+            bounceStallTicks = 0;
+            info("Rejoined the highway past the blockage — resuming bounce");
+            inGameAlertActivePlayer("<green>ElytraPilot: back on the highway past the blockage");
+            return;
+        }
+        tickHighwayCruise(x, y, z, speed);               // powered climb back up into the road band
+    }
+
     private void enterRingReroute(double x, double z) {
         var cfg = CONFIG.client.extra.elytraPilot;
         var nh = cfg.netherHardening;
@@ -1747,6 +1998,14 @@ public class ElytraPilot extends Module {
         var nh = cfg.netherHardening;
         if (ringPath == null || ringPath.isEmpty()) { phase = Phase.BOUNCE; bounceStallTicks = 0; return; }
         if (!hasAnyFirework()) { ringPath = null; enterPass(); return; }
+        // Budget the reroute by the distance it actually has to cover. The old flat rerouteTimeoutTicks (60s ≈ 2.4k
+        // blocks) was shorter than almost every real ring detour, so the reroute ALWAYS timed out into the local
+        // bypass and, when that failed too, an emergency landing — the graph never got to finish a single detour.
+        int ringBudget = nh.rerouteTimeoutTicks;
+        if (ringIdx < ringPath.size()) {
+            int[] wpB = ringPath.get(ringIdx);
+            ringBudget = Math.max(ringBudget, (int) ((horizDist(x, z, wpB[0], wpB[1]) / DETOUR_ASSUMED_BPS) * 20.0 * 2.0));
+        }
         while (ringIdx < ringPath.size()) {                                 // drop waypoints we've reached
             int[] wp = ringPath.get(ringIdx);
             if (horizDist(x, z, wp[0], wp[1]) <= nh.rerouteArriveRadius) ringIdx++; else break;
@@ -1758,10 +2017,10 @@ public class ElytraPilot extends Module {
             info("Ring reroute complete — resuming bounce");
             return;
         }
-        if (++ringTicks > nh.rerouteTimeoutTicks) {
-            warn("Ring reroute timed out after {} ticks — Baritone bypass", ringTicks);
+        if (++ringTicks > ringBudget) {
+            warn("Ring reroute timed out after {} ticks (budget {}) — falling back to a local detour", ringTicks, ringBudget);
             ringPath = null;
-            enterPass();
+            enterDetour(x, z, "ring reroute timed out");
             return;
         }
         int[] wp = ringPath.get(ringIdx);
@@ -1821,7 +2080,7 @@ public class ElytraPilot extends Module {
     private void enterRecover(String why) {
         if (++recoverEpisodes > CONFIG.client.extra.elytraPilot.maxRecoverEpisodes) {
             warn("Fell off the highway {} times — can't hold the road here, emergency landing", recoverEpisodes);
-            enterEmergencyLanding();
+            enterEmergencyLanding(EmergencyReason.BLOCKED);
             return;
         }
         enterPass();                 // reuse settle + Baritone-to-centerline@roadY (re-centers AND climbs back up)
@@ -1857,7 +2116,7 @@ public class ElytraPilot extends Module {
                 // Out of bypass attempts. Don't kill the flight — fall back to the graceful emergency landing.
                 warn(passRecovery ? "Could not get back onto the highway — emergency landing"
                                   : "Could not path past the obstacle — emergency landing");
-                enterEmergencyLanding();
+                enterEmergencyLanding(EmergencyReason.BLOCKED);
                 return;
             }
             startPassPath(x, z); // re-path further along the axis
@@ -1990,7 +2249,7 @@ public class ElytraPilot extends Module {
             double spd = haveLast ? Math.hypot(x - lastX, z - lastZ) * 20.0 : 0.0;
             if (!onGround) {                                  // glide down to the road first
                 submitMove(false, false, false, false, yaw, 12f);
-                if (++swapTicks > SWAP_REDEPLOY_TIMEOUT_TICKS * 2) { phase = Phase.EMERGENCY; }
+                if (++swapTicks > SWAP_REDEPLOY_TIMEOUT_TICKS * 2) { enterEmergencyLanding(); }
                 return;
             }
             submitMove(false, false, false, false, yaw, 0f); // grounded: hold still while swapping
@@ -2001,7 +2260,7 @@ public class ElytraPilot extends Module {
                 swapTicks = 0;
                 info("Elytra swapped on the road — resuming bounce");
             } else if (++swapTicks > SWAP_EQUIP_TIMEOUT_TICKS) {
-                if (!hasSpareElytra()) { phase = Phase.EMERGENCY; return; }
+                if (!hasSpareElytra()) { enterEmergencyLanding(); return; }
                 swapTicks = 0;                                // keep retrying
             }
             return;
@@ -2010,12 +2269,12 @@ public class ElytraPilot extends Module {
         if (!swapRedeploying) {
             boolean done = equipFreshElytraProgress();
             submitInput(false, false, yaw, 0f); // no elytra / not gliding — just hold heading while we fall
-            if (heightAboveGround(x, y, z) < cfg.minSwapClearance / 2) { phase = Phase.EMERGENCY; return; }
+            if (heightAboveGround(x, y, z) < cfg.minSwapClearance / 2) { enterEmergencyLanding(); return; }
             if (done) {
                 swapRedeploying = true;
                 swapTicks = 0;
             } else if (++swapTicks > SWAP_EQUIP_TIMEOUT_TICKS) {
-                if (!hasSpareElytra()) { phase = Phase.EMERGENCY; return; }
+                if (!hasSpareElytra()) { enterEmergencyLanding(); return; }
                 swapTicks = 0; // keep retrying (bounded overall by maxFlightTicks)
             }
             return;
@@ -2027,14 +2286,14 @@ public class ElytraPilot extends Module {
             if (!fire) ensureFireworkHeld();
             if (fire) noteRocketFired();
             submitInput(false, fire, yaw, -10f);
-            phase = CONFIG.client.extra.elytraPilot.ebounce ? Phase.BOUNCE : Phase.CRUISE;
+            phase = resumePhase();
             info("Elytra swapped — resuming flight");
             return;
         }
         jumpToggle = !jumpToggle;
         submitInput(jumpToggle, false, yaw, 0f);
         if (++swapTicks > SWAP_REDEPLOY_TIMEOUT_TICKS && heightAboveGround(x, y, z) < cfg.minSwapClearance)
-            phase = Phase.EMERGENCY;
+            enterEmergencyLanding();
     }
 
     /**
@@ -2379,8 +2638,10 @@ public class ElytraPilot extends Module {
 
     private void tickEmergency(double x, double y, double z) {
         if (!emergencyAlerted) {
-            inGameAlertActivePlayer("<red>ElytraPilot EMERGENCY — out of usable elytra; descending, please intervene");
-            warn("EMERGENCY — no usable elytra/recovery");
+            // Report the ACTUAL reason: this used to hardcode "out of usable elytra", so a road-blocked bot with a
+            // full-durability elytra reported an elytra failure and sent anyone reading the log down the wrong path.
+            inGameAlertActivePlayer("<red>ElytraPilot EMERGENCY — " + emergencyReason.label + "; descending, please intervene");
+            warn("EMERGENCY — {}", emergencyReason.label);
             emergencyAlerted = true;
         }
         float yaw = CACHE.getPlayerCache().getYaw();
@@ -2393,13 +2654,20 @@ public class ElytraPilot extends Module {
             submitInput(false, false, yaw, 0f);                   // nothing left — falling
         }
         if (!BOT.isFallFlying() && heightAboveGround(x, y, z) <= 2) {
+            // Cancel the trip EITHER WAY: there is no usable elytra left, so any remaining leg would only re-arm
+            // into another emergency. Worse, the road legs don't gate on leg success — NETHER_HW_FLYIN advances to
+            // ACQUIRE on any finished flight and NETHER_HIGHWAY never checks at all, so a still-armed trip walks the
+            // bot back onto the road and then stalls out its guard timer. The logout flag decides only whether we
+            // ALSO disconnect.
+            var cfg = CONFIG.client.extra.elytraPilot;
+            boolean cancelledTrip = cfg.tripActive;
+            if (cancelledTrip) { cfg.tripActive = false; MODULE.get(ElytraTrip.class).syncEnabledFromConfig(); }
             if (emergencyLogout) {
-                var cfg = CONFIG.client.extra.elytraPilot;
-                if (cfg.tripActive) { cfg.tripActive = false; MODULE.get(ElytraTrip.class).syncEnabledFromConfig(); }
-                complete("emergency landing — logging out to preserve the bot + kit", false);
-                Proxy.getInstance().disconnect("ElytraPilot: last elytra spent — emergency logout");
+                complete("emergency landing (" + emergencyReason.label + ") — logging out to preserve the bot + kit", false);
+                Proxy.getInstance().disconnect("ElytraPilot: " + emergencyReason.label + " — emergency logout");
             } else {
-                complete("emergency landing complete", false);
+                complete("emergency landing (" + emergencyReason.label + ") — staying online"
+                    + (cancelledTrip ? ", trip cancelled" : ""), false);
             }
         }
     }
@@ -2541,7 +2809,18 @@ public class ElytraPilot extends Module {
 
     /** Last-elytra / no-elytra failsafe: glide down to a landing and (per config) log out to preserve the bot. */
     private void enterEmergencyLanding() {
-        emergencyLogout = CONFIG.client.extra.elytraPilot.lastElytraLogout;
+        enterEmergencyLanding(EmergencyReason.NO_ELYTRA);
+    }
+
+    /**
+     * Graceful failsafe: glide down to a landing and (per config) log out. The logout is keyed to the REASON — a bot
+     * that's out of elytra can't fly on and is better parked+logged out, while one that's merely blocked is still
+     * airworthy and logging it out just strands it.
+     */
+    private void enterEmergencyLanding(EmergencyReason reason) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        emergencyReason = reason;
+        emergencyLogout = reason == EmergencyReason.BLOCKED ? cfg.blockedLogout : cfg.lastElytraLogout;
         emergencyAlerted = false;
         phase = Phase.EMERGENCY;
     }
@@ -2571,6 +2850,8 @@ public class ElytraPilot extends Module {
         var cfg = CONFIG.client.extra.elytraPilot;
         var rg = MODULE.get(Regear.class);
 
+        if (mendState != 0) { tickMend(); return; }   // Regear's done; throwing the bottles it pulled - see tickMend
+
         if (!resupplyStarted) {
             // Settle on the road first so Regear starts from a stable grounded state (it places an echest beside us).
             submitMove(false, false, false, false, desiredYaw(x, z), 0f);
@@ -2597,6 +2878,10 @@ public class ElytraPilot extends Module {
                 CONFIG.client.extra.regear.returnShulker = true;
                 rg.setElytraRefill(true, cfg.resupplyElytraCount);
             }
+            // While we're already sourcing from the echest, also pull XP bottles for a post-cycle Mending repair
+            // IF the worn elytra actually has Mending and needs it — checked once here so a non-Mending elytra
+            // never wastes a single bottle pull.
+            rg.setMendBottleTarget(shouldMend() ? cfg.mendBottleCount : 0);
             CONFIG.client.extra.regear.enabled = true;
             rg.syncEnabledFromConfig();
             resupplyStarted = true;
@@ -2611,9 +2896,20 @@ public class ElytraPilot extends Module {
         }
         if (rg.isComplete()) {
             restoreRegearConfig();
-            phase = Phase.BOUNCE;
+            // Regear never touches the worn elytra, so its durability/enchantments can't have changed since we
+            // decided this at resupply start - recomputing here (rather than caching) is just simpler and just as
+            // correct. Still grounded (Regear only just closed out), so this is the one guaranteed-stationary
+            // window to throw bottles in.
+            if (shouldMend() && countItem(ItemRegistry.EXPERIENCE_BOTTLE.id()) > 0) {
+                mendState = 1; mendSubStep = 0; mendTicks = 0; mendBottlesThrown = 0; mendThrowArmed = false;
+                mendOffhandBorrowed = false; mendOffhandSlot = -1; mendRestoreSubmitted = false;
+                mendStartDurability = wornElytraDurability();
+                info("Elytra resupply: mending the worn elytra with {} XP bottle(s).", countItem(ItemRegistry.EXPERIENCE_BOTTLE.id()));
+                return;
+            }
+            phase = resumePhase();
             bounceStallTicks = 0;
-            info("Elytra resupply complete — resuming bounce (spares=" + countSpareElytras() + ")");
+            info("Elytra resupply complete — resuming flight (spares=" + countSpareElytras() + ")");
             return;
         }
         if (rg.isRelocating()) { resupplyTicks = 0; return; }   // (disabled here, but never time out a relocation)
@@ -2739,6 +3035,131 @@ public class ElytraPilot extends Module {
     private int wornElytraDurability() {
         ItemStack c = chestplate();
         return isElytra(c) ? remainingDurability(c) : 0;
+    }
+
+    /** Worth a mend attempt: the worn elytra IS an elytra, has Mending, and is below the repair floor. Gates a
+     *  single bottle from ever being pulled/thrown at a non-Mending elytra, since vanilla Mending would just
+     *  ignore it. */
+    private boolean shouldMend() {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (!cfg.mendWornElytra) return false;
+        ItemStack c = chestplate();
+        if (!isElytra(c)) return false;
+        if (wornElytraDurability() >= cfg.mendDurabilityThreshold) return false;
+        return hasMending(c);
+    }
+
+    private boolean hasMending(ItemStack s) {
+        var ench = s.getDataComponentsOrEmpty().get(DataComponentTypes.ENCHANTMENTS);
+        return ench != null && ench.getEnchantments().containsKey(EnchantmentRegistry.MENDING.get().id());
+    }
+
+    /** Inventory slot (9-44) of the most-damaged carried SPARE elytra that's Mending-enchanted and below the
+     *  repair floor, or -1 if none qualifies. Picks the WORST (not best) durability — the opposite of
+     *  {@link #findBestSpareElytraSlot}, since this drives repair rather than equip-selection; a fresh spare
+     *  naturally never qualifies (it's above the floor), so there's no overlap with the emergency-swap pool. */
+    private int findMendableSpareElytraSlot() {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        List<ItemStack> inv = CACHE.getPlayerCache().getPlayerInventory();
+        int worst = -1, worstDur = cfg.mendDurabilityThreshold;   // exclusive ceiling - must be BELOW this to bother
+        for (int s = 9; s <= 44; s++) {
+            ItemStack it = inv.get(s);
+            if (!isElytra(it) || !hasMending(it)) continue;
+            int d = remainingDurability(it);
+            if (d < worstDur) { worstDur = d; worst = s; }
+        }
+        return worst;
+    }
+
+    /**
+     * Runs the post-resupply Mending burst in three sub-steps: (0) once, optionally borrow the offhand for a
+     * damaged spare elytra (see {@link #mendSpareElytraOffhand} in the doc), (1) throw the XP bottles Regear
+     * pulled, one at a time, at the bot's own feet — Mending repairs whatever's worn/held/offhand automatically
+     * (server-side) as the orbs are collected — (2) if the offhand was borrowed, swap the spare back out and
+     * restore AutoTotem before actually resuming the bounce. Runs only from the guaranteed-stationary window
+     * right after Regear completes (see the {@code rg.isComplete()} branch in {@link #tickResupply});
+     * {@code mendState != 0} routes every subsequent tick here until {@link #finishMend} is reached. Never fails
+     * the resupply — out of bottles, a throw that won't register, or the timeout just cut the attempt short and
+     * resume bouncing (after restoring the offhand, if borrowed) with whatever durability was reached.
+     */
+    private void tickMend() {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (mendSubStep != 2 && ++mendTicks > cfg.mendTimeoutTicks) { mendSubStep = 2; mendRestoreSubmitted = false; return; }
+
+        switch (mendSubStep) {
+            case 0 -> {   // one-time setup: borrow the offhand for a damaged Mending spare, if configured + safe
+                if (!cfg.mendSpareElytraOffhand
+                    || CACHE.getPlayerCache().getThePlayer().getHealth() < cfg.mendMinHealthToBorrowOffhand) {
+                    mendSubStep = 1; return;                            // not attempting this cycle
+                }
+                int spare = findMendableSpareElytraSlot();
+                if (spare == -1) { mendSubStep = 1; return; }           // no damaged Mending spare to bother with
+                if (INVENTORY.hasActiveRequest()) return;               // wait for room, retry next tick
+                mendAutoTotemWasEnabled = CONFIG.client.extra.autoTotem.enabled;
+                CONFIG.client.extra.autoTotem.enabled = false;
+                MODULE.get(AutoTotem.class).syncEnabledFromConfig();
+                submitInvAction(new MoveToHotbarSlot(spare, MoveToHotbarAction.OFF_HAND));
+                mendOffhandSlot = spare;
+                mendOffhandBorrowed = true;
+                mendSubStep = 1;
+            }
+            case 1 -> {   // throw loop
+                if (mendSpacing > 0) return;         // pacing between throws (decremented once per tick above)
+                int bottles = countItem(ItemRegistry.EXPERIENCE_BOTTLE.id());
+                if (bottles <= 0) { mendSubStep = 2; mendRestoreSubmitted = false; return; }
+                if (!ensureHeld(ItemRegistry.EXPERIENCE_BOTTLE.id())) return;   // still selecting the bottle - wait
+                float yaw = CACHE.getPlayerCache().getYaw();
+                if (mendThrowArmed) {
+                    if (countItem(ItemRegistry.EXPERIENCE_BOTTLE.id()) < bottles) {   // count dropped -> it landed
+                        submitInput(false, false, yaw, cfg.mendThrowPitch);           // release
+                        mendThrowArmed = false;
+                        mendBottlesThrown++;
+                        mendThrowTries = 0;
+                        mendSpacing = cfg.mendThrowSpacingTicks;                      // let the orb + level packet land
+                        return;
+                    }
+                    if (++mendThrowTries >= 10) {                                    // didn't register - re-arm next tick
+                        submitInput(false, false, yaw, cfg.mendThrowPitch);
+                        mendThrowArmed = false;
+                        return;
+                    }
+                    submitInput(false, true, yaw, cfg.mendThrowPitch);               // keep pressing until it throws
+                    return;
+                }
+                mendThrowTries = 0;
+                submitInput(false, true, yaw, cfg.mendThrowPitch);
+                mendThrowArmed = true;
+            }
+            default -> {   // restoring the offhand (if borrowed), then finish
+                if (mendOffhandBorrowed) {
+                    if (!mendRestoreSubmitted) {
+                        if (INVENTORY.hasActiveRequest()) return;      // wait for room, retry next tick
+                        submitInvAction(new MoveToHotbarSlot(mendOffhandSlot, MoveToHotbarAction.OFF_HAND));  // same call - swaps back
+                        mendRestoreSubmitted = true;
+                        mendRestoreTicks = cfg.mendRestoreSettleTicks;
+                        return;
+                    }
+                    if (mendRestoreTicks > 0) { mendRestoreTicks--; return; }
+                }
+                finishMend();
+            }
+        }
+    }
+
+    private void finishMend() {
+        if (mendOffhandBorrowed) {
+            CONFIG.client.extra.autoTotem.enabled = mendAutoTotemWasEnabled;
+            MODULE.get(AutoTotem.class).syncEnabledFromConfig();
+            mendOffhandBorrowed = false; mendOffhandSlot = -1;
+        }
+        mendState = 0; mendSubStep = 0;
+        if (mendBottlesThrown > 0) {
+            int gained = wornElytraDurability() - mendStartDurability;
+            info("Elytra resupply: mended {} durability with {} bottle(s).", gained, mendBottlesThrown);
+        }
+        phase = Phase.BOUNCE;
+        bounceStallTicks = 0;
+        info("Elytra resupply complete — resuming bounce (spares=" + countSpareElytras() + ")");
     }
 
     private boolean isElytra(ItemStack s) {
@@ -3260,6 +3681,7 @@ public class ElytraPilot extends Module {
     private void complete(String why, boolean success) {
         phase = Phase.DONE;
         lastFlightSuccess = success;
+        endDetour();                 // a flight can end mid-detour (emergency landing) — never leave the target clobbered
         BARITONE.stop();
         inGameAlertActivePlayer("<green>ElytraPilot: " + why);
         info("Flight complete: " + why);
@@ -3268,6 +3690,7 @@ public class ElytraPilot extends Module {
     private void abort(String why) {
         phase = Phase.DONE;
         lastFlightSuccess = false;
+        endDetour();
         BARITONE.stop();
         inGameAlertActivePlayer("<red>ElytraPilot aborted: " + why);
         warn("Aborted: " + why);

@@ -38,6 +38,7 @@ public class KitMakerCommand extends Command {
                 "match loose/smart/exact",
                 "enchantlevels on/off  (smart match: ignore enchant levels)",
                 "maxkits <n>  (0 = until shulkers/materials run out)",
+                "fillmode shulker/bundle  (set the ACTIVE kit's container: place-a-shulker vs fill-a-bundle in-inventory)",
                 "partial on/off  (build a kit even if sources can't fully fill it; missing slots left empty)",
                 "pauseplayer on/off",
                 "autodc on/off  (disconnect when done)",
@@ -96,6 +97,9 @@ public class KitMakerCommand extends Command {
                 CONFIG.client.extra.kitMaker.maxKits = getInteger(c, "n");
                 c.getSource().getEmbed().title("Max kits: " + (getInteger(c, "n") == 0 ? "unlimited" : getInteger(c, "n")));
             })))
+            .then(literal("fillmode")
+                .then(literal("shulker").executes(c -> { setFillMode(c, "shulker"); }))
+                .then(literal("bundle").executes(c -> { setFillMode(c, "bundle"); })))
             .then(literal("partial").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.kitMaker.allowPartial = getToggle(c, "toggle");
                 c.getSource().getEmbed().title("Partial kits " + toggleStrCaps(CONFIG.client.extra.kitMaker.allowPartial))
@@ -125,6 +129,34 @@ public class KitMakerCommand extends Command {
             }));
     }
 
+    /** Set the ACTIVE saved kit's fillMode (per-kit); bundles need a named kit. */
+    private static void setFillMode(com.mojang.brigadier.context.CommandContext<CommandContext> c, String mode) {
+        var cfg = CONFIG.client.extra.kitMaker;
+        String ak = cfg.activeKit == null ? "" : cfg.activeKit.trim();
+        if (ak.isEmpty() || ak.equals("__auto") || !cfg.kits.containsKey(ak)) {
+            c.getSource().getEmbed().title("No active saved kit")
+                .description("Fill mode is per-kit — select or create a saved kit in the dashboard first (a bundle kit needs a named kit).");
+            return;
+        }
+        cfg.kits.get(ak).fillMode = mode;
+        com.aquarius.Globals.saveConfigAsync();
+        c.getSource().getEmbed().title("Kit '" + ak + "' container: " + (mode.equals("bundle") ? "🎒 bundle" : "shulker"))
+            .description(mode.equals("bundle")
+                ? "The bot fills an empty bundle in-inventory (no place/break). Keep the kit within one bundle's capacity (≤100%)."
+                : "The bot places, fills and breaks a shulker box.");
+    }
+
+    /** The container the active kit packages into: "bundle" for a bundle kit, else "shulker". */
+    private static String activeContainer() {
+        var cfg = CONFIG.client.extra.kitMaker;
+        String ak = cfg.activeKit == null ? "" : cfg.activeKit.trim();
+        if (!ak.isEmpty() && !ak.equals("__auto")) {
+            var kd = cfg.kits.get(ak);
+            if (kd != null && "bundle".equalsIgnoreCase(kd.fillMode)) return "bundle";
+        }
+        return "shulker";
+    }
+
     @Override
     public void defaultEmbed(Embed embed) {
         var cfg = CONFIG.client.extra.kitMaker;
@@ -133,6 +165,7 @@ public class KitMakerCommand extends Command {
             .primaryColor()
             .addField("Enabled", toggleStr(cfg.enabled))
             .addField("State", module.statusLine())
+            .addField("Container", activeContainer().equals("bundle") ? "🎒 bundle (in-inventory fill)" : "shulker (place + fill + break)")
             .addField("Template", (cfg.templateChestX == 0 && cfg.templateChestY == 0 && cfg.templateChestZ == 0)
                 ? "auto-detect nearest placed shulker"
                 : "(" + cfg.templateChestX + ", " + cfg.templateChestY + ", " + cfg.templateChestZ + ")")

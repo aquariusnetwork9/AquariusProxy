@@ -1,0 +1,98 @@
+name: Dev Build
+
+# Publishes untested builds from dev/* branches without touching the real X.Y.Z version.
+# The published tag reuses the latest stable release's X.Y.Z (frozen) with a
+# ".dev-<shortsha>" suffix, so every push gets its own distinct, traceable build and the
+# odometer only moves when release.yml actually cuts a release.
+#
+# Testers opt in via `channel set java 1.21.4 dev` in-game, or by hand-editing
+# launch_config.json's release_channel to "java.1.21.4.dev".
+
+on:
+  push:
+    branches:
+      - 'dev/**'
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: write
+  attestations: write
+
+jobs:
+  build-and-publish-dev:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'corretto'
+
+      - name: Elevate wrapper permissions
+        run: chmod +x ./gradlew
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Determine frozen base version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          base=$(gh api "repos/${{ github.repository }}/releases" --paginate -q \
+              '.[] | select(.draft == false and (.tag_name | endswith("+1.21.4"))) | .tag_name' \
+            | sed 's/+1.21.4$//' \
+            | sort -t. -k1,1n -k2,2n -k3,3n \
+            | tail -1)
+          if [ -z "$base" ]; then
+            echo "::error::Could not find a stable +1.21.4 release to base the dev version on" >&2
+            exit 1
+          fi
+          short_sha=$(git rev-parse --short=8 HEAD)
+          echo "BASE_VERSION=$base" >> "$GITHUB_ENV"
+          echo "DEV_TAG=${base}.dev-${short_sha}+1.21.4.dev" >> "$GITHUB_ENV"
+          echo "JAVA_TAG=${base}.dev-${short_sha}+java.1.21.4.dev" >> "$GITHUB_ENV"
+        shell: bash
+
+      - name: Build shadow jar
+        env:
+          RELEASE_TAG: ${{ env.JAVA_TAG }}
+          AQUARIUS_RELEASE_TAG: ${{ env.JAVA_TAG }}
+        run: ./gradlew shadowJar
+
+      - name: Stage launcher assets
+        run: |
+          mkdir -p artifacts
+          cp build/libs/AquariusProxy.jar artifacts/AquariusProxy.jar
+
+      - name: Attest build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: 'artifacts/AquariusProxy.jar'
+
+      - name: Publish Dev Build (source tag)
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ env.DEV_TAG }}
+          artifacts: "artifacts/AquariusProxy.jar"
+          prerelease: true
+          allowUpdates: true
+          commit: ${{ github.sha }}
+          body: "Untested dev build from `${{ github.ref_name }}` @ ${{ github.sha }}. Not for manual download — use the Aquarius Launcher on the `dev` channel."
+          artifactErrorsFailBuild: true
+
+      - name: Publish Dev Build (launcher java channel)
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ env.JAVA_TAG }}
+          artifacts: "artifacts/AquariusProxy.jar"
+          prerelease: true
+          allowUpdates: true
+          commit: ${{ github.sha }}
+          body: "Untested dev build from `${{ github.ref_name }}` @ ${{ github.sha }}, published on the `java.1.21.4.dev` channel tag. Opt in with `channel set java 1.21.4 dev` in-game."
+          artifactErrorsFailBuild: true
