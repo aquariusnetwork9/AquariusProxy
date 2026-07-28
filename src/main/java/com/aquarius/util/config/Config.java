@@ -1057,8 +1057,9 @@ public final class Config {
                  *  last elytra to breaking and fall. 100 ≈ ~100s of glide left to get down. */
                 public int lastElytraEmergencyDurability = 100;
 
-                /** On the last-elytra emergency landing, disconnect to preserve the bot + kit where it lands (and
-                 *  cancel the trip so it doesn't re-arm into a fall on reconnect). */
+                /** On the last-elytra emergency landing, disconnect to preserve the bot + kit where it lands. An armed
+                 *  trip is cancelled by the emergency landing regardless of this flag — with no usable elytra left, a
+                 *  surviving leg would only re-arm into another emergency. Off = land and stay online, grounded. */
                 public boolean lastElytraLogout = true;
 
                 /**

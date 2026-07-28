@@ -63,6 +63,9 @@ public class ElytraPilotCommand extends Command {
                 "swapdur <n>           (swap the worn elytra at this remaining durability; max is 432)",
                 "sparedur <n>          (min remaining durability for an inventory elytra to count as a spare)",
                 "clearance <blocks>    (min height above ground before a flight-dropping swap is attempted)",
+                "lastelytra dur <n>    (no spare left: worn elytra at this durability triggers the graceful emergency landing; 0-432, 0 = failsafe off)",
+                "lastelytra logout <on/off> (on the last-elytra emergency landing, also log out to preserve the bot + kit where it lands)",
+                "lastelytra            (show the last-elytra failsafe config)",
                 "ebounce <on/off>      (bounce-highway mode: skip along a flat road, no fireworks)",
                 "road <y>              (the flat road's surface Y, for ebounce)",
                 "maxspeed <bps>        (speed cap in blocks/sec; 2b2t limit is 40 — keep ~38)",
@@ -251,6 +254,38 @@ public class ElytraPilotCommand extends Command {
                 CONFIG.client.extra.elytraPilot.minSwapClearance = getInteger(c, "blocks");
                 c.getSource().getEmbed().title("ElytraPilot min swap clearance = " + CONFIG.client.extra.elytraPilot.minSwapClearance);
             })))
+            .then(literal("lastelytra")
+                .then(literal("dur").then(argument("durability", integer(0, 432)).executes(c -> {
+                    int d = getInteger(c, "durability");
+                    CONFIG.client.extra.elytraPilot.lastElytraEmergencyDurability = d;
+                    c.getSource().getEmbed()
+                        .title("ElytraPilot last-elytra emergency durability = " + (d == 0 ? "0 (failsafe OFF)" : String.valueOf(d)))
+                        .description(d == 0
+                            ? "0 disables the failsafe: with no spare left the bot flies the last elytra until it BREAKS, then falls. Only set this if something else is catching the fall."
+                            : "With NO usable spare left, the worn elytra dropping to this triggers the graceful emergency landing — it glides down while it still can instead of flying to breaking and falling. ~1 durability per second of glide, so " + d + " ≈ " + d + "s to get down. Max is 432 (a full elytra).");
+                })))
+                .then(literal("logout").then(argument("toggle", toggle()).executes(c -> {
+                    CONFIG.client.extra.elytraPilot.lastElytraLogout = getToggle(c, "toggle");
+                    c.getSource().getEmbed()
+                        .title("ElytraPilot last-elytra logout " + toggleStrCaps(CONFIG.client.extra.elytraPilot.lastElytraLogout))
+                        .description("On = after the emergency landing, disconnect to preserve the bot + kit where it lands. Off = land and stay online, grounded with a near-dead elytra and no spare. An armed trip is cancelled either way — with no usable elytra left, a surviving leg would only re-arm into another emergency.");
+                })))
+                .executes(c -> {
+                    var cfg = CONFIG.client.extra.elytraPilot;
+                    String s = !cfg.swapElytra
+                        // The whole wear manager is gated on swapElytra, so `fly swap off` silently disables the
+                        // proactive landing too. Say so rather than reporting a threshold that can never fire.
+                        ? "DISABLED — `fly swap` is OFF, which turns off elytra wear management entirely, including this"
+                          + " failsafe. It would otherwise emergency-land at " + cfg.lastElytraEmergencyDurability + " durability."
+                        : cfg.lastElytraEmergencyDurability <= 0
+                            ? "DISABLED — dur is 0, so the last elytra is flown until it BREAKS."
+                            : "Emergency landing at " + cfg.lastElytraEmergencyDurability + " durability once no usable spare"
+                              + " remains (a spare counts at > " + cfg.freshElytraMinDurability + " durability).";
+                    c.getSource().getEmbed().title("ElytraPilot last-elytra failsafe")
+                        .description(s + "\nLogout on landing: " + toggleStrCaps(cfg.lastElytraLogout)
+                            + " — an armed trip is cancelled on the emergency landing either way.");
+                    return OK;
+                }))
             .then(literal("ebounce").then(argument("toggle", toggle()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.ebounce = getToggle(c, "toggle");
                 c.getSource().getEmbed()

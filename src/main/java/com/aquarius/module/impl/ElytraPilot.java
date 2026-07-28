@@ -2012,7 +2012,7 @@ public class ElytraPilot extends Module {
             double spd = haveLast ? Math.hypot(x - lastX, z - lastZ) * 20.0 : 0.0;
             if (!onGround) {                                  // glide down to the road first
                 submitMove(false, false, false, false, yaw, 12f);
-                if (++swapTicks > SWAP_REDEPLOY_TIMEOUT_TICKS * 2) { phase = Phase.EMERGENCY; }
+                if (++swapTicks > SWAP_REDEPLOY_TIMEOUT_TICKS * 2) { enterEmergencyLanding(); }
                 return;
             }
             submitMove(false, false, false, false, yaw, 0f); // grounded: hold still while swapping
@@ -2023,7 +2023,7 @@ public class ElytraPilot extends Module {
                 swapTicks = 0;
                 info("Elytra swapped on the road — resuming bounce");
             } else if (++swapTicks > SWAP_EQUIP_TIMEOUT_TICKS) {
-                if (!hasSpareElytra()) { phase = Phase.EMERGENCY; return; }
+                if (!hasSpareElytra()) { enterEmergencyLanding(); return; }
                 swapTicks = 0;                                // keep retrying
             }
             return;
@@ -2032,12 +2032,12 @@ public class ElytraPilot extends Module {
         if (!swapRedeploying) {
             boolean done = equipFreshElytraProgress();
             submitInput(false, false, yaw, 0f); // no elytra / not gliding — just hold heading while we fall
-            if (heightAboveGround(x, y, z) < cfg.minSwapClearance / 2) { phase = Phase.EMERGENCY; return; }
+            if (heightAboveGround(x, y, z) < cfg.minSwapClearance / 2) { enterEmergencyLanding(); return; }
             if (done) {
                 swapRedeploying = true;
                 swapTicks = 0;
             } else if (++swapTicks > SWAP_EQUIP_TIMEOUT_TICKS) {
-                if (!hasSpareElytra()) { phase = Phase.EMERGENCY; return; }
+                if (!hasSpareElytra()) { enterEmergencyLanding(); return; }
                 swapTicks = 0; // keep retrying (bounded overall by maxFlightTicks)
             }
             return;
@@ -2056,7 +2056,7 @@ public class ElytraPilot extends Module {
         jumpToggle = !jumpToggle;
         submitInput(jumpToggle, false, yaw, 0f);
         if (++swapTicks > SWAP_REDEPLOY_TIMEOUT_TICKS && heightAboveGround(x, y, z) < cfg.minSwapClearance)
-            phase = Phase.EMERGENCY;
+            enterEmergencyLanding();
     }
 
     /**
@@ -2415,13 +2415,19 @@ public class ElytraPilot extends Module {
             submitInput(false, false, yaw, 0f);                   // nothing left — falling
         }
         if (!BOT.isFallFlying() && heightAboveGround(x, y, z) <= 2) {
+            // Cancel the trip EITHER WAY: there is no usable elytra left, so any remaining leg would only re-arm
+            // into another emergency. Worse, the road legs don't gate on leg success — NETHER_HW_FLYIN advances to
+            // ACQUIRE on any finished flight and NETHER_HIGHWAY never checks at all, so a still-armed trip walks the
+            // bot back onto the road and then stalls out its guard timer. The logout flag decides only whether we
+            // ALSO disconnect.
+            var cfg = CONFIG.client.extra.elytraPilot;
+            boolean cancelledTrip = cfg.tripActive;
+            if (cancelledTrip) { cfg.tripActive = false; MODULE.get(ElytraTrip.class).syncEnabledFromConfig(); }
             if (emergencyLogout) {
-                var cfg = CONFIG.client.extra.elytraPilot;
-                if (cfg.tripActive) { cfg.tripActive = false; MODULE.get(ElytraTrip.class).syncEnabledFromConfig(); }
                 complete("emergency landing — logging out to preserve the bot + kit", false);
                 Proxy.getInstance().disconnect("ElytraPilot: last elytra spent — emergency logout");
             } else {
-                complete("emergency landing complete", false);
+                complete("emergency landing complete — staying online" + (cancelledTrip ? ", trip cancelled" : ""), false);
             }
         }
     }
