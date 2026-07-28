@@ -11,6 +11,7 @@ name: Dev Build
 on:
   push:
     branches:
+      - 'dev'          # the single integration branch — 'dev/**' does NOT match a bare 'dev'
       - 'dev/**'
   workflow_dispatch: {}
 
