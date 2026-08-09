@@ -1,8 +1,8 @@
 plugins {
     `java-library`
-    id("org.graalvm.buildtools.native") version "1.0.0"
-    id("com.gradleup.shadow") version "9.4.1"
-    id("io.freefair.lombok") version "9.2.0"
+    id("org.graalvm.buildtools.native") version "1.1.7"
+    id("com.gradleup.shadow") version "9.6.1"
+    id("io.freefair.lombok") version "9.5.0"
     `maven-publish`
 }
 
@@ -29,9 +29,9 @@ repositories {
     mavenLocal()
 }
 
-val mcplVersion = "1.21.4.45"
+val mcplVersion = "26.2.0.8"
 dependencies {
-    api("com.github.rfresh2:JDA:6.4.31") {
+    api("com.github.rfresh2:JDA:6.5.35") {
         exclude(group = "club.minnced")
         exclude(group = "net.java.dev.jna")
         exclude(group = "com.google.crypto.tink")
@@ -39,7 +39,7 @@ dependencies {
     api("com.github.rfresh2:MCProtocolLib:$mcplVersion") {
         exclude(group = "io.netty")
     }
-    api(platform("io.netty:netty-bom:4.2.12.Final"))
+    api(platform("io.netty:netty-bom:4.2.17.Final"))
     api("io.netty:netty-buffer")
     api("io.netty:netty-codec-haproxy")
     api("io.netty:netty-codec-dns")
@@ -59,11 +59,11 @@ dependencies {
     api("org.cloudburstmc.math:immutable:2.0")
     // Native nether terrain-gen + A* (Baritone elytra's pathfinder); natives bundled in the jar (linux/win/mac)
     implementation("dev.babbaj:nether-pathfinder:1.6")
-    api("org.redisson:redisson:4.3.1") {
+    api("org.redisson:redisson:4.7.0") {
         exclude(group = "io.netty")
     }
     api("com.github.rfresh2:SimpleEventBus:1.6")
-    val fastutilVersion = "8.5.16"
+    val fastutilVersion = "8.5.19"
     api("com.github.rfresh2.fastutil.maps:object-object-maps:$fastutilVersion")
     api("com.github.rfresh2.fastutil.maps:int-object-maps:$fastutilVersion")
     api("com.github.rfresh2.fastutil.maps:object-int-maps:$fastutilVersion")
@@ -76,30 +76,30 @@ dependencies {
     api("com.viaversion:viaversion-common:5.8.1")
     api("com.viaversion:viabackwards-common:5.8.1")
     api("com.viaversion:viarewind-common:4.0.15")
-    api("org.jline:jline:4.0.10")
+    api("org.jline:jline:4.3.1")
     api("ar.com.hjg:pngj:2.1.0")
-    api("com.zaxxer:HikariCP:7.0.2")
-    api("org.postgresql:postgresql:42.7.10")
-    api("org.jdbi:jdbi3-postgres:3.52.0")
-    api("com.google.guava:guava:33.5.0-jre")
-    api("ch.qos.logback:logback-classic:1.5.32")
+    api("com.zaxxer:HikariCP:7.1.0")
+    api("org.postgresql:postgresql:42.7.13")
+    api("org.jdbi:jdbi3-postgres:3.54.0")
+    api("com.google.guava:guava:33.6.0-jre")
+    api("ch.qos.logback:logback-classic:1.6.1")
     api("org.slf4j:slf4j-api:2.0.17")
     api("org.slf4j:jul-to-slf4j:2.0.17")
     api("com.mojang:brigadier:1.3.10")
     api("net.kyori:adventure-text-logger-slf4j")
     api("dev.omega24:upnp4j:1.0")
-    api(platform("tools.jackson:jackson-bom:3.1.1"))
+    api(platform("tools.jackson:jackson-bom:3.2.1"))
     api("tools.jackson.core:jackson-databind")
     api("tools.jackson.dataformat:jackson-dataformat-smile")
 
     testImplementation(platform("org.junit:junit-bom:6.0.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
-    testImplementation("org.testcontainers:testcontainers:2.0.4")
-    testImplementation("org.testcontainers:testcontainers-junit-jupiter:2.0.4")
+    testImplementation("org.testcontainers:testcontainers:2.0.5")
+    testImplementation("org.testcontainers:testcontainers-junit-jupiter:2.0.5")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     compileOnly("com.google.auto.service:auto-service-annotations:1.1.1")
     annotationProcessor("com.google.auto.service:auto-service:1.1.1")
-    compileOnly("org.graalvm.sdk:nativeimage:25.0.2")
+    compileOnly("org.graalvm.sdk:nativeimage:25.2.4")
 }
 
 lombok {
