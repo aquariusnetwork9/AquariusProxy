@@ -93,6 +93,8 @@ public class PearlDrop extends Module {
     private int throwWait;
     private int throwRetries;
     private int spacingWait;
+    private boolean verifyingLanding;
+    private int verifyTicks;
 
     private int totalThrown, totalChambers, totalFailed;
 
@@ -359,6 +361,8 @@ public class PearlDrop extends Module {
         throwWait = 0;
         throwRetries = 0;
         spacingWait = 0;
+        verifyingLanding = false;
+        verifyTicks = 0;
         pearlCountBefore = countPearls();
         phaseTicks = 0;
         phase = Phase.THROW;
@@ -376,6 +380,30 @@ public class PearlDrop extends Module {
         if (spacingWait > 0) { // cooldown pacing between pearls — hold the ledge, no click
             spacingWait--;
             submitMove(true, false, true, false, yaw, pitch);
+            return;
+        }
+
+        // Confirm a pearl that left the inventory actually landed as an entity in the target column, rather than
+        // trusting the inventory-count drop alone (which can't tell a caught pearl from one that missed the
+        // opening, bounced off the rim, or was grabbed by another entity).
+        if (verifyingLanding) {
+            submitMove(true, false, true, false, yaw, pitch);
+            if (occupied(c)) {
+                verifyingLanding = false;
+                creditThrow(c);
+                return;
+            }
+            if (++verifyTicks > cfg.landingVerifyTicks) {
+                verifyingLanding = false;
+                warn("PearlDrop: a pearl left the inventory at " + coordStr(c) + " but never registered in the chamber (missed?) — retrying.");
+                throwRetries++;
+                if (throwRetries > cfg.maxThrowRetries) {
+                    if (thrownThisChamber > 0) finishChamberPartial("a throw wouldn't confirm landing");
+                    else abortOverhang("throw landing never confirmed at " + coordStr(c));
+                } else {
+                    clickSent = false; // retry the click
+                }
+            }
             return;
         }
 
@@ -401,11 +429,12 @@ public class PearlDrop extends Module {
         submitMove(true, false, true, false, yaw, pitch);
         throwWait++;
         if (countPearls() < pearlCountBefore) {
-            thrownThisChamber++;
-            totalThrown++;
-            info("Threw pearl " + thrownThisChamber + "/" + targetCount + " into " + coordStr(c));
-            if (thrownThisChamber >= targetCount) { startRetreat(); }
-            else { clickSent = false; throwRetries = 0; spacingWait = cfg.throwSpacingTicks; }
+            if (cfg.verifyLanding) {
+                verifyingLanding = true;
+                verifyTicks = 0;
+                return;
+            }
+            creditThrow(c);
             return;
         }
         if (throwWait > cfg.throwTimeoutTicks) {
@@ -417,6 +446,15 @@ public class PearlDrop extends Module {
                 clickSent = false; // retry the click
             }
         }
+    }
+
+    /** Credit a confirmed (or, with {@code verifyLanding} off, assumed) throw and continue this chamber's job. */
+    private void creditThrow(StasisChamber c) {
+        thrownThisChamber++;
+        totalThrown++;
+        info("Threw pearl " + thrownThisChamber + "/" + targetCount + " into " + coordStr(c));
+        if (thrownThisChamber >= targetCount) { startRetreat(); }
+        else { clickSent = false; throwRetries = 0; spacingWait = CONFIG.client.extra.pearlDrop.throwSpacingTicks; }
     }
 
     private void startRetreat() {

@@ -44,9 +44,9 @@ The 5.0 line rolls up everything since the 4.0.0 stable plus upstream stability 
 | **KitMaker** — mass-produces filled kit shulkers from a template + supply chests, with partial-kit support. | ✅ live-validated on 2b2t |
 | **Backported ZenithProxy stability fixes** — disconnect-deadlock re-dispatch, cookie-request 2b2t kick, MCProfile username/UUID lookup replacing the dead Minetools API. | ✅ |
 | **GitHub-built pre-releases** — the `+1.21.4.pre` source jar and the `+java.1.21.4` launcher-channel jar are now built and published by CI, with provenance attestation. | ✅ |
-| **PearlDrop** — throws ender pearls *into* stasis chambers to stock them (the deposit counterpart to PearlPlus). | ⚠️ beta — built & deployed, not yet fully run live |
+| **PearlDrop** — throws ender pearls *into* stasis chambers to stock them (the deposit counterpart to PearlPlus), now with post-throw landing confirmation instead of trusting the inventory count alone. | ⚠️ beta — built & deployed, not yet fully run live |
 | **Enchanter** (`/enc`) — cheapest-anvil-order auto-enchanting of god gear. | ⚠️ beta — built & deployed, not yet fully run live |
-| **ElytraPilot multi-leg long-haul** — chaining several flight / highway / portal legs to a far destination. | ⚠️ beta *(single-leg flight + the no-firework highway bounce are validated)* |
+| **ElytraPilot multi-leg long-haul** — chaining several flight / highway / portal legs to a far destination. | ⚠️ beta *(single-leg flight is validated; the no-firework highway bounce is currently broken — see below)* |
 
 ---
 
@@ -188,11 +188,11 @@ Drives a boat the bot is seated in across open water to a coordinate. There is n
 
 A Baritone pathfinder addition: the planner treats **bubble columns as a movement**, so it rides the bot **up a soul-sand column** (and down a magma column, with a magma-guard) as part of a normal path — `.pathfinder goto <x> <y> <z>` can take a water elevator to a higher floor and exit laterally. Works with **sign-held water columns** (the common no-flood build). Exit-timing is functional but not yet smoothed.
 
-### ElytraPilot — autopilot elytra flight *(validated end-to-end in v4.0.0)*
+### ElytraPilot — autopilot elytra flight *(validated end-to-end in v4.0.0; see the bounce regression note below)*
 
-Autonomous elytra flight: deploys, steers, fires fireworks, simulates its own physics to stay on course, routes through the nether, and lands itself — covering long-haul travel, the 2b2t nether-highway bounce, and a full overworld↔nether trip planner. The three headline capabilities are now flown-and-validated live on 2b2t, not first cuts.
+Autonomous elytra flight: deploys, steers, fires fireworks, simulates its own physics to stay on course, routes through the nether, and lands itself — covering long-haul travel, the 2b2t nether-highway bounce, and a full overworld↔nether trip planner.
 
-- **No-firework nether-highway bounce** — a pure-input ground "bounce" along the 2b2t obsidian highways that **Grim accepts**: ~30–38 b/s sustained, **zero fireworks, zero setbacks**. Self-sustaining over long hauls via a seamless **0-tick elytra hot-swap** and an **ender-chest elytra resupply**, with obstacle stall→pass and centerline tracking.
+- ⚠️ **No-firework nether-highway bounce — currently broken, do not rely on this.** A 2b2t/Grim anticheat update has regressed the bounce technique documented as solved in [EBOUNCE_LOG.md](EBOUNCE_LOG.md) (Attempt #18, ~40 b/s, zero setbacks) — the previously-accepted pure-input ground bounce is no longer reliably accepted server-side. The prior "Grim accepts it" / "zero setbacks" claims describe that now-superseded state, not current behavior. Investigation into the new anticheat behavior is not yet started; until it's re-solved, use the firework cruise (below) for nether-highway travel instead of `ebounce`.
 - **Baritone-style nether flight** — a per-tick **physics-simulation solver** flies the route the way a human "constantly corrects," and native [nether-pathfinder](https://github.com/babbaj/nether-pathfinder) routing plans a path through *unloaded* chunks in ~1s from seed terrain. `fly trip nether <x> <z>` has flown the full leg and **landed on target at full HP, no totems**; 700-block trips proven, plus lava recovery and totem-pop abort.
 - **Overworld flight from spawn** — `fly trip <x> <z>` gears up from nothing (no-line-of-sight container open + self-kill relocation + contents-match kit), then flies a distance-scaled **climb / free-glide** cruise and lands dead-on. A full naked-spawn → 25k → on-target landing is done.
 - A chunk-loading governor (won't outrun 2b2t's slow streaming), AutoEat fire/heal integration, and a ~40 b/s speed cap throughout.

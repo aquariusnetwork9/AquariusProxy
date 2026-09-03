@@ -244,6 +244,12 @@ public final class Config {
                 public int approachTimeoutTicks = 120;
                 /** Timeout (ticks) for the retreat. */
                 public int retreatTimeoutTicks = 80;
+                /** After a throw empties the inventory slot, confirm the pearl actually registered as an entity
+                 *  inside the target column (not just that it left the inventory) before crediting it as thrown. */
+                public boolean verifyLanding = true;
+                /** Ticks to wait for {@code verifyLanding}'s post-throw occupancy check before treating the throw
+                 *  as missed and retrying. */
+                public int landingVerifyTicks = 10;
             }
 
             /**

@@ -50,7 +50,7 @@ These modules are complete and deployed but **not yet fully validated live on 2b
 | --- | --- |
 | **⚠️ PearlDrop** | Throws ender pearls *into* stasis chambers to stock them — the deposit counterpart to PearlPlus. |
 | **⚠️ Enchanter** (`/enc`) | Auto-builds god gear in an anvil station in the cheapest anvil-combine order, self-funding XP from bottles. |
-| **⚠️ ElytraPilot multi-leg long-haul** | Chains several flight / highway / portal legs across dimensions to a far destination. The individual legs — single-leg nether/overworld flight and the no-firework highway bounce — **are** validated; the full multi-leg run is still pending. |
+| **⚠️ ElytraPilot multi-leg long-haul** | Chains several flight / highway / portal legs across dimensions to a far destination. Single-leg nether/overworld flight **is** validated. The no-firework highway bounce, previously validated, is **currently broken** by a 2b2t/Grim anticheat update — see [EBOUNCE_LOG.md](https://github.com/aquariusnetwork9/AquariusProxy/blob/dev/EBOUNCE_LOG.md). The full multi-leg run is still pending regardless. |
 
 ## Installing / updating to 5.0
 
