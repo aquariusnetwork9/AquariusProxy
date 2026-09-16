@@ -10,6 +10,7 @@ import com.aquarius.event.queue.QueueSkipEvent;
 import com.aquarius.feature.chatschema.ChatSchemaParser;
 import com.aquarius.feature.deathmessages.DeathMessageParseResult;
 import com.aquarius.feature.deathmessages.DeathMessagesParser;
+import com.aquarius.feature.sixb6t.SixB6TJoin;
 import com.aquarius.network.client.ClientSession;
 import com.aquarius.network.codec.ClientEventLoopPacketHandler;
 import com.aquarius.util.ComponentSerializer;
@@ -38,6 +39,10 @@ public class SystemChatHandler implements ClientEventLoopPacketHandler<Clientbou
             logSystemChat(packet);
             final Component component = packet.getContent();
             String messageString = ComponentSerializer.serializePlain(component);
+
+            if (Proxy.getInstance().isOn6b6t()) {
+                SixB6TJoin.onSystemChat(messageString);
+            }
 
             if (Proxy.getInstance().isOn2b2t()) {
                 if ("Reconnecting to server 2b2t.".equals(messageString)

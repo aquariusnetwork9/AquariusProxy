@@ -786,6 +786,10 @@ public class Proxy {
         return CONFIG.client.server.address.toLowerCase().endsWith("2b2t.org");
     }
 
+    public boolean isOn6b6t() {
+        return CONFIG.client.server.address.toLowerCase().endsWith("6b6t.org");
+    }
+
     public long getOnlineTimeSeconds() {
         var proxyConnectTime = this.connectTime;
         return proxyConnectTime != null

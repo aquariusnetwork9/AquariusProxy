@@ -52,6 +52,9 @@ public final class Config {
         public boolean alwaysRefreshOnLogin = false;
         public int maxRefreshIntervalMins = 360; // 6 hrs
         public boolean useClientConnectionProxy = false;
+        // 6b6t's in-game auth-plugin password for cracked accounts (sent as "/login <password>" in
+        // the auth lobby) -- unrelated to the Microsoft account credentials above.
+        public String crackedLoginPassword = "";
 
         public enum AccountType {
             @SerializedName("msa") MSA,
@@ -173,6 +176,7 @@ public final class Config {
             public final PearlLoader pearlLoader = new PearlLoader();
             public final Waypoints waypoints = new Waypoints();
             public final AutoDrop autoDrop = new AutoDrop();
+            public final SixB6TAutoLogin sixB6TAutoLogin = new SixB6TAutoLogin();
             public String whisperCommand = "msg";
             public int tpsBufferSize = 20;
             public final Tasks tasks = new Tasks();
@@ -2736,6 +2740,20 @@ public final class Config {
                 public boolean useFireCharge = false;
                 // Abort the build if it runs longer than this many ticks (stuck / out of materials).
                 public int timeoutTicks = 200;
+            }
+
+            public static final class SixB6TAutoLogin {
+                // Walks the proxy through 6b6t's cracked-account login relay (auth lobby -> main
+                // lobby -> real world) and waits out the PicoLimbo backup server instead of treating
+                // either as "online". Only ever active when Proxy.isOn6b6t() and accountType is OFFLINE.
+                public boolean enabled = true;
+                // How many ticks to press forward for after the auth lobby teleports us to the portal
+                // (the server-facing yaw from that teleport is used as the walk direction). ~60 ticks
+                // covers the observed ~12 blocks at normal (non-sprinting) walk speed with margin.
+                public int portalWalkTicks = 60;
+                // How long to tolerate PicoLimbo (or an unrecognized mid-sequence stall) before giving
+                // up and disconnecting so AutoReconnect can retry later, once the real backend is back.
+                public int limboPatienceSeconds = 90;
             }
 
             public static final class AntiLeak {

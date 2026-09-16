@@ -3,6 +3,7 @@ package com.aquarius.network.client.handler.incoming;
 import com.aquarius.Proxy;
 import com.aquarius.cache.CacheResetType;
 import com.aquarius.event.client.ClientOnlineEvent;
+import com.aquarius.feature.sixb6t.SixB6TJoin;
 import com.aquarius.network.client.ClientSession;
 import com.aquarius.network.codec.PacketHandler;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
@@ -72,7 +73,13 @@ public class LoginHandler implements PacketHandler<ClientboundLoginPacket, Clien
             CACHE.getChatCache().setEnforcesSecureChat(packet.isEnforcesSecureChat());
         }
 
-        if (!Proxy.getInstance().isOn2b2t()) {
+        if (Proxy.getInstance().isOn6b6t()) {
+            SixB6TJoin.onLogin(packet.getWorldNames().length);
+            if (SixB6TJoin.isReadyForRealWorld() && !session.isOnline()) {
+                session.setOnline(true);
+                EVENT_BUS.post(new ClientOnlineEvent());
+            }
+        } else if (!Proxy.getInstance().isOn2b2t()) {
             if (!session.isOnline()) {
                 session.setOnline(true);
                 EVENT_BUS.post(new ClientOnlineEvent());

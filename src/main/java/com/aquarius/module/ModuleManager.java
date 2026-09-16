@@ -64,6 +64,7 @@ public class ModuleManager {
             new Spammer(),
             new Spook(),
             new SpawnPatrol(),
+            new SixB6TAutoLogin(),
             new WhisperControl(),
             new Tasks(),
             new VillagerTrader(),
