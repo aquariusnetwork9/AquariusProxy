@@ -119,6 +119,7 @@ public class CommandManager {
         new SessionTimeLimitCommand(),
         new ShutdownCommand(),
         new SkinCommand(),
+        new SixB6TTpaCommand(),
         new SpammerCommand(),
         new SpawnPatrolCommand(),
         new WhisperControlCommand(),

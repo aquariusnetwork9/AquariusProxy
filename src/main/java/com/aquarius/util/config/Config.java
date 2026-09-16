@@ -177,6 +177,7 @@ public final class Config {
             public final Waypoints waypoints = new Waypoints();
             public final AutoDrop autoDrop = new AutoDrop();
             public final SixB6TAutoLogin sixB6TAutoLogin = new SixB6TAutoLogin();
+            public final SixB6TTpaAutoAccept sixB6TTpaAutoAccept = new SixB6TTpaAutoAccept();
             public String whisperCommand = "msg";
             public int tpsBufferSize = 20;
             public final Tasks tasks = new Tasks();
@@ -2754,6 +2755,21 @@ public final class Config {
                 // How long to tolerate PicoLimbo (or an unrecognized mid-sequence stall) before giving
                 // up and disconnecting so AutoReconnect can retry later, once the real backend is back.
                 public int limboPatienceSeconds = 90;
+            }
+
+            public static final class SixB6TTpaAutoAccept {
+                // Auto-accepts "/tpa" requests on 6b6t with "/tpy <name>", but ONLY from names on
+                // this whitelist -- 6b6t delivers even player chat as a system message, so the
+                // request text alone can be spoofed by anyone typing it publicly (guarded against
+                // in SixB6TTpaRequestParser too, but the whitelist is the actual trust boundary).
+                public boolean enabled = true;
+                public final ArrayList<String> whitelist = new ArrayList<>();
+                // Suppresses answering the same requester twice for one notice that arrives as
+                // more than one system chat line (the name-sentence and the instruction-sentence).
+                public int repeatWindowMs = 3000;
+                // Paces outgoing accepts so a burst of simultaneous requests cannot look like
+                // chat-spam to 6b6t; only matters with multiple whitelisted requesters at once.
+                public int sendSpacingMs = 300;
             }
 
             public static final class AntiLeak {
