@@ -137,6 +137,18 @@ public final class Bot extends ModuleUtils {
     private double eBounceVy;        // synthesized vertical velocity (jump arc, then gentle porpoise)
     private int eBounceTick;         // ticks since the synth engaged (drives liftoff jump + deploy timing)
 
+    // --- Hover flight: 6b6t-native alternative to e-bounce. Once a real elytra takeoff is confirmed (isFallFlying,
+    // read from the server's own entity metadata, not assumed), every tick asserts an absolute target position
+    // directly -- no physics sim, onGround always honestly false -- instead of e-bounce's road-relative jump-arc
+    // math. The caller (ElytraPilot.tickHover) owns the travel/route planning and updates the target every tick.
+    private static final int HOVER_REDEPLOY_GAP_TICKS = 10;        // ticks between redeploy attempts while gliding is down
+    private static final int HOVER_SLOW_REDEPLOY_GAP_TICKS = 40;   // back off to this gap after repeated refusals
+    private static final int HOVER_MAX_FAILED_REDEPLOYS = 6;
+    private boolean hoverFlightActive;
+    private double hoverTargetX, hoverTargetY, hoverTargetZ;
+    private int hoverTicksSinceRedeployAttempt;
+    private int hoverFailedRedeploys;
+
     // --- Boat control: self-driven boat physics (a server-side port of Minecraft's AbstractBoat tick). When active
     // and the bot is seated in a boat, Bot.tick simulates the boat from the per-tick input the Boat module submits
     // and REPORTS the result via ServerboundMoveVehiclePacket (boats are client-authoritative — the controlling
@@ -475,6 +487,8 @@ public final class Bot extends ModuleUtils {
             velocity.set(0, 0, 0);
         } else if (eBounceActive) {
             tickEBounce();   // synthesize the exact MovePlayerPos trajectory; skip the physics engine entirely
+        } else if (hoverFlightActive) {
+            tickHoverFlight();
         } else {
             playerTravel(movementInputVec);
             tryCheckInsideBlocks();
@@ -2178,6 +2192,58 @@ public final class Bot extends ModuleUtils {
         this.yaw = this.requestedYaw = eBounceYaw;
         this.pitch = this.requestedPitch = eBouncePitch;
         this.velocity.set(nx * eBounceVx, eBounceVy, nz * eBounceVx);
+        CACHE.getPlayerCache().getThePlayer().setX(this.x).setY(this.y).setZ(this.z);
+    }
+
+    /**
+     * Hover flight: (re)arm the synth and set/update this tick's target position. Safe to call every tick while
+     * active (that's how the caller drives travel) -- only the first call (while inactive) resets the redeploy
+     * backoff state.
+     */
+    public void startHoverFlight(double targetX, double targetY, double targetZ) {
+        if (!hoverFlightActive) {
+            hoverFlightActive = true;
+            hoverTicksSinceRedeployAttempt = 0;
+            hoverFailedRedeploys = 0;
+        }
+        this.hoverTargetX = targetX;
+        this.hoverTargetY = targetY;
+        this.hoverTargetZ = targetZ;
+    }
+
+    public void stopHoverFlight() { hoverFlightActive = false; }
+
+    public boolean isHoverFlightActive() { return hoverFlightActive; }
+
+    /**
+     * Synthesize one tick of hover flight directly into position (no physics sim). While genuinely gliding
+     * (server-confirmed via {@link #isFallFlying}), assert the caller's target position outright -- this IS the
+     * flight, there is no velocity/acceleration to simulate. The server drops the gliding flag periodically even
+     * mid-hover (routine, not a failure): hold position and redeploy every {@link #HOVER_REDEPLOY_GAP_TICKS},
+     * backing off to {@link #HOVER_SLOW_REDEPLOY_GAP_TICKS} after {@link #HOVER_MAX_FAILED_REDEPLOYS} consecutive
+     * refusals, rather than falling out of the sky or aborting.
+     */
+    private void tickHoverFlight() {
+        if (!isFallFlying) {
+            if (++hoverTicksSinceRedeployAttempt >= (hoverFailedRedeploys >= HOVER_MAX_FAILED_REDEPLOYS
+                    ? HOVER_SLOW_REDEPLOY_GAP_TICKS : HOVER_REDEPLOY_GAP_TICKS)) {
+                hoverTicksSinceRedeployAttempt = 0;
+                if (!this.onGround && tryToStartFallFlying()) {
+                    sendClientPacketAsync(new ServerboundPlayerCommandPacket(
+                        CACHE.getPlayerCache().getEntityId(), PlayerState.START_ELYTRA_FLYING));
+                    hoverFailedRedeploys = 0;
+                } else {
+                    hoverFailedRedeploys++;
+                }
+            }
+            this.velocity.set(0, 0, 0);
+            return; // hold the last asserted position until gliding is confirmed again
+        }
+        this.x = hoverTargetX;
+        this.y = hoverTargetY;
+        this.z = hoverTargetZ;
+        this.onGround = false; // never lie about this mid-air -- the one thing the server can check for free
+        this.velocity.set(0, 0, 0);
         CACHE.getPlayerCache().getThePlayer().setX(this.x).setY(this.y).setZ(this.z);
     }
 

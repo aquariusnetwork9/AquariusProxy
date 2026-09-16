@@ -1167,6 +1167,24 @@ public final class Config {
                  */
                 public boolean ebounce = false;
 
+                /**
+                 * "Hover flight" mode: a 6b6t-native alternative to e-bounce (which needs 2b2t's ViaVersion
+                 * protocol-765 pin and its GrimAC quirks). Once a real elytra takeoff is confirmed by the
+                 * server's own gliding flag, every tick asserts an absolute target position directly (no
+                 * physics simulation, onGround always honestly false) instead of flying via real firework
+                 * physics -- lets the bot travel at any chosen speed, including a dead stop (a true hover),
+                 * with zero firework cost. Holds whatever altitude the real takeoff left it at; does not
+                 * auto-land on arrival yet (fly toggle/restart controls stop/start).
+                 */
+                public boolean hoverFlight = false;
+
+                /** Hover flight: max horizontal blocks moved per tick while travelling toward a target. */
+                public double hoverHorizontalSpeed = 1.0;
+
+                /** Hover flight: server position corrections tolerated before treating it as a real rejection
+                 *  (anti-cheat refusing the technique) and aborting, rather than routine drift. */
+                public int hoverMaxCorrections = 20;
+
                 /** E-bounce: the flat road's surface Y. Bouncing aborts if the bot sinks well below this. */
                 public int roadY = 64;
 

@@ -76,7 +76,7 @@ import static com.aquarius.util.DisconnectMessages.PITSTOP_DISCONNECT;
  */
 public class ElytraPilot extends Module {
 
-    private enum Phase { IDLE, TAKEOFF, CRUISE, BOUNCE, HOP, PASS, REROUTE, DETOUR, SWAP, RESUPPLY, DESCEND, LAND, LANDWALK, WALKOUT, EMERGENCY, PITSTOP_LAND, STOP_ACT, DONE }
+    private enum Phase { IDLE, TAKEOFF, CRUISE, BOUNCE, HOVER, HOP, PASS, REROUTE, DETOUR, SWAP, RESUPPLY, DESCEND, LAND, LANDWALK, WALKOUT, EMERGENCY, PITSTOP_LAND, STOP_ACT, DONE }
 
     /** Nether-hardening band-probe verdict: clear road / open gap to power-fly across / full-height wall to reroute. */
     private enum Band { CLEAR, GAP, WALL }
@@ -246,6 +246,7 @@ public class ElytraPilot extends Module {
     private volatile int setbackHoldTicks;         // no rockets while >0 (server just reset our position)
     private int boostGuaranteeTicks;               // ticks the live rocket is GUARANTEED to keep boosting
     private int boostMaxTicks;                     // ticks it might keep boosting (lifetime has random spread)
+    private int hoverCorrections;                  // HOVER: position corrections this flight (rejection-storm detector)
 
     // --- pitstop / goal stop action (set spawn + log out, at an intermediate pitstop or the ultimate goal) ---
     private boolean actLogout;                     // STOP_ACT: log out when the action finishes
@@ -284,6 +285,9 @@ public class ElytraPilot extends Module {
                     setbackHoldTicks = CONFIG.client.extra.elytraPilot.setbackHoldTicks;
                     pendingSolution = null;
                 }
+                // HOVER has no momentum to fight (each tick asserts a fresh position anyway), but a real
+                // anti-cheat rejection of the technique would show up as a flood of these — count them.
+                if (phase == Phase.HOVER) hoverCorrections++;
             }),
             of(ChunkDataEvent.class, e -> {     // feed observed chunks to the native router while flying the nether
                 var cfg = CONFIG.client.extra.elytraPilot;
@@ -396,6 +400,7 @@ public class ElytraPilot extends Module {
         swapRedeploying = false;
         redeployCooldown = 0;
         bounceStallTicks = 0;
+        hoverCorrections = 0;
         passRecovery = false;
         recoverEpisodes = 0;
         lastBand = Band.CLEAR;
@@ -593,6 +598,7 @@ public class ElytraPilot extends Module {
                     case TAKEOFF      -> tickTakeoff();
                     case CRUISE       -> tickCruise(x, y, z, speed);
                     case BOUNCE       -> tickBounce(x, y, z, speed);
+                    case HOVER        -> tickHover(x, y, z, speed);
                     case HOP          -> tickHop(x, y, z, speed);
                     case PASS         -> tickPass(x, y, z, speed);
                     case REROUTE      -> tickReroute(x, y, z, speed);
@@ -612,6 +618,7 @@ public class ElytraPilot extends Module {
             // Safety: the synthesized e-bounce stream must only run in BOUNCE. Any other phase (swap/land/abort/
             // lost-flight) hands movement back to the physics engine.
             if (BOT.isEBounceActive() && phase != Phase.BOUNCE) BOT.stopEBounce();
+            if (BOT.isHoverFlightActive() && phase != Phase.HOVER) BOT.stopHoverFlight();
 
             lastX = x;
             lastZ = z;
@@ -637,7 +644,10 @@ public class ElytraPilot extends Module {
      */
     private Phase resumePhase() {
         if (detourActive) return Phase.DETOUR;
-        return CONFIG.client.extra.elytraPilot.ebounce ? Phase.BOUNCE : Phase.CRUISE;
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (cfg.ebounce) return Phase.BOUNCE;
+        if (cfg.hoverFlight) return Phase.HOVER;
+        return Phase.CRUISE;
     }
 
     private void tickTakeoff() {
@@ -645,7 +655,7 @@ public class ElytraPilot extends Module {
             phase = resumePhase();
             ticksSinceFire = Integer.MAX_VALUE / 2; // fire immediately on the first cruise tick
             pinTicks = 0;
-            info("Airborne — entering " + (CONFIG.client.extra.elytraPilot.ebounce ? "bounce" : "cruise"));
+            info("Airborne — entering " + phase.name().toLowerCase());
             return;
         }
         var cfg = CONFIG.client.extra.elytraPilot;
@@ -781,6 +791,32 @@ public class ElytraPilot extends Module {
         cruiseFloorY = cfg.approxGroundY;   // no sawtooth floor in the single-glide profile
         info("Cruise sized for {}b leg: climb once to y{} then glide (ratio {})",
             (long) dist, cruiseCeilingY, cfg.cruiseGlideRatio);
+    }
+
+    /**
+     * HOVER: 6b6t-native packet flight. Real takeoff already happened (this phase is only entered from TAKEOFF,
+     * same as CRUISE); from here it's just target-position bookkeeping — {@link com.aquarius.feature.player.Bot}
+     * owns the actual glide-flag redeploy and position synth (see {@code Bot.tickHoverFlight}). Holds whatever
+     * altitude the real takeoff left it at (no vertical control yet — see class notes) and steps horizontally
+     * toward the configured target at {@code hoverHorizontalSpeed} blocks/tick, including a dead stop once there
+     * (a true hover). Does not auto-land on arrival yet: {@code fly toggle off} / {@code fly restart} control it.
+     */
+    private void tickHover(double x, double y, double z, double speed) {
+        var cfg = CONFIG.client.extra.elytraPilot;
+        if (hoverCorrections > cfg.hoverMaxCorrections) {
+            BOT.stopHoverFlight();
+            abort("too many position corrections while hovering (likely rejected by the anti-cheat)");
+            return;
+        }
+        if (setbackHoldTicks > 0) return; // let a correction settle before computing a fresh step from it
+        double destX = cfg.hasTarget ? cfg.targetX + 0.5 : x;
+        double destZ = cfg.hasTarget ? cfg.targetZ + 0.5 : z;
+        BOT.startHoverFlight(stepToward(x, destX, cfg.hoverHorizontalSpeed), y, stepToward(z, destZ, cfg.hoverHorizontalSpeed));
+    }
+
+    private static double stepToward(double from, double to, double maxStep) {
+        double delta = to - from;
+        return Math.abs(delta) <= maxStep ? to : from + Math.copySign(maxStep, delta);
     }
 
     /**

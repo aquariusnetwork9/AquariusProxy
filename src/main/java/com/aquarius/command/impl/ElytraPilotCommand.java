@@ -367,6 +367,13 @@ public class ElytraPilotCommand extends Command {
                     .title("ElytraPilot e-bounce mode " + toggleStrCaps(CONFIG.client.extra.elytraPilot.ebounce))
                     .description("Flat-road bounce highway, no fireworks. Set 'road <y>' to the road surface and a heading/target.");
             })))
+            .then(literal("hover").then(argument("toggle", toggle()).executes(c -> {
+                CONFIG.client.extra.elytraPilot.hoverFlight = getToggle(c, "toggle");
+                c.getSource().getEmbed()
+                    .title("ElytraPilot hover-flight mode " + toggleStrCaps(CONFIG.client.extra.elytraPilot.hoverFlight))
+                    .description("6b6t-native packet flight: real takeoff, then direct position assertion -- any speed "
+                        + "including a dead stop, no fireworks. Holds takeoff altitude; set a target with 'to <x> <z>'.");
+            })))
             .then(literal("road").then(argument("y", integer()).executes(c -> {
                 CONFIG.client.extra.elytraPilot.roadY = getInteger(c, "y");
                 c.getSource().getEmbed().title("ElytraPilot road Y = " + CONFIG.client.extra.elytraPilot.roadY);
