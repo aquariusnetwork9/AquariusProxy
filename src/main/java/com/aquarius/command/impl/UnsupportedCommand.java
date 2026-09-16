@@ -34,7 +34,8 @@ public class UnsupportedCommand extends Command {
                 "spectatorWhitelist on/off",
                 "allowOfflinePlayers on/off",
                 "auth type offline",
-                "auth offlineUsername <username>"
+                "auth offlineUsername <username>",
+                "auth crackedLoginPassword <password>"
             )
             .build();
     }
@@ -76,6 +77,20 @@ public class UnsupportedCommand extends Command {
                     Proxy.getInstance().cancelLogin();
                     Authenticator.INSTANCE.clearAuthCache();
                     return OK;
+                })))
+                .then(literal("crackedLoginPassword").then(argument("password", wordWithChars()).executes(c -> {
+                    c.getSource().setSensitiveInput(true);
+                    var passwordStr = getString(c, "password").trim();
+                    if (passwordStr.isBlank()) {
+                        c.getSource().getEmbed()
+                            .title("Invalid Password")
+                            .errorColor();
+                        return OK;
+                    }
+                    CONFIG.authentication.crackedLoginPassword = passwordStr;
+                    c.getSource().getEmbed()
+                        .title("Cracked Login Password Set");
+                    return OK;
                 }))));
     }
 
@@ -87,6 +102,7 @@ public class UnsupportedCommand extends Command {
             .addField("Allow Offline Players", toggleStr(!CONFIG.server.verifyUsers))
             .addField("Offline Authentication", toggleStr(CONFIG.authentication.accountType == OFFLINE))
             .addField("Offline Username", escape(CONFIG.authentication.username))
+            .addField("Cracked Login Password", CONFIG.authentication.crackedLoginPassword.isEmpty() ? "not set" : "set")
             .primaryColor();
     }
 }
