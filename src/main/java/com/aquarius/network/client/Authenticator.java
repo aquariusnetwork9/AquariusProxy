@@ -58,7 +58,9 @@ public class Authenticator {
     public MinecraftProtocol login()  {
         if (CONFIG.authentication.accountType == OFFLINE) {
             AUTH_LOG.warn("Using offline account: '{}'. Offline accounts will not receive user support.", CONFIG.authentication.username);
-            return createMinecraftProtocol(new MinecraftProfile(UUID.randomUUID(), CONFIG.authentication.username), null, null);
+            // matches UserAuthTask's offline UUID convention so identity is stable across reconnects
+            var offlineUuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + CONFIG.authentication.username).getBytes());
+            return createMinecraftProtocol(new MinecraftProfile(offlineUuid, CONFIG.authentication.username), null, null);
         }
         var authSession = loadAuthCache()
             // todo: validate JavaAuthManager from cache matches configured auth type?
