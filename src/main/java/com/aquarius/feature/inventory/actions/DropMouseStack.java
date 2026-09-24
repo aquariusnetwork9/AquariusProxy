@@ -1,6 +1,7 @@
 package com.aquarius.feature.inventory.actions;
 
 import com.aquarius.cache.data.inventory.Container;
+import com.aquarius.util.ItemUtil;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -47,7 +48,7 @@ public class DropMouseStack implements InventoryAction {
             -999,
             containerActionType,
             clickItemAction,
-            predictedMouseStack,
+            ItemUtil.toHashedStack(predictedMouseStack),
             Int2ObjectMaps.emptyMap()
         );
     }

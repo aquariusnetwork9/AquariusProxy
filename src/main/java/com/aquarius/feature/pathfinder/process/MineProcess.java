@@ -388,7 +388,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IBariton
         //  we would need an actual loot table to check against
         //  there could be a simpler way to do this, like setting a movement goal to the positions we are breaking
         for (var itemEntity : items) {
-            var itemStack = itemEntity.getMetadataValue(8, MetadataTypes.ITEM, ItemStack.class);
+            var itemStack = itemEntity.getMetadataValue(8, MetadataTypes.ITEM_STACK, ItemStack.class);
             if (itemStack == null) continue;
             var itemData = ItemRegistry.REGISTRY.get(itemStack.getId());
             if (itemData == null) continue;

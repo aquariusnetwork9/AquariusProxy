@@ -78,7 +78,7 @@ public class EntityLiving extends Entity {
         if (removed) return false;
         // https://minecraft.wiki/w/Java_Edition_protocol/Entity_metadata#Living_Entity
         EntityMetadata<?, ?> bedLocationMetadata = getMetadata().get(14);
-        if (bedLocationMetadata != null && bedLocationMetadata.getType() == MetadataTypes.OPTIONAL_POSITION) {
+        if (bedLocationMetadata != null && bedLocationMetadata.getType() == MetadataTypes.OPTIONAL_BLOCK_POS) {
             var bedLocation = (Optional<Vector3i>) bedLocationMetadata.getValue();
             if (bedLocation.isPresent()) return true;
         }

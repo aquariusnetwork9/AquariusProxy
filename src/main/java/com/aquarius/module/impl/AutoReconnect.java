@@ -13,6 +13,8 @@ import org.jspecify.annotations.Nullable;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Future;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.github.rfresh2.EventConsumer.of;
 import static com.aquarius.Globals.*;
@@ -59,10 +61,38 @@ public class AutoReconnect extends Module {
             return;
         }
         if (isReconnectableDisconnect(event.reason())) {
-            scheduleAutoReconnect(CONFIG.client.extra.autoReconnect.delaySeconds);
+            scheduleAutoReconnect(reconnectDelaySeconds(event.reason()));
         } else {
             info("Cancelling AutoReconnect because disconnect reason is not reconnectable");
         }
+    }
+
+    /**
+     * 6b6t names its own cooldown exactly ("Your verification link expired. Please wait 84 minutes
+     * before trying again.", "already online" kicks clear in seconds by contrast) — hammering the flat
+     * AutoReconnect delaySeconds into one of the long ones is pure noise for the next N minutes and, on
+     * a system that just told us to back off, is exactly the kind of signal an anti-bot layer is built
+     * to notice. Honor the server's own number when it names one; a small buffer avoids landing a few
+     * seconds early and re-earning the same cooldown. Live-observed 2026-09-23: this account and two
+     * others in the same fleet sat in this exact loop for 100+ minutes each, every attempt failing.
+     */
+    private int reconnectDelaySeconds(final String reason) {
+        final int configured = CONFIG.client.extra.autoReconnect.delaySeconds;
+        if (reason == null) {
+            return configured;
+        }
+        final Matcher matcher = WAIT_MINUTES_PATTERN.matcher(reason);
+        if (!matcher.find()) {
+            return configured;
+        }
+        final int minutes = Integer.parseInt(matcher.group(1));
+        final int serverWaitSeconds = minutes * 60 + WAIT_BUFFER_SECONDS;
+        if (serverWaitSeconds <= configured) {
+            return configured;
+        }
+        info("server asked us to wait {} minute(s) before retrying — honoring that instead of the flat {}s AutoReconnect delay",
+            minutes, configured);
+        return serverWaitSeconds;
     }
 
     public void scheduleAutoReconnect(final int delaySeconds) {
@@ -105,11 +135,18 @@ public class AutoReconnect extends Module {
         EVENT_BUS.postAsync(new AutoReconnectEvent(countdown));
         // random jitter to help prevent multiple clients from logging in at the same time
         Wait.waitRandomMs(1000);
-        for (int i = countdown; i > 0; i-=10) {
+        // A short wait keeps the original every-10s countdown; a long, server-named one (see
+        // reconnectDelaySeconds) would otherwise spam hundreds of "Reconnecting in Ns" lines for nothing.
+        final int logIntervalSeconds = countdown > LONG_WAIT_LOG_THRESHOLD_SECONDS ? 60 : 10;
+        for (int i = countdown; i > 0; i -= logIntervalSeconds) {
             info("Reconnecting in {}s", i);
-            Wait.wait(Math.min(10, i));
+            Wait.wait(Math.min(logIntervalSeconds, i));
         }
     }
+
+    private static final Pattern WAIT_MINUTES_PATTERN = Pattern.compile("wait (\\d+) minutes?", Pattern.CASE_INSENSITIVE);
+    private static final int WAIT_BUFFER_SECONDS = 30;
+    private static final int LONG_WAIT_LOG_THRESHOLD_SECONDS = 60;
 
     private static final Set<String> NON_RECONNECTABLE_DISCONNECT_REASONS = Sets.newHashSet(
         SYSTEM_DISCONNECT,

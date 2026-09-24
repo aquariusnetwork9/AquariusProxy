@@ -34,7 +34,10 @@ public class OutgoingChatHandler implements PacketHandler<ServerboundChatPacket,
         CACHE.getChatCache().setLastChatTimestamp(packetTime);
         if (CACHE.getChatCache().canUseChatSigning()) {
             int offset = 0;
-            var signedChat = new ServerboundChatPacket(packet.getMessage(), packetTime, 0, null, offset, BitSet.valueOf(new byte[20]));
+            // checksum is the lightweight companion to the signature, over the "last seen messages" list —
+            // that list is always empty here (see ChatSession.sign's own comment), and an empty list's
+            // checksum is 0 by the same convention vanilla uses.
+            var signedChat = new ServerboundChatPacket(packet.getMessage(), packetTime, 0, null, offset, BitSet.valueOf(new byte[20]), 0);
             CACHE.getChatCache().getChatSession().sign(signedChat);
             return signedChat;
         } else {

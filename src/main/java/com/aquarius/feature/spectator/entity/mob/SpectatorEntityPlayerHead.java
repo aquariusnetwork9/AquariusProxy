@@ -2,6 +2,7 @@ package com.aquarius.feature.spectator.entity.mob;
 
 import com.aquarius.mc.item.ItemRegistry;
 import org.geysermc.mcprotocollib.auth.GameProfile;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.player.ResolvableProfile;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.EntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.MetadataTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.ObjectEntityMetadata;
@@ -25,10 +26,10 @@ public class SpectatorEntityPlayerHead extends SpectatorMob {
     @Override
     public ArrayList<EntityMetadata<?, ?>> getBaseEntityMetadata(final GameProfile spectatorProfile, final int spectatorEntityId) {
         final Map<DataComponentType<?>, DataComponent<?, ?>> dataComponentsMap = new HashMap<>();
-        dataComponentsMap.put(DataComponentTypes.PROFILE, new ObjectDataComponent<GameProfile>(DataComponentTypes.PROFILE, spectatorProfile));
+        dataComponentsMap.put(DataComponentTypes.PROFILE, new ObjectDataComponent<>(DataComponentTypes.PROFILE, new ResolvableProfile(spectatorProfile)));
         final DataComponents dataComponents = new DataComponents(dataComponentsMap);
         return metadataListOf(
-            new ObjectEntityMetadata<>(23, MetadataTypes.ITEM, new ItemStack(ItemRegistry.PLAYER_HEAD.id(), 1, dataComponents))
+            new ObjectEntityMetadata<>(23, MetadataTypes.ITEM_STACK, new ItemStack(ItemRegistry.PLAYER_HEAD.id(), 1, dataComponents))
         );
     }
 

@@ -68,6 +68,7 @@ public class ClientCommandsOutgoingHandler implements PacketHandler<ClientboundC
         return new CommandNode(
             CommandType.ROOT,
             rootNodeA.isExecutable(),
+            rootNodeA.isAllowsRestricted(),
             combinedRootChildIndices,
             rootNodeA.getRedirectIndex(),
             rootNodeA.getName(),
@@ -88,6 +89,7 @@ public class ClientCommandsOutgoingHandler implements PacketHandler<ClientboundC
         return new CommandNode(
             node.getType(),
             node.isExecutable(),
+            node.isAllowsRestricted(),
             childIndices,
             redirectIndex,
             node.getName(),

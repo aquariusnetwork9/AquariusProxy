@@ -4,6 +4,7 @@ import com.aquarius.cache.data.inventory.Container;
 import com.aquarius.mc.item.BundleContents;
 import com.aquarius.mc.item.ItemRegistry;
 import com.aquarius.mc.item.ItemTags;
+import com.aquarius.util.ItemUtil;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import lombok.Data;
@@ -130,8 +131,8 @@ public class ClickItem implements InventoryAction {
             slotId,
             containerActionType,
             clickItemAction,
-            predictedMouseStack,
-            changedSlots
+            ItemUtil.toHashedStack(predictedMouseStack),
+            ItemUtil.toHashedStacks(changedSlots)
         );
     }
 

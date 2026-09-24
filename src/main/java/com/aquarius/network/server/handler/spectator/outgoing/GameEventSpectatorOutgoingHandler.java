@@ -8,7 +8,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.Clien
 public class GameEventSpectatorOutgoingHandler implements PacketHandler<ClientboundGameEventPacket, ServerSession> {
     @Override
     public ClientboundGameEventPacket apply(final ClientboundGameEventPacket packet, final ServerSession session) {
-        if (packet.getNotification() == GameEvent.CHANGE_GAMEMODE) {
+        if (packet.getNotification() == GameEvent.CHANGE_GAME_MODE) {
             return null;
         }
         return packet;

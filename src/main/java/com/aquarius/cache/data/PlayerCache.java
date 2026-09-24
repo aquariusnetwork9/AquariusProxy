@@ -9,10 +9,12 @@ import com.aquarius.cache.data.entity.EntityPlayer;
 import com.aquarius.cache.data.inventory.Container;
 import com.aquarius.cache.data.inventory.InventoryCache;
 import com.aquarius.network.server.ServerSession;
+import com.aquarius.util.ItemUtil;
 import com.aquarius.util.math.MutableVec3i;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import lombok.Data;
 import lombok.experimental.Accessors;
+import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.network.tcp.TcpSession;
@@ -96,7 +98,7 @@ public class PlayerCache implements CachedData {
         // todo: may need to move this out so spectators don't get sent wrong abilities
         consumer.accept(new ClientboundPlayerAbilitiesPacket(this.invincible, this.canFly, this.flying, this.creative, this.flySpeed, this.walkSpeed));
         consumer.accept(new ClientboundChangeDifficultyPacket(this.difficulty, this.isDifficultyLocked));
-        consumer.accept(new ClientboundGameEventPacket(GameEvent.CHANGE_GAMEMODE, this.gameMode));
+        consumer.accept(new ClientboundGameEventPacket(GameEvent.CHANGE_GAME_MODE, this.gameMode));
         consumer.accept(new ClientboundEntityEventPacket(this.thePlayer.getEntityId(), this.opLevel));
         var container = this.inventoryCache.getContainers().get(this.inventoryCache.getOpenContainerId());
         if (container == this.inventoryCache.getContainers().defaultReturnValue()) {
@@ -115,7 +117,12 @@ public class PlayerCache implements CachedData {
         } else {
             consumer.accept(new ClientboundPlayerPositionPacket(ThreadLocalRandom.current().nextInt(16, 1024), this.getX(), this.getY(), this.getZ(), this.getVelX(), this.getVelY(), this.getVelZ(), this.getYaw(), this.getPitch()));
         }
-        consumer.accept(new ClientboundSetDefaultSpawnPositionPacket(spawnPosition.getX(), spawnPosition.getY(), spawnPosition.getZ(), 0.0f));
+        // GlobalPos needs a dimension key that this cache does not itself track (that lives on
+        // ChunkCache, not reachable from here without a new cross-cache coupling); overworld covers the
+        // overwhelming common case, and this packet only affects a spectator's compass, not gameplay.
+        consumer.accept(new ClientboundSetDefaultSpawnPositionPacket(
+            new GlobalPos(Key.key("minecraft:overworld"), spawnPosition.getX(), spawnPosition.getY(), spawnPosition.getZ()),
+            0.0f, 0.0f));
         consumer.accept(new ClientboundSetHeldSlotPacket(heldItemSlot));
     }
 
@@ -168,7 +175,7 @@ public class PlayerCache implements CachedData {
             0,
             ContainerActionType.CREATIVE_GRAB_MAX_STACK,
             CreativeGrabAction.GRAB,
-            new ItemStack(1, 1),
+            ItemUtil.toHashedStack(new ItemStack(1, 1)),
             Int2ObjectMaps.emptyMap())
         );
     }

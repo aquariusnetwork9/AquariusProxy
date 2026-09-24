@@ -219,7 +219,8 @@ public final class Bot extends ModuleUtils {
 
     private void handleClientTickStopped(final ClientBotTick.Stopped event) {
         if (isSneaking) {
-            sendClientPacketAsync(new ServerboundPlayerCommandPacket(CACHE.getPlayerCache().getEntityId(), PlayerState.STOP_SNEAKING));
+            // sneak is a continuous ServerboundPlayerInputPacket flag as of 1.21.11, not a discrete command
+            sendClientPacketAsync(new ServerboundPlayerInputPacket(false, false, false, false, false, false, false));
         }
         if (isSprinting) {
             sendClientPacketAsync(new ServerboundPlayerCommandPacket(CACHE.getPlayerCache().getEntityId(), PlayerState.STOP_SPRINTING));
@@ -519,11 +520,8 @@ public final class Bot extends ModuleUtils {
             lastSentMovementInput = Input.builder().build();
         } else {
             // send movement packets based on position
-            if (wasSneaking != isSneaking) {
-                sendClientPacketAsync(new ServerboundPlayerCommandPacket(
-                    CACHE.getPlayerCache().getEntityId(),
-                    isSneaking ? PlayerState.START_SNEAKING : PlayerState.STOP_SNEAKING));
-            }
+            // Sneak is no longer a discrete PlayerState command as of 1.21.11 — it's the `shift` flag on
+            // ServerboundPlayerInputPacket, sent below (with the rest of movementInput) whenever it changes.
             if (lastSprinting != isSprinting) {
                 sendClientPacketAsync(new ServerboundPlayerCommandPacket(
                     CACHE.getPlayerCache().getEntityId(),
@@ -602,7 +600,7 @@ public final class Bot extends ModuleUtils {
             if (entity == CACHE.getPlayerCache().getThePlayer()) continue;
             switch (entity.getEntityType()) {
                 case FIREWORK_ROCKET -> {
-                    var attachedEntityId = entity.getMetadataValue(9, MetadataTypes.OPTIONAL_VARINT, OptionalInt.class);
+                    var attachedEntityId = entity.getMetadataValue(9, MetadataTypes.OPTIONAL_UNSIGNED_INT, OptionalInt.class);
                     if (attachedEntityId == null) continue;
                     if (attachedEntityId.getAsInt() != CACHE.getPlayerCache().getEntityId()) continue;
                     if (!isFallFlying) continue;

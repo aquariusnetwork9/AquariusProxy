@@ -5,7 +5,7 @@ import com.aquarius.event.module.EntityFishHookSpawnEvent;
 import com.aquarius.network.client.ClientSession;
 import com.aquarius.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.spawn.ClientboundAddEntityPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundAddEntityPacket;
 
 import static com.aquarius.Globals.CACHE;
 import static com.aquarius.Globals.EVENT_BUS;

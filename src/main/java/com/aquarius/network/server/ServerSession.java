@@ -111,6 +111,10 @@ public class ServerSession extends TcpServerSession {
     // allow spectator to set their camera to client
     // need to persist state to allow them in and out of this
     protected Entity cameraTarget = null;
+    // edge-detect start-of-sneak/sprint from ServerboundPlayerInputPacket's continuous shift/sprint
+    // flags (sneak/sprint stopped being discrete PlayerState commands as of 1.21.11)
+    protected boolean spectatorWasSneaking = false;
+    protected boolean spectatorWasSprinting = false;
     protected boolean showSelfEntity = true;
     protected int spectatorEntityId = 2147483647 - ThreadLocalRandom.current().nextInt(1000000);
     protected int spectatorSelfEntityId = spectatorEntityId - 1;

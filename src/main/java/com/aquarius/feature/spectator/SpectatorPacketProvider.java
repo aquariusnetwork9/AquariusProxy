@@ -10,7 +10,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Animation;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.BlockBreakStage;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.*;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.spawn.ClientboundAddEntityPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundAddEntityPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundBlockDestructionPacket;
 
 import java.util.ArrayList;

@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.network.tcp.TcpSession;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.spawn.ClientboundAddEntityPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundAddEntityPacket;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 

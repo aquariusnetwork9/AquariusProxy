@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "com.aquarius"
-version = "1.21.4"
+version = "1.21.11"
 
 val javaReleaseVersion = 21
 val javaVersion = JavaLanguageVersion.of(25)
@@ -29,7 +29,7 @@ repositories {
     mavenLocal()
 }
 
-val mcplVersion = "1.21.4.45"
+val mcplVersion = "1.21.11.13"
 dependencies {
     api("com.github.rfresh2:JDA:6.4.31") {
         exclude(group = "club.minnced")
@@ -73,9 +73,9 @@ dependencies {
     api("com.github.rfresh2.fastutil.maps:reference-object-maps:$fastutilVersion")
     api("com.github.rfresh2.fastutil.maps:long-double-maps:$fastutilVersion")
     api("com.github.rfresh2.fastutil.queues:int-queues:$fastutilVersion")
-    api("com.viaversion:viaversion-common:5.8.1")
-    api("com.viaversion:viabackwards-common:5.8.1")
-    api("com.viaversion:viarewind-common:4.0.15")
+    api("com.viaversion:viaversion-common:5.12.0")
+    api("com.viaversion:viabackwards-common:5.12.0")
+    api("com.viaversion:viarewind-common:4.2.0")
     api("org.jline:jline:4.0.10")
     api("ar.com.hjg:pngj:2.1.0")
     api("com.zaxxer:HikariCP:7.0.2")

@@ -822,7 +822,7 @@ public class AquariusMiner extends Module {
 
     /** True if the dropped item entity holds one of our keep-items. */
     private boolean isKeepDrop(Entity e) {
-        ItemStack stack = e.getMetadataValue(8, MetadataTypes.ITEM, ItemStack.class);
+        ItemStack stack = e.getMetadataValue(8, MetadataTypes.ITEM_STACK, ItemStack.class);
         return stack != null && isKeep(stack);
     }
 

@@ -9,7 +9,7 @@ import com.aquarius.network.client.ClientSession;
 import com.aquarius.network.codec.ClientEventLoopPacketHandler;
 import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.spawn.ClientboundAddEntityPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundAddEntityPacket;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
@@ -37,9 +37,9 @@ public class AddEntityHandler implements ClientEventLoopPacketHandler<Clientboun
                 .setYaw(packet.getYaw())
                 .setPitch(packet.getPitch())
                 .setHeadYaw(packet.getHeadYaw())
-                .setVelX(packet.getMotionX())
-                .setVelY(packet.getMotionY())
-                .setVelZ(packet.getMotionZ());
+                .setVelX(packet.getMovement().getX())
+                .setVelY(packet.getMovement().getY())
+                .setVelZ(packet.getMovement().getZ());
             CACHE.getEntityCache().add(entity);
         }
         return true;
