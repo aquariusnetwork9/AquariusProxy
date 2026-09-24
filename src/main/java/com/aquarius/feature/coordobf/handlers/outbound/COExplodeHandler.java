@@ -15,9 +15,12 @@ public class COExplodeHandler implements PacketHandler<ClientboundExplodePacket,
             coordObf.getCoordOffset(session).offsetX(packet.getCenterX()),
             packet.getCenterY(),
             coordObf.getCoordOffset(session).offsetZ(packet.getCenterZ()),
+            packet.getRadius(),
+            packet.getBlockCount(),
             packet.getPlayerKnockback(),
             coordObf.getCoordOffset(session).offsetParticle(packet.getExplosionParticle()),
-            packet.getExplosionSound()
+            packet.getExplosionSound(),
+            packet.getBlockParticles()
         );
     }
 }

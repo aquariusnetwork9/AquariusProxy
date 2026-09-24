@@ -1,6 +1,7 @@
 package com.aquarius.feature.inventory.actions;
 
 import com.aquarius.cache.data.inventory.Container;
+import com.aquarius.util.ItemUtil;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import lombok.Data;
@@ -72,8 +73,8 @@ public class MoveToHotbarSlot implements InventoryAction {
             slotId,
             containerActionType,
             moveToHotbarAction,
-            Container.EMPTY_STACK,
-            changedSlots
+            ItemUtil.toHashedStack(Container.EMPTY_STACK),
+            ItemUtil.toHashedStacks(changedSlots)
         );
     }
 

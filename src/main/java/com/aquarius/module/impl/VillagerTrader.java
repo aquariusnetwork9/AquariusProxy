@@ -655,20 +655,20 @@ public class VillagerTrader extends Module {
             case TRADING_TRY_START_PURCHASE -> {
                 var trade = tradeIterator.current();
                 recordVillagerCapabilities(currentVillagerUuid, offersPacket);
-                var trades = offersPacket.getTrades();
+                var trades = offersPacket.getOffers();
                 List<InventoryAction> actions = Lists.newArrayList();
-                for (int i = 0; i < trades.length; i++) {
-                    var villagerTrade = trades[i];
-                    if (villagerTrade.isTradeDisabled()) continue;
+                for (int i = 0; i < trades.size(); i++) {
+                    var villagerTrade = trades.get(i);
+                    if (villagerTrade.isOutOfStock()) continue;
                     if (!villagerOfferMatchesTrade(villagerTrade, trade)) continue;
 
-                    int availableTradeCount = villagerTrade.getMaxUses() - villagerTrade.getNumUses(); // each shift click can consume many trades
+                    int availableTradeCount = villagerTrade.getMaxUses() - villagerTrade.getUses(); // each shift click can consume many trades
 
                     int input1StackSize = ItemRegistry.REGISTRY.get(trade.inputItem1).stackSize();
 
-                    int baseCostInput1 = villagerTrade.getFirstInput().getAmount();
-                    int input1DemandCost = Math.max(0, MathHelper.floorI((villagerTrade.getFirstInput().getAmount() * villagerTrade.getDemand() * villagerTrade.getPriceMultiplier())));
-                    int input1Cost = MathHelper.clamp(baseCostInput1 + input1DemandCost + villagerTrade.getSpecialPrice(), 1, input1StackSize);
+                    int baseCostInput1 = villagerTrade.getItemCostA().count();
+                    int input1DemandCost = Math.max(0, MathHelper.floorI((villagerTrade.getItemCostA().count() * villagerTrade.getDemand() * villagerTrade.getPriceMultiplier())));
+                    int input1Cost = MathHelper.clamp(baseCostInput1 + input1DemandCost + villagerTrade.getSpecialPriceDiff(), 1, input1StackSize);
                     if (input1Cost > trade.maxInput1PerTrade) continue;
                     int maxTradesPerInputStack = input1StackSize / input1Cost;
                     int input1Count = countItem(trade.getInputItem1().id());
@@ -681,11 +681,11 @@ public class VillagerTrader extends Module {
 
                     if (trade.has2InputTrade()) {
                         int input2StackSize = trade.has2InputTrade() ? 64 : ItemRegistry.REGISTRY.get(trade.inputItem2).stackSize();
-                        int baseCostInput2 = villagerTrade.getSecondInput().getAmount();
-                        int input2DemandCost = Math.max(0, MathHelper.floorI((villagerTrade.getSecondInput().getAmount() * villagerTrade.getDemand() * villagerTrade.getPriceMultiplier())));
-                        int input2Cost = MathHelper.clamp(baseCostInput2 + input2DemandCost + villagerTrade.getSpecialPrice(), 1, input2StackSize);
+                        int baseCostInput2 = villagerTrade.getItemCostB().count();
+                        int input2DemandCost = Math.max(0, MathHelper.floorI((villagerTrade.getItemCostB().count() * villagerTrade.getDemand() * villagerTrade.getPriceMultiplier())));
+                        int input2Cost = MathHelper.clamp(baseCostInput2 + input2DemandCost + villagerTrade.getSpecialPriceDiff(), 1, input2StackSize);
                         if (input2Cost > trade.maxInput2PerTrade) continue;
-                        int tradersPerInput2Stack = villagerTrade.getSecondInput().getAmount() / input2Cost;
+                        int tradersPerInput2Stack = villagerTrade.getItemCostB().count() / input2Cost;
                         maxTradesPerInputStack = Math.min(maxTradesPerInputStack, tradersPerInput2Stack);
                         int input2Count = countItem(trade.getInputItem2().id());
                         int maxTradesForInput2 = input2Count / input2Cost;
@@ -708,8 +708,8 @@ public class VillagerTrader extends Module {
                     }
 
                     if (canShiftClickPurchase(villagerTrade)) {
-                        int outputsStackSize = ItemRegistry.REGISTRY.get(villagerTrade.getOutput().getId()).stackSize();
-                        int maxTradesPerOutputStack = outputsStackSize / villagerTrade.getOutput().getAmount();
+                        int outputsStackSize = ItemRegistry.REGISTRY.get(villagerTrade.getResult().getId()).stackSize();
+                        int maxTradesPerOutputStack = outputsStackSize / villagerTrade.getResult().getAmount();
                         int maxTradesPerShiftClick = Math.min(maxTradesPerInputStack, maxTradesPerOutputStack);
                         int tradeCount = 0;
                         for (int j = 0; j < maxTradeCount; j+= maxTradesPerShiftClick) {
@@ -1145,14 +1145,14 @@ public class VillagerTrader extends Module {
     private void recordVillagerCapabilities(UUID villagerUuid, ClientboundMerchantOffersPacket offers) {
         if (villagerUuid == null || offers == null) return;
         Set<String> caps = new HashSet<>();
-        var trades = offers.getTrades();
+        var trades = offers.getOffers();
         for (var entry : CONFIG.client.extra.villagerTrader.trades.entrySet()) {
             var t = entry.getValue();
             if (!t.enabled) continue;
-            for (int i = 0; i < trades.length; i++) {
-                if (villagerOfferMatchesTrade(trades[i], t)) {
+            for (int i = 0; i < trades.size(); i++) {
+                if (villagerOfferMatchesTrade(trades.get(i), t)) {
                     caps.add(entry.getKey());
-                    updateOfferPriceState(villagerUuid, i, entry.getKey(), trades[i]);
+                    updateOfferPriceState(villagerUuid, i, entry.getKey(), trades.get(i));
                 }
             }
         }
@@ -1177,9 +1177,9 @@ public class VillagerTrader extends Module {
     private void updateOfferPriceState(UUID villagerUuid, int offerIndex, String tradeId, VillagerTrade offer) {
         var perVillager = offerPriceStateByVillager.computeIfAbsent(villagerUuid, k -> new HashMap<>());
         var state = perVillager.computeIfAbsent(offerIndex, k -> new OfferPriceState());
-        int firstInputId = offer.getFirstInput().getId();
-        int secondInputId = offer.getSecondInput() != null ? offer.getSecondInput().getId() : -1;
-        int outputId = offer.getOutput() != null ? offer.getOutput().getId() : -1;
+        int firstInputId = offer.getItemCostA().itemId();
+        int secondInputId = offer.getItemCostB() != null ? offer.getItemCostB().itemId() : -1;
+        int outputId = offer.getResult() != null ? offer.getResult().getId() : -1;
         boolean identityKnown = state.lastObservedNumUses >= 0;
         boolean sameOffer = identityKnown
             && state.firstInputId == firstInputId
@@ -1202,7 +1202,7 @@ public class VillagerTrader extends Module {
             state.outputId = outputId;
         }
         state.tradeId = tradeId;
-        int numUses = offer.getNumUses();
+        int numUses = offer.getUses();
         if (state.lastObservedNumUses >= 0 && numUses < state.lastObservedNumUses) {
             state.restocksSinceLastFullBuy++;
             state.lastRestockDetectedAtMillis = System.currentTimeMillis();
@@ -1263,17 +1263,17 @@ public class VillagerTrader extends Module {
 
     /** Whether a villager's offer matches a configured trade by item + enchant (ignores price/affordability/sold-out). */
     private boolean villagerOfferMatchesTrade(VillagerTrade villagerTrade, Trade trade) {
-        if (villagerTrade.getOutput() == null) return false;
-        if (villagerTrade.getOutput().getId() != ItemRegistry.REGISTRY.get(trade.outputItem).id()) return false;
-        if (villagerTrade.getFirstInput().getId() != ItemRegistry.REGISTRY.get(trade.inputItem1).id()) return false;
+        if (villagerTrade.getResult() == null) return false;
+        if (villagerTrade.getResult().getId() != ItemRegistry.REGISTRY.get(trade.outputItem).id()) return false;
+        if (villagerTrade.getItemCostA().itemId() != ItemRegistry.REGISTRY.get(trade.inputItem1).id()) return false;
         if (trade.has2InputTrade()) {
-            if (villagerTrade.getSecondInput() == null) return false;
-            if (villagerTrade.getSecondInput().getId() != ItemRegistry.REGISTRY.get(trade.inputItem2).id()) return false;
+            if (villagerTrade.getItemCostB() == null) return false;
+            if (villagerTrade.getItemCostB().itemId() != ItemRegistry.REGISTRY.get(trade.inputItem2).id()) return false;
         } else {
-            if (villagerTrade.getSecondInput() != null) return false;
+            if (villagerTrade.getItemCostB() != null) return false;
         }
         if (!trade.outputItemEnchantments.isEmpty()) {
-            return enchantmentFilter(trade, villagerTrade.getOutput());
+            return enchantmentFilter(trade, villagerTrade.getResult());
         }
         return true;
     }
@@ -1330,13 +1330,13 @@ public class VillagerTrader extends Module {
 
     private boolean canShiftClickPurchase(VillagerTrade villagerTrade) {
         int count = 0;
-        for (var offer : offersPacket.getTrades()) {
-            if (villagerTrade.getOutput().getId() != offer.getOutput().getId()) continue;
-            if (villagerTrade.getFirstInput().getId() != offer.getFirstInput().getId()) continue;
-            boolean offerHasInput2 = offer.getSecondInput() != Container.EMPTY_STACK;
-            boolean villagerTradeHasInput2 = villagerTrade.getSecondInput() != Container.EMPTY_STACK;
+        for (var offer : offersPacket.getOffers()) {
+            if (villagerTrade.getResult().getId() != offer.getResult().getId()) continue;
+            if (villagerTrade.getItemCostA().itemId() != offer.getItemCostA().itemId()) continue;
+            boolean offerHasInput2 = offer.getItemCostB() != null;
+            boolean villagerTradeHasInput2 = villagerTrade.getItemCostB() != null;
             if (offerHasInput2 && villagerTradeHasInput2) {
-                if (villagerTrade.getSecondInput().getId() == offer.getSecondInput().getId()) {
+                if (villagerTrade.getItemCostB().itemId() == offer.getItemCostB().itemId()) {
                     count++;
                 }
             } else if (!offerHasInput2 && !villagerTradeHasInput2) {

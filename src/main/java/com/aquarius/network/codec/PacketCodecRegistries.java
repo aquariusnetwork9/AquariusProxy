@@ -6,7 +6,6 @@ import com.aquarius.network.client.handler.incoming.inventory.*;
 import com.aquarius.network.client.handler.incoming.level.*;
 import com.aquarius.network.client.handler.incoming.scoreboard.*;
 import com.aquarius.network.client.handler.incoming.spawn.AddEntityHandler;
-import com.aquarius.network.client.handler.incoming.spawn.AddExperienceOrbHandler;
 import com.aquarius.network.client.handler.incoming.spawn.SpawnPositionHandler;
 import com.aquarius.network.client.handler.outgoing.*;
 import com.aquarius.network.client.handler.postoutgoing.*;
@@ -38,8 +37,7 @@ import org.geysermc.mcprotocollib.protocol.packet.handshake.serverbound.ClientIn
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.*;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.*;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.*;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.spawn.ClientboundAddEntityPacket;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.spawn.ClientboundAddExperienceOrbPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundAddEntityPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.*;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.*;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.border.ClientboundInitializeBorderPacket;
@@ -52,6 +50,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.S
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundSetCreativeModeSlotPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundAcceptTeleportationPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundMoveVehiclePacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundPlayerInputPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundTeleportToEntityPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.*;
 import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.*;
@@ -79,7 +78,6 @@ public final class PacketCodecRegistries {
         ClientboundContainerSetContentPacket.class,
         ClientboundContainerSetDataPacket.class,
         ClientboundContainerSetSlotPacket.class,
-        ClientboundHorseScreenOpenPacket.class,
         ClientboundMoveVehiclePacket.class,
         ClientboundOpenBookPacket.class,
         ClientboundOpenScreenPacket.class,
@@ -220,7 +218,6 @@ public final class PacketCodecRegistries {
                 .inbound(ClientboundMoveVehiclePacket.class, new MoveVehicleHandler())
                 .inbound(ClientboundSetPassengersPacket.class, new EntitySetPassengersHandler())
                 .inbound(ClientboundTeleportEntityPacket.class, new TeleportEntityHandler())
-                .inbound(ClientboundAddExperienceOrbPacket.class, new AddExperienceOrbHandler())
                 .inbound(ClientboundAddEntityPacket.class, new AddEntityHandler())
                 .inbound(ClientboundSetDefaultSpawnPositionPacket.class, new SpawnPositionHandler())
                 .outbound(ServerboundChatPacket.class, new OutgoingChatHandler())
@@ -235,6 +232,7 @@ public final class PacketCodecRegistries {
                 .postOutbound(ServerboundMoveVehiclePacket.class, new PostOutgoingMoveVehicleHandler())
                 .postOutbound(ServerboundPlayerAbilitiesPacket.class, new PostOutgoingPlayerAbilitiesHandler())
                 .postOutbound(ServerboundPlayerCommandPacket.class, new PostOutgoingPlayerCommandHandler())
+                .postOutbound(ServerboundPlayerInputPacket.class, new PostOutgoingPlayerInputHandler())
                 .postOutbound(ServerboundSetCarriedItemPacket.class, new PostOutgoingSetCarriedItemHandler())
                 .postOutbound(ServerboundMovePlayerPosPacket.class, new PostOutgoingPlayerPositionHandler())
                 .postOutbound(ServerboundMovePlayerPosRotPacket.class, new PostOutgoingPlayerPositionRotationHandler())
@@ -283,6 +281,7 @@ public final class PacketCodecRegistries {
                 .inbound(ServerboundMovePlayerRotPacket.class, new PlayerRotationSpectatorHandler())
                 .inbound(ServerboundChatPacket.class, new ServerChatSpectatorHandler())
                 .inbound(ServerboundPlayerCommandPacket.class, new PlayerCommandSpectatorHandler())
+                .inbound(ServerboundPlayerInputPacket.class, new PlayerInputSpectatorHandler())
                 .inbound(ServerboundTeleportToEntityPacket.class, new TeleportToEntitySpectatorHandler())
                 .inbound(ServerboundInteractPacket.class, new InteractEntitySpectatorHandler())
                 .inbound(ServerboundChatCommandPacket.class, new ChatCommandSpectatorHandler())

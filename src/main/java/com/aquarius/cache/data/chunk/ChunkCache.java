@@ -370,9 +370,9 @@ public class ChunkCache implements CachedData {
             CLIENT_LOG.error("Error getting ChunkData packets from cache", e);
         }
         if (isRaining) {
-            consumer.accept(new ClientboundGameEventPacket(GameEvent.START_RAIN, null));
-            consumer.accept(new ClientboundGameEventPacket(GameEvent.RAIN_STRENGTH, new RainStrengthValue(this.rainStrength)));
-            consumer.accept(new ClientboundGameEventPacket(GameEvent.THUNDER_STRENGTH, new ThunderStrengthValue(this.thunderStrength)));
+            consumer.accept(new ClientboundGameEventPacket(GameEvent.START_RAINING, null));
+            consumer.accept(new ClientboundGameEventPacket(GameEvent.RAIN_LEVEL_CHANGE, new RainStrengthValue(this.rainStrength)));
+            consumer.accept(new ClientboundGameEventPacket(GameEvent.THUNDER_LEVEL_CHANGE, new ThunderStrengthValue(this.thunderStrength)));
         }
     }
 

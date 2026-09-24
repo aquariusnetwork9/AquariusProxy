@@ -152,6 +152,7 @@ public class McplBrigadierConverter {
         return new CommandNode(
             commandType,
             isExecutable,
+            false, // allowsRestricted: these are AquariusProxy's own local commands, not gated by an in-game permission system
             childrenIndeces,
             redirectIndex,
             name,

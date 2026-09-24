@@ -212,7 +212,7 @@ public final class FollowProcess extends BaritoneProcessHelper implements IBarit
                 .toList();
             List<GoalBlock> goals = new ArrayList<>();
             for (var itemEntity : itemEntities) {
-                var itemStack = itemEntity.getMetadataValue(8, MetadataTypes.ITEM, ItemStack.class);
+                var itemStack = itemEntity.getMetadataValue(8, MetadataTypes.ITEM_STACK, ItemStack.class);
                 if (itemStack == null) continue;
                 if (filter.test(itemStack)) {
                     goals.add(new GoalBlock(itemEntity.blockPos()));

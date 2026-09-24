@@ -51,8 +51,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.Clientbound
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.*;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerLookAtPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.spawn.ClientboundAddEntityPacket;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.spawn.ClientboundAddExperienceOrbPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundAddEntityPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerSetContentPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerSetSlotPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundSetCursorItemPacket;
@@ -162,7 +161,6 @@ public class CoordObfuscation extends Module {
                 .inbound(ServerboundPickItemFromBlockPacket.class, new COPickItemFromBlockHandler())
                 .outbound(ClientboundStartConfigurationPacket.class, new COCStartConfigurationHandler())
                 .outbound(ClientboundAddEntityPacket.class, new COAddEntityHandler())
-                .outbound(ClientboundAddExperienceOrbPacket.class, new COAddExperienceOrbHandler())
                 .outbound(ClientboundBlockDestructionPacket.class, new COBlockDestructionHandler())
                 .outbound(ClientboundBlockEntityDataPacket.class, new COBlockEntityDataHandler())
                 .outbound(ClientboundBlockEventPacket.class, new COBlockEventHandler())
@@ -555,7 +553,7 @@ public class CoordObfuscation extends Module {
         for (var entity : CACHE.getEntityCache().getEntities().values()) {
             if (entity.getEntityType() == EntityType.EYE_OF_ENDER) return true;
             if (entity.getEntityType() == EntityType.ITEM) {
-                var itemStack = entity.getMetadataValue(8, MetadataTypes.ITEM, ItemStack.class);
+                var itemStack = entity.getMetadataValue(8, MetadataTypes.ITEM_STACK, ItemStack.class);
                 if (itemStack == null) continue;
                 if (itemStack.getId() == ItemRegistry.ENDER_EYE.id()) return true;
             }

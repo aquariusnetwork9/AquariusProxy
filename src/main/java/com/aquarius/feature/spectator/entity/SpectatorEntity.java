@@ -35,7 +35,7 @@ public abstract class SpectatorEntity {
     /** Internal API **/
     protected ArrayList<EntityMetadata<?, ?>> buildMetadata(final GameProfile spectatorRealProfile, final int spectatorEntityId, boolean self) {
         var metadata = getBaseEntityMetadata(spectatorRealProfile, spectatorEntityId);
-        metadata.add(new ObjectEntityMetadata<>(2, MetadataTypes.OPTIONAL_CHAT, Optional.of(Component.text(spectatorRealProfile.getName()))));
+        metadata.add(new ObjectEntityMetadata<>(2, MetadataTypes.OPTIONAL_COMPONENT, Optional.of(Component.text(spectatorRealProfile.getName()))));
         metadata.add(new BooleanEntityMetadata(3, MetadataTypes.BOOLEAN, !self)); // hides nametag on self entities
         return metadata;
     }

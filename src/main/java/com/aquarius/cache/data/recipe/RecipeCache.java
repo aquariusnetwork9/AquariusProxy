@@ -10,7 +10,6 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.network.tcp.TcpSession;
-import org.geysermc.mcprotocollib.protocol.data.game.inventory.CraftingBookStateType;
 import org.geysermc.mcprotocollib.protocol.data.game.recipe.display.RecipeDisplayEntry;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundRecipeBookAddPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundRecipeBookRemovePacket;
@@ -25,15 +24,28 @@ import java.util.function.Consumer;
 @Data
 @Accessors(chain = true)
 public class RecipeCache implements CachedData {
+    /** Closed and unfiltered — vanilla's own state before any ClientboundRecipeBookSettingsPacket arrives. */
+    private static final ClientboundRecipeBookSettingsPacket.TypeSettings DEFAULT_TYPE_SETTINGS =
+        new ClientboundRecipeBookSettingsPacket.TypeSettings(false, false);
     protected Map<String, int[]> itemSets = new ConcurrentHashMap<>();
     protected Set<ClientboundUpdateRecipesPacket.SelectableRecipe> stoneCutterRecipes = Collections.synchronizedSet(new ObjectOpenHashSet<>());
-    protected Map<CraftingBookStateType, ClientboundRecipeBookSettingsPacket.TypeSettings> recipeBookSettings = Collections.synchronizedMap(new EnumMap<>(CraftingBookStateType.class));
+    /**
+     * The 4 recipe-book categories the server tracks (crafting/furnace/blastFurnace/smoker), each with its
+     * own open/filtered state. Was a Map<CraftingBookStateType, TypeSettings> before 1.21.11 removed that
+     * enum and flattened the packet to 4 named fields; kept as a map here (String key = the field name) so
+     * the rest of this class's shape — and reset()'s single Map.clear() — did not need to change.
+     */
+    protected Map<String, ClientboundRecipeBookSettingsPacket.TypeSettings> recipeBookSettings = Collections.synchronizedMap(new LinkedHashMap<>());
     protected Int2ObjectMap<RecipeDisplayEntry> recipeBookEntries = Int2ObjectMaps.synchronize(new Int2ObjectOpenHashMap<>());
 
     @Override
     public synchronized void getPackets(@NonNull final Consumer<Packet> consumer, final @NonNull TcpSession session) {
         consumer.accept(new ClientboundUpdateRecipesPacket(itemSets, new ArrayList<>(stoneCutterRecipes)));
-        consumer.accept(new ClientboundRecipeBookSettingsPacket(recipeBookSettings));
+        consumer.accept(new ClientboundRecipeBookSettingsPacket(
+            recipeBookSettings.getOrDefault("crafting", DEFAULT_TYPE_SETTINGS),
+            recipeBookSettings.getOrDefault("furnace", DEFAULT_TYPE_SETTINGS),
+            recipeBookSettings.getOrDefault("blastFurnace", DEFAULT_TYPE_SETTINGS),
+            recipeBookSettings.getOrDefault("smoker", DEFAULT_TYPE_SETTINGS)));
         final List<ClientboundRecipeBookAddPacket.Entry> entries = new ArrayList<>(recipeBookEntries.size());
         for (var entry : recipeBookEntries.int2ObjectEntrySet()) {
             entries.add(new ClientboundRecipeBookAddPacket.Entry(entry.getValue(), false, false));
@@ -69,7 +81,10 @@ public class RecipeCache implements CachedData {
     }
 
     public void setRecipeBookSettings(final ClientboundRecipeBookSettingsPacket packet) {
-        this.recipeBookSettings.putAll(packet.getStates());
+        this.recipeBookSettings.put("crafting", packet.getCrafting());
+        this.recipeBookSettings.put("furnace", packet.getFurnace());
+        this.recipeBookSettings.put("blastFurnace", packet.getBlastFurnace());
+        this.recipeBookSettings.put("smoker", packet.getSmoker());
     }
 
     public void removeRecipeBookEntries(final ClientboundRecipeBookRemovePacket packet) {

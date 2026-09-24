@@ -17,7 +17,8 @@ public class OutgoingChatCommandSignedHandler implements PacketHandler<Serverbou
         packet.setTimeStamp(packetTime);
         CACHE.getChatCache().setLastChatTimestamp(packetTime);
         if (CACHE.getChatCache().canUseChatSigning()) {
-            var signedCommand = new ServerboundChatCommandSignedPacket(packet.getCommand(), packet.getTimeStamp(), 0, packet.getSignatures(), 0, BitSet.valueOf(new byte[20]));
+            // checksum: see OutgoingChatHandler's identical note — 0 for the always-empty last-seen list.
+            var signedCommand = new ServerboundChatCommandSignedPacket(packet.getCommand(), packet.getTimeStamp(), 0, packet.getSignatures(), 0, BitSet.valueOf(new byte[20]), (byte) 0);
             CACHE.getChatCache().getChatSession().sign(signedCommand);
             return signedCommand;
         }

@@ -1,6 +1,5 @@
 package com.aquarius.feature.coordobf.handlers.outbound;
 
-import com.viaversion.nbt.mini.MNBT;
 import com.aquarius.module.impl.CoordObfuscation;
 import com.aquarius.network.codec.PacketHandler;
 import com.aquarius.network.server.ServerSession;
@@ -24,20 +23,15 @@ public class COSetEntityDataHandler implements PacketHandler<ClientboundSetEntit
         CoordObfuscation coordObf = MODULE.get(CoordObfuscation.class);
         List<EntityMetadata<?, ?>> modifiedMetadata = metadata.stream()
             .map(m -> {
-                if (m.getType() == MetadataTypes.POSITION) {
+                if (m.getType() == MetadataTypes.BLOCK_POS) {
                     return new ObjectEntityMetadata<>(m.getId(),
-                                                      MetadataTypes.POSITION,
+                                                      MetadataTypes.BLOCK_POS,
                                                       coordObf.getCoordOffset(session).offsetVector((Vector3i) m.getValue()));
-                } else if (m.getType() == MetadataTypes.OPTIONAL_POSITION) {
+                } else if (m.getType() == MetadataTypes.OPTIONAL_BLOCK_POS) {
                     return new ObjectEntityMetadata<>(m.getId(),
-                                                      MetadataTypes.OPTIONAL_POSITION,
+                                                      MetadataTypes.OPTIONAL_BLOCK_POS,
                                                       ((Optional<Vector3i>) m.getValue()).map(p -> coordObf.getCoordOffset(session)
                                                           .offsetVector(p)));
-                } else if (m.getType() == MetadataTypes.NBT_TAG) {
-                    return new ObjectEntityMetadata<>(m.getId(),
-                                                      MetadataTypes.NBT_TAG,
-                                                      coordObf.getCoordOffset(session)
-                                                          .offsetNbt((MNBT) m.getValue()));
                 } else if (m.getType() == MetadataTypes.OPTIONAL_GLOBAL_POS) {
                     return new ObjectEntityMetadata<>(m.getId(),
                                                       MetadataTypes.OPTIONAL_GLOBAL_POS,

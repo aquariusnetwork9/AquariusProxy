@@ -37,7 +37,8 @@ public class StatisticsCache implements CachedData {
                 true,
                 this.advancements.toArray(Advancement[]::new),
                 new String[0],
-                this.progress
+                this.progress,
+                true
         ));
 
         consumer.accept(new ClientboundAwardStatsPacket(

@@ -5,7 +5,7 @@ import com.aquarius.module.impl.CoordObfuscation;
 import com.aquarius.network.codec.PacketHandler;
 import com.aquarius.network.server.ServerSession;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.spawn.ClientboundAddEntityPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundAddEntityPacket;
 
 import static com.aquarius.Globals.CONFIG;
 import static com.aquarius.Globals.MODULE;
@@ -34,11 +34,9 @@ public class COAddEntityHandler implements PacketHandler<ClientboundAddEntityPac
             coordObf.getCoordOffset(session).offsetX(packet.getX()),
             packet.getY(),
             coordObf.getCoordOffset(session).offsetZ(packet.getZ()),
+            packet.getMovement(),
             packet.getYaw(),
             packet.getHeadYaw(),
-            packet.getPitch(),
-            packet.getMotionX(),
-            packet.getMotionY(),
-            packet.getMotionZ());
+            packet.getPitch());
     }
 }
